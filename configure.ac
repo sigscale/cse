@@ -60,6 +60,11 @@ AC_ERLANG_CHECK_LIB([stdlib],
 		[if echo -e "$ERLANG_LIB_VER_stdlib\n3.5" | sort -CV;
 		then AC_MSG_ERROR([>= stdlib-3.5 required!]); fi],
 		[AC_MSG_ERROR([stdlib was not found!])])
+AC_ERLANG_CHECK_LIB([m3ua], [], [AC_MSG_ERROR([m3ua was not found!])])
+AC_ERLANG_CHECK_LIB([sccp], [], [AC_MSG_ERROR([sccp was not found!])])
+AC_ERLANG_CHECK_LIB([tcap], [], [AC_MSG_ERROR([tcap was not found!])])
+AC_ERLANG_CHECK_LIB([map], [], [AC_MSG_ERROR([map was not found!])])
+AC_ERLANG_CHECK_LIB([cap], [], [AC_MSG_ERROR([cap was not found!])])
 
 
 ##
