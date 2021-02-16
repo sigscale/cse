@@ -14,5 +14,5 @@
 				cse_slp_sup,
 				cse_slp_fsm]},
 		{registered, [cse]},
-		{applications, [tcap, map, cap]},
+		{applications, [m3ua, sccp, tcap, map, cap]},
 		{env, []}]}.
