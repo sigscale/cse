@@ -38,7 +38,7 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [],
+		Args :: list(),
 		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
 		SupFlags :: supervisor:sup_flags(),
 		ChildSpec :: supervisor:child_spec().
@@ -46,8 +46,8 @@
 %% @see //stdlib/supervisor:init/1
 %% @private
 %%
-init(_Args) ->
-	ChildSpecs = [bridge(cse_asp_sup, []),
+init(Args) ->
+	ChildSpecs = [bridge(cse_asp_sup, Args),
 			bridge(cse_tco_sup, [])],
 	SupFlags = #{strategy => one_for_all,
 			intensity => 10, period => 60},

@@ -45,7 +45,7 @@
 		Reason :: term().
 %% @doc Starts the application processes.
 start(normal = _StartType, _Args) ->
-	supervisor:start_link(cse_sup, []).
+	supervisor:start_link({local, cse_sup}, cse_sup, []).
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
 	when

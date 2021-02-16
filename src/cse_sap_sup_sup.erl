@@ -37,7 +37,7 @@
 %%----------------------------------------------------------------------
 
 init([] = _Args) ->
-	ChildSpecs = [supervisor(cse_sap_sup, [])],
+	ChildSpecs = [supervisor(cse_sap_sup)],
 	SupFlags = #{strategy => simple_one_for_one,
 			intensity => 0, period => 1},
 	{ok, {SupFlags, ChildSpecs}}.
@@ -46,17 +46,16 @@ init([] = _Args) ->
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec supervisor(StartMod, Args) -> Result
+-spec supervisor(StartMod) -> Result
 	when
 		StartMod :: atom(),
-		Args :: [term()],
 		Result :: supervisor:child_spec().
 %% @doc Build a supervisor child specification for a
 %% 	{@link //stdlib/supervisor. supervisor} behaviour.
 %% @private
 %%
-supervisor(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
+supervisor(StartMod) ->
+	StartArgs = [StartMod],
 	StartFunc = {supervisor, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.

@@ -47,9 +47,9 @@
 %% @private
 %%
 init(_Args) ->
-	ChildSpecs = [server(cse_server, cse, [], []),
-			supervisor(cse_sap_sup_sup, cse_sap_sup_sup, []),
-			supervisor(cse_slp_sup, cse_slp_sup, [])],
+	ChildSpecs = [server(cse_server, {local, cse}, [], []),
+			supervisor(cse_sap_sup_sup, []),
+			supervisor(cse_slp_sup, [])],
 	SupFlags = #{intensity => 10, period => 60},
 	{ok, {SupFlags, ChildSpecs}}.
 
@@ -57,9 +57,8 @@ init(_Args) ->
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec supervisor(StartMod, Name, Args) -> Result
+-spec supervisor(StartMod, Args) -> Result
 	when
-		Name :: atom(),
 		StartMod :: atom(),
 		Args :: [term()],
 		Result :: supervisor:child_spec().
@@ -67,8 +66,8 @@ init(_Args) ->
 %% 	{@link //stdlib/supervisor. supervisor} behaviour.
 %% @private
 %%
-supervisor(StartMod, Name, Args) ->
-	StartArgs = [{local, Name}, StartMod, Args],
+supervisor(StartMod, Args) ->
+	StartArgs = [StartMod, Args],
 	StartFunc = {supervisor, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.

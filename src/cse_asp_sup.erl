@@ -41,7 +41,7 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [],
+		Args :: list(),
 		Result :: {ok, Pid, State} | ignore | {error, Reason},
 		Pid :: pid(),
 		State :: term(),
@@ -50,8 +50,7 @@
 %% @see //stdlib/supervisor:init/1
 %% @private
 %%
-init(_Args) ->
-erlang:display({?MODULE, ?LINE, self()}),
+init([Port, Options] = _Args) when is_integer(Port), is_list(Options) ->
 	ignore.
 
 -spec terminate(Reason, State) -> any()
