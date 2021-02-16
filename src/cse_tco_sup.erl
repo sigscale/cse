@@ -51,7 +51,6 @@
 %% @private
 %%
 init(_Args) ->
-erlang:display({?MODULE, ?LINE, self()}),
 	ignore.
 
 -spec terminate(Reason, State) -> any()
