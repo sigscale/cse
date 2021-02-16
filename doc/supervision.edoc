@@ -17,4 +17,7 @@ also provided as
 <tt>{RestartStrategy::strategy(), Intensity::integer(), Period::integer()}</tt>.
 
 <img alt="supervision heirachy" src="supervision.png" />
+<br />
+<a href="supervision.png">Figure 1-1</a>
+
 
