@@ -9,6 +9,8 @@ modhtml = cse.html \
 		cse_server.html \
 		cse_sap_sup_sup.html \
 		cse_sap_sup.html \
+		cse_asp_sup.html \
+		cse_tco_sup.html \
 		cse_slp_sup.html \
 		cse_slp_fsm.html
 

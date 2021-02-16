@@ -1,4 +1,4 @@
-%%% cse_sap_sup.erl
+%%% cse_tco_sup.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021 SigScale Global Inc.
@@ -18,58 +18,52 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @docfile "{@docsrc supervision.edoc}"
 %%%
--module(cse_sap_sup).
+-module(cse_tco_sup).
 -copyright('Copyright (c) 2021 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
--behaviour(supervisor).
+-behaviour(supervisor_bridge).
 
-%% export the callback needed for supervisor behaviour
--export([init/1]).
+%% export the callback needed for supervisor_bridge behaviour
+-export([init/1, terminate/2]).
 
-%%----------------------------------------------------------------------
-%%  The cse_sap_sup private API
-%%----------------------------------------------------------------------
-
+-record(state, {}).
+-type state() :: #state{}.
 
 %%----------------------------------------------------------------------
-%%  The supervisor callback
+%%  The cse_tco_sup private API
+%%----------------------------------------------------------------------
+
+
+%%----------------------------------------------------------------------
+%%  The supervisor_bridge callback
 %%----------------------------------------------------------------------
 
 -spec init(Args) -> Result
 	when
 		Args :: [],
-		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
-		SupFlags :: supervisor:sup_flags(),
-		ChildSpec :: supervisor:child_spec().
+		Result :: {ok, Pid, State} | ignore | {error, Reason},
+		Pid :: pid(),
+		State :: term(),
+		Reason :: term().
 %% @doc Initialize the {@module} supervisor.
 %% @see //stdlib/supervisor:init/1
 %% @private
 %%
 init(_Args) ->
-	ChildSpecs = [bridge(cse_asp_sup, []),
-			bridge(cse_tco_sup, [])],
-	SupFlags = #{strategy => one_for_all,
-			intensity => 10, period => 60},
-	{ok, {SupFlags, ChildSpecs}}.
+erlang:display({?MODULE, ?LINE, self()}),
+	ignore.
+
+-spec terminate(Reason, State) -> any()
+	when
+		Reason :: normal | shutdown | {shutdown, term()} | term(),
+      State :: state().
+%% @see //stdlib/gen_server:terminate/3
+%% @private
+terminate(_Reason, _State) ->
+	ok.
 
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
-
--spec bridge(StartMod, Args) -> Result
-	when
-		Name :: atom(),
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: supervisor:child_spec().
-%% @doc Build a supervisor child specification for a
-%% 	{@link //stdlib/supervisor_bridge. supervisor_bridge} behaviour.
-%% @private
-%%
-bridge(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
-	StartFunc = {supervisor_bridge, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			type => supervisor, modules => [StartMod]}.
 
