@@ -59,7 +59,6 @@ init(_Args) ->
 
 -spec bridge(StartMod, Args) -> Result
 	when
-		Name :: atom(),
 		StartMod :: atom(),
 		Args :: [term()],
 		Result :: supervisor:child_spec().
