@@ -15,7 +15,8 @@ beam_DATA = cse.beam \
 		cse_asp_sup.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
-		cse_slp_fsm.beam
+		cse_slp_fsm.beam \
+		cse_tco_server_cb.beam
 
 %.beam:	$(top_srcdir)/src/%.erl
 	$(ERLC) $(ERLCFLAGS) $<

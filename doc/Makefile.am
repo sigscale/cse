@@ -12,7 +12,8 @@ modhtml = cse.html \
 		cse_asp_sup.html \
 		cse_tco_sup.html \
 		cse_slp_sup.html \
-		cse_slp_fsm.html
+		cse_slp_fsm.html \
+		cse_tco_server_cb.html
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \

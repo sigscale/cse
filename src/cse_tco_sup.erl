@@ -27,7 +27,8 @@
 %% export the callback needed for supervisor_bridge behaviour
 -export([init/1, terminate/2]).
 
--record(state, {}).
+-record(state,
+		{tsl :: pid()}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -46,21 +47,25 @@
 		Pid :: pid(),
 		State :: term(),
 		Reason :: term().
-%% @doc Initialize the {@module} supervisor.
-%% @see //stdlib/supervisor:init/1
+%% @see //stdlib/supervisor_bridge:init/1
 %% @private
 %%
-init(_Args) ->
-	ignore.
+init(Args) when is_list(Args) ->
+	case tcap:start_tsl({local, tcap_camel}, cse_tco_server_cb, Args, []) of
+		{ok, TSL} ->
+			{ok, TSL, #state{tsl = TSL}};
+		{error, Reason} ->
+			{error, Reason}
+	end.
 
 -spec terminate(Reason, State) -> any()
 	when
 		Reason :: normal | shutdown | {shutdown, term()} | term(),
       State :: state().
-%% @see //stdlib/gen_server:terminate/3
+%% @see //stdlib/gen_server_bridge:terminate/2
 %% @private
-terminate(_Reason, _State) ->
-	ok.
+terminate(_Reason, #state{tsl = TSL} = _State) ->
+	tcap:stop_tsl(TSL).
 
 %%----------------------------------------------------------------------
 %%  internal functions
