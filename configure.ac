@@ -4,7 +4,7 @@
 ##
 ## Boilerplate:  standard boilerplate code
 ##
-AC_INIT([cse], [0.1.0], [issues@sigscale.org])
+AC_INIT([cse], [0.1.1], [issues@sigscale.org])
 AC_COPYRIGHT([Copyright (c) 2021 SigScale Global Inc.])
 AC_PREREQ(2.63)
 AC_CONFIG_SRCDIR([src/cse_app.erl])
@@ -62,6 +62,7 @@ AC_ERLANG_CHECK_LIB([stdlib],
 		[AC_MSG_ERROR([stdlib was not found!])])
 AC_ERLANG_CHECK_LIB([m3ua], [], [AC_MSG_ERROR([m3ua was not found!])])
 AC_ERLANG_CHECK_LIB([sccp], [], [AC_MSG_ERROR([sccp was not found!])])
+AC_ERLANG_CHECK_LIB([gtt], [], [AC_MSG_ERROR([gtt was not found!])])
 AC_ERLANG_CHECK_LIB([tcap], [], [AC_MSG_ERROR([tcap was not found!])])
 AC_ERLANG_CHECK_LIB([map], [], [AC_MSG_ERROR([map was not found!])])
 AC_ERLANG_CHECK_LIB([cap], [], [AC_MSG_ERROR([cap was not found!])])
