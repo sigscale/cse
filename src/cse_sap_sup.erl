@@ -36,38 +36,26 @@
 %%  The supervisor callback
 %%----------------------------------------------------------------------
 
--spec init(Args) -> Result
-	when
-		Args :: list(),
-		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
-		SupFlags :: supervisor:sup_flags(),
-		ChildSpec :: supervisor:child_spec().
-%% @doc Initialize the {@module} supervisor.
-%% @see //stdlib/supervisor:init/1
-%% @private
-%%
-init(Args) ->
-	ChildSpecs = [bridge(cse_asp_sup, Args),
-			bridge(cse_tco_sup, [])],
-	SupFlags = #{strategy => one_for_all,
-			intensity => 10, period => 60},
+init([] = _Args) ->
+	ChildSpecs = [bridge(cse_tco_sup)],
+	SupFlags = #{strategy => simple_one_for_one,
+			intensity => 0, period => 1},
 	{ok, {SupFlags, ChildSpecs}}.
 
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec bridge(StartMod, Args) -> Result
+-spec bridge(StartMod) -> Result
 	when
 		StartMod :: atom(),
-		Args :: [term()],
 		Result :: supervisor:child_spec().
 %% @doc Build a supervisor child specification for a
 %% 	{@link //stdlib/supervisor_bridge. supervisor_bridge} behaviour.
 %% @private
 %%
-bridge(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
+bridge(StartMod) ->
+	StartArgs = [StartMod],
 	StartFunc = {supervisor_bridge, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
