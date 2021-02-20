@@ -48,27 +48,27 @@ stop() ->
 -spec start(Port, Options) -> Result
 	when
 		Port :: inet:port_number(),
-		Options :: [m3ua:option()],
+		Options :: map(),
 		Result :: {ok, SapSup} | {error, Reason},
 		SapSup :: pid(),
 		Reason :: term().
-%% @doc Start a network service access point (NSAP).
+%% @doc Start a TCAP Transaction Sub-Layer (TSL).
 %%
 %% 	Returns the {@link //stdlib/supervisor. supervisor} process.
-start(Port, Options) when is_integer(Port), is_list(Options) ->
+start(Options) when is_list(Options) ->
 	Children = supervisor:which_children(cse_sup),
-	{_, Sup, _, _} = lists:keyfind(cse_sap_sup_sup, 1, Children),
-	supervisor:start_child(Sup, [[Port, Options]]).
+	{_, Sup, _, _} = lists:keyfind(cse_sap_sup, 1, Children),
+	supervisor:start_child(Sup, [[Options]]).
 
 -spec stop(SapSup) -> Result
 	when
 		SapSup :: pid(),
 		Result :: ok | {error, Reason},
 		Reason :: term().
-%% @doc Stop a network service access point (NSAP).
+%% @doc Stop a TCAP Transaction Sub-Layer (TSL).
 stop(SapSup) when is_pid(SapSup) ->
 	Children = supervisor:which_children(cse_sup),
-	{_, Sup, _, _} = lists:keyfind(cse_sap_sup_sup, 1, Children),
+	{_, Sup, _, _} = lists:keyfind(cse_sap_sup, 1, Children),
 	supervisor:terminate_child(Sup, SapSup).
 
 %%----------------------------------------------------------------------
