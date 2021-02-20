@@ -10,7 +10,6 @@ beam_DATA = cse.beam \
 		cse_app.beam \
 		cse_sup.beam \
 		cse_server.beam \
-		cse_sap_sup.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
 		cse_slp_fsm.beam \

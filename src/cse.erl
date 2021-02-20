@@ -23,7 +23,7 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse  public API
--export([start/0, stop/0, start/2, stop/1]).
+-export([start/0, stop/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse public API
@@ -44,32 +44,6 @@ start() ->
 %% @doc Stop the {@link //cse. cse} application.
 stop() ->
 	application:stop(cse).
-
--spec start(Port, Options) -> Result
-	when
-		Port :: inet:port_number(),
-		Options :: map(),
-		Result :: {ok, SapSup} | {error, Reason},
-		SapSup :: pid(),
-		Reason :: term().
-%% @doc Start a TCAP Transaction Sub-Layer (TSL).
-%%
-%% 	Returns the {@link //stdlib/supervisor. supervisor} process.
-start(Options) when is_list(Options) ->
-	Children = supervisor:which_children(cse_sup),
-	{_, Sup, _, _} = lists:keyfind(cse_sap_sup, 1, Children),
-	supervisor:start_child(Sup, [[Options]]).
-
--spec stop(SapSup) -> Result
-	when
-		SapSup :: pid(),
-		Result :: ok | {error, Reason},
-		Reason :: term().
-%% @doc Stop a TCAP Transaction Sub-Layer (TSL).
-stop(SapSup) when is_pid(SapSup) ->
-	Children = supervisor:which_children(cse_sup),
-	{_, Sup, _, _} = lists:keyfind(cse_sap_sup, 1, Children),
-	supervisor:terminate_child(Sup, SapSup).
 
 %%----------------------------------------------------------------------
 %%  internal functions

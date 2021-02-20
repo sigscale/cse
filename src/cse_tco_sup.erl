@@ -28,7 +28,7 @@
 -export([init/1, terminate/2]).
 
 -record(state,
-		{tsl :: pid()}).
+		{tco :: pid()}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -50,10 +50,14 @@
 %% @see //stdlib/supervisor_bridge:init/1
 %% @private
 %%
-init(Args) when is_list(Args) ->
-	case tcap:start_tsl({local, tcap_camel}, cse_tco_server_cb, Args, []) of
-		{ok, TSL} ->
-			{ok, TSL, #state{tsl = TSL}};
+init(_Args) ->
+	{ok, Name} = application:get_env(tsl_name),
+	{ok, Module} = application:get_env(tsl_cb_module),
+	{ok, TcoArgs} = application:get_env(tsl_args),
+	{ok, Options} = application:get_env(tsl_options),
+	case tcap:start_tsl({local, Name}, Module, TcoArgs, Options) of
+		{ok, TCO} ->
+			{ok, TSL, #state{tco = TCO}};
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -61,11 +65,11 @@ init(Args) when is_list(Args) ->
 -spec terminate(Reason, State) -> any()
 	when
 		Reason :: normal | shutdown | {shutdown, term()} | term(),
-      State :: state().
+		State :: state().
 %% @see //stdlib/gen_server_bridge:terminate/2
 %% @private
-terminate(_Reason, #state{tsl = TSL} = _State) ->
-	tcap:stop_tsl(TSL).
+terminate(_Reason, #state{tco = TCO} = _State) ->
+	tcap:stop_tsl(TCO).
 
 %%----------------------------------------------------------------------
 %%  internal functions
