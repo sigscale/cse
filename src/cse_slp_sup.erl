@@ -39,7 +39,7 @@
 init([] = _Args) ->
 	ChildSpecs = [fsm(cse_slp_fsm)],
 	SupFlags = #{strategy => simple_one_for_one,
-			intensity => 0, period => 1},
+			intensity => 10, period => 60},
 	{ok, {SupFlags, ChildSpecs}}.
 
 %%----------------------------------------------------------------------
