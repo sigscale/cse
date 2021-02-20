@@ -48,7 +48,7 @@
 %%
 init(_Args) ->
 	ChildSpecs = [server(cse_server, {local, cse}, [], []),
-			supervisor(cse_sap_sup_sup, []),
+			supervisor(cse_sap_sup, []),
 			supervisor(cse_slp_sup, [])],
 	SupFlags = #{intensity => 10, period => 60},
 	{ok, {SupFlags, ChildSpecs}}.
