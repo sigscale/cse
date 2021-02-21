@@ -57,7 +57,7 @@ init(_Args) ->
 	{ok, Options} = application:get_env(tsl_options),
 	case tcap:start_tsl({local, Name}, Module, TcoArgs, Options) of
 		{ok, TCO} ->
-			{ok, TSL, #state{tco = TCO}};
+			{ok, TCO, #state{tco = TCO}};
 		{error, Reason} ->
 			{error, Reason}
 	end.
