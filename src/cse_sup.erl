@@ -48,7 +48,7 @@
 %%
 init(_Args) ->
 	ChildSpecs = [server(cse_server, {local, cse}, [], []),
-			bridge(cse_tco_sup),
+			bridge(cse_tco_sup, []),
 			supervisor(cse_slp_sup, [])],
 	SupFlags = #{intensity => 5, period => 60},
 	{ok, {SupFlags, ChildSpecs}}.
@@ -72,16 +72,17 @@ supervisor(StartMod, Args) ->
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
 
--spec bridge(StartMod) -> Result
+-spec bridge(StartMod, Args) -> Result
 	when
 		StartMod :: atom(),
+		Args :: [term()],
 		Result :: supervisor:child_spec().
 %% @doc Build a supervisor child specification for a
 %% 	{@link //stdlib/supervisor_bridge. supervisor_bridge} behaviour.
 %% @private
 %%
-bridge(StartMod) ->
-	StartArgs = [StartMod],
+bridge(StartMod, Args) ->
+	StartArgs = [StartMod, Args],
 	StartFunc = {supervisor_bridge, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
