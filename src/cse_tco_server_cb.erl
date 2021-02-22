@@ -36,6 +36,7 @@
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
 -include_lib("tcap/include/tcap.hrl").
+-include_lib("tcap/include/DialoguePDUs.hrl").
 
 -record(state,
 		{sup :: pid(),
@@ -77,7 +78,7 @@ send_primitive(_Primitive, _State) ->
 	DHA :: pid(),
 	CCO :: pid(),
 	TCU :: pid(),
-	Reason :: term().
+	Reason :: unknown_context | term().
 %% @doc This function is called by TCO to initialize an
 %% 	Application Entity Instance (AEI).
 %%
@@ -95,8 +96,27 @@ send_primitive(_Primitive, _State) ->
 %%
 %% @@see //tcap/tcap_tcap_server:start_aei/2
 %% @private
-start_aei(_DialoguePortion, _State) ->
-	{error, not_implemented}.
+start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
+		DialoguePDUs}} = _DialoguePortion, #state{slp_sup = SlpSup} = State) ->
+	case 'DialoguePDUs':decode('DialoguePDU', DialoguePDUs) of
+		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC} = APDU}} ->
+			case AC of
+				% ?'id-ac-CAP-gsmSSF-scfGenericAC' ->
+				{0,4,0,0,1,_,3,4} ->
+					case supervisor:start_child(SlpSup, [APDU]) of
+						{ok, TCU} ->
+							tcap:open(self(), TCU);
+						{error, Reason} ->
+							{error, Reason}
+					end;
+				_ ->
+					error_logger:warning_report(["Unknown Application Context Name",
+							{'application-context-name', AC}]),
+					{error, unknown_context}
+			end;
+		{error, Reason} ->
+			{error, Reason}
+	end.
 
 -spec handle_call(Request, From, State) -> Result
 	when
@@ -132,9 +152,8 @@ handle_call(Request, _From, State) ->
 %% 	gen_server:abcast/2,3}.
 %% @@see //stdlib/gen_server:handle_cast/2
 %% @private
-handle_cast({'N', 'UNITDATA', indication, UnitData} = Request, State)
-		when is_binary(UnitData) ->
-	{primitive, Request, State}.
+handle_cast(Request, State) ->
+	{stop, Request, State}.
 
 -spec handle_continue(Info, State) -> Result
 	when
