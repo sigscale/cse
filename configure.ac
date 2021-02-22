@@ -93,6 +93,6 @@ AC_ERLANG_CHECK_LIB([cap], [], [AC_MSG_ERROR([cap was not found!])])
 ## Output:  create output files
 ##
 
-AC_OUTPUT([Makefile ebin/Makefile doc/Makefile
+AC_OUTPUT([Makefile ebin/Makefile doc/Makefile test/Makefile
 		$PACKAGE_NAME.rel sys.config])
 
