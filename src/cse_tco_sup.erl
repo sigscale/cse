@@ -43,7 +43,7 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [],
+		Args :: list(),
 		Result :: {ok, Pid, State} | ignore | {error, Reason},
 		Pid :: pid(),
 		State :: term(),
