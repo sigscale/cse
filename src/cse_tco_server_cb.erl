@@ -24,6 +24,7 @@
 -copyright('Copyright (c) 2021 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
+-dialyzer(no_undefined_callbacks).
 -behaviour(tcap_tco_server).
 
 % export the gen_server call backs
@@ -72,7 +73,7 @@ send_primitive(_Primitive, _State) ->
 
 -spec start_aei(DialoguePortion, State) -> Result
 	when
-	DialoguePortion :: binary(),
+	DialoguePortion :: #'EXTERNAL'{} | undefined,
 	State :: state(),
 	Result :: {ok, DHA, CCO, TCU, State} | {error, Reason},
 	DHA :: pid(),
