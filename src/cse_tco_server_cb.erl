@@ -37,7 +37,9 @@
 -include_lib("tcap/include/sccp_primitive.hrl").
 -include_lib("tcap/include/tcap.hrl").
 
--record(state, {}).
+-record(state,
+		{sup :: pid(),
+		slp_sup :: pid() | undefined}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -52,9 +54,9 @@
 				| {stop, Reason :: term()} | ignore.
 %% @see //stdlib/gen_server:init/1
 %% @private
-init(_Args) ->
+init([Sup] = _Args) ->
 	process_flag(trap_exit, true),
-	{ok, #state{}}.
+	{ok, #state{sup = Sup}, {continue, init}}.
 
 -spec send_primitive(Primitive, State) -> any()
 	when
@@ -142,8 +144,10 @@ handle_cast({'N', 'UNITDATA', indication, UnitData} = Request, State)
 				| {noreply, NewState :: state(), timeout() | hibernate | {continue, term()}}
 				| {stop, Reason :: term(), NewState :: state()}.
 %% @doc Handle continued execution.
-handle_continue(Info, State) ->
-	{stop, Info, State}.
+handle_continue(init, #state{sup = TopSup} = State) ->
+	Children = supervisor:which_children(TopSup),
+	{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
+	{noreply, State#state{slp_sup = SlpSup}}.
 
 -spec handle_info(Info, State) -> Result
 	when

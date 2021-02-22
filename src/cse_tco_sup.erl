@@ -28,7 +28,8 @@
 -export([init/1, terminate/2]).
 
 -record(state,
-		{tco :: pid()}).
+		{sup :: pid(),
+		tco :: pid()}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -50,14 +51,14 @@
 %% @see //stdlib/supervisor_bridge:init/1
 %% @private
 %%
-init(_Args) ->
+init([Sup] = _Args) ->
 	{ok, Name} = application:get_env(tsl_name),
 	{ok, Module} = application:get_env(tsl_cb_module),
 	{ok, TcoArgs} = application:get_env(tsl_args),
 	{ok, Options} = application:get_env(tsl_options),
-	case tcap:start_tsl({local, Name}, Module, TcoArgs, Options) of
+	case tcap:start_tsl({local, Name}, Module, [Sup | TcoArgs], Options) of
 		{ok, TCO} ->
-			{ok, TCO, #state{tco = TCO}};
+			{ok, TCO, #state{sup = Sup, tco = TCO}};
 		{error, Reason} ->
 			{error, Reason}
 	end.
