@@ -50,10 +50,10 @@ init_per_suite(Config) ->
 	ok = application:set_env(mnesia, dir, PrivDir),
 	{ok, [m3ua_asp, m3ua_as]} = m3ua_app:install(),
 	{ok,[gtt_ep,gtt_as,gtt_pc]} = gtt_app:install(),
+	ok = application:start(inets),
+	ok = application:start(snmp),
+	ok = application:start(sigscale_mibs),
 	ok = application:start(m3ua),
-	ok = application:load(sccp),
-	ok = application:load(map),
-	ok = application:load(cap),
 	ok = application:start(tcap),
 	ok = application:start(gtt),
 	Config.
@@ -62,7 +62,12 @@ init_per_suite(Config) ->
 %% Cleanup after the whole suite.
 %%
 end_per_suite(_Config) ->
-	ok.
+	ok = application:stop(gtt),
+	ok = application:stop(tcap),
+	ok = application:stop(m3ua),
+	ok = application:stop(sigscale_mibs),
+	ok = application:stop(snmp),
+	ok = application:stop(inets).
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before each test case.
