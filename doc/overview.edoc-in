@@ -5,6 +5,12 @@
 @doc This application implements a CAMEL Service Environment (CSE).
 
 ==Introduction==
+The CAMEL Originating Basic Call State Machine (O-BCSM) is depicted in
+<a href="#figure1-1">Figure 1-1</a>.
+
+<p><img alt="diagram of camel o-bcsm"
+		name="figure1-1" src="o-bcsm-camel.png" /><br />
+Figure 1-1: O-BCSM</p>
 
 ==Installation==
 
