@@ -36,6 +36,9 @@
 
 -include_lib("tcap/include/tcap.hrl").
 -include_lib("cap/include/CAP-operationcodes.hrl").
+-include_lib("cap/include/CAP-datatypes.hrl").
+-include_lib("cap/include/CAP-gsmSSF-gsmSCF-pkgs-contracts-acs.hrl").
+-include_lib("cap/include/CAMEL-datatypes.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -type state() :: register_csl | collect_information
@@ -45,10 +48,10 @@
 -record(statedata,
 		{dha :: pid() | undefined,
 		cco :: pid() | undefined,
-		did :: byte() | undefined,
+		did :: 0..4294967295 | undefined,
 		ac :: tuple() | undefined,
-		dest_address :: sccp_codec:party_address() | undefined,
-		orig_address :: sccp_codec:party_address() | undefined}).
+		scf :: sccp_codec:party_address() | undefined,
+		ssf :: sccp_codec:party_address() | undefined}).
 -type statedata() :: #statedata{}.
 
 %%----------------------------------------------------------------------
@@ -114,20 +117,82 @@ collect_information(cast, {'TC', 'BEGIN', indication,
 		componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
 		#statedata{did = undefined} = Data) ->
 	NewData = Data#statedata{did = DialogueID, ac = AC,
-			dest_address = DestAddress, orig_address = OrigAddress},
+			scf = DestAddress, ssf = OrigAddress},
 erlang:display({?MODULE, ?LINE, collect_information, cast, _EventContent, NewData}),
 	{keep_state, NewData};
 collect_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-initialDP',
-		dialogueID = DialogueID, invokeID = InvokeID,
+		dialogueID = DialogueID, invokeID = _InvokeID,
 		lastComponent = true, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID, dha = DHA, cco = CCO,
+		scf = SCF, ac = AC} = Data) ->
+erlang:display({?MODULE, ?LINE, collect_information, cast, _EventContent, Data}),
 	case 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':decode(
 			'GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
 		{ok, InitialDPArg} ->
-			erlang:display({?MODULE, ?LINE, collect_information, InitialDPArg}),
+erlang:display({?MODULE, ?LINE, collect_information, InitialDPArg}),
 			NewData = Data#statedata{},
-			{keep_state, NewData};
+			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = routeSelectFailure,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = oCalledPartyBusy,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = oNoAnswer,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = oAnswer,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = oDisconnect,
+							monitorMode = notifyAndContinue,
+							legID = {sendingSideID, ?leg1}},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = oDisconnect,
+							monitorMode = notifyAndContinue,
+							legID = {sendingSideID, ?leg2}},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = oAbandon,
+							monitorMode = notifyAndContinue}],
+			{ok, RequestReportBCSMEventArg} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode(
+					'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
+			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
+					invokeID = 1, dialogueID = DialogueID, class = 1,
+					lastComponent = false, parameters = RequestReportBCSMEventArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
+			{ok, CallInformationRequestArg} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode(
+					'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
+					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
+					requestedInformationTypeList = [callAttemptElapsedTime,
+					callStopTime, callConnectedElapsedTime, releaseCause]}),
+			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
+					invokeID = 2, dialogueID = DialogueID, class = 1,
+					lastComponent = false, parameters = CallInformationRequestArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+					maxCallPeriodDuration = 300},
+			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+					'PduAChBillingChargingCharacteristics', {timeDurationCharging, TimeDurationCharging}),
+			{ok, ApplyChargingArg} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode(
+					'GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+					partyToCharge = {sendingSideID, ?leg1}}),
+			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+					invokeID = 3, dialogueID = DialogueID, class = 1,
+					lastComponent = false, parameters = ApplyChargingArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
+			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = 4, dialogueID = DialogueID, class = 1,
+					lastComponent = true},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					appContextName = AC, qos = {true, true},
+					origAddress = SCF, componentsPresent = true},
+			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+			{next_state, analyse_information, NewData};
 		{error, Reason} ->
 			{stop, Reason}
 	end.
