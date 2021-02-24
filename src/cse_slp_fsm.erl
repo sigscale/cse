@@ -31,7 +31,8 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([idle/3]).
+-export([collect_information/3, analyse_information/3,
+		routing/3, o_alerting/3, o_active/3]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -74,17 +75,61 @@ callback_mode() ->
 init([APDU]) ->
 	process_flag(trap_exit, true),
 	Data = #statedata{},
-	{ok, idle, Data}.
+	{ok, collect_information, Data}.
 
--spec idle(EventType, EventContent, Data) -> Result
+-spec collect_information(EventType, EventContent, Data) -> Result
 	when
 		EventType :: gen_statem:event_type(),
 		EventContent :: term(),
 		Data :: statedata(),
 		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>idle</em> state.
+%% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
-idle(_EventType, _EventContent, #statedata{} = _Data) ->
+collect_information(_EventType, _EventContent, #statedata{} = _Data) ->
+	keep_state_and_data.
+
+-spec analyse_information(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>analyse_information</em> state.
+%% @private
+analyse_information(_EventType, _EventContent, #statedata{} = _Data) ->
+	keep_state_and_data.
+
+-spec routing(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>routing</em> state.
+%% @private
+routing(_EventType, _EventContent, #statedata{} = _Data) ->
+	keep_state_and_data.
+
+-spec o_alerting(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>o_alerting</em> state.
+%% @private
+o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
+	keep_state_and_data.
+
+-spec o_active(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>o_active</em> state.
+%% @private
+o_active(_EventType, _EventContent, #statedata{} = _Data) ->
 	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
