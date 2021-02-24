@@ -104,9 +104,14 @@ start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
 			case AC of
 				% ?'id-ac-CAP-gsmSSF-scfGenericAC' ->
 				{0,4,0,0,1,_,3,4} ->
-					case supervisor:start_child(SlpSup, [APDU]) of
+					case supervisor:start_child(SlpSup, [[APDU], []]) of
 						{ok, TCU} ->
-							tcap:open(self(), TCU);
+							case tcap:open(self(), TCU) of
+								{ok, DHA, CCO} ->
+									{ok, DHA, CCO, TCU, State};
+								{error, Reason} ->
+									{error, Reason}
+							end;
 						{error, Reason} ->
 							{error, Reason}
 					end;

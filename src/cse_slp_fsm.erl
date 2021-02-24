@@ -71,7 +71,7 @@ callback_mode() ->
 %%
 %% @see //stdlib/gen_statem:init/1
 %% @private
-init([]) ->
+init([APDU]) ->
 	process_flag(trap_exit, true),
 	Data = #statedata{},
 	{ok, idle, Data}.
