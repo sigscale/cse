@@ -36,7 +36,8 @@
 
 -include_lib("kernel/include/logger.hrl").
 
--type state() :: idle.
+-type state() :: collect_information | analyse_information
+		| routing | o_alerting | o_active.
 
 %% the cse_slp_fsm state data
 -record(statedata, {}).
@@ -73,6 +74,7 @@ callback_mode() ->
 %% @see //stdlib/gen_statem:init/1
 %% @private
 init([APDU]) ->
+erlang:display({?MODULE, ?LINE, init, APDU}),
 	process_flag(trap_exit, true),
 	Data = #statedata{},
 	{ok, collect_information, Data}.
@@ -86,6 +88,7 @@ init([APDU]) ->
 %% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
 collect_information(_EventType, _EventContent, #statedata{} = _Data) ->
+erlang:display({?MODULE, ?LINE, collect_information, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
@@ -97,6 +100,7 @@ collect_information(_EventType, _EventContent, #statedata{} = _Data) ->
 %% @doc Handles events received in the <em>analyse_information</em> state.
 %% @private
 analyse_information(_EventType, _EventContent, #statedata{} = _Data) ->
+erlang:display({?MODULE, ?LINE, analyse_information, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec routing(EventType, EventContent, Data) -> Result
@@ -108,6 +112,7 @@ analyse_information(_EventType, _EventContent, #statedata{} = _Data) ->
 %% @doc Handles events received in the <em>routing</em> state.
 %% @private
 routing(_EventType, _EventContent, #statedata{} = _Data) ->
+erlang:display({?MODULE, ?LINE, routing, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
@@ -119,6 +124,7 @@ routing(_EventType, _EventContent, #statedata{} = _Data) ->
 %% @doc Handles events received in the <em>o_alerting</em> state.
 %% @private
 o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
+erlang:display({?MODULE, ?LINE, o_alerting, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec o_active(EventType, EventContent, Data) -> Result
@@ -130,6 +136,7 @@ o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
 %% @doc Handles events received in the <em>o_active</em> state.
 %% @private
 o_active(_EventType, _EventContent, #statedata{} = _Data) ->
+erlang:display({?MODULE, ?LINE, o_active, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
@@ -143,6 +150,7 @@ o_active(_EventType, _EventContent, #statedata{} = _Data) ->
 %% @private
 %%
 handle_event(_EventType, _EventContent, _State, _Data) ->
+erlang:display({?MODULE, ?LINE, handle_event, _EventType, _EventContent, _State, _Data}),
 	keep_state_and_data.
 
 -spec terminate(Reason, State, Data) -> any()
@@ -155,6 +163,7 @@ handle_event(_EventType, _EventContent, _State, _Data) ->
 %% @private
 %%
 terminate(_Reason, _State, _Data) ->
+erlang:display({?MODULE, ?LINE, terminate, _Reason, _State, _Data}),
 	ok.
 
 -spec code_change(OldVsn, OldState, OldData, Extra) -> Result
