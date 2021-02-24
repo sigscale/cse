@@ -3,7 +3,8 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-testmods = cse_api_SUITE
+testmods = cse_api_SUITE \
+		cse_tcap_SUITE
 
 check_DATA = .dialyzer_ok .common_test_ok
 
