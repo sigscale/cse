@@ -108,6 +108,7 @@ start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
 						{ok, TCU} ->
 							case tcap:open(self(), TCU) of
 								{ok, DHA, CCO} ->
+									gen_statem:cast(TCU, {register_csl, DHA, CCO}),
 									{ok, DHA, CCO, TCU, State};
 								{error, Reason} ->
 									{error, Reason}

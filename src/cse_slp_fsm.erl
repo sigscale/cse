@@ -31,19 +31,21 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([collect_information/3, analyse_information/3,
-		routing/3, o_alerting/3, o_active/3]).
+-export([register_csl/3, collect_information/3,
+		analyse_information/3, routing/3, o_alerting/3, o_active/3]).
 
 -include_lib("tcap/include/tcap.hrl").
 -include_lib("cap/include/CAP-operationcodes.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--type state() :: collect_information | analyse_information
-		| routing | o_alerting | o_active.
+-type state() :: register_csl | collect_information
+		| analyse_information | routing | o_alerting | o_active.
 
 %% the cse_slp_fsm state data
 -record(statedata,
-		{did :: byte() | undefined,
+		{dha :: pid() | undefined,
+		cco :: pid() | undefined,
+		did :: byte() | undefined,
 		ac :: tuple() | undefined,
 		dest_address :: sccp_codec:party_address() | undefined,
 		orig_address :: sccp_codec:party_address() | undefined}).
@@ -83,7 +85,19 @@ init([APDU]) ->
 erlang:display({?MODULE, ?LINE, init, APDU}),
 	process_flag(trap_exit, true),
 	Data = #statedata{},
-	{ok, collect_information, Data}.
+	{ok, register_csl, Data}.
+
+-spec register_csl(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>register_csl</em> state.
+%% @private
+register_csl(cast, {register_csl, DHA, CCO}, Data) ->
+	NewData = Data#statedata{dha = DHA, cco = CCO},
+	{next_state, collect_information, NewData}.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
