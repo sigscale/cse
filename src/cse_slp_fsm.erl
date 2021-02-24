@@ -34,13 +34,19 @@
 -export([collect_information/3, analyse_information/3,
 		routing/3, o_alerting/3, o_active/3]).
 
+-include_lib("tcap/include/tcap.hrl").
+-include_lib("cap/include/CAP-operationcodes.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -type state() :: collect_information | analyse_information
 		| routing | o_alerting | o_active.
 
 %% the cse_slp_fsm state data
--record(statedata, {}).
+-record(statedata,
+		{did :: byte() | undefined,
+		ac :: tuple() | undefined,
+		dest_address :: sccp_codec:party_address() | undefined,
+		orig_address :: sccp_codec:party_address() | undefined}).
 -type statedata() :: #statedata{}.
 
 %%----------------------------------------------------------------------
@@ -87,9 +93,30 @@ erlang:display({?MODULE, ?LINE, init, APDU}),
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
-collect_information(_EventType, _EventContent, #statedata{} = _Data) ->
-erlang:display({?MODULE, ?LINE, collect_information, _EventType, _EventContent, _Data}),
-	keep_state_and_data.
+collect_information(cast, {'TC', 'BEGIN', indication,
+		#'TC-BEGIN'{appContextName = AC,
+		dialogueID = DialogueID, qos = _QoS,
+		destAddress = DestAddress, origAddress = OrigAddress,
+		componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
+		#statedata{did = undefined} = Data) ->
+	NewData = Data#statedata{did = DialogueID, ac = AC,
+			dest_address = DestAddress, orig_address = OrigAddress},
+erlang:display({?MODULE, ?LINE, collect_information, cast, _EventContent, NewData}),
+	{keep_state, NewData};
+collect_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-initialDP',
+		dialogueID = DialogueID, invokeID = InvokeID,
+		lastComponent = true, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':decode(
+			'GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
+		{ok, InitialDPArg} ->
+			erlang:display({?MODULE, ?LINE, collect_information, InitialDPArg}),
+			NewData = Data#statedata{},
+			{keep_state, NewData};
+		{error, Reason} ->
+			{stop, Reason}
+	end.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
