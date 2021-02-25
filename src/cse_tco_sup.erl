@@ -55,7 +55,7 @@ init([Sup] = _Args) ->
 	{ok, Name} = application:get_env(tsl_name),
 	{ok, Module} = application:get_env(tsl_cb_module),
 	{ok, TcoArgs} = application:get_env(tsl_args),
-	{ok, Options} = application:get_env(tsl_options),
+	{ok, Options} = application:get_env(tsl_opts),
 	case tcap:start_tsl({local, Name}, Module, [Sup | TcoArgs], Options) of
 		{ok, TCO} ->
 			{ok, TCO, #state{sup = Sup, tco = TCO}};
