@@ -17,4 +17,21 @@ Figure 1-1: O-BCSM</p>
 ==Operation==
 
 ==Configuration==
+The {@link //cse. cse} application may be configured using the following
+application environment variables (~/releases/<VERSION>/sys.config):
+<dl>
+	<dt>tsl_name</dt>
+		<dd>Registered name of the TCO process in the TCAP Transaction
+				Sublayer (TSL). (default: cse_tsl)</dd>
+	<dt>tsl_cb_module</dt>
+		<dd>Name of the (@link //tcap/tcap_tco_server. tcap_tco_server}
+				behaviour callback module implementing the TCAP binding.
+				(default: cse_tco_server_cb)</dd>
+	<dt>tsl_args</dt>
+		<dd>Extra arguments in (@link //tcap/tcap:start_tsl. tcap:start_tsl/4}.
+				(default: [])</dd>
+	<dt>tsl_opt</dt>
+		<dd>Options in (@link //tcap/tcap:start_tsl. tcap:start_tsl/4}.
+				(default: [])</dd>
+</dl>
 
