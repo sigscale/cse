@@ -34,14 +34,17 @@
 % export the tco_tco_server call backs
 -export([send_primitive/2, start_aei/2]).
 
+-include_lib("m3ua/include/m3ua.hrl").
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
--include_lib("tcap/include/tcap.hrl").
 -include_lib("tcap/include/DialoguePDUs.hrl").
+-include_lib("tcap/include/tcap.hrl").
 
 -record(state,
 		{sup :: pid(),
-		slp_sup :: pid() | undefined}).
+		slp_sup :: pid() | undefined,
+		queue = #{} :: #{Ref :: reference() => {Fsm :: pid(), Now :: integer()}},
+		weights = #{} :: gtt:weights()}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -60,16 +63,66 @@ init([Sup] = _Args) ->
 	process_flag(trap_exit, true),
 	{ok, #state{sup = Sup}, {continue, init}}.
 
--spec send_primitive(Primitive, State) -> any()
+-spec send_primitive(Primitive, State) -> Result
 	when
 		Primitive :: {'N', 'UNITDATA', request, UdataParams},
 		UdataParams :: #'N-UNITDATA'{},
-		State :: state().
+		State :: state(),
+		Result :: {noreply, NewState}
+				| {noreply, NewState, timeout() | hibernate | {continue, term()}}
+				| {stop, Reason, NewState},
+		NewState :: state(),
+		Reason :: term().
 %% @doc The TCO will call this function when it has a service primitive to deliver to the SCCP layer.
 %% @@see //tcap/tcap_tcap_server:send_primitive/2
 %% @private
-send_primitive(_Primitive, _State) ->
-	ok.
+send_primitive({'N', 'UNITDATA', request,
+		#'N-UNITDATA'{userData = UserData,
+				calledAddress = CalledParty, callingAddress = CallingParty,
+				sequenceControl = SequenceControl, returnOption = ReturnOption,
+				importance = _Importance} = _UdataParams},
+		#state{queue = Queue, weights = Weights} = State) ->
+	Now = erlang:monotonic_time(),
+	Class = case {SequenceControl, ReturnOption} of
+		{false, false} ->
+			0;
+		{true, false} ->
+			1;
+		{false, true} ->
+			128;
+		{true, true} ->
+			129
+	end,
+	SccpUnitData = #sccp_unitdata{data = UserData, class = Class,
+			called_party = CalledParty, calling_party = CallingParty},
+	case catch sccp_codec:sccp(SccpUnitData) of
+		{ok, UnitData} ->
+			% @todo AS selection
+			RC = 0,
+			[#m3ua_as{rk = {_, Keys, _}}] = mnesia:dirty_read(m3ua_as, RC),
+			[{DPC, _, _} | _] = Keys,
+			Stream = 1,
+			OPC = undefined,
+			NI = undefined,
+			SI = undefined,
+			SLS = undefined,
+			% end: AS selection
+			case gtt:candidates([RC]) of
+				ActiveAsps when length(ActiveAsps) > 0 ->
+					{Fsm, _Status, ActiveWeights} = gtt:select_asp(ActiveAsps, Weights),
+					Ref = m3ua:cast(Fsm, Stream, RC, OPC, DPC, NI, SI, SLS, UnitData),
+					NewQueue = Queue#{Ref => {Fsm, Now}},
+					F = fun({QueueSize, Delay, _}) ->
+								{QueueSize + 1, Delay, Now}
+					end,
+					NewWeights = maps:update_with(Fsm, F, ActiveWeights),
+					{noreply, State#state{queue = NewQueue, weights = NewWeights}};
+				[] ->
+					{noreply, State}
+			end;
+		{error, Reason} ->
+			{stop, Reason, State}
+	end.
 
 -spec start_aei(DialoguePortion, State) -> Result
 	when
@@ -188,8 +241,15 @@ handle_continue(init, #state{sup = TopSup} = State) ->
 %% @doc Handle a received message.
 %% @@see //stdlib/gen_server:handle_info/2
 %% @private
-handle_info(Info, State) ->
-	{stop, Info, State}.
+handle_info({'MTP-TRANSFER', confirm, Ref},
+		#state{queue = Queue, weights = Weights} = State) ->
+	Now = erlang:monotonic_time(),
+	{{Fsm, Start}, NewQueue} =  maps:take(Ref, Queue),
+	F = fun({QueueSize, _, _}) ->
+				{QueueSize - 1, Now - Start, Now}
+	end,
+	NewWeights = maps:update_with(Fsm, F, Weights),
+	{noreply, State#state{queue = NewQueue, weights = NewWeights}}.
 
 -spec terminate(Reason, State) -> any()
 	when
