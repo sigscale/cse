@@ -34,6 +34,7 @@
 -export([register_csl/3, collect_information/3,
 		analyse_information/3, routing/3, o_alerting/3, o_active/3]).
 
+-include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
 -include_lib("cap/include/CAP-operationcodes.hrl").
 -include_lib("cap/include/CAP-datatypes.hrl").
@@ -85,7 +86,6 @@ callback_mode() ->
 %% @see //stdlib/gen_statem:init/1
 %% @private
 init([APDU]) ->
-erlang:display({?MODULE, ?LINE, init, APDU}),
 	process_flag(trap_exit, true),
 	Data = #statedata{},
 	{ok, register_csl, Data}.
@@ -118,7 +118,6 @@ collect_information(cast, {'TC', 'BEGIN', indication,
 		#statedata{did = undefined} = Data) ->
 	NewData = Data#statedata{did = DialogueID, ac = AC,
 			scf = DestAddress, ssf = OrigAddress},
-erlang:display({?MODULE, ?LINE, collect_information, cast, _EventContent, NewData}),
 	{keep_state, NewData};
 collect_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-initialDP',
@@ -126,11 +125,9 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 		lastComponent = true, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID, dha = DHA, cco = CCO,
 		scf = SCF, ac = AC} = Data) ->
-erlang:display({?MODULE, ?LINE, collect_information, cast, _EventContent, Data}),
 	case 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':decode(
 			'GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
 		{ok, InitialDPArg} ->
-erlang:display({?MODULE, ?LINE, collect_information, InitialDPArg}),
 			NewData = Data#statedata{},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = routeSelectFailure,
