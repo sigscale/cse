@@ -30,6 +30,7 @@
 -export([start_dialogue/0, start_dialogue/1,
 		end_dialogue/0, end_dialogue/1,
 		collected_info/0, collected_info/1,
+		continue/0, continue/1,
 		dp_arming/0, dp_arming/1,
 		apply_charging/0, apply_charging/1,
 		call_info_request/0, call_info_request/1]).
@@ -171,8 +172,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, collected_info, dp_arming, apply_charging,
-			call_info_request].
+	[start_dialogue, end_dialogue, collected_info, continue, dp_arming,
+			apply_charging, call_info_request].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -264,6 +265,29 @@ collected_info(Config) ->
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
 	analyse_information = get_state(TcUser).
+
+continue() ->
+	[{userdata, [{doc, "Continue received by SSF"}]}].
+
+continue(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_dp(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD} -> UD
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
+	{basicROS, {invoke, Invoke}} = lists:last(Components),
+	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
+	?'opcode-continue' = element(N, Invoke).
 
 dp_arming() ->
 	[{userdata, [{doc, "RequestReportBCSMEvent received by SSF"}]}].
