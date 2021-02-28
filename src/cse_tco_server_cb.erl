@@ -42,6 +42,7 @@
 
 -record(state,
 		{sup :: pid(),
+		extra_args :: list(),
 		slp_sup :: pid() | undefined,
 		queue = #{} :: #{Ref :: reference() => {Fsm :: pid(), Now :: integer()}},
 		weights = #{} :: gtt:weights()}).
@@ -59,9 +60,9 @@
 				| {stop, Reason :: term()} | ignore.
 %% @see //stdlib/gen_server:init/1
 %% @private
-init([Sup] = _Args) ->
+init([Sup | ExtraArgs] = _Args) ->
 	process_flag(trap_exit, true),
-	{ok, #state{sup = Sup}, {continue, init}}.
+	{ok, #state{sup = Sup, extra_args = ExtraArgs}, {continue, init}}.
 
 -spec send_primitive(Primitive, State) -> Result
 	when
