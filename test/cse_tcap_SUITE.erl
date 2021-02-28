@@ -29,16 +29,18 @@
 %% export test cases
 -export([start_dialogue/0, start_dialogue/1,
 		end_dialogue/0, end_dialogue/1,
-		collected_info/0, collected_info/1]).
+		collected_info/0, collected_info/1,
+		dp_arming/0, dp_arming/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
+-include_lib("map/include/MAP-MS-DataTypes.hrl").
 -include_lib("cap/include/CAP-operationcodes.hrl").
 -include_lib("cap/include/CAP-object-identifiers.hrl").
 -include_lib("cap/include/CAP-gsmSSF-gsmSCF-pkgs-contracts-acs.hrl").
--include_lib("map/include/MAP-MS-DataTypes.hrl").
+-include_lib("cap/include/CAP-datatypes.hrl").
 -include_lib("common_test/include/ct.hrl").
 
 -define(SSN_CAMEL, 146).
@@ -166,7 +168,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, collected_info].
+	[start_dialogue, end_dialogue, collected_info, dp_arming].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -186,7 +188,7 @@ start_dialogue(Config) ->
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
-		{'N', 'UNITDATA', request, #'N-UNITDATA'{} = UD1} -> UD1
+		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2,
 			sequenceControl = true,
@@ -221,7 +223,7 @@ end_dialogue(Config) ->
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
-		{'N', 'UNITDATA', request, #'N-UNITDATA'{} = UD1} -> UD1
+		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
 	{ok, {continue,  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
@@ -258,6 +260,41 @@ collected_info(Config) ->
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
 	analyse_information = get_state(TcUser).
+
+dp_arming() ->
+	[{userdata, [{doc, "RequestReportBCSMEvent received by SSF"}]}].
+
+dp_arming(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_dp(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD} -> UD
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
+	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
+	F1 = fun({basicROS, {invoke, Invoke}})
+					when element(N, Invoke) == ?'opcode-requestReportBCSMEvent' ->
+				true;
+			(_) -> false
+	end,
+	[{basicROS, {invoke, I}}] = lists:filter(F1, Components),
+	A = I#'GenericSSF-gsmSCF-PDUs_continue_components_SEQOF_basicROS_invoke'.argument,
+	BCSMEvents = A#'GenericSSF-gsmSCF-PDUs_RequestReportBCSMEventArg'.bcsmEvents,
+	F2 = fun(#'BCSMEvent'{}) ->
+				true;
+			(_) ->
+				false
+	end,
+	true = lists:all(F2, BCSMEvents).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
@@ -303,7 +340,7 @@ pdu_initial_dp(OTID, AC) ->
 			cellGlobalIdOrServiceAreaIdOrLAI =
 			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
 	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
-			serviceKey = 91,
+			serviceKey = 100,
 			callingPartyNumber = <<129,16,65,97,85,21,50,4>>,
 			callingPartysCategory = <<10>>,
 			locationNumber = <<129,19,65,97,85,21,50,4>>,
