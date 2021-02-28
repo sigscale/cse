@@ -27,7 +27,8 @@
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 %% export test cases
--export([start_dialogue/0, start_dialogue/1]).
+-export([start_dialogue/0, start_dialogue/1,
+		end_dialogue/0, end_dialogue/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
@@ -40,6 +41,9 @@
 -include_lib("common_test/include/ct.hrl").
 
 -define(SSN_CAMEL, 146).
+
+-define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
+-define(PDUs, 'GenericSSF-gsmSCF-PDUs').
 
 %%---------------------------------------------------------------------
 %%  Test server callback functions
@@ -94,6 +98,23 @@ init_per_suite(Config) ->
 				F(State, 2) ! Primitive,
 				{noreply, State}
 	end,
+	Fstart = fun(DialoguePortion, State) ->
+				case Cb:start_aei(DialoguePortion, State) of
+					{ok, DHA, CCO, TCU, State} ->
+						F = fun F(S, N) ->
+								case element(N, S) of
+									[{?MODULE, Pid}] ->
+										Pid;
+									_ ->
+										F(S, N + 1)
+								end
+						end,
+						F(State, 2) ! {csl, DHA, TCU},
+						{ok, DHA, CCO, TCU, State};
+					{error, Reason} ->
+						{error, Reason}
+				end
+	end,
 	Callback = #tcap_tco_cb{init = fun Cb:init/1,
 		handle_call = fun Cb:handle_call/3,
 		handle_cast =  fun Cb:handle_cast/2,
@@ -101,7 +122,7 @@ init_per_suite(Config) ->
 		terminate = fun Cb:terminate/2,
 		handle_continue = fun Cb:handle_continue/2,
 		send_primitive = Fsend,
-		start_aei = fun Cb:start_aei/2,
+		start_aei = Fstart,
 		code_change = fun Cb:code_change/3,
 		format_status = fun Cb:format_status/2},
 	ok = application:set_env(cse, tsl_callback, Callback),
@@ -144,53 +165,36 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue].
+	[start_dialogue, end_dialogue].
 
 %%---------------------------------------------------------------------
 %%  Test cases
 %%---------------------------------------------------------------------
 
 start_dialogue() ->
-	[{userdata, [{doc, "Start a TCAP Dialougue"}]}].
+	[{userdata, [{doc, "Start a TCAP Dialogue"}]}].
 
 start_dialogue(Config) ->
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
-	SsfParty = #party_address{ssn = ?SSN_CAMEL,
-			nai = international,
-			translation_type = undefined,
-			numbering_plan = isdn_tele,
-			encoding_scheme = bcd_odd,
-			gt = [1,4,1,6,5,5,5,1,2,3,4]},
-	ScfParty = #party_address{ssn = ?SSN_CAMEL,
-			nai = international,
-			translation_type = undefined,
-			numbering_plan = isdn_tele,
-			encoding_scheme = bcd_odd,
-			gt = [1,4,1,6,5,5,5,5,6,7,8]},
+	SsfParty = party(),
+	ScfParty = party(),
 	SsfTid = tid(),
 	UserData1 = pdu_initial_dp(SsfTid, AC),
-	SccpParams1 = #'N-UNITDATA'{userData = UserData1,
-			sequenceControl = true,
-			returnOption = true,
-			calledAddress = ScfParty,
-			callingAddress = SsfParty},
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
-		{'N', 'UNITDATA', request, #'N-UNITDATA'{} = UD1} ->
-			UD1
+		{'N', 'UNITDATA', request, #'N-UNITDATA'{} = UD1} -> UD1
 	end,
 	#'N-UNITDATA'{userData = UserData2,
 			sequenceControl = true,
 			returnOption = true,
 			calledAddress = SsfParty,
 			callingAddress = ScfParty} = SccpParams2,
-	Pkgs = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs',
-	{ok, {continue,  Continue}} = Pkgs:decode('GenericSSF-gsmSCF-PDUs',
-		UserData2),
+	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<_ScfTid:32>>,
-			dtid = <<_SsfTid:32>>,
+			dtid = <<SsfTid:32>>,
 			dialoguePortion = DialoguePortion,
 			components = _Components} = Continue,
 	#'EXTERNAL'{'direct-reference' = {0,0,17,773,1,1,1},
@@ -202,12 +206,62 @@ start_dialogue(Config) ->
 			result = Result} = AARE,
 	accepted = Result.
 
+end_dialogue() ->
+	[{userdata, [{doc, "End a TCAP Dialogue"}]}].
+
+end_dialogue(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_dp(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, #'N-UNITDATA'{} = UD1} -> UD1
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {continue,  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
+	MonitorRef = receive
+		{csl, DHA, _TCU} ->
+			monitor(process, DHA)
+	end,
+	End = #'GenericSSF-gsmSCF-PDUs_end'{dtid = <<ScfTid:32>>},
+	{ok, UserData3} = ?Pkgs:encode(?PDUs, {'end',  End}),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	receive
+		{'DOWN', MonitorRef, _, _, normal} = M -> ok
+	end.
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
 
 tid() ->
 	rand:uniform(4294967295).
+
+party() ->
+	party(4, [1,4,1,6,5,5,5]).
+party(N, Acc) when length(Acc) < 11 ->
+	party(N - 1, [rand:uniform(10) - 1 | Acc]);
+party(0, Acc) ->
+	#party_address{ssn = ?SSN_CAMEL,
+			nai = international,
+			translation_type = undefined,
+			numbering_plan = isdn_tele,
+			encoding_scheme = bcd_odd,
+			gt = Acc}.
+
+unitdata(UserData, CalledParty, CallingParty) ->
+	#'N-UNITDATA'{userData = UserData,
+			sequenceControl = true,
+			returnOption = true,
+			calledAddress = CalledParty,
+			callingAddress = CallingParty}.
 
 pdu_initial_dp(OTID, AC) ->
 	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
@@ -243,7 +297,6 @@ pdu_initial_dp(OTID, AC) ->
 	Begin = #'GenericSSF-gsmSCF-PDUs_begin'{otid = <<OTID:32>>,
 			dialoguePortion = DialoguePortion,
 			components = [{basicROS, {invoke, Invoke}}]},
-	{ok, UD} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode('GenericSSF-gsmSCF-PDUs',
-			{'begin', Begin}),
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
 	UD.
 
