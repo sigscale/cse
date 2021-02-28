@@ -24,7 +24,7 @@
 				"cap-1.0.1"]},
 		{env,
 				[{tsl_name, cse_tsl},
-				{tsl_cb_module, cse_tco_server_cb},
+				{tsl_callback, cse_tco_server_cb},
 				{tsl_args, []},
 				{tsl_opts, []}]},
 		{mod, {cse_app,[]}}]}.

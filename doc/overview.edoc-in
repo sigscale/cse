@@ -23,7 +23,7 @@ application environment variables (`~/releases/<VERSION>/sys.config'):
 	<dt>`tsl_name'</dt>
 		<dd>Registered name of the TCO process in the TCAP Transaction
 				Sublayer (TSL). (default: cse_tsl)</dd>
-	<dt>`tsl_cb_module'</dt>
+	<dt>`tsl_callback'</dt>
 		<dd>Name of the (@link //tcap/tcap_tco_server. tcap_tco_server}
 				behaviour callback module implementing the TCAP binding.
 				(default: cse_tco_server_cb)</dd>

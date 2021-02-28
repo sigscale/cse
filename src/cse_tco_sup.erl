@@ -53,7 +53,7 @@
 %%
 init([Sup] = _Args) ->
 	{ok, Name} = application:get_env(tsl_name),
-	{ok, Module} = application:get_env(tsl_cb_module),
+	{ok, Module} = application:get_env(tsl_callback),
 	{ok, TcoArgs} = application:get_env(tsl_args),
 	{ok, Options} = application:get_env(tsl_opts),
 	case tcap:start_tsl({local, Name}, Module, [Sup | TcoArgs], Options) of
