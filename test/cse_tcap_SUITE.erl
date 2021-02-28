@@ -31,7 +31,8 @@
 		end_dialogue/0, end_dialogue/1,
 		collected_info/0, collected_info/1,
 		dp_arming/0, dp_arming/1,
-		apply_charging/0, apply_charging/1]).
+		apply_charging/0, apply_charging/1,
+		call_info_request/0, call_info_request/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
@@ -170,7 +171,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, collected_info, dp_arming, apply_charging].
+	[start_dialogue, end_dialogue, collected_info, dp_arming, apply_charging,
+			call_info_request].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -330,6 +332,42 @@ apply_charging(Config) ->
 	{ok, {_, TD}} = 'CAMEL-datatypes':decode('PduAChBillingChargingCharacteristics', PDUs),
 	P = TD#'PduAChBillingChargingCharacteristics_timeDurationCharging'.maxCallPeriodDuration,
 	true = is_integer(P).
+
+call_info_request() ->
+	[{userdata, [{doc, "CallInformationRequest received by SSF"}]}].
+
+call_info_request(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_dp(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD} -> UD
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
+	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
+	F1 = fun({basicROS, {invoke, Invoke}})
+					when element(N, Invoke) == ?'opcode-callInformationRequest' ->
+				true;
+			(_) -> false
+	end,
+	[{basicROS, {invoke, I}}] = lists:filter(F1, Components),
+	A = I#'GenericSSF-gsmSCF-PDUs_continue_components_SEQOF_basicROS_invoke'.argument,
+	L = A#'GenericSSF-gsmSCF-PDUs_CallInformationRequestArg'.requestedInformationTypeList,
+	F = fun(Type) when Type == callAttemptElapsedTime; Type == callStopTime;
+					Type == callConnectedElapsedTime; Type == releaseCause ->
+				true;
+			(_) ->
+				false
+	end,
+	true = lists:all(F, L).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
