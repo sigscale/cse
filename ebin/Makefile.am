@@ -13,10 +13,11 @@ beam_DATA = cse.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
 		cse_slp_fsm.beam \
-		cse_tco_server_cb.beam
+		cse_tco_server_cb.beam \
+		cse_codec.beam
 
 %.beam:	$(top_srcdir)/src/%.erl
-	$(ERLC) $(ERLCFLAGS) $<
+	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
 
 %.app:   %.app-in
 	sed -e 's/%APP_NAME%/$(PACKAGE_NAME)/' \

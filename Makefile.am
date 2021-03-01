@@ -2,7 +2,7 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = ebin doc test
+SUBDIRS = ebin include doc test
 
 .PHONY: release
 release: $(PACKAGE_VERSION).tar.gz
