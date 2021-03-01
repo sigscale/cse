@@ -4,7 +4,8 @@
 ## Process this file with automake to produce Makefile.in
 
 testmods = cse_api_SUITE \
-		cse_tcap_SUITE
+		cse_tcap_SUITE \
+		cse_codec_SUITE
 
 check_DATA = .dialyzer_ok .common_test_ok
 
@@ -12,7 +13,7 @@ check_DATA = .dialyzer_ok .common_test_ok
 	dialyzer --src $(top_srcdir)/src
 
 %.beam:$(top_srcdir)/test/%.erl
-	$(ERLC) $(ERLCFLAGS) $<
+	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
 
 .common_test_ok:	$(addsuffix .beam, $(testmods))
 	@if [ ! -d log ]; then mkdir log; fi
