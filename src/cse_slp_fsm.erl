@@ -55,6 +55,8 @@
 		ssf :: sccp_codec:party_address() | undefined}).
 -type statedata() :: #statedata{}.
 
+-define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
+
 %%----------------------------------------------------------------------
 %%  The cse_slp_fsm gen_statem callbacks
 %%----------------------------------------------------------------------
@@ -125,8 +127,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 		lastComponent = true, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID, dha = DHA, cco = CCO,
 		scf = SCF, ac = AC} = Data) ->
-	case 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':decode(
-			'GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
 		{ok, InitialDPArg} ->
 			NewData = Data#statedata{},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
@@ -152,15 +153,13 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = oAbandon,
 							monitorMode = notifyAndContinue}],
-			{ok, RequestReportBCSMEventArg} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode(
-					'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
+			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
 					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
 			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
 					invokeID = 1, dialogueID = DialogueID, class = 1,
 					lastComponent = false, parameters = RequestReportBCSMEventArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
-			{ok, CallInformationRequestArg} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode(
-					'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
+			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
 					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
 					requestedInformationTypeList = [callAttemptElapsedTime,
 					callStopTime, callConnectedElapsedTime, releaseCause]}),
@@ -172,8 +171,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 					maxCallPeriodDuration = 300},
 			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
 					'PduAChBillingChargingCharacteristics', {timeDurationCharging, TimeDurationCharging}),
-			{ok, ApplyChargingArg} = 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs':encode(
-					'GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
 					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
 					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
 					partyToCharge = {sendingSideID, ?leg1}}),
