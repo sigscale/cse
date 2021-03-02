@@ -31,8 +31,8 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([register_csl/3, collect_information/3,
-		analyse_information/3, routing/3, o_alerting/3, o_active/3]).
+-export([null/3, collect_information/3, analyse_information/3,
+		routing/3, o_alerting/3, o_active/3]).
 
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
@@ -42,7 +42,7 @@
 -include_lib("cap/include/CAMEL-datatypes.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--type state() :: register_csl | collect_information
+-type state() :: null | collect_information
 		| analyse_information | routing | o_alerting | o_active.
 
 %% the cse_slp_fsm state data
@@ -69,7 +69,7 @@
 %% @private
 %%
 callback_mode() ->
-	[state_functions].
+	[state_functions, state_enter].
 
 -spec init(Args) -> Result
 	when
@@ -90,17 +90,19 @@ callback_mode() ->
 init([APDU]) ->
 	process_flag(trap_exit, true),
 	Data = #statedata{},
-	{ok, register_csl, Data}.
+	{ok, null, Data}.
 
--spec register_csl(EventType, EventContent, Data) -> Result
+-spec null(EventType, EventContent, Data) -> Result
 	when
 		EventType :: gen_statem:event_type(),
 		EventContent :: term(),
 		Data :: statedata(),
 		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>register_csl</em> state.
+%% @doc Handles events received in the <em>null</em> state.
 %% @private
-register_csl(cast, {register_csl, DHA, CCO}, Data) ->
+null(enter, null, _Data) ->
+	keep_state_and_data;
+null(cast, {register_csl, DHA, CCO}, Data) ->
 	NewData = Data#statedata{dha = DHA, cco = CCO},
 	{next_state, collect_information, NewData}.
 
@@ -112,6 +114,8 @@ register_csl(cast, {register_csl, DHA, CCO}, Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
+collect_information(enter, _State, _Data) ->
+	keep_state_and_data;
 collect_information(cast, {'TC', 'BEGIN', indication,
 		#'TC-BEGIN'{appContextName = AC,
 		dialogueID = DialogueID, qos = _QoS,
@@ -200,6 +204,8 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>analyse_information</em> state.
 %% @private
+analyse_information(enter, _State, _Data) ->
+	keep_state_and_data;
 analyse_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 		dialogueID = DialogueID, lastComponent = LastComponent,
@@ -279,6 +285,8 @@ analyse_information(cast, {'TC', 'END', indication,
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>routing</em> state.
 %% @private
+routing(enter, _State, _Data) ->
+	keep_state_and_data;
 routing(_EventType, _EventContent, #statedata{} = _Data) ->
 	keep_state_and_data.
 
@@ -290,6 +298,8 @@ routing(_EventType, _EventContent, #statedata{} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_alerting</em> state.
 %% @private
+o_alerting(enter, _State, _Data) ->
+	keep_state_and_data;
 o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
 	keep_state_and_data.
 
@@ -301,6 +311,8 @@ o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_active</em> state.
 %% @private
+o_active(enter, _State, _Data) ->
+	keep_state_and_data;
 o_active(_EventType, _EventContent, #statedata{} = _Data) ->
 	keep_state_and_data.
 
