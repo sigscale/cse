@@ -102,6 +102,12 @@ init([APDU]) ->
 %% @private
 null(enter, null, _Data) ->
 	keep_state_and_data;
+null(enter, OldState,
+		#statedata{did = DialogueID, dha = DHA} = Data) ->
+	End = #'TC-END'{dialogueID = DialogueID,
+			qos = {true, true}, termination = basic},
+	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+	{stop, normal};
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	NewData = Data#statedata{dha = DHA, cco = CCO},
 	{next_state, collect_information, NewData}.
@@ -210,19 +216,19 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 		dialogueID = DialogueID, lastComponent = LastComponent,
 		parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
 			case LastComponent of
 				true ->
-					{stop, normal};
+					{next_state, null, Data};
 				false ->
 					keep_state_and_data
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			case LastComponent of
 				true ->
-					{stop, normal};
+					{next_state, null, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -233,7 +239,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, lastComponent = LastComponent,
 		parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
@@ -241,7 +247,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 						#'PduCallResult_timeDurationChargingResult'{}} ->
 					case LastComponent of
 						true ->
-							{stop, normal};
+							{next_state, null, Data};
 						false ->
 							keep_state_and_data
 					end;
@@ -255,12 +261,12 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, lastComponent = LastComponent,
 		parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
 			case LastComponent of
 				true ->
-					{stop, normal};
+					{next_state, null, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -269,13 +275,13 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 	end;
 analyse_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
-	{stop, normal};
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, null, Data};
 analyse_information(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
-	{stop, normal}.
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, null, Data}.
 
 -spec routing(EventType, EventContent, Data) -> Result
 	when
