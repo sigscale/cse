@@ -200,9 +200,76 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>analyse_information</em> state.
 %% @private
-analyse_information(_EventType, _EventContent, #statedata{} = _Data) ->
-erlang:display({?MODULE, ?LINE, analyse_information, _EventType, _EventContent, _Data}),
-	keep_state_and_data.
+analyse_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
+		dialogueID = DialogueID, lastComponent = LastComponent,
+		parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
+			case LastComponent of
+				true ->
+					{stop, normal};
+				false ->
+					keep_state_and_data
+			end;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
+			case LastComponent of
+				true ->
+					{stop, normal};
+				false ->
+					keep_state_and_data
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+analyse_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, lastComponent = LastComponent,
+		parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}} ->
+					case LastComponent of
+						true ->
+							{stop, normal};
+						false ->
+							keep_state_and_data
+					end;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+analyse_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, lastComponent = LastComponent,
+		parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
+			case LastComponent of
+				true ->
+					{stop, normal};
+				false ->
+					keep_state_and_data
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+analyse_information(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	{stop, normal};
+analyse_information(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	{stop, normal}.
 
 -spec routing(EventType, EventContent, Data) -> Result
 	when
@@ -213,7 +280,6 @@ erlang:display({?MODULE, ?LINE, analyse_information, _EventType, _EventContent, 
 %% @doc Handles events received in the <em>routing</em> state.
 %% @private
 routing(_EventType, _EventContent, #statedata{} = _Data) ->
-erlang:display({?MODULE, ?LINE, routing, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
@@ -225,7 +291,6 @@ erlang:display({?MODULE, ?LINE, routing, _EventType, _EventContent, _Data}),
 %% @doc Handles events received in the <em>o_alerting</em> state.
 %% @private
 o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
-erlang:display({?MODULE, ?LINE, o_alerting, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec o_active(EventType, EventContent, Data) -> Result
@@ -237,7 +302,6 @@ erlang:display({?MODULE, ?LINE, o_alerting, _EventType, _EventContent, _Data}),
 %% @doc Handles events received in the <em>o_active</em> state.
 %% @private
 o_active(_EventType, _EventContent, #statedata{} = _Data) ->
-erlang:display({?MODULE, ?LINE, o_active, _EventType, _EventContent, _Data}),
 	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
@@ -251,7 +315,6 @@ erlang:display({?MODULE, ?LINE, o_active, _EventType, _EventContent, _Data}),
 %% @private
 %%
 handle_event(_EventType, _EventContent, _State, _Data) ->
-erlang:display({?MODULE, ?LINE, handle_event, _EventType, _EventContent, _State, _Data}),
 	keep_state_and_data.
 
 -spec terminate(Reason, State, Data) -> any()
@@ -264,7 +327,6 @@ erlang:display({?MODULE, ?LINE, handle_event, _EventType, _EventContent, _State,
 %% @private
 %%
 terminate(_Reason, _State, _Data) ->
-erlang:display({?MODULE, ?LINE, terminate, _Reason, _State, _Data}),
 	ok.
 
 -spec code_change(OldVsn, OldState, OldData, Extra) -> Result
