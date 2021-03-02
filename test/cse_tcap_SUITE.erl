@@ -34,7 +34,8 @@
 		dp_arming/0, dp_arming/1,
 		apply_charging/0, apply_charging/1,
 		call_info_request/0, call_info_request/1,
-		mo_abandon/0, mo_abandon/1]).
+		mo_abandon/0, mo_abandon/1,
+		mo_answer/0, mo_answer/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
@@ -176,7 +177,7 @@ sequences() ->
 %%
 all() ->
 	[start_dialogue, end_dialogue, collected_info, continue, dp_arming,
-			apply_charging, call_info_request, mo_abandon].
+			apply_charging, call_info_request, mo_abandon, mo_answer].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -430,6 +431,34 @@ mo_abandon(Config) ->
 	receive
 		{'DOWN', MonitorRef, _, _, normal} -> ok
 	end.
+
+mo_answer() ->
+	[{userdata, [{doc, "EventReportBCSM:oAnswer received by SCF"}]}].
+
+mo_answer(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	TcUser = receive
+		{csl, _DHA, TCU} -> TCU
+	end,
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD} -> UD
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
+	UserData3 = pdu_o_answer(SsfTid, ScfTid, 2),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	ct:sleep(500),
+	o_active = get_state(TcUser).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
