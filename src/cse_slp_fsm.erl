@@ -222,6 +222,8 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = analyzedInformation}} ->
+			{next_state, routing, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
 			case LastComponent of
 				true ->
@@ -229,13 +231,15 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 				false ->
 					keep_state_and_data
 			end;
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oBusy}} ->
 			case LastComponent of
 				true ->
 					{next_state, null, Data};
 				false ->
 					keep_state_and_data
 			end;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
+			{next_state, o_active, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -311,7 +315,98 @@ routing(_EventType, _EventContent, #statedata{} = _Data) ->
 o_alerting(enter, _State, _Data) ->
 	keep_state_and_data;
 o_alerting(_EventType, _EventContent, #statedata{} = _Data) ->
-	keep_state_and_data.
+	keep_state_and_data;
+o_alerting(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
+		dialogueID = DialogueID, lastComponent = LastComponent,
+		parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
+			case LastComponent of
+				true ->
+					{next_state, null, Data};
+				false ->
+					keep_state_and_data
+			end;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
+			case LastComponent of
+				true ->
+					{next_state, null, Data};
+				false ->
+					keep_state_and_data
+			end;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
+			case LastComponent of
+				true ->
+					{next_state, null, Data};
+				false ->
+					keep_state_and_data
+			end;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
+			case LastComponent of
+				true ->
+					{next_state, null, Data};
+				false ->
+					keep_state_and_data
+			end;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
+			{next_state, o_active, Data};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, lastComponent = LastComponent,
+		parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					case LastComponent of
+						true ->
+							{next_state, null, Data};
+						false ->
+							keep_state_and_data
+					end;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, lastComponent = LastComponent,
+		parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
+			case LastComponent of
+				true ->
+					{next_state, null, Data};
+				false ->
+					keep_state_and_data
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, null, Data};
+o_alerting(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, null, Data}.
 
 -spec o_active(EventType, EventContent, Data) -> Result
 	when
