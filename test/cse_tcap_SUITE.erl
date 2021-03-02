@@ -80,7 +80,7 @@ init_per_suite(Config) ->
 	ok = application:start(m3ua),
 	ok = application:start(tcap),
 	ok = application:start(gtt),
-	ok = application:unload(cse),
+	catch application:unload(cse),
 	ok = application:load(cse),
 	{ok, Cb} = application:get_env(cse, tsl_callback),
 	Finfo = fun({?MODULE, TestCasePid}, State) ->
