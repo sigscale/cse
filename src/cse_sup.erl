@@ -50,7 +50,7 @@ init(_Args) ->
 	ChildSpecs = [server(cse_server, {local, cse}, [], []),
 			bridge(cse_tco_sup, [self()]),
 			supervisor(cse_slp_sup, [])],
-	SupFlags = #{intensity => 5, period => 60},
+	SupFlags = #{},
 	{ok, {SupFlags, ChildSpecs}}.
 
 %%----------------------------------------------------------------------

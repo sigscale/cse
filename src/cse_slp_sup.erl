@@ -38,8 +38,7 @@
 
 init([] = _Args) ->
 	ChildSpecs = [fsm(cse_slp_fsm)],
-	SupFlags = #{strategy => simple_one_for_one,
-			intensity => 10, period => 60},
+	SupFlags = #{strategy => simple_one_for_one},
 	{ok, {SupFlags, ChildSpecs}}.
 
 %%----------------------------------------------------------------------
@@ -57,5 +56,6 @@ init([] = _Args) ->
 fsm(StartMod) ->
 	StartArgs = [StartMod],
 	StartFunc = {gen_statem, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc, modules => [StartMod]}.
+	#{id => StartMod, start => StartFunc,
+			restart => temporary, modules => [StartMod]}.
 
