@@ -203,7 +203,7 @@ start_dialogue(Config) ->
 			returnOption = true,
 			calledAddress = SsfParty,
 			callingAddress = ScfParty} = SccpParams2,
-	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<_ScfTid:32>>,
 			dtid = <<SsfTid:32>>,
 			dialoguePortion = DialoguePortion,
@@ -234,7 +234,7 @@ end_dialogue(Config) ->
 		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {continue,  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
 	MonitorRef = receive
 		{csl, DHA, _TCU} ->
@@ -286,7 +286,7 @@ continue(Config) ->
 		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
 	{basicROS, {invoke, Invoke}} = lists:last(Components),
 	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
@@ -309,7 +309,7 @@ dp_arming(Config) ->
 		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
 	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
 	F1 = fun({basicROS, {invoke, Invoke}})
@@ -344,7 +344,7 @@ apply_charging(Config) ->
 		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
 	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
 	F1 = fun({basicROS, {invoke, Invoke}})
@@ -377,7 +377,7 @@ call_info_request(Config) ->
 		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {continue,  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{components = Components} = Continue,
 	N = #'GenericSCF-gsmSSF-PDUs_continue_components_SEQOF_basicROS_invoke'.opcode,
 	F1 = fun({basicROS, {invoke, Invoke}})
@@ -414,14 +414,21 @@ mo_abandon(Config) ->
 			monitor(process, DHA)
 	end,
 	SccpParams2 = receive
-		{'N', 'UNITDATA', request, UD} -> UD
+		{'N', 'UNITDATA', request, UD1} -> UD1
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {continue,  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
 	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
 	UserData3 = pdu_o_abandon(SsfTid, ScfTid, 2),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	SccpParams4 = receive
+		{'N', 'UNITDATA', request, UD2} -> UD2
+	end,
+	#'N-UNITDATA'{userData = UserData4} = SccpParams4,
+	{ok, {'end', _End}} = ?Pkgs:decode(?PDUs, UserData4),
 	receive
-		{'DOWN', MonitorRef, _, _, shutdown} -> ok
+		{'DOWN', MonitorRef, _, _, normal} -> ok
 	end.
 
 %%---------------------------------------------------------------------
