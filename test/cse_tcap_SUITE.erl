@@ -35,7 +35,8 @@
 		apply_charging/0, apply_charging/1,
 		call_info_request/0, call_info_request/1,
 		mo_abandon/0, mo_abandon/1,
-		mo_answer/0, mo_answer/1]).
+		mo_answer/0, mo_answer/1,
+		mo_disconnect/0, mo_disconnect/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
@@ -176,8 +177,9 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, collected_info, continue, dp_arming,
-			apply_charging, call_info_request, mo_abandon, mo_answer].
+	[start_dialogue, end_dialogue, collected_info,
+			continue, dp_arming, apply_charging, call_info_request,
+			mo_abandon, mo_answer, mo_disconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -459,6 +461,44 @@ mo_answer(Config) ->
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
 	ct:sleep(500),
 	o_active = get_state(TcUser).
+
+mo_disconnect() ->
+	[{userdata, [{doc, "EventReportBCSM:oDisconnect received by SCF"}]}].
+
+mo_disconnect(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	MonitorRef = receive
+		{csl, DHA, _TCU} ->
+			monitor(process, DHA)
+	end,
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD1} -> UD1
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
+	UserData3 = pdu_o_answer(SsfTid, ScfTid, 2),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	UserData4 = pdu_o_disconnect(SsfTid, ScfTid, 3),
+	SccpParams4 = unitdata(UserData4, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams4}),
+	SccpParams5 = receive
+		{'N', 'UNITDATA', request, UD2} -> UD2
+	end,
+	#'N-UNITDATA'{userData = UserData5} = SccpParams5,
+	{ok, {'end', _End}} = ?Pkgs:decode(?PDUs, UserData5),
+	receive
+		{'DOWN', MonitorRef, _, _, normal} -> ok
+	end.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
