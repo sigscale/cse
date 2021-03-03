@@ -1,0 +1,40 @@
+2021-03-03  Vance Shipley <vances@sigscale.org>
+
+	* test case for mo disconnect
+	* handle bcsm events in active state
+	* plantuml version of o-bcsm
+	* test case for mo answer
+	* handle bcsm events in alerting state
+	* transition to null state; on entering null send tc-end
+	* enable state enter functions; add null state
+	* test case for mo abandon
+	* handle expected tc events in analyse info state
+	* add messaging diagram
+	* default restart intensity/period; temporary slp_fsm
+	* macro to shorten unweildy module name
+	* add test suite for codec
+	* add codec module and header file
+	* test case for continue
+	* test case for call information request
+	* test case for apply charging
+	* test case for dp arming
+	* test case for receiving initialdp
+	* test case for end of dialogue
+	* test case for dialogue initiation
+	* store extra arguments in state for adaptation use
+	* send received primitives to m3ua
+	* document application configuration environment variables
+	* on initial dp send invoke components to dha
+	* register csl with tcu
+	* decode received InitialDP
+	* add states for camel o-bcsm
+	* diagrams of o-bcsm
+	* add test suite for tcap integration
+	* correct aei/slp start
+	* test suite for api
+	* decode dialogue portion, match ac, start aei
+	* find slp_sup in tco_server
+	* make install target creates release package
+	* add tcap_tco_server callback; start tcap transaction sublayer
+	* depend on sigtran stack applications
+
