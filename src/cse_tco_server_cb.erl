@@ -97,7 +97,7 @@ send_primitive({'N', 'UNITDATA', request,
 	SccpUnitData = #sccp_unitdata{data = UserData, class = Class,
 			called_party = CalledParty, calling_party = CallingParty},
 	case catch sccp_codec:sccp(SccpUnitData) of
-		{ok, UnitData} ->
+		UnitData ->
 			% @todo AS selection
 			RC = 0,
 			[#m3ua_as{rk = {_, Keys, _}}] = mnesia:dirty_read(m3ua_as, RC),
@@ -121,7 +121,7 @@ send_primitive({'N', 'UNITDATA', request,
 				[] ->
 					{noreply, State}
 			end;
-		{error, Reason} ->
+		{'EXIT', Reason} ->
 			{stop, Reason, State}
 	end.
 
