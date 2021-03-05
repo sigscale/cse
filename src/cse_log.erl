@@ -25,6 +25,9 @@
 %% export the cse_log  public API
 -export([iso8601/1]).
 
+% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
+-define(EPOCH, 62167219200).
+
 %%----------------------------------------------------------------------
 %%  The cse_log public API
 %%----------------------------------------------------------------------
