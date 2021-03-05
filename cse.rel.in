@@ -6,6 +6,7 @@
 	{inets, "@ERLANG_LIB_VER_inets@"},
 	{snmp, "@ERLANG_LIB_VER_snmp@"},
 	{sigscale_mibs, "@ERLANG_LIB_VER_sigscale_mibs@"},
+	{zj, "@ERLANG_LIB_VER_zj@", load},
 	{m3ua, "@ERLANG_LIB_VER_m3ua@"},
 	{tcap, "@ERLANG_LIB_VER_tcap@"},
 	{sccp, "@ERLANG_LIB_VER_sccp@", load},
