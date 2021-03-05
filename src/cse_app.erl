@@ -45,6 +45,41 @@
 		Reason :: term().
 %% @doc Starts the application processes.
 start(normal = _StartType, _Args) ->
+	case inets:services_info() of
+		ServicesInfo when is_list(ServicesInfo) ->
+			{ok, Profile} = application:get_env(nrf_profile),
+			start1(Profile, ServicesInfo);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start1(Profile, [{httpc, _Pid, Info} | T]) ->
+	case proplists:lookup(profile, Info) of
+		{profile, Profile} ->
+			start2(Profile);
+		_ ->
+			start1(Profile, T)
+	end;
+start1(Profile, [_ | T]) ->
+	start1(Profile, T);
+start1(Profile, []) ->
+	case inets:start(httpc, [{profile, Profile}]) of
+		{ok, _Pid} ->
+			start2(Profile);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start2(Profile) ->
+	{ok, Options} = application:get_env(nrf_options),
+	case httpc:set_options(Options, Profile) of
+		ok ->
+			start3();
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start3() ->
 	supervisor:start_link({local, cse_sup}, cse_sup, []).
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
