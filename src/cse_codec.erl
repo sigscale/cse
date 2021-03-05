@@ -23,9 +23,11 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_codec  public API
--export([called_party/1, calling_party/1, called_party_bcd/1, date_time/1]).
+-export([called_party/1, calling_party/1, called_party_bcd/1,
+		date_time/1, error_code/1]).
 
 -include("cse_codec.hrl").
+-include_lib("cap/include/CAP-errorcodes.hrl").
 
 -type called_party() :: #called_party{}.
 -type called_party_bcd() :: #called_party_bcd{}.
@@ -148,6 +150,48 @@ date_time({{Year, Month, Day}, {Hour, Minute, Second}}) ->
 	<<Y2:4, Y1:4, Y4:4, Y3:4, M2:4, M1:4, D2:4, D1:4,
 		H2:4, H1:4, Min2:4, Min1:4, S2:4, S1:4>>.
 	
+-spec error_code(ErrorCode) -> ErrorName
+	when
+		ErrorCode :: {local, integer()} | {global, tuple()},
+		ErrorName :: atom() | tuple().
+%% @doc Returns the name for an error code.
+error_code({global, OID}) ->
+	OID;
+error_code({local, ?'errcode-canceled'}) ->
+	canceled;
+error_code({local, ?'errcode-cancelFailed'}) ->
+	cancelFailed;
+error_code({local, ?'errcode-eTCFailed'}) ->
+	eTCFailed;
+error_code({local, ?'errcode-improperCallerResponse'}) ->
+	improperCallerResponse;
+error_code({local, ?'errcode-missingCustomerRecord'}) ->
+	missingCustomerRecord;
+error_code({local, ?'errcode-missingParameter'}) ->
+	missingParameter;
+error_code({local, ?'errcode-parameterOutOfRange'}) ->
+	parameterOutOfRange;
+error_code({local, ?'errcode-requestedInfoError'}) ->
+	requestedInfoError;
+error_code({local, ?'errcode-systemFailure'}) ->
+	systemFailure;
+error_code({local, ?'errcode-taskRefused'}) ->
+	taskRefused;
+error_code({local, ?'errcode-unavailableResource'}) ->
+	unavailableResource;
+error_code({local, ?'errcode-unexpectedComponentSequence'}) ->
+	unexpectedComponentSequence;
+error_code({local, ?'errcode-unexpectedDataValue'}) ->
+	unexpectedDataValue;
+error_code({local, ?'errcode-unexpectedParameter'}) ->
+	unexpectedParameter;
+error_code({local, ?'errcode-unknownLegID'}) ->
+	unknownLegID;
+error_code({local, ?'errcode-unknownPDPID'}) ->
+	unknownPDPID;
+error_code({local, ?'errcode-unknownCSID'}) ->
+	unknownCSID.
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
