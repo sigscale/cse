@@ -289,7 +289,23 @@ analyse_information(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data}.
+	{next_state, null, Data};
+analyse_information(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		error = Error, parameters = Parameters,
+		lastComponent = LastComponent} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_name(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, analyse_information}, {ssf, SSF}]),
+	case LastComponent of
+		true ->
+			{next_state, null, Data};
+		false ->
+			keep_state_and_data
+	end.
 
 -spec routing(EventType, EventContent, Data) -> Result
 	when
@@ -301,6 +317,22 @@ analyse_information(cast, {'TC', 'END', indication,
 %% @private
 routing(enter, _State, _Data) ->
 	keep_state_and_data;
+routing(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		error = Error, parameters = Parameters,
+		lastComponent = LastComponent} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_name(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, routing}, {ssf, SSF}]),
+	case LastComponent of
+		true ->
+			{next_state, null, Data};
+		false ->
+			keep_state_and_data
+	end;
 routing(_EventType, _EventContent, #statedata{} = _Data) ->
 	keep_state_and_data.
 
@@ -404,7 +436,23 @@ o_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data}.
+	{next_state, null, Data};
+o_alerting(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		error = Error, parameters = Parameters,
+		lastComponent = LastComponent} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_name(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, o_alerting}, {ssf, SSF}]),
+	case LastComponent of
+		true ->
+			{next_state, null, Data};
+		false ->
+			keep_state_and_data
+	end.
 
 -spec o_active(EventType, EventContent, Data) -> Result
 	when
@@ -483,7 +531,23 @@ o_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data}.
+	{next_state, null, Data};
+o_active(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		error = Error, parameters = Parameters,
+		lastComponent = LastComponent} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_name(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, o_active}, {ssf, SSF}]),
+	case LastComponent of
+		true ->
+			{next_state, null, Data};
+		false ->
+			keep_state_and_data
+	end.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
