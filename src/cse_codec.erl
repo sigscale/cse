@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc This library module implements the public API for the
+%%% @doc This library module implements CODEC functions for the
 %%%   {@link //cse. cse} application.
 %%%
 -module(cse_codec).
