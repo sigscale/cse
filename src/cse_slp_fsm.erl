@@ -333,8 +333,15 @@ routing(cast, {'TC', 'U-ERROR', indication,
 		false ->
 			keep_state_and_data
 	end;
-routing(_EventType, _EventContent, #statedata{} = _Data) ->
-	keep_state_and_data.
+routing(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, null, Data};
+routing(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, null, Data}.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
 	when
