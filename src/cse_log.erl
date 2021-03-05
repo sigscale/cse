@@ -23,7 +23,7 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log  public API
--export([iso8601/1]).
+-export([date/1, iso8601/1]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(EPOCH, 62167219200).
@@ -31,6 +31,15 @@
 %%----------------------------------------------------------------------
 %%  The cse_log public API
 %%----------------------------------------------------------------------
+
+-spec date(MilliSeconds) -> Result
+	when
+		MilliSeconds :: pos_integer(),
+		Result :: calendar:datetime().
+%% @doc Convert timestamp to date and time.
+date(MilliSeconds) when is_integer(MilliSeconds) ->
+	Seconds = ?EPOCH + (MilliSeconds div 1000),
+	calendar:gregorian_seconds_to_datetime(Seconds).
 
 -spec iso8601(DateTime) -> DateTime
 	when
