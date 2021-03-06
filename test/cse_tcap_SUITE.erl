@@ -536,7 +536,7 @@ isup_calling_party() ->
 isup_calling_party(N, Acc) when N > 0 ->
 	isup_calling_party(N - 1, [rand:uniform(10 - 1) | Acc]);
 isup_calling_party(0, Acc) ->
-	CallingParty = #calling_party{nai = 3, ni = 0,
+	CallingParty = #calling_party{nai = 4, ni = 0,
 			npi = 1, apri = 0, si = 3, address = Acc},
 	cse_codec:calling_party(CallingParty).
 
