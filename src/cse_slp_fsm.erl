@@ -41,6 +41,7 @@
 -include_lib("cap/include/CAP-gsmSSF-gsmSCF-pkgs-contracts-acs.hrl").
 -include_lib("cap/include/CAMEL-datatypes.hrl").
 -include_lib("kernel/include/logger.hrl").
+-include("cse_codec.hrl").
 
 -type state() :: null | collect_information
 		| analyse_information | routing | o_alerting | o_active.
@@ -52,7 +53,12 @@
 		did :: 0..4294967295 | undefined,
 		ac :: tuple() | undefined,
 		scf :: sccp_codec:party_address() | undefined,
-		ssf :: sccp_codec:party_address() | undefined}).
+		ssf :: sccp_codec:party_address() | undefined,
+		imsi :: [$0..$9] | undefined,
+		msisdn :: [$0..$9] | undefined,
+		called ::  [$0..$9] | undefined,
+		call_ref :: binary() | undefined,
+		msc :: binary() | undefined}).
 -type statedata() :: #statedata{}.
 
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
@@ -138,8 +144,19 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 		#statedata{did = DialogueID, dha = DHA, cco = CCO,
 		scf = SCF, ac = AC} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
-		{ok, InitialDPArg} ->
-			NewData = Data#statedata{},
+		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
+				callingPartyNumber = CallingPartyNumber,
+				calledPartyBCDNumber = CalledPartyBCDNumber,
+				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
+				mscAddress = MscAddress} = _InitialDPArg} ->
+			#calling_party{nai = 4, npi = 1,
+					address = MSISDN} = cse_codec:calling_party(CallingPartyNumber),
+			#called_party_bcd{address = CalledNumber}
+					= cse_codec:called_party_bcd(CalledPartyBCDNumber),
+			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
+					msisdn = [integer_to_list(D) || D <- MSISDN],
+					called = CalledNumber,
+					call_ref = CallReferenceNumber, msc = MscAddress},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = routeSelectFailure,
 							monitorMode = notifyAndContinue},
@@ -291,9 +308,9 @@ analyse_information(cast, {'TC', 'END', indication,
 		#statedata{did = DialogueID} = Data) ->
 	{next_state, null, Data};
 analyse_information(cast, {'TC', 'U-ERROR', indication,
-		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
-		lastComponent = LastComponent} = _EventContent,
+		lastComponent = LastComponent}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
 	?LOG_WARNING([{'TC', 'U-ERROR'},
 			{error, cse_codec:error_code(Error)},
@@ -318,9 +335,9 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 routing(enter, _State, _Data) ->
 	keep_state_and_data;
 routing(cast, {'TC', 'U-ERROR', indication,
-		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
-		lastComponent = LastComponent} = _EventContent,
+		lastComponent = LastComponent}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
 	?LOG_WARNING([{'TC', 'U-ERROR'},
 			{error, cse_codec:error_code(Error)},
@@ -445,9 +462,9 @@ o_alerting(cast, {'TC', 'END', indication,
 		#statedata{did = DialogueID} = Data) ->
 	{next_state, null, Data};
 o_alerting(cast, {'TC', 'U-ERROR', indication,
-		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
-		lastComponent = LastComponent} = _EventContent,
+		lastComponent = LastComponent}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
 	?LOG_WARNING([{'TC', 'U-ERROR'},
 			{error, cse_codec:error_code(Error)},
@@ -540,9 +557,9 @@ o_active(cast, {'TC', 'END', indication,
 		#statedata{did = DialogueID} = Data) ->
 	{next_state, null, Data};
 o_active(cast, {'TC', 'U-ERROR', indication,
-		#'TC-U-ERROR'{dialogueID = DialogueID}, invokeID = InvokeID,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
-		lastComponent = LastComponent} = _EventContent,
+		lastComponent = LastComponent}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
 	?LOG_WARNING([{'TC', 'U-ERROR'},
 			{error, cse_codec:error_code(Error)},
