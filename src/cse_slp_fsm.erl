@@ -58,7 +58,10 @@
 		msisdn :: [$0..$9] | undefined,
 		called ::  [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
-		msc :: binary() | undefined}).
+		msc :: binary() | undefined,
+		nrf_profile :: atom(),
+		nrf_uri :: string(),
+		nrf_reqid :: reference() | undefined}).
 -type statedata() :: #statedata{}.
 
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
@@ -94,8 +97,10 @@ callback_mode() ->
 %% @see //stdlib/gen_statem:init/1
 %% @private
 init([APDU]) ->
+	{ok, Profile} = application:get_env(nrf_profile),
+	{ok, URI} = application:get_env(nrf_uri),
 	process_flag(trap_exit, true),
-	Data = #statedata{},
+	Data = #statedata{nrf_profile = Profile, nrf_uri = URI},
 	{ok, null, Data}.
 
 -spec null(EventType, EventContent, Data) -> Result
@@ -619,4 +624,42 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
+
+-spec start_rating(Data) -> Result
+	when
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, null, Data}.
+%% @doc Start rating a session.
+start_rating(#statedata{imsi = IMSI, msisdn = MSISDN,
+		called = CalledNumber, nrf_profile = Profile,
+		nrf_uri = URI} = Data) ->
+	Now = erlang:system_time(millisecond),
+	MFA = {?MODULE, nrf_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceContextId = "32276@3gpp.org",
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
+					"destinationId" => [#{"destinationIdType" => "DN",
+							"destinationIdData" => CalledNumber}],
+					"requestSubType" => "RESERVE"}]},
+	Body = zj:encode(JSON),
+	Request = {URI, Headers, "application/json", Body},
+	case httpc:request(post, Request, [], Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#statedata{nrf_reqid = RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, start_rating}, {error, Reason},
+					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			{next_state, null, Data};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, start_rating}, {error, Reason},
+					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			{next_state, null, Data}
+	end.
 
