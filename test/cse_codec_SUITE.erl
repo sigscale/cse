@@ -29,7 +29,7 @@
 -export([called_party/0, called_party/1,
 		calling_party/0, calling_party/1,
 		called_party_bcd/0, called_party_bcd/1,
-		date_time/0, date_time/1]).
+		tbcd/0, tbcd/1, date_time/0, date_time/1]).
 
 -include("cse_codec.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -78,7 +78,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[called_party, called_party_bcd, calling_party, date_time].
+	[called_party, called_party_bcd, calling_party, tbcd, date_time].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -134,6 +134,17 @@ called_party_bcd(_Config) ->
 			lists:reverse(Digits)
 	end,
 	CP = cse_codec:called_party_bcd(B).
+
+tbcd() ->
+	[{userdata, [{doc, "Encode/decode TBCD-String"}]}].
+
+tbcd(_Config) ->
+	Digits1 = "0123456789*#abc",
+	Digits1 = cse_codec:tbcd(cse_codec:tbcd(Digits1)),
+	Digits2 = "123456#",
+	Digits2 = cse_codec:tbcd(cse_codec:tbcd(Digits2)),
+	Digits3 = <<2:4, 1:4, 4:4, 3:4, 15:4, 5:4>>,
+	Digits3 = cse_codec:tbcd(cse_codec:tbcd(Digits3)).
 
 date_time() ->
 	[{userdata, [{doc, "Encode/decode CAMEL CalledPartyBCD"}]}].

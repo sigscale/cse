@@ -24,7 +24,7 @@
 
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
-		date_time/1, error_code/1]).
+		tbcd/1, date_time/1, error_code/1]).
 
 -include("cse_codec.hrl").
 -include_lib("cap/include/CAP-errorcodes.hrl").
@@ -119,6 +119,42 @@ called_party_bcd2([A], Acc) ->
 called_party_bcd2([], Acc) ->
 	Acc.
 
+-spec tbcd(Digits) -> Digits
+	when
+		Digits :: [Digit] | binary(),
+		Digit :: 0..14 | $0..$9 | $* | $# | $a | $b | $c.
+%% @doc CODEC for TBCD-String.
+%%
+%% 	The Telephony Binary Coded Decimal String (TBCD)
+%% 	type is used to store dialing digits in a compact
+%% 	form. Digits are "0123456789*#abc"..
+tbcd(Digits) when is_binary(Digits) ->
+	tbcd(Digits, []);
+tbcd(Digits) when is_list(Digits) ->
+	tbcd(Digits, <<>>).
+%% @hidden
+tbcd(<<15:4, A:4>>, Acc) ->
+	lists:reverse([digit(A) | Acc]);
+tbcd(<<A2:4, A1:4, Rest/binary>>, Acc)
+		when A1 >= 0, A1 < 15, A2 >= 0, A2 < 15 ->
+	tbcd(Rest, [digit(A2), digit(A1) | Acc]);
+tbcd(<<>>, Acc) ->
+	lists:reverse(Acc);
+tbcd([A], Acc) when ((A >= $0) and (A =< $9)) or (A == $*)
+		or (A == $#) or ((A >= $a) and (A =<$c)) ->
+	B = digit(A),
+	<<Acc/binary, 15:4, B:4>>;
+tbcd([A2, A1 | T], Acc)
+		when (((A1 >= $0) or (A1 =< $9)) or (A1 == $*)
+		or (A1 == $#) or ((A1 >= $a) and (A1 =<$c))),
+		(((A2 >= $0) and (A2 =< $9)) or (A2 == $*)
+		or (A2 == $#) or ((A2 >= $a) and (A2 =<$c))) ->
+	B1 = digit(A1),
+	B2 = digit(A2),
+	tbcd(T, <<Acc/binary, B1:4, B2:4>>);
+tbcd([], Acc) ->
+	Acc.
+
 -spec date_time(DateAndTime) -> DateAndTime
 	when
 		DateAndTime :: binary() | calendar:datetime().
@@ -157,42 +193,107 @@ date_time({{Year, Month, Day}, {Hour, Minute, Second}}) ->
 %% @doc Returns the name for an error code.
 error_code({global, OID}) ->
 	OID;
-error_code({local, ?'errcode-canceled'}) ->
+error_code(?'errcode-canceled') ->
 	canceled;
-error_code({local, ?'errcode-cancelFailed'}) ->
+error_code(?'errcode-cancelFailed') ->
 	cancelFailed;
-error_code({local, ?'errcode-eTCFailed'}) ->
+error_code(?'errcode-eTCFailed') ->
 	eTCFailed;
-error_code({local, ?'errcode-improperCallerResponse'}) ->
+error_code(?'errcode-improperCallerResponse') ->
 	improperCallerResponse;
-error_code({local, ?'errcode-missingCustomerRecord'}) ->
+error_code(?'errcode-missingCustomerRecord') ->
 	missingCustomerRecord;
-error_code({local, ?'errcode-missingParameter'}) ->
+error_code(?'errcode-missingParameter') ->
 	missingParameter;
-error_code({local, ?'errcode-parameterOutOfRange'}) ->
+error_code(?'errcode-parameterOutOfRange') ->
 	parameterOutOfRange;
-error_code({local, ?'errcode-requestedInfoError'}) ->
+error_code(?'errcode-requestedInfoError') ->
 	requestedInfoError;
-error_code({local, ?'errcode-systemFailure'}) ->
+error_code(?'errcode-systemFailure') ->
 	systemFailure;
-error_code({local, ?'errcode-taskRefused'}) ->
+error_code(?'errcode-taskRefused') ->
 	taskRefused;
-error_code({local, ?'errcode-unavailableResource'}) ->
+error_code(?'errcode-unavailableResource') ->
 	unavailableResource;
-error_code({local, ?'errcode-unexpectedComponentSequence'}) ->
+error_code(?'errcode-unexpectedComponentSequence') ->
 	unexpectedComponentSequence;
-error_code({local, ?'errcode-unexpectedDataValue'}) ->
+error_code(?'errcode-unexpectedDataValue') ->
 	unexpectedDataValue;
-error_code({local, ?'errcode-unexpectedParameter'}) ->
+error_code(?'errcode-unexpectedParameter') ->
 	unexpectedParameter;
-error_code({local, ?'errcode-unknownLegID'}) ->
+error_code(?'errcode-unknownLegID') ->
 	unknownLegID;
-error_code({local, ?'errcode-unknownPDPID'}) ->
+error_code(?'errcode-unknownPDPID') ->
 	unknownPDPID;
-error_code({local, ?'errcode-unknownCSID'}) ->
+error_code(?'errcode-unknownCSID') ->
 	unknownCSID.
 
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
+
+-spec digit(Digit) -> Digit
+	when
+		Digit :: 0..14 | $0..$9 | $* | $# | $a..$c.
+%% @doc Convert between integer and ASCII digit.
+digit(0) ->
+	$0;
+digit($0) ->
+	0;
+digit(1) ->
+	$1;
+digit($1) ->
+	1;
+digit(2) ->
+	$2;
+digit($2) ->
+	2;
+digit(3) ->
+	$3;
+digit($3) ->
+	3;
+digit(4) ->
+	$4;
+digit($4) ->
+	4;
+digit(5) ->
+	$5;
+digit($5) ->
+	5;
+digit(6) ->
+	$6;
+digit($6) ->
+	6;
+digit(7) ->
+	$7;
+digit($7) ->
+	7;
+digit(8) ->
+	$8;
+digit($8) ->
+	8;
+digit(9) ->
+	$9;
+digit($9) ->
+	9;
+digit(10) ->
+	$*;
+digit($*) ->
+	10;
+digit(11) ->
+	$#;
+digit($#) ->
+	11;
+digit(12) ->
+	$a;
+digit($a) ->
+	12;
+digit(13) ->
+	$b;
+digit($b) ->
+	13;
+digit(14) ->
+	$c;
+digit($c) ->
+	14.
 
