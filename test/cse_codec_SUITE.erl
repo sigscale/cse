@@ -29,7 +29,8 @@
 -export([called_party/0, called_party/1,
 		calling_party/0, calling_party/1,
 		called_party_bcd/0, called_party_bcd/1,
-		tbcd/0, tbcd/1, date_time/0, date_time/1]).
+		tbcd/0, tbcd/1, date_time/0, date_time/1,
+		cause/0, cause/1]).
 
 -include("cse_codec.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -78,7 +79,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[called_party, called_party_bcd, calling_party, tbcd, date_time].
+	[called_party, called_party_bcd, calling_party, tbcd, date_time, cause].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -159,7 +160,6 @@ date_time(_Config) ->
 	Second = rand:uniform(60) - 1,
 	Time = {Hour, Minute, Second},
 	DateTime = {Date, Time},
-erlang:display({?MODULE, ?LINE, DateTime}),
 	B = cse_codec:date_time(DateTime),
 	<<Y2:4, Y1:4, Y4:4, Y3:4, M2:4, M1:4, D2:4, D1:4,
 			H2:4, H1:4, Min2:4, Min1:4, S2:4, S1:4>> = B,
@@ -170,6 +170,26 @@ erlang:display({?MODULE, ?LINE, DateTime}),
 	Minute = (Min1 * 10) + Min2,
 	Second = (S1 * 10) + S2,
 	DateTime = cse_codec:date_time(B).
+
+cause() ->
+	[{userdata, [{doc, "Encode/decode ISUP Cause"}]}].
+
+cause(_Config) ->
+	Codings = [itu, iso, national, other],
+	Coding = lists:nth(rand:uniform(4), Codings),
+	Locations = [user, local_private, local_public, transit,
+			remote_public, remote_private, international, beyond],
+	Location = lists:nth(rand:uniform(8), Locations),
+	Value = rand:uniform(127),
+	Diagnostic = case rand:uniform(2) of
+		1 ->
+			undefined;
+		2 ->
+			crypto:strong_rand_bytes(rand:uniform(4))
+	end,
+	Cause = #cause{coding = Coding, location = Location,
+		value = Value, diagnostic = Diagnostic},
+	Cause = cse_codec:cause(cse_codec:cause(Cause)).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

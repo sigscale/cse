@@ -40,3 +40,12 @@
 		npi :: 0..1 | 3..4 | 8..9,
 		address = [] :: [0..15]}).
 
+%% ITU-T Q.763 ISUP 3.12
+-record(cause,
+		{coding = itu :: itu | iso | national | other,
+		location :: user | local_private | local_public | transit
+				| remote_public | remote_private | international
+				| beyond | undefined,
+		value = 31 :: 1..127,
+		diagnostic :: binary() | undefined}).
+

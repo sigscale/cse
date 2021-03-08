@@ -24,7 +24,7 @@
 
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
-		tbcd/1, date_time/1, error_code/1]).
+		tbcd/1, date_time/1, error_code/1, cause/1]).
 
 -include("cse_codec.hrl").
 -include_lib("cap/include/CAP-errorcodes.hrl").
@@ -227,6 +227,77 @@ error_code(?'errcode-unknownPDPID') ->
 	unknownPDPID;
 error_code(?'errcode-unknownCSID') ->
 	unknownCSID.
+
+-spec cause(Cause) -> Cause
+	when
+		Cause :: #cause{} | binary().
+%% @doc CODEC for ISUP Cause.
+cause(<<1:1, Coding:2, 0:1, Location:4, 1:1, Value:7>>) ->
+	cause(Coding, Location, #cause{value = Value});
+cause(<<1:1, Coding:2, 0:1, Location:4, 1:1, Value:7,
+		Diagnostics/binary>>) ->
+	cause(Coding, Location,
+			#cause{value = Value, diagnostic = Diagnostics});
+cause(#cause{coding = Coding, location = Location,
+		value = Value, diagnostic = undefined})
+		when Value > 0, Value < 128 ->
+	cause1(Coding, Location, <<1:1, Value:7>>);
+cause(#cause{coding = Coding, location = Location,
+		value = Value, diagnostic = Diagnostics})
+		when Value > 0, Value < 128, is_binary(Diagnostics) ->
+	cause1(Coding, Location, <<1:1, Value:7, Diagnostics/binary>>).
+%% @hidden
+cause(0, Location, Acc) ->
+	cause(Location, Acc#cause{coding = itu});
+cause(1, Location, Acc) ->
+	cause(Location, Acc#cause{coding = iso});
+cause(2, Location, Acc) ->
+	cause(Location, Acc#cause{coding = national});
+cause(3, Location, Acc) ->
+	cause(Location, Acc#cause{coding = other}).
+%% @hidden
+cause(0, Acc) ->
+	Acc#cause{location = user};
+cause(1, Acc) ->
+	Acc#cause{location = local_private};
+cause(2, Acc) ->
+	Acc#cause{location = local_public};
+cause(3, Acc) ->
+	Acc#cause{location = transit};
+cause(4, Acc) ->
+	Acc#cause{location = remote_public};
+cause(5, Acc) ->
+	Acc#cause{location = remote_private};
+cause(6, Acc) ->
+	Acc#cause{location = international};
+cause(7, Acc) ->
+	Acc#cause{location = beyond}.
+%% @hidden
+cause1(itu, Location, Acc) ->
+	cause2(0, Location, Acc);
+cause1(iso, Location, Acc) ->
+	cause2(1, Location, Acc);
+cause1(national, Location, Acc) ->
+	cause2(2, Location, Acc);
+cause1(other, Location, Acc) ->
+	cause2(3, Location, Acc).
+%% @hidden
+cause2(Coding, user, Acc) ->
+	<<1:1, Coding:2, 0:1, 0:4, Acc/binary>>;
+cause2(Coding, local_private, Acc) ->
+	<<1:1, Coding:2, 0:1, 1:4, Acc/binary>>;
+cause2(Coding, local_public, Acc) ->
+	<<1:1, Coding:2, 0:1, 2:4, Acc/binary>>;
+cause2(Coding, transit, Acc) ->
+	<<1:1, Coding:2, 0:1, 3:4, Acc/binary>>;
+cause2(Coding, remote_public, Acc) ->
+	<<1:1, Coding:2, 0:1, 4:4, Acc/binary>>;
+cause2(Coding, remote_private, Acc) ->
+	<<1:1, Coding:2, 0:1, 5:4, Acc/binary>>;
+cause2(Coding, international, Acc) ->
+	<<1:1, Coding:2, 0:1, 6:4, Acc/binary>>;
+cause2(Coding, beyond, Acc) ->
+	<<1:1, Coding:2, 0:1, 7:4, Acc/binary>>.
 
 %%----------------------------------------------------------------------
 %%  internal functions
