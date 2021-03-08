@@ -77,6 +77,18 @@ init_per_suite(Config) ->
 	{ok, [m3ua_asp, m3ua_as]} = m3ua_app:install(),
 	{ok, [gtt_ep,gtt_as,gtt_pc]} = gtt_app:install(),
 	ok = application:start(inets),
+	HttpdPort = case inets:start(httpd,
+			[{port, 0},
+			{server_name, atom_to_list(?MODULE)},
+			{server_root, "./"},
+			{document_root, ?config(data_dir, Config)},
+			{modules, [mod_ct_nrf]}]) of
+		{ok, HttpdPid} ->
+			[{port, Port}] = httpd:info(HttpdPid, [port]),
+			Port;
+		{error, InetsReason} ->
+			ct:fail(InetsReason)
+	end,
 	ok = application:start(snmp),
 	ok = application:start(sigscale_mibs),
 	ok = application:start(m3ua),
@@ -139,6 +151,8 @@ init_per_suite(Config) ->
 		format_status = fun Cb:format_status/2},
 	ok = application:set_env(cse, tsl_callback, Callback),
 	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined}]),
+	ok = application:set_env(cse, nrf_uri,
+			"http://localhost:" ++ integer_to_list(HttpdPort)),
 	ok = application:start(cse),
 	{ok, TCO} = application:get_env(cse, tsl_name),
 	[{tco, TCO}, {orig_cb, Cb} | Config].

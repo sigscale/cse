@@ -5,7 +5,8 @@
 
 testmods = cse_api_SUITE \
 		cse_tcap_SUITE \
-		cse_codec_SUITE
+		cse_codec_SUITE \
+		mod_ct_nrf
 
 check_DATA = .dialyzer_ok .common_test_ok
 
