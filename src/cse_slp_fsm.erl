@@ -33,6 +33,8 @@
 %% export the callbacks for gen_statem states.
 -export([null/3, collect_information/3, analyse_information/3,
 		routing/3, o_alerting/3, o_active/3]).
+%% export the private api
+-export([nrf_start_reply/2]).
 
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
@@ -61,6 +63,7 @@
 		msc :: binary() | undefined,
 		nrf_profile :: atom(),
 		nrf_uri :: string(),
+		nrf_location :: string() | undefined,
 		nrf_reqid :: reference() | undefined}).
 -type statedata() :: #statedata{}.
 
@@ -146,22 +149,34 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		dialogueID = DialogueID, invokeID = _InvokeID,
 		lastComponent = true, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID, dha = DHA, cco = CCO,
-		scf = SCF, ac = AC} = Data) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
 				callingPartyNumber = CallingPartyNumber,
 				calledPartyBCDNumber = CalledPartyBCDNumber,
 				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress} = _InitialDPArg} ->
-			#calling_party{nai = 4, npi = 1,
-					address = MSISDN} = cse_codec:calling_party(CallingPartyNumber),
+			#calling_party{nai = 4, npi = 1, address = CallingAddress}
+					= cse_codec:calling_party(CallingPartyNumber),
+			MSISDN = lists:flatten([integer_to_list(D) || D <- CallingAddress]),
 			#called_party_bcd{address = CalledNumber}
 					= cse_codec:called_party_bcd(CalledPartyBCDNumber),
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
-					msisdn = [integer_to_list(D) || D <- MSISDN],
-					called = CalledNumber,
+					msisdn = MSISDN, called = CalledNumber,
 					call_ref = CallReferenceNumber, msc = MscAddress},
+			nrf_start(NewData);
+		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = _}} ->
+			NewData = Data#statedata{},
+			{keep_state, NewData}
+	end;
+collect_information(cast, {nrf_start,
+		{RequestId, {{_Version, 201, _Phrase} = _StatusLine, Headers, Body}}},
+		#statedata{nrf_reqid = RequestId, did = DialogueID,
+		dha = DHA, cco = CCO, scf = SCF, ac = AC} = Data) ->
+	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
+		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"}]}},
+				{_, Location}} when is_list(Location) ->
+			NewData = Data#statedata{nrf_location = Location},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = routeSelectFailure,
 							monitorMode = notifyAndContinue},
@@ -219,9 +234,44 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 					origAddress = SCF, componentsPresent = true},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, analyse_information, NewData};
-		{error, Reason} ->
-			{stop, Reason}
-	end.
+		% {{ok, #{"serviceRating" := [#{"resultCode" := _} | _]}}, _} ->
+		% {{error, _Partial, _Remaining}, _} ->
+		_Other ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = 1, dialogueID = DialogueID, class = 1,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+			{next_state, null, Data}
+	end;
+collect_information(cast, {nrf_start,
+		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		did = DialogueID, cco = CCO} = Data) ->
+	?LOG_WARNING([{nrf_start, RequestId}, {nrf_uri, URI},
+			{version, Version}, {code, Code}, {reason, Phrase}]),
+	Cause = #cause{location = local_public, value = 31},
+	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{allCallSegments, cse_codec:cause(Cause)}),
+	Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = 1, dialogueID = DialogueID, class = 1,
+			parameters = ReleaseCallArg},
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+	{next_state, null, Data};
+collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		did = DialogueID, cco = CCO} = Data) ->
+	?LOG_ERROR([{nrf_start, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	Cause = #cause{location = local_public, value = 31},
+	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{allCallSegments, cse_codec:cause(Cause)}),
+	Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = 1, dialogueID = DialogueID, class = 1,
+			parameters = ReleaseCallArg},
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+	{next_state, null, Data}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
@@ -622,19 +672,36 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 	{ok, OldState, OldData}.
 
 %%----------------------------------------------------------------------
+%%  private api
+%%----------------------------------------------------------------------
+
+-spec nrf_start_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_start/1}.
+%% @private
+nrf_start_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_start, ReplyInfo}).
+
+%%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec start_rating(Data) -> Result
+-spec nrf_start(Data) -> Result
 	when
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {next_state, null, Data}.
 %% @doc Start rating a session.
-start_rating(#statedata{imsi = IMSI, msisdn = MSISDN,
+nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 		called = CalledNumber, nrf_profile = Profile,
 		nrf_uri = URI} = Data) ->
 	Now = erlang:system_time(millisecond),
-	MFA = {?MODULE, nrf_reply, [self()]},
+	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers = [{"accept", "application/json"}],
 	Sequence = ets:update_counter(counters, nrf_seq, 1),
@@ -648,17 +715,18 @@ start_rating(#statedata{imsi = IMSI, msisdn = MSISDN,
 							"destinationIdData" => CalledNumber}],
 					"requestSubType" => "RESERVE"}]},
 	Body = zj:encode(JSON),
-	Request = {URI, Headers, "application/json", Body},
-	case httpc:request(post, Request, [], Options, Profile) of
+	Request = {URI ++ "/ratingdata", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#statedata{nrf_reqid = RequestId},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
-			?LOG_WARNING([{?MODULE, start_rating}, {error, Reason},
+			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
 			{next_state, null, Data};
 		{error, Reason} ->
-			?LOG_ERROR([{?MODULE, start_rating}, {error, Reason},
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
 			{next_state, null, Data}
 	end.
