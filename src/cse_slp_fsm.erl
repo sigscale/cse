@@ -116,6 +116,13 @@ init([APDU]) ->
 %% @private
 null(enter, null, _Data) ->
 	keep_state_and_data;
+null(enter, collect_information,
+		#statedata{did = DialogueID, ac = AC, dha = DHA} = Data) ->
+	End = #'TC-END'{dialogueID = DialogueID,
+			appContextName = AC, qos = {true, true},
+			termination = basic},
+	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+	{stop, normal};
 null(enter, OldState,
 		#statedata{did = DialogueID, dha = DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
