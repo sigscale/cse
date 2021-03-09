@@ -39,6 +39,7 @@
 -include_lib("tcap/include/sccp_primitive.hrl").
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
+-include_lib("cap/include/CAP-object-identifiers.hrl").
 
 -record(state,
 		{sup :: pid(),
@@ -156,8 +157,10 @@ start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
 	case 'DialoguePDUs':decode('DialoguePDU', DialoguePDUs) of
 		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC} = APDU}} ->
 			case AC of
-				% ?'id-ac-CAP-gsmSSF-scfGenericAC' ->
-				{0,4,0,0,1,_,3,4} ->
+				AC when
+				AC == ?'id-ac-CAP-gsmSSF-scfGenericAC'; % Phase 4
+				AC == {0,4,0,0,1,21,3,4};               % Phase 3
+				AC == {0,4,0,0,1,0,50,1} ->             % Phase 2
 					case supervisor:start_child(SlpSup, [[APDU], []]) of
 						{ok, TCU} ->
 							case tcap:open(self(), TCU) of
