@@ -168,8 +168,9 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 			MSISDN = lists:flatten([integer_to_list(D) || D <- CallingAddress]),
 			#called_party_bcd{address = CalledNumber}
 					= cse_codec:called_party_bcd(CalledPartyBCDNumber),
+			DN = lists:flatten([integer_to_list(D) || D <- CalledNumber]),
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
-					msisdn = MSISDN, called = CalledNumber,
+					msisdn = MSISDN, called = DN,
 					call_ref = CallReferenceNumber, msc = MscAddress},
 			nrf_start(NewData);
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = _}} ->
