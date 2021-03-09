@@ -320,6 +320,13 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
+			case LastComponent of
+				true ->
+					{next_state, null, Data};
+				false ->
+					keep_state_and_data
+			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
