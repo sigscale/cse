@@ -252,7 +252,7 @@ collect_information(cast, {nrf_start,
 					parameters = CallInformationRequestArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
 			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = GrantedTime},
+					maxCallPeriodDuration = GrantedTime * 10},
 			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
 					'PduAChBillingChargingCharacteristics',
 					{timeDurationCharging, TimeDurationCharging}),
@@ -632,7 +632,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_update(Time, Data);
+					nrf_update(Time * 10, Data);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -649,7 +649,7 @@ o_active(cast, {nrf_update,
 		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}} ->
 			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = GrantedTime},
+					maxCallPeriodDuration = GrantedTime * 10},
 			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
 					'PduAChBillingChargingCharacteristics',
 					{timeDurationCharging, TimeDurationCharging}),
@@ -919,7 +919,7 @@ nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
 					"destinationId" => [#{"destinationIdType" => "DN",
 							"destinationIdData" => CalledNumber}],
-					"consumedUnit" => #{"time" => Consumed div 10},
+					"consumedUnit" => #{"time" => Consumed},
 					"requestSubType" => "DEBIT"},
 					#{"serviceContextId" => ServiceContextId,
 					"destinationId" => [#{"destinationIdType" => "DN",
@@ -965,7 +965,7 @@ nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
 					"destinationId" => [#{"destinationIdType" => "DN",
 							"destinationIdData" => CalledNumber}],
-					"consumedUnit" => #{"time" => Consumed div 10},
+					"consumedUnit" => #{"time" => Consumed},
 					"requestSubType" => "DEBIT"}]},
 	Body = zj:encode(JSON),
 	Request = {URI ++ Location ++ "/release", Headers, "application/json", Body},
