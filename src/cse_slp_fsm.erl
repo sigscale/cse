@@ -53,6 +53,7 @@
 		{dha :: pid() | undefined,
 		cco :: pid() | undefined,
 		did :: 0..4294967295 | undefined,
+		iid = 0 :: 0..127,
 		ac :: tuple() | undefined,
 		scf :: sccp_codec:party_address() | undefined,
 		ssf :: sccp_codec:party_address() | undefined,
@@ -179,7 +180,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{_Version, 201, _Phrase} = _StatusLine, Headers, Body}}},
-		#statedata{nrf_reqid = RequestId, did = DialogueID,
+		#statedata{nrf_reqid = RequestId, did = DialogueID, iid = IID,
 		dha = DHA, cco = CCO, scf = SCF, ac = AC} = Data) ->
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"}]}},
@@ -211,7 +212,7 @@ collect_information(cast, {nrf_start,
 			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
 					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
 			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
-					invokeID = 1, dialogueID = DialogueID, class = 1,
+					invokeID = IID + 1, dialogueID = DialogueID, class = 1,
 					parameters = RequestReportBCSMEventArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
 			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
@@ -219,7 +220,7 @@ collect_information(cast, {nrf_start,
 					requestedInformationTypeList = [callAttemptElapsedTime,
 					callStopTime, callConnectedElapsedTime, releaseCause]}),
 			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
-					invokeID = 2, dialogueID = DialogueID, class = 1,
+					invokeID = IID + 2, dialogueID = DialogueID, class = 1,
 					parameters = CallInformationRequestArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
 			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
@@ -231,17 +232,17 @@ collect_information(cast, {nrf_start,
 					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
 					partyToCharge = {sendingSideID, ?leg1}}),
 			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
-					invokeID = 3, dialogueID = DialogueID, class = 1,
+					invokeID = IID + 3, dialogueID = DialogueID, class = 1,
 					parameters = ApplyChargingArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
 			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
-					invokeID = 4, dialogueID = DialogueID, class = 1},
+					invokeID = IID + 4, dialogueID = DialogueID, class = 1},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
 					appContextName = AC, qos = {true, true},
 					origAddress = SCF, componentsPresent = true},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, analyse_information, NewData};
+			{next_state, analyse_information, NewData#statedata{iid = IID + 4}};
 		% {{ok, #{"serviceRating" := [#{"resultCode" := _} | _]}}, _} ->
 		% {{error, _Partial, _Remaining}, _} ->
 		_Other ->
@@ -249,37 +250,37 @@ collect_information(cast, {nrf_start,
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = 1, dialogueID = DialogueID, class = 1,
+					invokeID = IID + 1, dialogueID = DialogueID, class = 1,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-			{next_state, null, Data}
+			{next_state, null, Data#statedata{iid = IID + 1}}
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
-		did = DialogueID, cco = CCO} = Data) ->
+		did = DialogueID, iid = IID, cco = CCO} = Data) ->
 	?LOG_WARNING([{nrf_start, RequestId}, {nrf_uri, URI},
 			{version, Version}, {code, Code}, {reason, Phrase}]),
 	Cause = #cause{location = local_public, value = 31},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 			{allCallSegments, cse_codec:cause(Cause)}),
 	Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-			invokeID = 1, dialogueID = DialogueID, class = 1,
+			invokeID = IID + 1, dialogueID = DialogueID, class = 1,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-	{next_state, null, Data};
+	{next_state, null, Data#statedata{iid = IID + 1}};
 collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
-		did = DialogueID, cco = CCO} = Data) ->
+		did = DialogueID, iid = IID, cco = CCO} = Data) ->
 	?LOG_ERROR([{nrf_start, RequestId}, {nrf_uri, URI}, {error, Reason}]),
 	Cause = #cause{location = local_public, value = 31},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 			{allCallSegments, cse_codec:cause(Cause)}),
 	Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-			invokeID = 1, dialogueID = DialogueID, class = 1,
+			invokeID = IID + 1, dialogueID = DialogueID, class = 1,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-	{next_state, null, Data}.
+	{next_state, null, Data#statedata{iid = IID + 1}}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
