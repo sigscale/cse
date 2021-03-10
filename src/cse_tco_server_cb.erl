@@ -158,9 +158,9 @@ start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
 		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC} = APDU}} ->
 			case AC of
 				AC when
-				AC == ?'id-ac-CAP-gsmSSF-scfGenericAC'; % Phase 4
-				AC == {0,4,0,0,1,21,3,4};               % Phase 3
-				AC == {0,4,0,0,1,0,50,1} ->             % Phase 2
+				AC == ?'id-ac-CAP-gsmSSF-scfGenericAC'; % Phase 4 (CAP-gsmSSF-scfGenericAC)
+				AC == {0,4,0,0,1,21,3,4};               % Phase 3 (capssf-scfGenericAC)
+				AC == {0,4,0,0,1,0,50,1} ->             % Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
 					case supervisor:start_child(SlpSup, [[APDU], []]) of
 						{ok, TCU} ->
 							case tcap:open(self(), TCU) of
