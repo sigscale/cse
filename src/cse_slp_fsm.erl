@@ -34,7 +34,7 @@
 -export([null/3, collect_information/3, analyse_information/3,
 		routing/3, o_alerting/3, o_active/3]).
 %% export the private api
--export([nrf_start_reply/2]).
+-export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
@@ -115,24 +115,50 @@ init([APDU]) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null, _Data) ->
+null(enter, null, #statedata{dha = undefined} = _Data) ->
 	keep_state_and_data;
+null(enter, _OldState, #statedata{nrf_reqid = ReqId} = _Data)
+		when is_reference(ReqId) ->
+	keep_state_and_data;
+null(enter, _OldState,
+		#statedata{nrf_reqid = undefined, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	nrf_release(0, Data);
 null(enter, collect_information,
-		#statedata{did = DialogueID, ac = AC, dha = DHA} = Data) ->
+		#statedata{did = DialogueID, ac = AC, dha = DHA} = _Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	{stop, normal};
-null(enter, OldState,
-		#statedata{did = DialogueID, dha = DHA} = Data) ->
+null(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = _Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			qos = {true, true}, termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	{stop, normal};
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	NewData = Data#statedata{dha = DHA, cco = CCO},
-	{next_state, collect_information, NewData}.
+	{next_state, collect_information, NewData};
+null(cast, {nrf_release,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	{repeat_state, NewData};
+null(cast, {nrf_release,
+		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
+			{version, Version}, {code, Code}, {reason, Phrase}]),
+	{repeat_state, NewData};
+null(cast, {nrf_release, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	{repeat_state, NewData}.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
@@ -183,9 +209,11 @@ collect_information(cast, {nrf_start,
 		#statedata{nrf_reqid = RequestId, did = DialogueID, iid = IID,
 		dha = DHA, cco = CCO, scf = SCF, ac = AC} = Data) ->
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"}]}},
+		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
+				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
-			NewData = Data#statedata{nrf_location = Location},
+			NewData = Data#statedata{iid = IID + 4,
+						nrf_reqid = undefined, nrf_location = Location},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = routeSelectFailure,
 							monitorMode = notifyAndContinue},
@@ -224,9 +252,10 @@ collect_information(cast, {nrf_start,
 					parameters = CallInformationRequestArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
 			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = 300},
+					maxCallPeriodDuration = GrantedTime},
 			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
-					'PduAChBillingChargingCharacteristics', {timeDurationCharging, TimeDurationCharging}),
+					'PduAChBillingChargingCharacteristics',
+					{timeDurationCharging, TimeDurationCharging}),
 			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
 					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
 					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
@@ -242,45 +271,51 @@ collect_information(cast, {nrf_start,
 					appContextName = AC, qos = {true, true},
 					origAddress = SCF, componentsPresent = true},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, analyse_information, NewData#statedata{iid = IID + 4}};
+			{next_state, analyse_information, NewData};
 		% {{ok, #{"serviceRating" := [#{"resultCode" := _} | _]}}, _} ->
 		% {{error, _Partial, _Remaining}, _} ->
 		_Other ->
+			NewData = Data#statedata{iid = IID + 1,
+						nrf_reqid = undefined, nrf_location = undefined},
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 1,
 					parameters = ReleaseCallArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-			{next_state, null, Data#statedata{iid = IID + 1}}
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, null, NewData}
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
+	NewIID = IID + 1,
+	NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
 	?LOG_WARNING([{nrf_start, RequestId}, {nrf_uri, URI},
 			{version, Version}, {code, Code}, {reason, Phrase}]),
 	Cause = #cause{location = local_public, value = 31},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 			{allCallSegments, cse_codec:cause(Cause)}),
-	Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-			invokeID = IID + 1, dialogueID = DialogueID, class = 1,
+	Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = NewIID, dialogueID = DialogueID, class = 1,
 			parameters = ReleaseCallArg},
-	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-	{next_state, null, Data#statedata{iid = IID + 1}};
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+	{next_state, null, NewData};
 collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
+	NewIID = IID + 1,
+	NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
 	?LOG_ERROR([{nrf_start, RequestId}, {nrf_uri, URI}, {error, Reason}]),
 	Cause = #cause{location = local_public, value = 31},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 			{allCallSegments, cse_codec:cause(Cause)}),
-	Invoke2 = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-			invokeID = IID + 1, dialogueID = DialogueID, class = 1,
+	Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = NewIID, dialogueID = DialogueID, class = 1,
 			parameters = ReleaseCallArg},
-	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-	{next_state, null, Data#statedata{iid = IID + 1}}.
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+	{next_state, null, NewData}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
@@ -589,19 +624,107 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
-						#'PduCallResult_timeDurationChargingResult'{}}} ->
-					case LastComponent of
-						true ->
-							{next_state, null, Data};
-						false ->
-							keep_state_and_data
-					end;
+						#'PduCallResult_timeDurationChargingResult'{
+						timeInformation = {timeIfNoTariffSwitch, Time},
+						callLegReleasedAtTcpExpiry = Released}}}
+						when Released /= asn1_NOVALUE ->
+					nrf_release(Time, Data);
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{
+						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
+					nrf_update(Time, Data);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+o_active(cast, {nrf_update,
+		{RequestId, {{_, 200, _} = _StatusLine, _Headers, Body}}},
+		#statedata{nrf_reqid = RequestId,
+		did = DialogueID, iid = IID, cco = CCO} = Data) ->
+	NewIID = IID + 1,
+	NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
+				"grantedUnit" := #{"time" := GrantedTime}}]}} ->
+			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+					maxCallPeriodDuration = GrantedTime},
+			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+					'PduAChBillingChargingCharacteristics',
+					{timeDurationCharging, TimeDurationCharging}),
+			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+					partyToCharge = {sendingSideID, ?leg1}}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+					invokeID = NewIID, dialogueID = DialogueID, class = 1,
+					parameters = ApplyChargingArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, null, Data#statedata{iid = NewIID}};
+		%% {ok, #{"serviceRating" := [#{"resultCode" := _}]}} ->
+		%% {error, _Partial, _Remaining} ->
+		_Other ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 1,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, null, NewData}
+	end;
+o_active(cast, {nrf_update,
+		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		did = DialogueID, iid = IID, cco = CCO} = Data) ->
+	NewIID = IID + 1,
+	NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
+	?LOG_WARNING([{nrf_update, RequestId}, {nrf_uri, URI},
+			{version, Version}, {code, Code}, {reason, Phrase}]),
+	Cause = #cause{location = local_public, value = 31},
+	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{allCallSegments, cse_codec:cause(Cause)}),
+	Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = NewIID, dialogueID = DialogueID, class = 1,
+			parameters = ReleaseCallArg},
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+	{next_state, null, NewData};
+o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		did = DialogueID, iid = IID, cco = CCO} = Data) ->
+	NewIID = IID + 1,
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined, iid = NewIID},
+	?LOG_ERROR([{nrf_update, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	Cause = #cause{location = local_public, value = 31},
+	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{allCallSegments, cse_codec:cause(Cause)}),
+	Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = NewIID, dialogueID = DialogueID, class = 1,
+			parameters = ReleaseCallArg},
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+	{next_state, null, NewData};
+o_active(cast, {nrf_release,
+		{RequestId, {{Version, 200, Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	{next_state, null, NewData};
+o_active(cast, {nrf_release,
+		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
+			{version, Version}, {code, Code}, {reason, Phrase}]),
+	{next_state, null, NewData};
+o_active(cast, {nrf_release, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	{next_state, null, NewData};
 o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, lastComponent = LastComponent,
@@ -704,6 +827,32 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 nrf_start_reply(ReplyInfo, Fsm) ->
 	gen_statem:cast(Fsm, {nrf_start, ReplyInfo}).
 
+-spec nrf_update_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_update/1}.
+%% @private
+nrf_update_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_update, ReplyInfo}).
+
+-spec nrf_release_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_release/1}.
+%% @private
+nrf_release_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_release, ReplyInfo}).
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
@@ -743,6 +892,94 @@ nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 			{next_state, null, Data};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			{next_state, null, Data}
+	end.
+
+-spec nrf_update(Consumed, Data) -> Result
+	when
+		Consumed :: non_neg_integer(),
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, null, Data}.
+%% @doc Interim update during a rating session.
+nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
+		called = CalledNumber, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	Now = erlang:system_time(millisecond),
+	MFA = {?MODULE, nrf_update_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceContextId = "32276@3gpp.org",
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
+					"destinationId" => [#{"destinationIdType" => "DN",
+							"destinationIdData" => CalledNumber}],
+					"consumedUnit" => #{"time" => Consumed div 10},
+					"requestSubType" => "DEBIT"},
+					#{"serviceContextId" => ServiceContextId,
+					"destinationId" => [#{"destinationIdType" => "DN",
+							"destinationIdData" => CalledNumber}],
+					"requestSubType" => "RESERVE"}]},
+	Body = zj:encode(JSON),
+	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#statedata{nrf_reqid = RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
+					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			{next_state, null, Data};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			{next_state, null, Data}
+	end.
+
+-spec nrf_release(Consumed, Data) -> Result
+	when
+		Consumed :: non_neg_integer(),
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, null, Data}.
+%% @doc Final update to release a rating session.
+nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
+		called = CalledNumber, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	Now = erlang:system_time(millisecond),
+	MFA = {?MODULE, nrf_release_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceContextId = "32276@3gpp.org",
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
+					"destinationId" => [#{"destinationIdType" => "DN",
+							"destinationIdData" => CalledNumber}],
+					"consumedUnit" => #{"time" => Consumed div 10},
+					"requestSubType" => "DEBIT"}]},
+	Body = zj:encode(JSON),
+	Request = {URI ++ Location ++ "/release", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#statedata{nrf_reqid = RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
+					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			{next_state, null, Data};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
 			{next_state, null, Data}
 	end.
