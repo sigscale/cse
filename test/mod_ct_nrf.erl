@@ -111,17 +111,17 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, Op])
 
 service_rating([#{"serviceContextId" := "32276@3gpp.org",
 		"requestSubType" := "RESERVE"} = Request | T], Acc) ->
-	GrantedUnit = #{"grantedUnit" => #{"time" => 60}},
+	GrantedUnit = #{"time" => 60},
 	Result = Request#{"grantedUnit" => GrantedUnit, "resultCode" => "SUCCESS"},
 	service_rating(T, [maps:remove("destinationId", Result) | Acc]);
 service_rating([#{"serviceContextId" := "32251@3gpp.org",
 		"requestSubType" := "RESERVE"} = Request | T], Acc) ->
-	GrantedUnit = #{"grantedUnit" => #{"totalVolume" => 10000000}},
+	GrantedUnit = #{"totalVolume" => 10000000},
 	Result = Request#{"grantedUnit" => GrantedUnit, "resultCode" => "SUCCESS"},
 	service_rating(T, [Result | Acc]);
 service_rating([#{"serviceContextId" := "32274@3gpp.org",
 		"requestSubType" := "RESERVE"} = Request | T], Acc) ->
-	GrantedUnit = #{"grantedUnit" => #{"serviceSpecificUnit" => 1}},
+	GrantedUnit = #{"serviceSpecificUnit" => 1},
 	Result = Request#{"grantedUnit" => GrantedUnit, "resultCode" => "SUCCESS"},
 	service_rating(T, [maps:remove("destinationId", Result) | Acc]);
 service_rating([#{"serviceContextId" := "32276@3gpp.org",
