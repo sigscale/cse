@@ -10,12 +10,19 @@
 The SLP instances (SLPI) are implemented as finte state machines
 with the {@link //stdlib/gen_statem. gen_statem} behaviour.
 
-The CAMEL Originating Basic Call State Machine (O-BCSM) is depicted in
-<a href="#figure1-1">Figure 1-1</a>.
+The CAMEL standardized Originating Basic Call State Machine (O-BCSM)
+is depicted in <a href="#figure1-1">Figure 1-1</a>.
 
 <p><img alt="diagram of camel o-bcsm"
 		name="figure1-1" src="o-bcsm-camel.png" /><br />
 Figure 1-1: O-BCSM</p>
+
+The CAMEL standardized Terminating Basic Call State Machine (T-BCSM)
+is depicted in <a href="#figure1-2">Figure 1-2</a>.
+
+<p><img alt="diagram of camel t-bcsm"
+		name="figure1-2" src="t-bcsm-camel.png" /><br />
+Figure 1-2: T-BCSM</p>
 
 ===Messaging===
 The interprocess communication is depicted in

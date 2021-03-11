@@ -1,0 +1,32 @@
+@startuml
+
+state T_Null {
+	state T_Abandon <<inputPin>>
+	state T_Disconnect <<inputPin>>
+}
+state Terminating_Call_Handling {
+	state Terminating_Attempt_Authorised <<inputPin>>
+}
+state T_Alerting {
+	state Call_Accepted <<inputPin>>
+}
+state T_Active {
+	state T_Answer <<inputPin>>
+}
+state T_Exception
+
+T_Null -down-> Terminating_Attempt_Authorised
+Terminating_Call_Handling -down-> Call_Accepted
+Terminating_Call_Handling -down-> T_Answer
+T_Alerting -down-> T_Answer
+
+Terminating_Call_Handling -up-> T_Abandon
+T_Alerting -up-> T_Abandon
+T_Active -up-> T_Disconnect
+
+T_Exception -left-> T_Null
+T_Alerting -up-> T_Exception : T_alerting_failure
+T_Active -up-> T_Exception : T_active_failure
+
+@enduml
+
