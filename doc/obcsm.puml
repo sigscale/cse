@@ -1,6 +1,9 @@
 @startuml
 
-state O_Null
+state O_Null {
+	state O_Abandon <<inputPin>>
+	state O_Disconnect <<inputPin>>
+}
 state Authorize_Origination_Attempt
 state Collect_Information
 state Analyse_Information {
@@ -23,6 +26,10 @@ Collect_Information -down-> Collected_Info
 Analyse_Information -down-> Analysed_Information
 Routing -down-> O_Term_Seized
 O_Alerting -down-> O_Answer
+
+Analyse_Information -up-> O_Abandon
+O_Alerting -up-> O_Abandon
+O_Active -up-> O_Disconnect
 
 O_Exception -left-> O_Null
 Analyse_Information -up-> O_Exception : invalid_information
