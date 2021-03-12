@@ -137,6 +137,7 @@ null(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = _Data) ->
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	{stop, normal};
 null(cast, {register_csl, DHA, CCO}, Data) ->
+	link(DHA),
 	NewData = Data#statedata{dha = DHA, cco = CCO},
 	{next_state, collect_information, NewData};
 null(cast, {nrf_release,
