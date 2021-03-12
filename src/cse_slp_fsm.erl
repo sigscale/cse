@@ -159,7 +159,9 @@ null(cast, {nrf_release, {RequestId, {error, Reason}}},
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
 	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
-	{repeat_state, NewData}.
+	{repeat_state, NewData};
+null(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+	{stop, Reason}.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
@@ -316,7 +318,10 @@ collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID, class = 4,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, null, NewData}.
+	{next_state, null, NewData};
+collect_information(info, {'EXIT', DHA, Reason},
+		#statedata{dha = DHA} = Data) ->
+	{stop, Reason}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
@@ -429,7 +434,10 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 			{next_state, null, Data};
 		false ->
 			keep_state_and_data
-	end.
+	end;
+analyse_information(info, {'EXIT', DHA, Reason},
+		 #statedata{dha = DHA} = Data) ->
+	{stop, Reason}.
 
 -spec routing(EventType, EventContent, Data) -> Result
 	when
@@ -465,7 +473,9 @@ routing(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data}.
+	{next_state, null, Data};
+routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+	{stop, Reason}.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
 	when
@@ -583,7 +593,9 @@ o_alerting(cast, {'TC', 'U-ERROR', indication,
 			{next_state, null, Data};
 		false ->
 			keep_state_and_data
-	end.
+	end;
+o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+	{stop, Reason}.
 
 -spec o_active(EventType, EventContent, Data) -> Result
 	when
@@ -770,7 +782,9 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 			{next_state, null, Data};
 		false ->
 			keep_state_and_data
-	end.
+	end;
+o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+	{stop, Reason}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
