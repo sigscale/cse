@@ -300,6 +300,8 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, routing, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
 			{next_state, o_abandon, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
+			{next_state, o_active, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
