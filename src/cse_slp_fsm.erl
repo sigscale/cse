@@ -32,7 +32,7 @@
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
 -export([null/3, collect_information/3, analyse_information/3,
-		routing/3, o_alerting/3, o_active/3]).
+		routing/3, o_alerting/3, o_active/3, exception/3]).
 %% export the private api
 -export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
@@ -45,8 +45,8 @@
 -include_lib("kernel/include/logger.hrl").
 -include("cse_codec.hrl").
 
--type state() :: null | collect_information
-		| analyse_information | routing | o_alerting | o_active.
+-type state() :: null | collect_information | analyse_information
+		| routing | o_alerting | o_active | exception.
 
 %% the cse_slp_fsm state data
 -record(statedata,
@@ -115,51 +115,18 @@ init([APDU]) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null, #statedata{dha = undefined} = _Data) ->
+null(enter, null, _Data) ->
 	keep_state_and_data;
-null(enter, _OldState, #statedata{nrf_reqid = ReqId} = _Data)
-		when is_reference(ReqId) ->
-	keep_state_and_data;
-null(enter, _OldState,
-		#statedata{nrf_reqid = undefined, nrf_location = Location} = Data)
-		when is_list(Location) ->
-	nrf_release(0, Data);
-null(enter, collect_information,
-		#statedata{did = DialogueID, ac = AC, dha = DHA} = _Data) ->
-	End = #'TC-END'{dialogueID = DialogueID,
-			appContextName = AC, qos = {true, true},
-			termination = basic},
-	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	{stop, normal};
-null(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = _Data) ->
-	End = #'TC-END'{dialogueID = DialogueID,
-			qos = {true, true}, termination = basic},
-	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+null(enter, _OldState, _Data) ->
 	{stop, normal};
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	link(DHA),
 	NewData = Data#statedata{dha = DHA, cco = CCO},
 	{next_state, collect_information, NewData};
-null(cast, {nrf_release,
-		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId} = Data) ->
-	NewData = Data#statedata{nrf_reqid = undefined,
-			nrf_location = undefined},
-	{repeat_state, NewData};
-null(cast, {nrf_release,
-		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
-	NewData = Data#statedata{nrf_reqid = undefined,
-			nrf_location = undefined},
-	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
-			{version, Version}, {code, Code}, {reason, Phrase}]),
-	{repeat_state, NewData};
-null(cast, {nrf_release, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
-	NewData = Data#statedata{nrf_reqid = undefined,
-			nrf_location = undefined},
-	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
-	{repeat_state, NewData};
+null(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	keep_state_and_data;
 null(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
 	{stop, Reason}.
 
@@ -287,7 +254,7 @@ collect_information(cast, {nrf_start,
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, null, NewData}
+			{next_state, exception, NewData}
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
@@ -304,7 +271,7 @@ collect_information(cast, {nrf_start,
 			invokeID = NewIID, dialogueID = DialogueID, class = 4,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
@@ -318,7 +285,7 @@ collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID, class = 4,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 collect_information(info, {'EXIT', DHA, Reason},
 		#statedata{dha = DHA} = Data) ->
 	{stop, Reason}.
@@ -349,14 +316,14 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oBusy}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -365,7 +332,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -384,7 +351,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 						#'PduCallResult_timeDurationChargingResult'{}}} ->
 					case LastComponent of
 						true ->
-							{next_state, null, Data};
+							{next_state, exception, Data};
 						false ->
 							keep_state_and_data
 					end;
@@ -403,7 +370,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -413,12 +380,12 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 analyse_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 analyse_information(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 analyse_information(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
@@ -431,7 +398,7 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 			{state, analyse_information}, {ssf, SSF}]),
 	case LastComponent of
 		true ->
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		false ->
 			keep_state_and_data
 	end;
@@ -461,19 +428,19 @@ routing(cast, {'TC', 'U-ERROR', indication,
 			{state, routing}, {ssf, SSF}]),
 	case LastComponent of
 		true ->
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		false ->
 			keep_state_and_data
 	end;
 routing(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 routing(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
 	{stop, Reason}.
 
@@ -501,28 +468,28 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -543,7 +510,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 						#'PduCallResult_timeDurationChargingResult'{}}} ->
 					case LastComponent of
 						true ->
-							{next_state, null, Data};
+							{next_state, exception, Data};
 						false ->
 							keep_state_and_data
 					end;
@@ -562,7 +529,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -572,12 +539,12 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 o_alerting(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 o_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 o_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
@@ -590,7 +557,7 @@ o_alerting(cast, {'TC', 'U-ERROR', indication,
 			{state, o_alerting}, {ssf, SSF}]),
 	case LastComponent of
 		true ->
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		false ->
 			keep_state_and_data
 	end;
@@ -621,7 +588,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -689,7 +656,7 @@ o_active(cast, {nrf_update,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, null, NewData}
+			{next_state, exception, NewData}
 	end;
 o_active(cast, {nrf_update,
 		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
@@ -706,7 +673,7 @@ o_active(cast, {nrf_update,
 			invokeID = NewIID, dialogueID = DialogueID, class = 4,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
@@ -721,13 +688,13 @@ o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID, class = 4,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 o_active(cast, {nrf_release,
 		{RequestId, {{Version, 200, Phrase} = _StatusLine, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 o_active(cast, {nrf_release,
 		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
@@ -735,13 +702,13 @@ o_active(cast, {nrf_release,
 			nrf_location = undefined},
 	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
 			{version, Version}, {code, Code}, {reason, Phrase}]),
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 o_active(cast, {nrf_release, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
 	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
-	{next_state, null, NewData};
+	{next_state, exception, NewData};
 o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, lastComponent = LastComponent,
@@ -751,7 +718,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
 			case LastComponent of
 				true ->
-					{next_state, null, Data};
+					{next_state, exception, Data};
 				false ->
 					keep_state_and_data
 			end;
@@ -761,12 +728,12 @@ o_active(cast, {'TC', 'INVOKE', indication,
 o_active(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 o_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{next_state, null, Data};
+	{next_state, exception, Data};
 o_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters,
@@ -779,12 +746,64 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 			{state, o_active}, {ssf, SSF}]),
 	case LastComponent of
 		true ->
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		false ->
 			keep_state_and_data
 	end;
 o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
 	{stop, Reason}.
+
+-spec exception(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>exception</em> state.
+%% @private
+exception(enter, _OldState, #statedata{nrf_reqid = ReqId} = _Data)
+		when is_reference(ReqId) ->
+	keep_state_and_data;
+exception(enter, _OldState,
+		#statedata{nrf_reqid = undefined, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	nrf_release(0, Data);
+exception(enter, _OldState,
+		#statedata{iid = 0, did = DialogueID, ac = AC, dha = DHA} = _Data) ->
+	End = #'TC-END'{dialogueID = DialogueID,
+			appContextName = AC, qos = {true, true},
+			termination = basic},
+	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+	{stop, normal};
+exception(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = _Data) ->
+	End = #'TC-END'{dialogueID = DialogueID,
+			qos = {true, true}, termination = basic},
+	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+	{stop, normal};
+exception(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	keep_state_and_data;
+exception(cast, {nrf_release,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	{next_state, null, NewData};
+exception(cast, {nrf_release,
+		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
+			{version, Version}, {code, Code}, {reason, Phrase}]),
+	{next_state, null, NewData};
+exception(cast, {nrf_release, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	{next_state, null, NewData}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
@@ -879,7 +898,7 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 -spec nrf_start(Data) -> Result
 	when
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {next_state, null, Data}.
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Start rating a session.
 nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 		called = CalledNumber, nrf_profile = Profile,
@@ -908,18 +927,18 @@ nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data}
+			{next_state, exception, Data}
 	end.
 
 -spec nrf_update(Consumed, Data) -> Result
 	when
 		Consumed :: non_neg_integer(),
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {next_state, null, Data}.
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Interim update during a rating session.
 nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		called = CalledNumber, nrf_profile = Profile,
@@ -954,18 +973,18 @@ nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data}
+			{next_state, exception, Data}
 	end.
 
 -spec nrf_release(Consumed, Data) -> Result
 	when
 		Consumed :: non_neg_integer(),
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {next_state, null, Data}.
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Final update to release a rating session.
 nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		called = CalledNumber, nrf_profile = Profile,
@@ -996,10 +1015,10 @@ nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data};
+			{next_state, exception, Data};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data}
+			{next_state, exception, Data}
 	end.
 
