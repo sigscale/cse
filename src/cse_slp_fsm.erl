@@ -642,8 +642,8 @@ o_active(cast, {'TC', 'INVOKE', indication,
 	end;
 o_active(cast, {nrf_update,
 		{RequestId, {{_, 200, _} = _StatusLine, _Headers, Body}}},
-		#statedata{nrf_reqid = RequestId,
-		did = DialogueID, iid = IID, cco = CCO} = Data) ->
+		#statedata{nrf_reqid = RequestId, did = DialogueID, iid = IID,
+		dha = DHA, cco = CCO, scf = SCF} = Data) ->
 	NewIID = IID + 1,
 	NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
 	case zj:decode(Body) of
@@ -662,7 +662,11 @@ o_active(cast, {nrf_update,
 					invokeID = NewIID, dialogueID = DialogueID, class = 2,
 					parameters = ApplyChargingArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, null, Data#statedata{iid = NewIID}};
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF,
+					componentsPresent = true},
+			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+			{keep_state, Data#statedata{iid = NewIID}};
 		%% {ok, #{"serviceRating" := [#{"resultCode" := _}]}} ->
 		%% {error, _Partial, _Remaining} ->
 		_Other ->
