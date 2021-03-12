@@ -620,7 +620,7 @@ pdu_o_abandon(OTID, DTID, InvokeID) ->
 			argument = EventReportArg},
 	ChargingResult = #'PduCallResult_timeDurationChargingResult'{
 			partyToCharge = {receivingSideID, ?leg1},
-			timeInformation = {timeIfNoTariffSwitch, rand:uniform(320)}},
+			timeInformation = {timeIfNoTariffSwitch, 0}},
 	{ok, ChargingResultArg} = 'CAMEL-datatypes':encode('PduCallResult',
 			{timeDurationChargingResult, ChargingResult}),
 	Invoke2 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
