@@ -125,9 +125,9 @@ null(cast, {register_csl, DHA, CCO}, Data) ->
 	{next_state, collect_information, NewData};
 null(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
-null(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+null(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
@@ -287,7 +287,7 @@ collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, exception, NewData};
 collect_information(info, {'EXIT', DHA, Reason},
-		#statedata{dha = DHA} = Data) ->
+		#statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
@@ -403,7 +403,7 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 			keep_state_and_data
 	end;
 analyse_information(info, {'EXIT', DHA, Reason},
-		 #statedata{dha = DHA} = Data) ->
+		 #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec routing(EventType, EventContent, Data) -> Result
@@ -441,7 +441,7 @@ routing(cast, {'TC', 'END', indication,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	{next_state, exception, Data};
-routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
@@ -561,7 +561,7 @@ o_alerting(cast, {'TC', 'U-ERROR', indication,
 		false ->
 			keep_state_and_data
 	end;
-o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec o_active(EventType, EventContent, Data) -> Result
@@ -597,8 +597,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 	end;
 o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
-		dialogueID = DialogueID, lastComponent = LastComponent,
-		parameters = Argument}} = _EventContent,
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
@@ -690,8 +689,8 @@ o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, exception, NewData};
 o_active(cast, {nrf_release,
-		{RequestId, {{Version, 200, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+		{RequestId, {{_Version, 200, _Phrase} = _StatusLine, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId} = Data) ->
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
 	{next_state, exception, NewData};
@@ -750,7 +749,7 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 		false ->
 			keep_state_and_data
 	end;
-o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = Data) ->
+o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec exception(EventType, EventContent, Data) -> Result
@@ -782,7 +781,7 @@ exception(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = _Data) ->
 	{stop, normal};
 exception(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
@@ -803,7 +802,9 @@ exception(cast, {nrf_release, {RequestId, {error, Reason}}},
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
 	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
-	{next_state, null, NewData}.
+	{next_state, null, NewData};
+exception(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
