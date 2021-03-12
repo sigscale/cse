@@ -115,10 +115,8 @@ init([APDU]) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null, _Data) ->
-	keep_state_and_data;
 null(enter, _OldState, _Data) ->
-	{stop, normal};
+	keep_state_and_data;
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	link(DHA),
 	NewData = Data#statedata{dha = DHA, cco = CCO},
@@ -768,17 +766,17 @@ exception(enter, _OldState,
 		when is_list(Location) ->
 	nrf_release(0, Data);
 exception(enter, _OldState,
-		#statedata{iid = 0, did = DialogueID, ac = AC, dha = DHA} = _Data) ->
+		#statedata{iid = 0, did = DialogueID, ac = AC, dha = DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	{stop, normal};
-exception(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = _Data) ->
+	{next_state, null, Data};
+exception(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			qos = {true, true}, termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	{stop, normal};
+	{next_state, null, Data};
 exception(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
