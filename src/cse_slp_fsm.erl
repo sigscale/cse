@@ -691,7 +691,7 @@ o_abandon(cast, {'TC', 'CONTINUE', indication,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
-o_disconnect(cast, {'TC', 'INVOKE', indication,
+o_abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
