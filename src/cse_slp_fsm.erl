@@ -503,28 +503,48 @@ o_active(cast, {nrf_update,
 		#statedata{nrf_reqid = RequestId, did = DialogueID, iid = IID,
 		dha = DHA, cco = CCO, scf = SCF} = Data) ->
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
-				"grantedUnit" := #{"time" := GrantedTime}}]}} ->
-			NewIID = IID + 1,
-			NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
-			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = GrantedTime * 10},
-			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
-					'PduAChBillingChargingCharacteristics',
-					{timeDurationCharging, TimeDurationCharging}),
-			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
-					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
-					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
-					partyToCharge = {sendingSideID, ?leg1}}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
-					invokeID = NewIID, dialogueID = DialogueID, class = 2,
-					parameters = ApplyChargingArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-					qos = {true, true}, origAddress = SCF,
-					componentsPresent = true},
-			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{keep_state, NewData};
+		{ok, #{"serviceRating" := [Result1, Result2]}}
+				when Result1#{"resultCode" := "SUCCESS"},
+				Result2#{"resultCode" := "SUCCESS"} ->
+			try
+				case maps:find("grantedUnit", Result1) of
+					{ok, GT} ->
+						GT;
+					error ->
+						case maps:find("grantedUnit", Result2) of
+							{ok, GT} ->
+								GT;
+							error ->
+								throw(not_found)
+						end
+				end
+			of
+				GrantedTime ->
+					NewIID = IID + 1,
+					NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
+					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+							maxCallPeriodDuration = GrantedTime * 10},
+					{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+							'PduAChBillingChargingCharacteristics',
+							{timeDurationCharging, TimeDurationCharging}),
+					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+							#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+							aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+							partyToCharge = {sendingSideID, ?leg1}}),
+					Invoke = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+							invokeID = NewIID, dialogueID = DialogueID, class = 2,
+							parameters = ApplyChargingArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+							qos = {true, true}, origAddress = SCF,
+							componentsPresent = true},
+					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+					{keep_state, NewData}
+			catch
+				not_found ->
+					NewData = Data#statedata{nrf_reqid = undefined},
+					{next_state, exception, NewData}
+			end;
 		%% {ok, #{"serviceRating" := [#{"resultCode" := _}]}} ->
 		%% {error, _Partial, _Remaining} ->
 		_Other ->
