@@ -348,6 +348,11 @@ analyse_information(info, {'EXIT', DHA, Reason},
 %% @private
 routing(enter, _State, _Data) ->
 	keep_state_and_data;
+routing(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
 routing(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
@@ -571,6 +576,11 @@ o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 %% @private
 o_abandon(enter, _State, _Data) ->
 	keep_state_and_data;
+o_abandon(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
 o_abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
@@ -675,6 +685,11 @@ o_abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 %% @doc Handles events received in the <em>o_disconnect</em> state.
 %% @private
 o_disconnect(enter, _State, _Data) ->
+	keep_state_and_data;
+o_abandon(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
 o_disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
@@ -806,6 +821,11 @@ exception(enter, _OldState,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
+exception(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId} = Data) ->
