@@ -491,7 +491,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_update(Time * 10, Data);
+					nrf_update(Time div 10, Data);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -686,12 +686,12 @@ o_abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 %% @private
 o_disconnect(enter, _State, _Data) ->
 	keep_state_and_data;
-o_abandon(cast, {'TC', 'CONTINUE', indication,
+o_disconnect(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
-o_abandon(cast, {'TC', 'INVOKE', indication,
+o_disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
@@ -701,7 +701,7 @@ o_abandon(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_release(Time * 10, Data);
+					nrf_release(Time div 10, Data);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
