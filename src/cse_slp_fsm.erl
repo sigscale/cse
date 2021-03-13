@@ -455,7 +455,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, routing},
+			?LOG_WARNING([{state, o_alerting},
 					{eventTypeBCSM, EventType}, {slpi, self()}]),
 			keep_state_and_data;
 		{error, Reason} ->
