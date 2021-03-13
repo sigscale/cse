@@ -182,9 +182,11 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 					msisdn = MSISDN, called = DN,
 					call_ref = CallReferenceNumber, msc = MscAddress},
 			nrf_start(NewData);
-		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = _}} ->
-			NewData = Data#statedata{},
-			{keep_state, NewData}
+		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
+				eventTypeBCSM = EventType} = InitialDPArg} ->
+			?LOG_WARNING([{state, collect_information}, {eventTypeBCSM, EventType},
+					{slpi, self()}, {initalDPArg, InitialDPArg}]),
+			{keep_state, Data}
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
@@ -325,6 +327,10 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, o_abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, analyse_information},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -389,6 +395,10 @@ routing(cast, {'TC', 'INVOKE', indication,
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, routing},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -444,6 +454,10 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, routing},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -501,6 +515,10 @@ o_active(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect}} ->
 			{next_state, o_disconnect, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, o_active},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
