@@ -334,16 +334,6 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-analyse_information(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
-		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			{next_state, exception, Data};
-		{error, Reason} ->
-			{stop, Reason}
-	end;
 analyse_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -458,16 +448,6 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			?LOG_WARNING([{state, o_alerting},
 					{eventTypeBCSM, EventType}, {slpi, self()}]),
 			keep_state_and_data;
-		{error, Reason} ->
-			{stop, Reason}
-	end;
-o_alerting(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
-		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			{next_state, exception, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
