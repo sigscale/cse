@@ -32,8 +32,9 @@
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
 -export([null/3, collect_information/3, analyse_information/3,
-		routing/3, o_alerting/3, o_active/3, o_disconnect/3,
-		o_abandon/3, exception/3]).
+		routing/3, o_alerting/3, o_active/3, disconnect/3,
+		abandon/3, terminating_call_handling/3, t_alerting/3,
+		t_active/3, exception/3]).
 %% export the private api
 -export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
@@ -47,7 +48,8 @@
 -include("cse_codec.hrl").
 
 -type state() :: null | collect_information | analyse_information
-		| routing | o_alerting | o_active | o_disconnect | o_abandon
+		| routing | o_alerting | o_active | disconnect | abandon
+		| terminating_call_handling | t_alerting | t_active
 		| exception.
 
 %% the cse_slp_fsm state data
@@ -62,6 +64,7 @@
 		imsi :: [$0..$9] | undefined,
 		msisdn :: [$0..$9] | undefined,
 		called ::  [$0..$9] | undefined,
+		calling ::  [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
 		msc :: binary() | undefined,
 		nrf_profile :: atom(),
@@ -179,7 +182,22 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 					= cse_codec:called_party_bcd(CalledPartyBCDNumber),
 			DN = lists:flatten([integer_to_list(D) || D <- CalledNumber]),
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
-					msisdn = MSISDN, called = DN,
+					msisdn = MSISDN, called = DN, calling = MSISDN,
+					call_ref = CallReferenceNumber, msc = MscAddress},
+			nrf_start(NewData);
+		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = termAttemptAuthorized,
+				callingPartyNumber = CallingPartyNumber,
+				calledPartyNumber = CalledPartyNumber,
+				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
+				mscAddress = MscAddress} = _InitialDPArg} ->
+			#calling_party{nai = 4, npi = 1, address = CallingAddress}
+					= cse_codec:calling_party(CallingPartyNumber),
+			#called_party{nai = 4, npi = 1, address = CalledAddress}
+					= cse_codec:called_party(CalledPartyNumber),
+			MSISDN = lists:flatten([integer_to_list(D) || D <- CalledAddress]),
+			DN = lists:flatten([integer_to_list(D) || D <- CallingAddress]),
+			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
+					msisdn = MSISDN, called = MSISDN, calling = DN,
 					call_ref = CallReferenceNumber, msc = MscAddress},
 			nrf_start(NewData);
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
@@ -190,8 +208,8 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
-		nrf_uri = URI, did = DialogueID, iid = IID,
+		#statedata{nrf_reqid = RequestId, msisdn = MSISDN, calling = MSISDN,
+		nrf_profile = Profile, nrf_uri = URI, did = DialogueID, iid = IID,
 		dha = DHA, cco = CCO, scf = SCF, ac = AC} = Data) ->
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
@@ -283,6 +301,100 @@ collect_information(cast, {nrf_start,
 			{next_state, exception, NewData}
 	end;
 collect_information(cast, {nrf_start,
+		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
+		#statedata{nrf_reqid = RequestId, msisdn = MSISDN, called = MSISDN,
+		nrf_profile = Profile, nrf_uri = URI, did = DialogueID, iid = IID,
+		dha = DHA, cco = CCO, scf = SCF, ac = AC} = Data) ->
+	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
+		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
+				"grantedUnit" := #{"time" := GrantedTime}}]}},
+				{_, Location}} when is_list(Location) ->
+			NewData = Data#statedata{iid = IID + 4,
+						nrf_reqid = undefined, nrf_location = Location},
+			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tBusy,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tNoAnswer,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tAnswer,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tAbandon,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = callAccepted,
+							monitorMode = notifyAndContinue},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tDisconnect,
+							monitorMode = notifyAndContinue,
+							legID = {sendingSideID, ?leg1}},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tDisconnect,
+							monitorMode = notifyAndContinue,
+							legID = {sendingSideID, ?leg2}}],
+			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
+			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 2,
+					parameters = RequestReportBCSMEventArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
+			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
+					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
+					requestedInformationTypeList = [callAttemptElapsedTime,
+					callStopTime, callConnectedElapsedTime, releaseCause]}),
+			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
+					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
+					parameters = CallInformationRequestArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+					maxCallPeriodDuration = GrantedTime * 10},
+			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+					'PduAChBillingChargingCharacteristics',
+					{timeDurationCharging, TimeDurationCharging}),
+			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+					partyToCharge = {sendingSideID, ?leg2}}),
+			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+					invokeID = IID + 3, dialogueID = DialogueID, class = 2,
+					parameters = ApplyChargingArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
+			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					appContextName = AC, qos = {true, true},
+					origAddress = SCF, componentsPresent = true},
+			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+			{next_state, terminating_call_handling, NewData};
+		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
+				when is_list(Location) ->
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {json, JSON}]),
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{error, Partial, Remaining}, {_, Location}} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData}
+	end;
+collect_information(cast, {nrf_start,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
 		nrf_uri = URI} = Data) ->
@@ -324,7 +436,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = analyzedInformation}} ->
 			{next_state, routing, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
-			{next_state, o_abandon, Data};
+			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
@@ -354,6 +466,64 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 			{state, analyse_information}, {ssf, SSF}]),
 	{next_state, exception, Data};
 analyse_information(info, {'EXIT', DHA, Reason},
+		 #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
+
+-spec terminating_call_handling(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>terminating_call_handling</em> state.
+%% @private
+terminating_call_handling(enter, _State, _Data) ->
+	keep_state_and_data;
+terminating_call_handling(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+terminating_call_handling(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}} ->
+			{next_state, abandon, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tBusy}} ->
+			{next_state, exception, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = callAccepted}} ->
+			{next_state, t_alerting, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
+			{next_state, t_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, terminating_call_handling},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
+terminating_call_handling(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data};
+terminating_call_handling(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+		error = Error, parameters = Parameters}} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, terminating_call_handling}, {ssf, SSF}]),
+	{next_state, exception, Data};
+terminating_call_handling(info, {'EXIT', DHA, Reason},
 		 #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
@@ -437,7 +607,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
-			{next_state, o_abandon, Data};
+			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
@@ -473,6 +643,63 @@ o_alerting(cast, {'TC', 'U-ERROR', indication,
 o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
+-spec t_alerting(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>t_alerting</em> state.
+%% @private
+t_alerting(enter, _State, _Data) ->
+	keep_state_and_data;
+t_alerting(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+t_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}} ->
+			{next_state, abandon, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}} ->
+			{next_state, exception, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tBusy}} ->
+			{next_state, exception, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
+			{next_state, t_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, t_alerting},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+t_alerting(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
+t_alerting(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data};
+t_alerting(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+		error = Error, parameters = Parameters}} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, t_alerting}, {ssf, SSF}]),
+	{next_state, exception, Data};
+t_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
+
 -spec o_active(EventType, EventContent, Data) -> Result
 	when
 		EventType :: gen_statem:event_type(),
@@ -494,7 +721,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect}} ->
-			{next_state, o_disconnect, Data};
+			{next_state, disconnect, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
 			?LOG_WARNING([{state, o_active},
 					{eventTypeBCSM, EventType}, {slpi, self()}]),
@@ -628,22 +855,177 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
--spec o_abandon(EventType, EventContent, Data) -> Result
+-spec t_active(EventType, EventContent, Data) -> Result
 	when
 		EventType :: gen_statem:event_type(),
 		EventContent :: term(),
 		Data :: statedata(),
 		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>o_abandon</em> state.
+%% @doc Handles events received in the <em>t_active</em> state.
 %% @private
-o_abandon(enter, _State, _Data) ->
+t_active(enter, _State, _Data) ->
 	keep_state_and_data;
-o_abandon(cast, {'TC', 'CONTINUE', indication,
+t_active(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
-o_abandon(cast, {'TC', 'INVOKE', indication,
+t_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tDisconnect}} ->
+			{next_state, disconnect, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
+			?LOG_WARNING([{state, t_active},
+					{eventTypeBCSM, EventType}, {slpi, self()}]),
+			keep_state_and_data;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+t_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{
+						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
+					nrf_update(Time div 10, Data);
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+t_active(cast, {nrf_update,
+		{RequestId, {{_, 200, _}, _Headers, Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		nrf_profile = Profile, nrf_location = Location,
+		did = DialogueID, iid = IID, dha = DHA, cco = CCO,
+		scf = SCF} = Data) ->
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
+				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
+			Fold = fun(#{"grantedUnit" := GU}, undefined) when is_integer(GU) ->
+						GU;
+					(#{"grantedUnit" := GU}, _) when is_integer(GU) ->
+						multiple;
+					(#{"grantedUnit" := _}, undefined) ->
+						invalid;
+					(#{}, Acc) ->
+						Acc
+			end,
+			case lists:foldl(Fold, undefined, ServiceRating) of
+				GrantedTime when is_integer(GrantedTime) ->
+					NewIID = IID + 1,
+					NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
+					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+							maxCallPeriodDuration = GrantedTime * 10},
+					{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+							'PduAChBillingChargingCharacteristics',
+							{timeDurationCharging, TimeDurationCharging}),
+					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+							#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+							aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+							partyToCharge = {sendingSideID, ?leg2}}),
+					Invoke = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+							invokeID = NewIID, dialogueID = DialogueID, class = 2,
+							parameters = ApplyChargingArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+							qos = {true, true}, origAddress = SCF,
+							componentsPresent = true},
+					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+					{keep_state, NewData};
+				Other when is_atom(Other) ->
+					?LOG_ERROR([{?MODULE, nrf_start}, {Other, "grantedUnit"},
+							{profile, Profile}, {uri, URI}, {location, Location},
+							{slpi, self()}, {json, JSON}]),
+					NewData = Data#statedata{nrf_reqid = undefined},
+					{next_state, exception, NewData}
+			end;
+		{{ok, #{"serviceRating" := [#{"resultCode" := _},
+				#{"resultCode" := _}]}}, {_, Location}} when is_list(Location) ->
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData};
+		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {json, JSON}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData};
+		{{error, Partial, Remaining}, {_, Location}} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData}
+	end;
+t_active(cast, {nrf_update,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, exception, NewData};
+t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	{next_state, exception, NewData};
+t_active(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
+t_active(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data};
+t_active(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+		error = Error, parameters = Parameters}} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, t_active}, {ssf, SSF}]),
+	{next_state, exception, Data};
+t_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
+
+-spec abandon(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>abandon</em> state.
+%% @private
+abandon(enter, _State, _Data) ->
+	keep_state_and_data;
+abandon(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
@@ -659,7 +1041,7 @@ o_abandon(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_abandon(cast, {'TC', 'INVOKE', indication,
+abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
@@ -669,7 +1051,7 @@ o_abandon(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_abandon(cast, {nrf_release,
+abandon(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, did = DialogueID,
 		iid = IID, cco = CCO} = Data) ->
@@ -684,7 +1066,7 @@ o_abandon(cast, {nrf_release,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
-o_abandon(cast, {nrf_release,
+abandon(cast, {nrf_release,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location,
@@ -703,7 +1085,7 @@ o_abandon(cast, {nrf_release,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
-o_abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
+abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
@@ -721,16 +1103,16 @@ o_abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
-o_abandon(cast, {'TC', 'L-CANCEL', indication,
+abandon(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
 	keep_state_and_data;
-o_abandon(cast, {'TC', 'END', indication,
+abandon(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	{next_state, stop, Data};
-o_abandon(cast, {'TC', 'U-ERROR', indication,
+abandon(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
@@ -738,27 +1120,27 @@ o_abandon(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, o_abandon}, {ssf, SSF}]),
+			{state, abandon}, {ssf, SSF}]),
 	{next_state, null, Data};
-o_abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
--spec o_disconnect(EventType, EventContent, Data) -> Result
+-spec disconnect(EventType, EventContent, Data) -> Result
 	when
 		EventType :: gen_statem:event_type(),
 		EventContent :: term(),
 		Data :: statedata(),
 		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>o_disconnect</em> state.
+%% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-o_disconnect(enter, _State, _Data) ->
+disconnect(enter, _State, _Data) ->
 	keep_state_and_data;
-o_disconnect(cast, {'TC', 'CONTINUE', indication,
+disconnect(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
-o_disconnect(cast, {'TC', 'INVOKE', indication,
+disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
@@ -775,7 +1157,7 @@ o_disconnect(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_disconnect(cast, {'TC', 'INVOKE', indication,
+disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
@@ -785,7 +1167,7 @@ o_disconnect(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_disconnect(cast, {nrf_release,
+disconnect(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, did = DialogueID,
 		iid = IID, cco = CCO} = Data) ->
@@ -800,7 +1182,7 @@ o_disconnect(cast, {nrf_release,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
-o_disconnect(cast, {nrf_release,
+disconnect(cast, {nrf_release,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location,
@@ -819,7 +1201,7 @@ o_disconnect(cast, {nrf_release,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
-o_disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
+disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
 		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
@@ -837,16 +1219,16 @@ o_disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
-o_disconnect(cast, {'TC', 'L-CANCEL', indication,
+disconnect(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
 	keep_state_and_data;
-o_disconnect(cast, {'TC', 'END', indication,
+disconnect(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	{next_state, stop, Data};
-o_disconnect(cast, {'TC', 'U-ERROR', indication,
+disconnect(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
@@ -854,9 +1236,9 @@ o_disconnect(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, o_disconnect}, {ssf, SSF}]),
+			{state, disconnect}, {ssf, SSF}]),
 	{next_state, null, Data};
-o_disconnect(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+disconnect(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec exception(EventType, EventContent, Data) -> Result
