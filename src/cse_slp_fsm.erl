@@ -187,8 +187,9 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 			{keep_state, NewData}
 	end;
 collect_information(cast, {nrf_start,
-		{RequestId, {{_Version, 201, _Phrase} = _StatusLine, Headers, Body}}},
-		#statedata{nrf_reqid = RequestId, did = DialogueID, iid = IID,
+		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, did = DialogueID, iid = IID,
 		dha = DHA, cco = CCO, scf = SCF, ac = AC} = Data) ->
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
@@ -254,23 +255,45 @@ collect_information(cast, {nrf_start,
 					origAddress = SCF, componentsPresent = true},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, analyse_information, NewData};
-		% {{ok, #{"serviceRating" := [#{"resultCode" := _} | _]}}, _} ->
-		% {{error, _Partial, _Remaining}, _} ->
-		_Other ->
+		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
+				when is_list(Location) ->
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {json, JSON}]),
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{error, Partial, Remaining}, {_, Location}} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData}
 	end;
 collect_information(cast, {nrf_start,
-		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI} = Data) ->
 	NewData = Data#statedata{nrf_reqid = undefined},
-	?LOG_WARNING([{nrf_start, RequestId}, {nrf_uri, URI},
-			{version, Version}, {code, Code}, {reason, Phrase}]),
+	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData};
 collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI} = Data) ->
 	NewData = Data#statedata{nrf_reqid = undefined},
-	?LOG_ERROR([{nrf_start, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData};
 collect_information(info, {'EXIT', DHA, Reason},
 		#statedata{dha = DHA} = _Data) ->
@@ -499,27 +522,25 @@ o_active(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 o_active(cast, {nrf_update,
-		{RequestId, {{_, 200, _} = _StatusLine, _Headers, Body}}},
-		#statedata{nrf_reqid = RequestId, did = DialogueID, iid = IID,
-		dha = DHA, cco = CCO, scf = SCF} = Data) ->
+		{RequestId, {{_, 200, _}, _Headers, Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		nrf_profile = Profile, nrf_location = Location,
+		did = DialogueID, iid = IID, dha = DHA, cco = CCO,
+		scf = SCF} = Data) ->
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := [Result1, Result2]}}
-				when Result1#{"resultCode" := "SUCCESS"},
-				Result2#{"resultCode" := "SUCCESS"} ->
-			try
-				case maps:find("grantedUnit", Result1) of
-					{ok, GT} ->
-						GT;
-					error ->
-						case maps:find("grantedUnit", Result2) of
-							{ok, GT} ->
-								GT;
-							error ->
-								throw(not_found)
-						end
-				end
-			of
-				GrantedTime ->
+		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
+				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
+			Fold = fun(#{"grantedUnit" := GU}, undefined) when is_integer(GU) ->
+						GU;
+					(#{"grantedUnit" := GU}, _) when is_integer(GU) ->
+						multiple;
+					(#{"grantedUnit" := _}, undefined) ->
+						invalid;
+					(#{}, Acc) ->
+						Acc
+			end,
+			case lists:foldl(Fold, undefined, ServiceRating) of
+				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
 					NewData = Data#statedata{nrf_reqid = undefined, iid = NewIID},
 					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
@@ -539,28 +560,51 @@ o_active(cast, {nrf_update,
 							qos = {true, true}, origAddress = SCF,
 							componentsPresent = true},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-					{keep_state, NewData}
-			catch
-				not_found ->
+					{keep_state, NewData};
+				Other when is_atom(Other) ->
+					?LOG_ERROR([{?MODULE, nrf_start}, {Other, "grantedUnit"},
+							{profile, Profile}, {uri, URI}, {location, Location},
+							{slpi, self()}, {json, JSON}]),
 					NewData = Data#statedata{nrf_reqid = undefined},
 					{next_state, exception, NewData}
 			end;
-		%% {ok, #{"serviceRating" := [#{"resultCode" := _}]}} ->
-		%% {error, _Partial, _Remaining} ->
-		_Other ->
+		{{ok, #{"serviceRating" := [#{"resultCode" := _},
+				#{"resultCode" := _}]}}, {_, Location}} when is_list(Location) ->
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData};
+		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {json, JSON}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData};
+		{{error, Partial, Remaining}, {_, Location}} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData}
 	end;
 o_active(cast, {nrf_update,
-		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
-	?LOG_WARNING([{nrf_update, RequestId}, {nrf_uri, URI},
-			{version, Version}, {code, Code}, {reason, Phrase}]),
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewData = Data#statedata{nrf_reqid = undefined},
 	{next_state, exception, NewData};
 o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
-	?LOG_ERROR([{nrf_update, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
 	{next_state, exception, NewData};
@@ -643,11 +687,13 @@ o_abandon(cast, {nrf_release,
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
 o_abandon(cast, {nrf_release,
-		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
-	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
-			{version, Version}, {code, Code}, {reason, Phrase}]),
+	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewIID = IID + 1,
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined, iid = NewIID},
@@ -660,9 +706,12 @@ o_abandon(cast, {nrf_release,
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
 o_abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
-	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewIID = IID + 1,
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined, iid = NewIID},
@@ -754,11 +803,13 @@ o_disconnect(cast, {nrf_release,
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
 o_disconnect(cast, {nrf_release,
-		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
-	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
-			{version, Version}, {code, Code}, {reason, Phrase}]),
+	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewIID = IID + 1,
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined, iid = NewIID},
@@ -771,9 +822,12 @@ o_disconnect(cast, {nrf_release,
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, null, NewData};
 o_disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data) ->
-	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
+	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewIID = IID + 1,
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined, iid = NewIID},
@@ -853,18 +907,23 @@ exception(cast, {nrf_release,
 			nrf_location = undefined},
 	{next_state, null, NewData};
 exception(cast, {nrf_release,
-		{RequestId, {{Version, Code, Phrase} = _StatusLine, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
-	?LOG_WARNING([{nrf_release, RequestId}, {nrf_uri, URI},
-			{version, Version}, {code, Code}, {reason, Phrase}]),
+	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	{next_state, null, NewData};
 exception(cast, {nrf_release, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_uri = URI} = Data) ->
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
 	NewData = Data#statedata{nrf_reqid = undefined,
 			nrf_location = undefined},
-	?LOG_ERROR([{nrf_release, RequestId}, {nrf_uri, URI}, {error, Reason}]),
 	{next_state, null, NewData};
 exception(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -1009,12 +1068,12 @@ nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
-					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data};
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			{next_state, exception, Data};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
-					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			{next_state, null, Data}
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			{next_state, exception, Data}
 	end.
 
 -spec nrf_update(Consumed, Data) -> Result
@@ -1054,15 +1113,15 @@ nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 			NewData = Data#statedata{nrf_reqid = RequestId},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
-			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
-					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_location = undefined},
-			{next_state, null, NewData};
+			{next_state, exception, NewData};
 		{error, Reason} ->
-			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
-					{uri, URI}, {profile, Profile}, {slpi, self()}]),
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_location = undefined},
-			{next_state, null, NewData}
+			{next_state, exception, NewData}
 	end.
 
 -spec nrf_release(Consumed, Data) -> Result
@@ -1073,7 +1132,8 @@ nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 %% @doc Final update to release a rating session.
 nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		called = CalledNumber, nrf_profile = Profile,
-		nrf_uri = URI, nrf_location = Location} = Data)
+		nrf_uri = URI, nrf_location = Location,
+		did = DialogueID, iid = IID, cco = CCO} = Data)
 		when is_list(Location) ->
 	Now = erlang:system_time(millisecond),
 	MFA = {?MODULE, nrf_release_reply, [self()]},
@@ -1097,15 +1157,24 @@ nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#statedata{nrf_reqid = RequestId},
 			{keep_state, NewData};
-		{error, {failed_connect, _} = Reason} ->
-			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
-					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			NewData = Data#statedata{nrf_location = undefined},
-			{next_state, null, NewData};
 		{error, Reason} ->
-			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
-					{uri, URI}, {profile, Profile}, {slpi, self()}]),
-			NewData = Data#statedata{nrf_location = undefined},
+			case Reason of
+				{failed_connect, _} ->
+					?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()}]);
+				_ ->
+					?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()}])
+			end,
+			NewIID = IID + 1,
+			NewData = Data#statedata{nrf_location = undefined, iid = NewIID},
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, null, NewData}
 	end.
 
