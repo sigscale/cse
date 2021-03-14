@@ -123,13 +123,13 @@ init([APDU]) ->
 null(enter, null, _Data) ->
 	keep_state_and_data;
 null(enter, _OldState,
-		#statedata{iid = 0, did = DialogueID, ac = AC, dha = DHA} = Data) ->
+		#statedata{iid = 0, did = DialogueID, ac = AC, dha = DHA}) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	keep_state_and_data;
-null(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = Data) ->
+null(enter, _OldState, #statedata{did = DialogueID, dha = DHA}) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			qos = {true, true}, termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
@@ -451,7 +451,7 @@ analyse_information(cast, {'TC', 'L-CANCEL', indication,
 analyse_information(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 analyse_information(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -505,7 +505,7 @@ terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
 terminating_call_handling(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 terminating_call_handling(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -569,7 +569,7 @@ routing(cast, {'TC', 'L-CANCEL', indication,
 routing(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
@@ -614,7 +614,7 @@ o_alerting(cast, {'TC', 'L-CANCEL', indication,
 o_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 o_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -667,7 +667,7 @@ t_alerting(cast, {'TC', 'L-CANCEL', indication,
 t_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 t_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -818,7 +818,7 @@ o_active(cast, {'TC', 'L-CANCEL', indication,
 o_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 o_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -969,7 +969,7 @@ t_active(cast, {'TC', 'L-CANCEL', indication,
 t_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 t_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -1018,7 +1018,7 @@ abandon(cast, {'TC', 'INVOKE', indication,
 abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
 			keep_state_and_data;
@@ -1084,7 +1084,7 @@ abandon(cast, {'TC', 'L-CANCEL', indication,
 abandon(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 abandon(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -1134,7 +1134,7 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
 			keep_state_and_data;
@@ -1200,7 +1200,7 @@ disconnect(cast, {'TC', 'L-CANCEL', indication,
 disconnect(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 disconnect(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
@@ -1313,7 +1313,7 @@ exception(cast, {'TC', 'L-CANCEL', indication,
 exception(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID}) ->
 	{stop, normal};
 exception(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
