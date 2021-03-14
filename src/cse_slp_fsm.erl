@@ -733,9 +733,11 @@ o_active(cast, {nrf_update,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
 				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
-			Fold = fun(#{"grantedUnit" := GU}, undefined) when is_integer(GU) ->
+			Fold = fun(#{"grantedUnit" := #{"time" := GU}}, undefined)
+							when is_integer(GU) ->
 						GU;
-					(#{"grantedUnit" := GU}, _) when is_integer(GU) ->
+					(#{"grantedUnit" := #{"time" := GU}}, _)
+							when is_integer(GU) ->
 						multiple;
 					(#{"grantedUnit" := _}, undefined) ->
 						invalid;
@@ -884,9 +886,11 @@ t_active(cast, {nrf_update,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
 				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
-			Fold = fun(#{"grantedUnit" := GU}, undefined) when is_integer(GU) ->
+			Fold = fun(#{"grantedUnit" := #{"time" := GU}}, undefined)
+							when is_integer(GU) ->
 						GU;
-					(#{"grantedUnit" := GU}, _) when is_integer(GU) ->
+					(#{"grantedUnit" := #{"time" := GU}}, _)
+							when is_integer(GU) ->
 						multiple;
 					(#{"grantedUnit" := _}, undefined) ->
 						invalid;
