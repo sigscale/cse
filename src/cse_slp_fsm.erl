@@ -439,54 +439,11 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, analyse_information},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
+			{next_state, exception, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-analyse_information(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
-		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
-		{ok, ChargingResultArg} ->
-			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
-				{ok, {timeDurationChargingResult,
-						#'PduCallResult_timeDurationChargingResult'{}}} ->
-					nrf_update(0, Data);
-				{error, Reason} ->
-					{stop, Reason}
-			end;
-		{error, Reason} ->
-			{stop, Reason}
-	end;
-analyse_information(cast, {nrf_release,
-		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId} = Data) ->
-	NewData = Data#statedata{nrf_reqid = undefined,
-			nrf_location = undefined},
-	{next_state, null, NewData};
-analyse_information(cast, {nrf_release,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
-		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
-		nrf_uri = URI, nrf_location = Location} = Data) ->
-	NewData = Data#statedata{nrf_reqid = undefined,
-			nrf_location = undefined},
-	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
-			{profile, Profile}, {uri, URI}, {location, Location},
-			{slpi, self()}]),
-	{next_state, null, NewData};
-analyse_information(cast, {nrf_release, {RequestId, {error, Reason}}},
-		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
-		nrf_uri = URI, nrf_location = Location} = Data) ->
-	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
-			{profile, Profile}, {uri, URI}, {location, Location},
-			{slpi, self()}]),
-	NewData = Data#statedata{nrf_reqid = undefined,
-			nrf_location = undefined},
-	{next_state, null, NewData};
 analyse_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -538,10 +495,6 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			{next_state, t_alerting, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
 			{next_state, t_active, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, terminating_call_handling},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -596,10 +549,6 @@ routing(cast, {'TC', 'INVOKE', indication,
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, routing},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -655,10 +604,6 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, o_alerting},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -712,10 +657,6 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
 			{next_state, t_active, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, t_alerting},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -763,10 +704,6 @@ o_active(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect}} ->
 			{next_state, disconnect, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, o_active},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -918,10 +855,6 @@ t_active(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tDisconnect}} ->
 			{next_state, disconnect, Data};
-		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = EventType}} ->
-			?LOG_WARNING([{state, t_active},
-					{eventTypeBCSM, EventType}, {slpi, self()}]),
-			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1321,6 +1254,16 @@ exception(cast, {'TC', 'CONTINUE', indication,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
+exception(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
+			{next_state, null, Data};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
 exception(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
