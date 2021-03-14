@@ -446,6 +446,47 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+analyse_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					nrf_update(0, Data);
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+analyse_information(cast, {nrf_release,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	{next_state, null, NewData};
+analyse_information(cast, {nrf_release,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	{next_state, null, NewData};
+analyse_information(cast, {nrf_release, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined,
+			nrf_location = undefined},
+	{next_state, null, NewData};
 analyse_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
