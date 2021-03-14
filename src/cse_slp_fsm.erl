@@ -765,7 +765,7 @@ o_active(cast, {nrf_update,
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 					{keep_state, NewData};
 				Other when is_atom(Other) ->
-					?LOG_ERROR([{?MODULE, nrf_start}, {Other, "grantedUnit"},
+					?LOG_ERROR([{?MODULE, nrf_update}, {Other, "grantedUnit"},
 							{profile, Profile}, {uri, URI}, {location, Location},
 							{slpi, self()}, {json, JSON}]),
 					NewData = Data#statedata{nrf_reqid = undefined},
@@ -776,19 +776,19 @@ o_active(cast, {nrf_update,
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData};
 		{{ok, JSON}, {_, Location}} when is_list(Location) ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, {_, Location}} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData};
 		{{ok, _}, false} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+			?LOG_ERROR([{?MODULE, nrf_update}, {missing, "Location:"},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData}
@@ -916,7 +916,7 @@ t_active(cast, {nrf_update,
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 					{keep_state, NewData};
 				Other when is_atom(Other) ->
-					?LOG_ERROR([{?MODULE, nrf_start}, {Other, "grantedUnit"},
+					?LOG_ERROR([{?MODULE, nrf_update}, {Other, "grantedUnit"},
 							{profile, Profile}, {uri, URI}, {location, Location},
 							{slpi, self()}, {json, JSON}]),
 					NewData = Data#statedata{nrf_reqid = undefined},
@@ -927,19 +927,19 @@ t_active(cast, {nrf_update,
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData};
 		{{ok, JSON}, {_, Location}} when is_list(Location) ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, {_, Location}} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData};
 		{{ok, _}, false} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+			?LOG_ERROR([{?MODULE, nrf_update}, {missing, "Location:"},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_reqid = undefined},
 			{next_state, exception, NewData}
