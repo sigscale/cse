@@ -323,9 +323,9 @@ collect_information(cast, {nrf_start,
 					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = tAbandon,
 							monitorMode = notifyAndContinue},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = callAccepted,
-							monitorMode = notifyAndContinue},
+%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+%							eventTypeBCSM = callAccepted, % Alerting DP is a Phase 4 feature
+%							monitorMode = notifyAndContinue},
 					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = tDisconnect,
 							monitorMode = notifyAndContinue,
