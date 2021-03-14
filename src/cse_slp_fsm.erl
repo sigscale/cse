@@ -128,12 +128,12 @@ null(enter, _OldState,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	{next_state, null, Data};
+	keep_state_and_data;
 null(enter, _OldState, #statedata{did = DialogueID, dha = DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			qos = {true, true}, termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	{next_state, null, Data};
+	keep_state_and_data;
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	link(DHA),
 	NewData = Data#statedata{dha = DHA, cco = CCO},
@@ -1021,7 +1021,7 @@ abandon(cast, {'TC', 'INVOKE', indication,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			{next_state, null, Data};
+			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1137,7 +1137,7 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			{next_state, null, Data};
+			keep_state_and_data;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
