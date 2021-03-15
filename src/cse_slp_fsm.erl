@@ -1428,12 +1428,8 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Start rating a session.
 nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
-		called = CalledNumber, nrf_profile = Profile,
-		nrf_uri = URI} = Data) ->
+		calling = MSISDN, called = CalledNumber} = Data) ->
 	Now = erlang:system_time(millisecond),
-	MFA = {?MODULE, nrf_start_reply, [self()]},
-	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
 	Sequence = ets:update_counter(counters, nrf_seq, 1),
 	ServiceContextId = "32276@3gpp.org",
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1444,6 +1440,26 @@ nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 					"destinationId" => [#{"destinationIdType" => "DN",
 							"destinationIdData" => CalledNumber}],
 					"requestSubType" => "RESERVE"}]},
+	nrf_start1(JSON, Data);
+nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
+		calling = CallingNumber, called = MSISDN} = Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceContextId = "32276@3gpp.org",
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
+					"originationId" => [#{"originationIdType" => "DN",
+							"originationIdData" => CallingNumber}],
+					"requestSubType" => "RESERVE"}]},
+	nrf_start1(JSON, Data).
+%% @hidden
+nrf_start1(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
+	MFA = {?MODULE, nrf_start_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
 	Body = zj:encode(JSON),
 	Request = {URI ++ "/ratingdata", Headers, "application/json", Body},
 	HttpOptions = [{relaxed, true}],
@@ -1468,13 +1484,9 @@ nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Interim update during a rating session.
 nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
-		called = CalledNumber, nrf_profile = Profile,
-		nrf_uri = URI, nrf_location = Location} = Data)
-		when is_list(Location) ->
+		calling = MSISDN, called = CalledNumber} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
 	Now = erlang:system_time(millisecond),
-	MFA = {?MODULE, nrf_update_reply, [self()]},
-	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
 	Sequence = ets:update_counter(counters, nrf_seq, 1),
 	ServiceContextId = "32276@3gpp.org",
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1490,6 +1502,34 @@ nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 					"destinationId" => [#{"destinationIdType" => "DN",
 							"destinationIdData" => CalledNumber}],
 					"requestSubType" => "RESERVE"}]},
+	nrf_update1(JSON, Data);
+nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
+		calling = CallingNumber, called = MSISDN} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceContextId = "32276@3gpp.org",
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
+					"originationId" => [#{"originationIdType" => "DN",
+							"originationIdData" => CallingNumber}],
+					"consumedUnit" => #{"time" => Consumed},
+					"requestSubType" => "DEBIT"},
+					#{"serviceContextId" => ServiceContextId,
+					"originationId" => [#{"originationIdType" => "DN",
+							"originationIdData" => CallingNumber}],
+					"requestSubType" => "RESERVE"}]},
+	nrf_update1(JSON, Data).
+%% @hidden
+nrf_update1(JSON, #statedata{nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	MFA = {?MODULE, nrf_update_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
 	Body = zj:encode(JSON),
 	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
 	HttpOptions = [{relaxed, true}],
@@ -1516,14 +1556,9 @@ nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Final update to release a rating session.
 nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
-		called = CalledNumber, nrf_profile = Profile,
-		nrf_uri = URI, nrf_location = Location,
-		did = DialogueID, iid = IID, cco = CCO} = Data)
-		when is_list(Location) ->
+		calling = MSISDN, called = CalledNumber} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
 	Now = erlang:system_time(millisecond),
-	MFA = {?MODULE, nrf_release_reply, [self()]},
-	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
 	Sequence = ets:update_counter(counters, nrf_seq, 1),
 	ServiceContextId = "32276@3gpp.org",
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1535,6 +1570,31 @@ nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
 							"destinationIdData" => CalledNumber}],
 					"consumedUnit" => #{"time" => Consumed},
 					"requestSubType" => "DEBIT"}]},
+	nrf_release1(JSON, Data);
+nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
+		calling = CallingNumber, called = MSISDN} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceContextId = "32276@3gpp.org",
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
+					"originationId" => [#{"originationIdType" => "DN",
+							"originationIdData" => CallingNumber}],
+					"consumedUnit" => #{"time" => Consumed},
+					"requestSubType" => "DEBIT"}]},
+	nrf_release1(JSON, Data).
+%% @hidden
+nrf_release1(JSON, #statedata{nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location,
+		did = DialogueID, iid = IID, cco = CCO} = Data)
+		when is_list(Location) ->
+	MFA = {?MODULE, nrf_release_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
 	Body = zj:encode(JSON),
 	Request = {URI ++ Location ++ "/release", Headers, "application/json", Body},
 	HttpOptions = [{relaxed, true}],
