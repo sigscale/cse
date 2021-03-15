@@ -123,7 +123,8 @@ init([APDU]) ->
 null(enter, null, _Data) ->
 	keep_state_and_data;
 null(enter, _OldState,
-		#statedata{iid = 0, did = DialogueID, ac = AC, dha = DHA}) ->
+		#statedata{iid = IID, did = DialogueID, ac = AC, dha = DHA})
+		when IID < 4 ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
