@@ -687,6 +687,15 @@ pdu_o_disconnect(OTID, DTID, InvokeID) ->
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',
 			argument = EventReportArg},
+	ChargingResult = #'PduCallResult_timeDurationChargingResult'{
+			partyToCharge = {receivingSideID, ?leg1},
+			timeInformation = {timeIfNoTariffSwitch, rand:uniform(300)}},
+	{ok, ChargingResultArg} = 'CAMEL-datatypes':encode('PduCallResult',
+			{timeDurationChargingResult, ChargingResult}),
+	Invoke2 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID + 1},
+			opcode = ?'opcode-applyChargingReport',
+			argument = ChargingResultArg},
 	TV1 = rand:uniform(256) - 1,
 	RI1 = #'RequestedInformation'{
 			requestedInformationType = callAttemptElapsedTime,
@@ -706,11 +715,11 @@ pdu_o_disconnect(OTID, DTID, InvokeID) ->
 	InfoReportArg = #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 			legID = {receivingSideID, ?leg2},
 			requestedInformationList = RequestedInformationList},
-	Invoke2 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
-			invokeId = {present, InvokeID + 1},
+	Invoke3 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID + 2},
 			opcode = ?'opcode-callInformationReport',
 			argument = InfoReportArg},
-	Components = [{basicROS, {invoke, I}} || I <- [Invoke1, Invoke2]],
+	Components = [{basicROS, {invoke, I}} || I <- [Invoke1, Invoke2, Invoke3]],
 	Continue = #'GenericSSF-gsmSCF-PDUs_continue'{
 			otid = <<OTID:32>>,
 			dtid = <<DTID:32>>,
