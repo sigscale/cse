@@ -16,7 +16,7 @@ modhtml = cse.html \
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \
-		index.html stylesheet.css \
+		index.html stylesheet.css edoc-info \
 		sigscale-logo.png supervision.png
 
 overview.edoc: overview.edoc-in
@@ -26,7 +26,7 @@ overview.edoc: overview.edoc-in
 %.html:$(top_srcdir)/src/%.erl	overview.edoc $(top_srcdir)/doc/supervision.edoc
 	$(ERL) -noshell -run edoc_run application \
 			"'$(PACKAGE_NAME)'" "'$(top_builddir)'" \
-			'[{sort_functions,false},{private,true},{todo,true},{source_path,["$(top_srcdir)/src"]},{subpackages,false},{def,{docsrc,"$(top_srcdir)/doc/{@?}"}},{stylesheet_file, "$(top_srcdir)/doc/sigscale.css"}]'
+			'[{sort_functions,false},{private,true},{todo,true},{source_path,["$(top_srcdir)/src"]},{doc_path, ["$(ERLANG_LIB_DIR_mnesia)/doc","/Users/vances/m3ua.build/doc","$(ERLANG_LIB_DIR_m3ua)/doc"]},{subpackages,false},{def,{docsrc,"$(top_srcdir)/doc/{@?}"}},{stylesheet_file, "$(top_srcdir)/doc/sigscale.css"}]'
 	for i in `ls *.html`; do \
 			sed -e 's!erlang logo!sigscale logo!' \
 					-e 's!href=\"http://www.erlang.org/\"!href=\"http://www.sigscale.org/\"!' \
@@ -38,6 +38,7 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/o-bcsm-camel.png .
 	-cp -n $(top_srcdir)/doc/t-bcsm-camel.png .
 	-cp -n $(top_srcdir)/doc/messaging.png .
+	-cp -n $(top_srcdir)/doc/distribution.png .
 
 CLEANFILES = overview.edoc edoc-info index.html \
 		modules-frame.html overview-summary.html packages-frame.html \
