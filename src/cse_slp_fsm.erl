@@ -1538,12 +1538,12 @@ nrf_update1(JSON, #statedata{nrf_profile = Profile,
 			NewData = Data#statedata{nrf_reqid = RequestId},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
-			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
+			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_location = undefined},
 			{next_state, exception, NewData};
 		{error, Reason} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = Data#statedata{nrf_location = undefined},
 			{next_state, exception, NewData}
@@ -1605,10 +1605,10 @@ nrf_release1(JSON, #statedata{nrf_profile = Profile,
 		{error, Reason} ->
 			case Reason of
 				{failed_connect, _} ->
-					?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
+					?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 							{profile, Profile}, {uri, URI}, {slpi, self()}]);
 				_ ->
-					?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 							{profile, Profile}, {uri, URI}, {slpi, self()}])
 			end,
 			NewIID = IID + 1,
