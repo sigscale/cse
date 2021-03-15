@@ -66,6 +66,7 @@
 		called ::  [$0..$9] | undefined,
 		calling ::  [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
+		consumed = 0 :: non_neg_integer(),
 		msc :: binary() | undefined,
 		nrf_profile :: atom(),
 		nrf_uri :: string(),
@@ -711,14 +712,15 @@ o_active(cast, {'TC', 'INVOKE', indication,
 o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID, consumed = Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_update(Time div 10, Data);
+					NewData = Data#statedata{consumed = Consumed + Time},
+					nrf_update((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -859,14 +861,15 @@ t_active(cast, {'TC', 'INVOKE', indication,
 t_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID, consumed = Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_update(Time div 10, Data);
+					NewData = Data#statedata{consumed = Consumed + Time},
+					nrf_update((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -1112,14 +1115,15 @@ disconnect(cast, {'TC', 'CONTINUE', indication,
 disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID, consumed = Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_release(Time div 10, Data);
+					NewData = Data#statedata{consumed = Consumed + Time},
+					nrf_release((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -1262,14 +1266,15 @@ exception(cast, {'TC', 'INVOKE', indication,
 exception(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID, consumed = Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					nrf_release(Time div 10, Data);
+					NewData = Data#statedata{consumed = Consumed + Time},
+					nrf_release((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
