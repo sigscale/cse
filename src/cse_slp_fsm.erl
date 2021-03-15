@@ -719,7 +719,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					NewData = Data#statedata{consumed = Consumed + Time},
+					NewData = Data#statedata{consumed = Time},
 					nrf_update((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
@@ -868,7 +868,7 @@ t_active(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					NewData = Data#statedata{consumed = Consumed + Time},
+					NewData = Data#statedata{consumed = Time},
 					nrf_update((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
@@ -1122,7 +1122,7 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					NewData = Data#statedata{consumed = Consumed + Time},
+					NewData = Data#statedata{consumed = Time},
 					nrf_release((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
@@ -1273,7 +1273,7 @@ exception(cast, {'TC', 'INVOKE', indication,
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					NewData = Data#statedata{consumed = Consumed + Time},
+					NewData = Data#statedata{consumed = Time},
 					nrf_release((Time - Consumed) div 10, NewData);
 				{error, Reason} ->
 					{stop, Reason}
