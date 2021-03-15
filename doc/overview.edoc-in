@@ -25,12 +25,28 @@ is depicted in <a href="#figure1-2">Figure 1-2</a>.
 Figure 1-2: T-BCSM</p>
 
 ===Messaging===
-The interprocess communication is depicted in
-<a href="#figure1-2">Figure 1-2</a>.
+Iinterprocess communication is depicted in
+<a href="#figure1-2">Figure 1-2</a>. An SLPI process sends primitive
+requests to Dialogue Handler (DHA) and Component Coordinator (CCO)
+processes of the {@link //tcap. tcap} application's Component Sublayer
+(CSL).  It receives primitive indications from DHA.
+
+The Application Server Processes (ASP) of the {@link //m3ua. m3ua}
+application exchange primitives with a Transaction Coordinator (TCO)
+process in the {@link //tcap. tcap} application's Transaction Sublayer
+(TSL).
 
 <p><img alt="diagram of interprocess communication"
 		name="figure1-2" src="messaging.png" /><br />
 Figure 1-2: Messaging</p>
+
+===Distribution===
+Process instances of the applications may be distributed across nodes
+as depicted in <a href="#figure1-3">Figure 1-3</a>.
+
+<p><img alt="diagram of process distribution"
+		name="figure1-3" src="distribution.png" /><br />
+Figure 1-3: Distribution</p>
 
 ==Installation==
 
