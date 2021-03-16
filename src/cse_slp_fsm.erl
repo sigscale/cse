@@ -174,17 +174,17 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
 				callingPartyNumber = CallingPartyNumber,
-				calledPartyNumber = CalledPartyNumber,
+				originalCalledPartyID= OriginalCalledPartyID,
 				calledPartyBCDNumber = CalledPartyBCDNumber,
 				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress} = _InitialDPArg} ->
 			#calling_party{nai = 4, npi = 1, address = CallingAddress}
 					= cse_codec:calling_party(CallingPartyNumber),
 			MSISDN = lists:flatten([integer_to_list(D) || D <- CallingAddress]),
-			CalledNumber = case CalledPartyNumber of
-				CalledPartyNumber when is_binary(CalledPartyNumber) ->
+			CalledNumber = case OriginalCalledPartyID of
+				OriginalCalledPartyID when is_binary(OriginalCalledPartyID) ->
 					#called_party{address = CPN}
-							= cse_codec:called_party(CalledPartyNumber),
+							= cse_codec:called_party(OriginalCalledPartyID),
 					CPN;
 				asn1_NOVALUE ->
 					#called_party_bcd{address = CPN}
