@@ -44,6 +44,7 @@
 -include_lib("cap/include/CAP-datatypes.hrl").
 -include_lib("cap/include/CAP-gsmSSF-gsmSCF-pkgs-contracts-acs.hrl").
 -include_lib("cap/include/CAMEL-datatypes.hrl").
+-include_lib("map/include/MAP-MS-DataTypes.hrl").
 -include_lib("kernel/include/logger.hrl").
 -include("cse_codec.hrl").
 
@@ -67,7 +68,9 @@
 		calling ::  [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
 		consumed = 0 :: non_neg_integer(),
-		msc :: binary() | undefined,
+		msc :: [$0..$9] | undefined,
+		vlr :: [$0..$9] | undefined,
+		isup :: [$0..$9] | undefined,
 		nrf_profile :: atom(),
 		nrf_uri :: string(),
 		nrf_location :: string() | undefined,
@@ -174,42 +177,54 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
 				callingPartyNumber = CallingPartyNumber,
-				originalCalledPartyID= OriginalCalledPartyID,
+				originalCalledPartyID = OriginalCalledPartyID,
 				calledPartyBCDNumber = CalledPartyBCDNumber,
+				locationInformation = LocationInformation,
+				locationNumber = LocationNumber,
 				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress} = _InitialDPArg} ->
-			#calling_party{nai = 4, npi = 1, address = CallingAddress}
-					= cse_codec:calling_party(CallingPartyNumber),
-			MSISDN = lists:flatten([integer_to_list(D) || D <- CallingAddress]),
-			CalledNumber = case OriginalCalledPartyID of
-				OriginalCalledPartyID when is_binary(OriginalCalledPartyID) ->
-					#called_party{address = CPN}
-							= cse_codec:called_party(OriginalCalledPartyID),
-					CPN;
+			{Vlr1, Msc1, Isup1} = case LocationInformation of
+				#'LocationInformation'{'vlr-number' = LIvlr,
+						'msc-Number' = LImsc, locationNumber = LIisup,
+						ageOfLocationInformation = Age} when Age < 15 ->
+					{LIvlr, LImsc, LIisup};
 				asn1_NOVALUE ->
-					#called_party_bcd{address = CPN}
-							= cse_codec:called_party_bcd(CalledPartyBCDNumber),
-					CPN
+					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
 			end,
-			DN = lists:flatten([integer_to_list(D) || D <- CalledNumber]),
+			MSC = msc_number(Msc1, MscAddress),
+			VLR = isdn_address(Vlr1),
+			ISUP = calling_number(Isup1, LocationNumber),
+			MSISDN = calling_number(CallingPartyNumber),
+			DN = called_number(OriginalCalledPartyID, CalledPartyBCDNumber),
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
 					msisdn = MSISDN, called = DN, calling = MSISDN,
-					call_ref = CallReferenceNumber, msc = MscAddress},
+					isup = ISUP, vlr = VLR, msc = MSC,
+					call_ref = CallReferenceNumber},
 			nrf_start(NewData);
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = termAttemptAuthorized,
 				callingPartyNumber = CallingPartyNumber,
 				calledPartyNumber = CalledPartyNumber,
+				locationInformation = LocationInformation,
+				locationNumber = LocationNumber,
 				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress} = _InitialDPArg} ->
-			#calling_party{nai = 4, npi = 1, address = CallingAddress}
-					= cse_codec:calling_party(CallingPartyNumber),
-			#called_party{nai = 4, npi = 1, address = CalledAddress}
-					= cse_codec:called_party(CalledPartyNumber),
-			MSISDN = lists:flatten([integer_to_list(D) || D <- CalledAddress]),
-			DN = lists:flatten([integer_to_list(D) || D <- CallingAddress]),
+			{Vlr1, Msc1, Isup1} = case LocationInformation of
+				#'LocationInformation'{'vlr-number' = LIvlr,
+						'msc-Number' = LImsc, locationNumber = LIisup,
+						ageOfLocationInformation = Age} when Age < 15 ->
+					{LIvlr, LImsc, LIisup};
+				asn1_NOVALUE ->
+					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
+			end,
+			MSC = msc_number(Msc1, MscAddress),
+			VLR = isdn_address(Vlr1),
+			ISUP = calling_number(Isup1, LocationNumber),
+			MSISDN = calling_number(CallingPartyNumber),
+			DN = called_number(CalledPartyNumber, asn1_NOVALUE),
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
 					msisdn = MSISDN, called = MSISDN, calling = DN,
-					call_ref = CallReferenceNumber, msc = MscAddress},
+					isup = ISUP, vlr = VLR, msc = MSC,
+					call_ref = CallReferenceNumber},
 			nrf_start(NewData);
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 				eventTypeBCSM = EventType} = InitialDPArg} ->
@@ -1432,36 +1447,59 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Start rating a session.
-nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
-		calling = MSISDN, called = CalledNumber} = Data) ->
-	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
-	ServiceContextId = "32276@3gpp.org",
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
-			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
-					"destinationId" => [#{"destinationIdType" => "DN",
-							"destinationIdData" => CalledNumber}],
-					"requestSubType" => "RESERVE"}]},
-	nrf_start1(JSON, Data);
-nrf_start(#statedata{imsi = IMSI, msisdn = MSISDN,
-		calling = CallingNumber, called = MSISDN} = Data) ->
-	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
-	ServiceContextId = "32276@3gpp.org",
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
-			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
-					"originationId" => [#{"originationIdType" => "DN",
-							"originationIdData" => CallingNumber}],
-					"requestSubType" => "RESERVE"}]},
-	nrf_start1(JSON, Data).
+nrf_start(#statedata{msc = MSC, vlr = VLR} = Data)
+		when is_list(MSC), is_list(VLR) ->
+	SI = #{"mscAddress" => MSC, "vlrNumber" => VLR},
+	nrf_start1(SI , Data);
+nrf_start(#statedata{msc = MSC} = Data)
+		when is_list(MSC) ->
+	SI = #{"mscAddress" => MSC},
+	nrf_start1(SI, Data).
 %% @hidden
-nrf_start1(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
+nrf_start1(SI, #statedata{isup = ISUP} = Data)
+		when is_list(ISUP) ->
+	nrf_start2(SI#{"locationNumber" => ISUP}, Data);
+nrf_start1(SI, Data) ->
+	nrf_start2(SI, Data).
+%% @hidden
+nrf_start2(SI, #statedata{call_ref = CallRef} = Data)
+		when is_binary(CallRef) ->
+	nrf_start3(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_start2(SI, Data) ->
+	nrf_start3(SI, Data).
+%% @hidden
+nrf_start3(ServiceInformation,
+		#statedata{msisdn = MSISDN, calling = MSISDN,
+		called = CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
+	nrf_start4(ServiceRating, Data);
+nrf_start3(ServiceInformation,
+		#statedata{msisdn = MSISDN, called = MSISDN,
+		calling = CallingNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
+	nrf_start4(ServiceRating, Data).
+%% @hidden
+nrf_start4(ServiceRating, #statedata{imsi = IMSI, msisdn = MSISDN} = Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [ServiceRating]},
+	nrf_start5(JSON, Data).
+%% @hidden
+nrf_start5(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers = [{"accept", "application/json"}],
@@ -1488,48 +1526,62 @@ nrf_start1(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Interim update during a rating session.
-nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
-		calling = MSISDN, called = CalledNumber} = Data)
-		when is_integer(Consumed), Consumed >= 0 ->
-	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
-	ServiceContextId = "32276@3gpp.org",
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
-			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
-					"destinationId" => [#{"destinationIdType" => "DN",
-							"destinationIdData" => CalledNumber}],
-					"consumedUnit" => #{"time" => Consumed},
-					"requestSubType" => "DEBIT"},
-					#{"serviceContextId" => ServiceContextId,
-					"destinationId" => [#{"destinationIdType" => "DN",
-							"destinationIdData" => CalledNumber}],
-					"requestSubType" => "RESERVE"}]},
-	nrf_update1(JSON, Data);
-nrf_update(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
-		calling = CallingNumber, called = MSISDN} = Data)
-		when is_integer(Consumed), Consumed >= 0 ->
-	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
-	ServiceContextId = "32276@3gpp.org",
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
-			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
-					"originationId" => [#{"originationIdType" => "DN",
-							"originationIdData" => CallingNumber}],
-					"consumedUnit" => #{"time" => Consumed},
-					"requestSubType" => "DEBIT"},
-					#{"serviceContextId" => ServiceContextId,
-					"originationId" => [#{"originationIdType" => "DN",
-							"originationIdData" => CallingNumber}],
-					"requestSubType" => "RESERVE"}]},
-	nrf_update1(JSON, Data).
+nrf_update(Consumed, #statedata{msc = MSC, vlr = VLR} = Data)
+		when is_list(MSC), is_list(VLR) ->
+	SI = #{"mscAddress" => MSC, "vlrNumber" => VLR},
+	nrf_update1(Consumed, SI , Data);
+nrf_update(Consumed, #statedata{msc = MSC} = Data)
+		when is_list(MSC) ->
+	SI = #{"mscAddress" => MSC},
+	nrf_update1(Consumed, SI, Data).
 %% @hidden
-nrf_update1(JSON, #statedata{nrf_profile = Profile,
+nrf_update1(Consumed, SI, #statedata{isup = ISUP} = Data)
+		when is_list(ISUP) ->
+	nrf_update2(Consumed, SI#{"locationNumber" => ISUP}, Data);
+nrf_update1(Consumed, SI, Data) ->
+	nrf_update2(Consumed, SI, Data).
+%% @hidden
+nrf_update2(Consumed, SI, #statedata{call_ref = CallRef} = Data)
+		when is_binary(CallRef) ->
+	nrf_update3(Consumed, SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_update2(Consumed, SI, Data) ->
+	nrf_update3(Consumed, SI, Data).
+%% @hidden
+nrf_update3(Consumed, ServiceInformation,
+		#statedata{msisdn = MSISDN, calling = MSISDN,
+		called = CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_update4(Consumed, ServiceRating, Data);
+nrf_update3(Consumed, ServiceInformation,
+		#statedata{msisdn = MSISDN, called = MSISDN,
+		calling = CallingNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_update4(Consumed, ServiceRating, Data).
+%% @hidden
+nrf_update4(Consumed, ServiceRating,
+		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
+			"requestSubType" => "DEBIT"},
+	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [Debit, Reserve]},
+	nrf_update5(JSON, Data).
+%% @hidden
+nrf_update5(JSON, #statedata{nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
@@ -1560,40 +1612,61 @@ nrf_update1(JSON, #statedata{nrf_profile = Profile,
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Final update to release a rating session.
-nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
-		calling = MSISDN, called = CalledNumber} = Data)
-		when is_integer(Consumed), Consumed >= 0 ->
-	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
-	ServiceContextId = "32276@3gpp.org",
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
-			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
-					"destinationId" => [#{"destinationIdType" => "DN",
-							"destinationIdData" => CalledNumber}],
-					"consumedUnit" => #{"time" => Consumed},
-					"requestSubType" => "DEBIT"}]},
-	nrf_release1(JSON, Data);
-nrf_release(Consumed, #statedata{imsi = IMSI, msisdn = MSISDN,
-		calling = CallingNumber, called = MSISDN} = Data)
-		when is_integer(Consumed), Consumed >= 0 ->
-	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
-	ServiceContextId = "32276@3gpp.org",
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
-			"serviceRating" => [#{"serviceContextId" => ServiceContextId,
-					"originationId" => [#{"originationIdType" => "DN",
-							"originationIdData" => CallingNumber}],
-					"consumedUnit" => #{"time" => Consumed},
-					"requestSubType" => "DEBIT"}]},
-	nrf_release1(JSON, Data).
+nrf_release(Consumed, #statedata{msc = MSC, vlr = VLR} = Data)
+		when is_list(MSC), is_list(VLR) ->
+	SI = #{"mscAddress" => MSC, "vlrNumber" => VLR},
+	nrf_release1(Consumed, SI , Data);
+nrf_release(Consumed, #statedata{msc = MSC} = Data)
+		when is_list(MSC) ->
+	SI = #{"mscAddress" => MSC},
+	nrf_release1(Consumed, SI, Data).
 %% @hidden
-nrf_release1(JSON, #statedata{nrf_profile = Profile,
+nrf_release1(Consumed, SI, #statedata{isup = ISUP} = Data)
+		when is_list(ISUP) ->
+	nrf_release2(Consumed, SI#{"locationNumber" => ISUP}, Data);
+nrf_release1(Consumed, SI, Data) ->
+	nrf_release2(Consumed, SI, Data).
+%% @hidden
+nrf_release2(Consumed, SI, #statedata{call_ref = CallRef} = Data)
+		when is_binary(CallRef) ->
+	nrf_release3(Consumed, SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_release2(Consumed, SI, Data) ->
+	nrf_release3(Consumed, SI, Data).
+%% @hidden
+nrf_release3(Consumed, ServiceInformation,
+		#statedata{msisdn = MSISDN, calling = MSISDN,
+		called = CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_release4(Consumed, ServiceRating, Data);
+nrf_release3(Consumed, ServiceInformation,
+		#statedata{msisdn = MSISDN, called = MSISDN,
+		calling = CallingNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_release4(Consumed, ServiceRating, Data).
+%% @hidden
+nrf_release4(Consumed, ServiceRating,
+		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	ServiceRating1 = ServiceRating#{"requestSubType" => "DEBIT",
+			"consumedUnit" => #{"time" => Consumed}},
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
+			"serviceRating" => [ServiceRating1]},
+	nrf_release5(JSON, Data).
+%% @hidden
+nrf_release5(JSON, #statedata{nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data)
 		when is_list(Location) ->
@@ -1627,4 +1700,69 @@ nrf_release1(JSON, #statedata{nrf_profile = Profile,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, null, NewData}
 	end.
+
+-spec calling_number(Address) -> Number
+	when
+		Address :: binary() | asn1_NOVALUE,
+		Number :: string() | undefined.
+%% @doc Convert Calling Party Address to E.164 string.
+%% @hidden
+calling_number(Address) when is_binary(Address) ->
+	#calling_party{nai = 4, npi = 1,
+			address = A} = cse_codec:calling_party(Address),
+	lists:flatten([integer_to_list(D) || D <- A]);
+calling_number(asn1_NOVALUE) ->
+	undefined.
+
+-spec calling_number(Address1, Address2) -> Number
+	when
+		Address1 :: binary() | asn1_NOVALUE,
+		Address2 :: binary() | asn1_NOVALUE,
+		Number :: string() | undefined.
+%% @doc Convert Calling Party Address to E.164 string.
+%% 	Prefer `Address1', fallback to `Address2'.
+calling_number(Address1, _Address2) when is_binary(Address1) ->
+	calling_number(Address1);
+calling_number(asn1_NOVALUE, Address) when is_binary(Address) ->
+	calling_number(Address).
+
+-spec msc_number(Address1, Address2) -> Number
+	when
+		Address1 :: binary() | asn1_NOVALUE,
+		Address2 :: binary() | asn1_NOVALUE,
+		Number :: string() | undefined.
+%% @doc Convert MSC Number or Address to E.164 string.
+%% 	Prefer `Address1', fallback to `Address2'.
+msc_number(Address1, _Address2) when is_binary(Address1) ->
+	isdn_address(Address1);
+msc_number(asn1_NOVALUE, Address) when is_binary(Address) ->
+	calling_number(Address).
+
+-spec isdn_address(Address) -> Number
+	when
+		Address :: binary() | asn1_NOVALUE,
+		Number :: string() | undefined.
+%% @doc Convert ISDN-AddressString to E.164 string.
+isdn_address(Address) when is_binary(Address) ->
+	#isdn_address{nai = 1, npi = 1,
+			address = A} = cse_codec:isdn_address(Address),
+	A;
+isdn_address(asn1_NOVALUE) ->
+	undefined.
+
+-spec called_number(OriginalCalledPartyID, CalledPartyBCDNumber) -> Number
+	when
+		OriginalCalledPartyID :: binary() | asn1_NOVALUE,
+		CalledPartyBCDNumber :: binary() | asn1_NOVALUE,
+		Number :: string().
+%% @doc Convert Called Party Address to E.164 string.
+%% @hidden
+called_number(OriginalCalledPartyID, _CalledPartyBCDNumber)
+		when is_binary(OriginalCalledPartyID) ->
+	#called_party{address = A} = cse_codec:called_party(OriginalCalledPartyID),
+	lists:flatten([integer_to_list(D) || D <- A]);
+called_number(asn1_NOVALUE, CalledPartyBCDNumber) ->
+	#called_party_bcd{address = A}
+			= cse_codec:called_party_bcd(CalledPartyBCDNumber),
+	lists:flatten([integer_to_list(D) || D <- A]).
 
