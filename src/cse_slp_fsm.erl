@@ -188,7 +188,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 						'msc-Number' = LImsc, locationNumber = LIisup,
 						ageOfLocationInformation = Age} when Age < 15 ->
 					{LIvlr, LImsc, LIisup};
-				asn1_NOVALUE ->
+				_ ->
 					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
 			end,
 			MSC = isdn_address(Msc1, MscAddress),
@@ -213,7 +213,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 						'msc-Number' = LImsc, locationNumber = LIisup,
 						ageOfLocationInformation = Age} when Age < 15 ->
 					{LIvlr, LImsc, LIisup};
-				asn1_NOVALUE ->
+				_ ->
 					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
 			end,
 			MSC = isdn_address(Msc1, MscAddress),
