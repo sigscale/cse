@@ -579,21 +579,22 @@ pdu_initial(OTID, AC) ->
 			encoding = {'single-ASN1-type', DialoguePDUs}},
 	LocationInformation = #'LocationInformation'{
 			ageOfLocationInformation = 0,
-			'vlr-number' = <<193,65,97,85,5,0,240>>,
+			'vlr-number' = cse_codec:isdn_address(#isdn_address{nai = 1,
+					npi = 1, address = "14165550000"}),
 			cellGlobalIdOrServiceAreaIdOrLAI =
 			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
 	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 			serviceKey = 100,
 			callingPartyNumber = isup_calling_party(),
 			callingPartysCategory = <<10>>,
-			locationNumber = <<129,19,65,97,85,21,50,4>>,
+			locationNumber = isup_calling_party(),
 			bearerCapability = {bearerCap,<<128,144,163>>},
 			eventTypeBCSM = collectedInfo,
 			iMSI = <<0,1,16,16,50,84,118,152>>,
 			locationInformation = LocationInformation,
 			'ext-basicServiceCode' = {'ext-Teleservice', <<17>>},
-			callReferenceNumber = <<9,4,193,244>>,
-			mscAddress = <<193,65,97,85,5,0,240>>,
+			callReferenceNumber = crypto:strong_rand_bytes(4),
+			mscAddress = isup_calling_party(),
 			calledPartyBCDNumber = called_party_bcd(),
 			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
