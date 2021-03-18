@@ -191,7 +191,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 				asn1_NOVALUE ->
 					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
 			end,
-			MSC = msc_number(Msc1, MscAddress),
+			MSC = isdn_address(Msc1, MscAddress),
 			VLR = isdn_address(Vlr1),
 			ISUP = calling_number(Isup1, LocationNumber),
 			MSISDN = calling_number(CallingPartyNumber),
@@ -216,7 +216,7 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 				asn1_NOVALUE ->
 					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
 			end,
-			MSC = msc_number(Msc1, MscAddress),
+			MSC = isdn_address(Msc1, MscAddress),
 			VLR = isdn_address(Vlr1),
 			ISUP = calling_number(Isup1, LocationNumber),
 			MSISDN = calling_number(CallingPartyNumber),
@@ -1726,18 +1726,6 @@ calling_number(Address1, _Address2) when is_binary(Address1) ->
 calling_number(asn1_NOVALUE, Address) when is_binary(Address) ->
 	calling_number(Address).
 
--spec msc_number(Address1, Address2) -> Number
-	when
-		Address1 :: binary() | asn1_NOVALUE,
-		Address2 :: binary() | asn1_NOVALUE,
-		Number :: string() | undefined.
-%% @doc Convert MSC Number or Address to E.164 string.
-%% 	Prefer `Address1', fallback to `Address2'.
-msc_number(Address1, _Address2) when is_binary(Address1) ->
-	isdn_address(Address1);
-msc_number(asn1_NOVALUE, Address) when is_binary(Address) ->
-	calling_number(Address).
-
 -spec isdn_address(Address) -> Number
 	when
 		Address :: binary() | asn1_NOVALUE,
@@ -1749,6 +1737,18 @@ isdn_address(Address) when is_binary(Address) ->
 	A;
 isdn_address(asn1_NOVALUE) ->
 	undefined.
+
+-spec isdn_address(Address1, Address2) -> Number
+	when
+		Address1 :: binary() | asn1_NOVALUE,
+		Address2 :: binary() | asn1_NOVALUE,
+		Number :: string() | undefined.
+%% @doc Convert ISDN-AddressString to E.164 string.
+%% 	Prefer `Address1', fallback to `Address2'.
+isdn_address(Address1, _Address2) when is_binary(Address1) ->
+	isdn_address(Address1);
+isdn_address(asn1_NOVALUE, Address) when is_binary(Address) ->
+	isdn_address(Address).
 
 -spec called_number(OriginalCalledPartyID, CalledPartyBCDNumber) -> Number
 	when

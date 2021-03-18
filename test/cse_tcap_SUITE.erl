@@ -594,7 +594,8 @@ pdu_initial(OTID, AC) ->
 			locationInformation = LocationInformation,
 			'ext-basicServiceCode' = {'ext-Teleservice', <<17>>},
 			callReferenceNumber = crypto:strong_rand_bytes(4),
-			mscAddress = isup_calling_party(),
+			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
+               npi = 1, address = "14165550001"}),
 			calledPartyBCDNumber = called_party_bcd(),
 			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
