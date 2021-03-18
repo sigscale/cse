@@ -1724,7 +1724,9 @@ calling_number(asn1_NOVALUE) ->
 calling_number(Address1, _Address2) when is_binary(Address1) ->
 	calling_number(Address1);
 calling_number(asn1_NOVALUE, Address) when is_binary(Address) ->
-	calling_number(Address).
+	calling_number(Address);
+calling_number(asn1_NOVALUE, asn1_NOVALUE) ->
+	undefined.
 
 -spec isdn_address(Address) -> Number
 	when
@@ -1748,21 +1750,26 @@ isdn_address(asn1_NOVALUE) ->
 isdn_address(Address1, _Address2) when is_binary(Address1) ->
 	isdn_address(Address1);
 isdn_address(asn1_NOVALUE, Address) when is_binary(Address) ->
-	isdn_address(Address).
+	isdn_address(Address);
+isdn_address(asn1_NOVALUE, asn1_NOVALUE) ->
+	undefined.
 
 -spec called_number(OriginalCalledPartyID, CalledPartyBCDNumber) -> Number
 	when
 		OriginalCalledPartyID :: binary() | asn1_NOVALUE,
 		CalledPartyBCDNumber :: binary() | asn1_NOVALUE,
-		Number :: string().
+		Number :: string() | undefined.
 %% @doc Convert Called Party Address to E.164 string.
 %% @hidden
 called_number(OriginalCalledPartyID, _CalledPartyBCDNumber)
 		when is_binary(OriginalCalledPartyID) ->
 	#called_party{address = A} = cse_codec:called_party(OriginalCalledPartyID),
 	lists:flatten([integer_to_list(D) || D <- A]);
-called_number(asn1_NOVALUE, CalledPartyBCDNumber) ->
+called_number(asn1_NOVALUE, CalledPartyBCDNumber)
+		when is_binary(CalledPartyBCDNumber) ->
 	#called_party_bcd{address = A}
 			= cse_codec:called_party_bcd(CalledPartyBCDNumber),
-	lists:flatten([integer_to_list(D) || D <- A]).
+	lists:flatten([integer_to_list(D) || D <- A]);
+called_number(asn1_NOVALUE, asn1_NOVALUE) ->
+	undefined.
 
