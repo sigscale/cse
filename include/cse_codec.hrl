@@ -40,6 +40,12 @@
 		npi :: 0..1 | 3..4 | 8..9,
 		address = [] :: [0..15]}).
 
+%% 3GPP TS 29.02 17.7.8
+-record(isdn_address,
+		{nai :: 0..7,
+		npi :: 0..9,
+		address = [] :: [$0..$9]}).
+
 %% ITU-T Q.763 ISUP 3.12
 -record(cause,
 		{coding = itu :: itu | iso | national | other,

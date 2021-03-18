@@ -24,7 +24,7 @@
 
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
-		tbcd/1, date_time/1, error_code/1, cause/1]).
+		isdn_address/1, tbcd/1, date_time/1, error_code/1, cause/1]).
 
 -include("cse_codec.hrl").
 -include_lib("cap/include/CAP-errorcodes.hrl").
@@ -32,7 +32,9 @@
 -type called_party() :: #called_party{}.
 -type called_party_bcd() :: #called_party_bcd{}.
 -type calling_party() :: #calling_party{}.
--export_types([called_party/0, called_party_bcd/0, calling_party/0]).
+-type isdn_address() :: #isdn_address{}.
+-export_types([called_party/0, called_party_bcd/0, calling_party/0,
+		isdn_address/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_codec public API
@@ -119,10 +121,20 @@ called_party_bcd2([A], Acc) ->
 called_party_bcd2([], Acc) ->
 	Acc.
 
+-spec isdn_address(Address) -> Address
+	when
+		Address :: isdn_address() | binary().
+%% @doc CODEC for MAP ISDN-AddressString.
+isdn_address(<<1:1, NAI:3, NPI:4, Address/binary>> = _Address) ->
+	#isdn_address{nai = NAI, npi = NPI, address = tbcd(Address)};
+isdn_address(#isdn_address{nai = NAI, npi = NPI, address = Address}) ->
+	TBCD = tbcd(Address),
+	<<1:1, NAI:3, NPI:4, TBCD/binary>>.
+
 -spec tbcd(Digits) -> Digits
 	when
 		Digits :: [Digit] | binary(),
-		Digit :: 0..14 | $0..$9 | $* | $# | $a | $b | $c.
+		Digit :: $0..$9 | $* | $# | $a | $b | $c.
 %% @doc CODEC for TBCD-String.
 %%
 %% 	The Telephony Binary Coded Decimal String (TBCD)
