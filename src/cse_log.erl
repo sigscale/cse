@@ -32,11 +32,13 @@
 %%  The cse_log public API
 %%----------------------------------------------------------------------
 
--spec date(MilliSeconds) -> Result
+-spec date(DateTime) -> DateTime
 	when
-		MilliSeconds :: pos_integer(),
-		Result :: calendar:datetime().
-%% @doc Convert timestamp to date and time.
+		DateTime :: MilliSeconds | calendar:datetime(),
+		MilliSeconds :: pos_integer().
+%% @doc Convert between unix epoch milliseconds and date and time.
+date({{_, _, _}, {_, _, _}} = DateTime) ->
+	(calendar:datetime_to_gregorian_seconds(DateTime) - ?EPOCH) * 1000;
 date(MilliSeconds) when is_integer(MilliSeconds) ->
 	Seconds = ?EPOCH + (MilliSeconds div 1000),
 	calendar:gregorian_seconds_to_datetime(Seconds).
