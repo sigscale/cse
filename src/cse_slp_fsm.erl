@@ -65,8 +65,12 @@
 		imsi :: [$0..$9] | undefined,
 		msisdn :: [$0..$9] | undefined,
 		called ::  [$0..$9] | undefined,
-		calling ::  [$0..$9] | undefined,
+		calling :: [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
+		call_start :: string() | undefined,
+		charging_start :: string() | undefined,
+		call_end :: string() | undefined,
+		isup_cause :: cse_codec:cause() | undefined,
 		consumed = 0 :: non_neg_integer(),
 		msc :: [$0..$9] | undefined,
 		vlr :: [$0..$9] | undefined,
@@ -78,6 +82,10 @@
 -type statedata() :: #statedata{}.
 
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
+-define(callAttemptElapsedTime,   0).
+-define(callStopTime,             1).
+-define(callConnectedElapsedTime, 2).
+-define(releaseCause,            30).
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_fsm gen_statem callbacks
@@ -199,7 +207,8 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
 					msisdn = MSISDN, called = DN, calling = MSISDN,
 					isup = ISUP, vlr = VLR, msc = MSC,
-					call_ref = CallReferenceNumber},
+					call_ref = CallReferenceNumber,
+					call_start = cse_log:iso8601(erlang:system_time(millisecond))},
 			nrf_start(NewData);
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = termAttemptAuthorized,
 				callingPartyNumber = CallingPartyNumber,
@@ -224,7 +233,8 @@ collect_information(cast, {'TC', 'INVOKE', indication,
 			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
 					msisdn = MSISDN, called = MSISDN, calling = DN,
 					isup = ISUP, vlr = VLR, msc = MSC,
-					call_ref = CallReferenceNumber},
+					call_ref = CallReferenceNumber,
+					call_start = cse_log:iso8601(erlang:system_time(millisecond))},
 			nrf_start(NewData);
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 				eventTypeBCSM = EventType} = InitialDPArg} ->
@@ -274,8 +284,7 @@ collect_information(cast, {nrf_start,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
 			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
 					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
-					requestedInformationTypeList = [callAttemptElapsedTime,
-					callStopTime, callConnectedElapsedTime, releaseCause]}),
+					requestedInformationTypeList = [callStopTime, releaseCause]}),
 			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
 					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
 					parameters = CallInformationRequestArg},
@@ -368,8 +377,7 @@ collect_information(cast, {nrf_start,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
 			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
 					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
-					requestedInformationTypeList = [callAttemptElapsedTime,
-					callStopTime, callConnectedElapsedTime, releaseCause]}),
+					requestedInformationTypeList = [callStopTime, releaseCause]}),
 			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
 					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
 					parameters = CallInformationRequestArg},
@@ -716,8 +724,9 @@ t_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_active</em> state.
 %% @private
-o_active(enter, _State, _Data) ->
-	keep_state_and_data;
+o_active(enter, _State, Data) ->
+	StartCharging = cse_log:iso8601(erlang:system_time(millisecond)),
+	{keep_state, Data#statedata{charging_start = StartCharging}};
 o_active(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
@@ -865,8 +874,9 @@ o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>t_active</em> state.
 %% @private
-t_active(enter, _State, _Data) ->
-	keep_state_and_data;
+t_active(enter, _State, Data) ->
+	StartCharging = cse_log:iso8601(erlang:system_time(millisecond)),
+	{keep_state, Data#statedata{charging_start = StartCharging}};
 t_active(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
@@ -1040,10 +1050,11 @@ abandon(cast, {'TC', 'INVOKE', indication,
 abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID}) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			keep_state_and_data;
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1154,10 +1165,11 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID}) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			keep_state_and_data;
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1276,8 +1288,9 @@ exception(cast, {'TC', 'INVOKE', indication,
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{}} ->
-			{next_state, null, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1459,7 +1472,19 @@ nrf_start2(SI, #statedata{call_ref = CallRef} = Data)
 nrf_start2(SI, Data) ->
 	nrf_start3(SI, Data).
 %% @hidden
-nrf_start3(ServiceInformation,
+nrf_start3(SI, #statedata{call_start = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_start4(SI#{"startTime" => DateTime}, Data).
+%nrf_start3(SI, Data) ->
+%	nrf_start4(SI, Data).
+%% @hidden
+nrf_start4(SI, #statedata{charging_start = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_start5(SI#{"startOfCharging" => DateTime}, Data);
+nrf_start4(SI, Data) ->
+	nrf_start5(SI, Data).
+%% @hidden
+nrf_start5(ServiceInformation,
 		#statedata{msisdn = MSISDN, calling = MSISDN,
 		called = CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1468,8 +1493,8 @@ nrf_start3(ServiceInformation,
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_start4(ServiceRating, Data);
-nrf_start3(ServiceInformation,
+	nrf_start6(ServiceRating, Data);
+nrf_start5(ServiceInformation,
 		#statedata{msisdn = MSISDN, called = MSISDN,
 		calling = CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1478,9 +1503,9 @@ nrf_start3(ServiceInformation,
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_start4(ServiceRating, Data).
+	nrf_start6(ServiceRating, Data).
 %% @hidden
-nrf_start4(ServiceRating, #statedata{imsi = IMSI, msisdn = MSISDN} = Data) ->
+nrf_start6(ServiceRating, #statedata{imsi = IMSI, msisdn = MSISDN} = Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1488,9 +1513,9 @@ nrf_start4(ServiceRating, #statedata{imsi = IMSI, msisdn = MSISDN} = Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating]},
-	nrf_start5(JSON, Data).
+	nrf_start7(JSON, Data).
 %% @hidden
-nrf_start5(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
+nrf_start7(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers = [{"accept", "application/json"}],
@@ -1538,7 +1563,39 @@ nrf_update2(Consumed, SI, #statedata{call_ref = CallRef} = Data)
 nrf_update2(Consumed, SI, Data) ->
 	nrf_update3(Consumed, SI, Data).
 %% @hidden
-nrf_update3(Consumed, ServiceInformation,
+nrf_update3(Consumed, SI, #statedata{call_start = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_update4(Consumed, SI#{"startTime" => DateTime}, Data);
+nrf_update3(Consumed, SI, Data) ->
+	nrf_update4(Consumed, SI, Data).
+%% @hidden
+nrf_update4(Consumed, SI, #statedata{charging_start = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_update5(Consumed, SI#{"startOfCharging" => DateTime}, Data);
+nrf_update4(Consumed, SI, Data) ->
+	nrf_update5(Consumed, SI, Data).
+%% @hidden
+nrf_update5(Consumed, SI, #statedata{call_end = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_update6(Consumed, SI#{"stopTime" => DateTime}, Data);
+nrf_update5(Consumed, SI, Data) ->
+	nrf_update6(Consumed, SI, Data).
+%% @hidden
+nrf_update6(Consumed, SI, #statedata{isup_cause = #cause{value = Value,
+		location = Location, diagnostic = Diagnostic}} = Data) ->
+	Cause1 = #{"causeValue" => Value,
+			"causeLocation" => atom_to_list(Location)},
+	Cause2 = case Diagnostic of
+		Diagnostic when is_binary(Diagnostic) ->
+			Cause1#{"causeDiagnostics" => base64:encode(Diagnostic)};
+		undefined ->
+			Cause1
+	end,
+	nrf_update7(Consumed, SI#{"isupCause" => Cause2}, Data);
+nrf_update6(Consumed, SI, Data) ->
+	nrf_update7(Consumed, SI, Data).
+%% @hidden
+nrf_update7(Consumed, ServiceInformation,
 		#statedata{msisdn = MSISDN, calling = MSISDN,
 		called = CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1546,8 +1603,8 @@ nrf_update3(Consumed, ServiceInformation,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_update4(Consumed, ServiceRating, Data);
-nrf_update3(Consumed, ServiceInformation,
+	nrf_update8(Consumed, ServiceRating, Data);
+nrf_update7(Consumed, ServiceInformation,
 		#statedata{msisdn = MSISDN, called = MSISDN,
 		calling = CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1555,9 +1612,9 @@ nrf_update3(Consumed, ServiceInformation,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_update4(Consumed, ServiceRating, Data).
+	nrf_update8(Consumed, ServiceRating, Data).
 %% @hidden
-nrf_update4(Consumed, ServiceRating,
+nrf_update8(Consumed, ServiceRating,
 		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
 	Now = erlang:system_time(millisecond),
@@ -1570,9 +1627,9 @@ nrf_update4(Consumed, ServiceRating,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
-	nrf_update5(JSON, Data).
+	nrf_update9(JSON, Data).
 %% @hidden
-nrf_update5(JSON, #statedata{nrf_profile = Profile,
+nrf_update9(JSON, #statedata{nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
@@ -1624,7 +1681,39 @@ nrf_release2(Consumed, SI, #statedata{call_ref = CallRef} = Data)
 nrf_release2(Consumed, SI, Data) ->
 	nrf_release3(Consumed, SI, Data).
 %% @hidden
-nrf_release3(Consumed, ServiceInformation,
+nrf_release3(Consumed, SI, #statedata{call_start = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_release4(Consumed, SI#{"startTime" => DateTime}, Data);
+nrf_release3(Consumed, SI, Data) ->
+	nrf_release4(Consumed, SI, Data).
+%% @hidden
+nrf_release4(Consumed, SI, #statedata{charging_start = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_release5(Consumed, SI#{"startOfCharging" => DateTime}, Data);
+nrf_release4(Consumed, SI, Data) ->
+	nrf_release5(Consumed, SI, Data).
+%% @hidden
+nrf_release5(Consumed, SI, #statedata{call_end = DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_release6(Consumed, SI#{"stopTime" => DateTime}, Data);
+nrf_release5(Consumed, SI, Data) ->
+	nrf_release6(Consumed, SI, Data).
+%% @hidden
+nrf_release6(Consumed, SI, #statedata{isup_cause = #cause{value = Value,
+		location = Location, diagnostic = Diagnostic}} = Data) ->
+	Cause1 = #{"causeValue" => Value,
+			"causeLocation" => atom_to_list(Location)},
+	Cause2 = case Diagnostic of
+		Diagnostic when is_binary(Diagnostic) ->
+			Cause1#{"causeDiagnostics" => base64:encode(Diagnostic)};
+		undefined ->
+			Cause1
+	end,
+	nrf_release7(Consumed, SI#{"isupCause" => Cause2}, Data);
+nrf_release6(Consumed, SI, Data) ->
+	nrf_release7(Consumed, SI, Data).
+%% @hidden
+nrf_release7(Consumed, ServiceInformation,
 		#statedata{msisdn = MSISDN, calling = MSISDN,
 		called = CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1632,8 +1721,8 @@ nrf_release3(Consumed, ServiceInformation,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release4(Consumed, ServiceRating, Data);
-nrf_release3(Consumed, ServiceInformation,
+	nrf_release8(Consumed, ServiceRating, Data);
+nrf_release7(Consumed, ServiceInformation,
 		#statedata{msisdn = MSISDN, called = MSISDN,
 		calling = CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1641,9 +1730,9 @@ nrf_release3(Consumed, ServiceInformation,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release4(Consumed, ServiceRating, Data).
+	nrf_release8(Consumed, ServiceRating, Data).
 %% @hidden
-nrf_release4(Consumed, ServiceRating,
+nrf_release8(Consumed, ServiceRating,
 		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
 	Now = erlang:system_time(millisecond),
@@ -1655,9 +1744,9 @@ nrf_release4(Consumed, ServiceRating,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating1]},
-	nrf_release5(JSON, Data).
+	nrf_release9(JSON, Data).
 %% @hidden
-nrf_release5(JSON, #statedata{nrf_profile = Profile,
+nrf_release9(JSON, #statedata{nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location,
 		did = DialogueID, iid = IID, cco = CCO} = Data)
 		when is_list(Location) ->
@@ -1764,4 +1853,27 @@ called_number(asn1_NOVALUE, CalledPartyBCDNumber)
 	lists:flatten([integer_to_list(D) || D <- A]);
 called_number(asn1_NOVALUE, asn1_NOVALUE) ->
 	undefined.
+
+-spec call_info(RequestedInformationTypeList, Data) -> Data
+	when
+		RequestedInformationTypeList :: [#'GenericSSF-gsmSCF-PDUs_CallInformationReportArg_requestedInformationList_SEQOF'{}],
+		Data :: statedata().
+%% @doc Update state data with call information.
+call_info([#'GenericSSF-gsmSCF-PDUs_CallInformationReportArg_requestedInformationList_SEQOF'{
+		requestedInformationType = ?callStopTime,
+		requestedInformationValue = {callStopTimeValue, StopTime}}
+		| T] = _RequestedInformationTypeList, Data) ->
+	MilliSeconds = cse_log:date(cse_codec:date_time(StopTime)),
+	NewData = Data#statedata{call_end = cse_log:iso8601(MilliSeconds)},
+	call_info(T, NewData);
+call_info([#'GenericSSF-gsmSCF-PDUs_CallInformationReportArg_requestedInformationList_SEQOF'{
+		requestedInformationType = ?releaseCause,
+		requestedInformationValue = {releaseCauseValue, Cause}}
+		| T] = _RequestedInformationTypeList, Data) ->
+	NewData = Data#statedata{isup_cause = cse_codec:cause(Cause)},
+	call_info(T, NewData);
+call_info([_ | T], Data) ->
+	call_info(T, Data);
+call_info([], Data) ->
+	Data.
 
