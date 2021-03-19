@@ -33,8 +33,9 @@
 -type called_party_bcd() :: #called_party_bcd{}.
 -type calling_party() :: #calling_party{}.
 -type isdn_address() :: #isdn_address{}.
+-type cause() :: #cause{}.
 -export_types([called_party/0, called_party_bcd/0, calling_party/0,
-		isdn_address/0]).
+		isdn_address/0, cause/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_codec public API
