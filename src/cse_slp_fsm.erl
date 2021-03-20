@@ -72,6 +72,7 @@
 		call_end :: string() | undefined,
 		isup_cause :: cse_codec:cause() | undefined,
 		consumed = 0 :: non_neg_integer(),
+		pending = 0 :: non_neg_integer(),
 		msc :: [$0..$9] | undefined,
 		vlr :: [$0..$9] | undefined,
 		isup :: [$0..$9] | undefined,
@@ -1034,13 +1035,13 @@ abandon(cast, {'TC', 'CONTINUE', indication,
 abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
+		#statedata{did = DialogueID} = _Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{}}} ->
-					nrf_release(0, Data);
+					keep_state_and_data;
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -1054,7 +1055,7 @@ abandon(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 				requestedInformationList = CallInfo}} ->
-			{keep_state, call_info(CallInfo, Data)};
+			nrf_release(call_info(CallInfo, Data));
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1147,15 +1148,17 @@ disconnect(cast, {'TC', 'CONTINUE', indication,
 disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID, consumed = Consumed} = Data) ->
+		#statedata{did = DialogueID, consumed = Consumed,
+		pending = Pending} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					NewData = Data#statedata{consumed = Time},
-					nrf_release((Time - Consumed) div 10, NewData);
+					NewData = Data#statedata{consumed = Time,
+							pending = Pending + ((Time - Consumed) div 10)},
+					{keep_state, NewData};
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -1169,7 +1172,7 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 				requestedInformationList = CallInfo}} ->
-			{keep_state, call_info(CallInfo, Data)};
+			nrf_release(call_info(CallInfo, Data));
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1265,7 +1268,7 @@ exception(enter, _OldState,
 			invokeID = NewIID, dialogueID = DialogueID, class = 4,
 			parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	nrf_release(0, NewData);
+	nrf_release(NewData);
 exception(enter, _OldState,
 		#statedata{did = DialogueID, iid = IID, cco = CCO} = Data)->
 	NewIID = IID + 1,
@@ -1284,31 +1287,33 @@ exception(cast, {'TC', 'CONTINUE', indication,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
 exception(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
-		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
-				requestedInformationList = CallInfo}} ->
-			{keep_state, call_info(CallInfo, Data)};
-		{error, Reason} ->
-			{stop, Reason}
-	end;
-exception(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID, consumed = Consumed} = Data) ->
+		#statedata{did = DialogueID, pending = Pending,
+		consumed = Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
-					NewData = Data#statedata{consumed = Time},
-					nrf_release((Time - Consumed) div 10, NewData);
+					NewData = Data#statedata{consumed = Time,
+							pending = Pending + ((Time - Consumed) div 10)},
+					{keep_state, NewData};
 				{error, Reason} ->
 					{stop, Reason}
 			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+exception(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			nrf_release(call_info(CallInfo, Data));
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1654,52 +1659,51 @@ nrf_update9(JSON, #statedata{nrf_profile = Profile,
 			{next_state, exception, NewData}
 	end.
 
--spec nrf_release(Consumed, Data) -> Result
+-spec nrf_release(Data) -> Result
 	when
-		Consumed :: non_neg_integer(),
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
 %% @doc Final update to release a rating session.
-nrf_release(Consumed, #statedata{msc = MSC, vlr = VLR} = Data)
+nrf_release(#statedata{msc = MSC, vlr = VLR} = Data)
 		when is_list(MSC), is_list(VLR) ->
 	SI = #{"mscAddress" => MSC, "vlrNumber" => VLR},
-	nrf_release1(Consumed, SI , Data);
-nrf_release(Consumed, #statedata{msc = MSC} = Data)
+	nrf_release1(SI , Data);
+nrf_release(#statedata{msc = MSC} = Data)
 		when is_list(MSC) ->
 	SI = #{"mscAddress" => MSC},
-	nrf_release1(Consumed, SI, Data).
+	nrf_release1(SI, Data).
 %% @hidden
-nrf_release1(Consumed, SI, #statedata{isup = ISUP} = Data)
+nrf_release1(SI, #statedata{isup = ISUP} = Data)
 		when is_list(ISUP) ->
-	nrf_release2(Consumed, SI#{"locationNumber" => ISUP}, Data);
-nrf_release1(Consumed, SI, Data) ->
-	nrf_release2(Consumed, SI, Data).
+	nrf_release2(SI#{"locationNumber" => ISUP}, Data);
+nrf_release1(SI, Data) ->
+	nrf_release2(SI, Data).
 %% @hidden
-nrf_release2(Consumed, SI, #statedata{call_ref = CallRef} = Data)
+nrf_release2(SI, #statedata{call_ref = CallRef} = Data)
 		when is_binary(CallRef) ->
-	nrf_release3(Consumed, SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
-nrf_release2(Consumed, SI, Data) ->
-	nrf_release3(Consumed, SI, Data).
+	nrf_release3(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_release2(SI, Data) ->
+	nrf_release3(SI, Data).
 %% @hidden
-nrf_release3(Consumed, SI, #statedata{call_start = DateTime} = Data)
+nrf_release3(SI, #statedata{call_start = DateTime} = Data)
 		when is_list(DateTime) ->
-	nrf_release4(Consumed, SI#{"startTime" => DateTime}, Data);
-nrf_release3(Consumed, SI, Data) ->
-	nrf_release4(Consumed, SI, Data).
+	nrf_release4(SI#{"startTime" => DateTime}, Data);
+nrf_release3(SI, Data) ->
+	nrf_release4(SI, Data).
 %% @hidden
-nrf_release4(Consumed, SI, #statedata{charging_start = DateTime} = Data)
+nrf_release4(SI, #statedata{charging_start = DateTime} = Data)
 		when is_list(DateTime) ->
-	nrf_release5(Consumed, SI#{"startOfCharging" => DateTime}, Data);
-nrf_release4(Consumed, SI, Data) ->
-	nrf_release5(Consumed, SI, Data).
+	nrf_release5(SI#{"startOfCharging" => DateTime}, Data);
+nrf_release4(SI, Data) ->
+	nrf_release5(SI, Data).
 %% @hidden
-nrf_release5(Consumed, SI, #statedata{call_end = DateTime} = Data)
+nrf_release5(SI, #statedata{call_end = DateTime} = Data)
 		when is_list(DateTime) ->
-	nrf_release6(Consumed, SI#{"stopTime" => DateTime}, Data);
-nrf_release5(Consumed, SI, Data) ->
-	nrf_release6(Consumed, SI, Data).
+	nrf_release6(SI#{"stopTime" => DateTime}, Data);
+nrf_release5(SI, Data) ->
+	nrf_release6(SI, Data).
 %% @hidden
-nrf_release6(Consumed, SI, #statedata{isup_cause = #cause{value = Value,
+nrf_release6(SI, #statedata{isup_cause = #cause{value = Value,
 		location = Location, diagnostic = Diagnostic}} = Data) ->
 	Cause1 = #{"causeValue" => Value,
 			"causeLocation" => atom_to_list(Location)},
@@ -1709,11 +1713,11 @@ nrf_release6(Consumed, SI, #statedata{isup_cause = #cause{value = Value,
 		undefined ->
 			Cause1
 	end,
-	nrf_release7(Consumed, SI#{"isupCause" => Cause2}, Data);
-nrf_release6(Consumed, SI, Data) ->
-	nrf_release7(Consumed, SI, Data).
+	nrf_release7(SI#{"isupCause" => Cause2}, Data);
+nrf_release6(SI, Data) ->
+	nrf_release7(SI, Data).
 %% @hidden
-nrf_release7(Consumed, ServiceInformation,
+nrf_release7(ServiceInformation,
 		#statedata{msisdn = MSISDN, calling = MSISDN,
 		called = CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1721,8 +1725,8 @@ nrf_release7(Consumed, ServiceInformation,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release8(Consumed, ServiceRating, Data);
-nrf_release7(Consumed, ServiceInformation,
+	nrf_release8(ServiceRating, Data);
+nrf_release7(ServiceInformation,
 		#statedata{msisdn = MSISDN, called = MSISDN,
 		calling = CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1730,11 +1734,11 @@ nrf_release7(Consumed, ServiceInformation,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release8(Consumed, ServiceRating, Data).
+	nrf_release8(ServiceRating, Data).
 %% @hidden
-nrf_release8(Consumed, ServiceRating,
-		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
-		when is_integer(Consumed), Consumed >= 0 ->
+nrf_release8(ServiceRating,
+		#statedata{imsi = IMSI, msisdn = MSISDN,
+		pending = Consumed} = Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(counters, nrf_seq, 1),
 	ServiceRating1 = ServiceRating#{"requestSubType" => "DEBIT",
@@ -1759,7 +1763,7 @@ nrf_release9(JSON, #statedata{nrf_profile = Profile,
 	case httpc:request(post, Request, HttpOptions, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#statedata{nrf_reqid = RequestId,
-					nrf_location = undefined},
+					nrf_location = undefined, pending = 0},
 			{keep_state, NewData};
 		{error, Reason} ->
 			case Reason of
