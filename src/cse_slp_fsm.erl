@@ -476,6 +476,8 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, o_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			{next_state, exception, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
+			{next_state, exception, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
