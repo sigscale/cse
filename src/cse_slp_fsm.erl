@@ -1240,7 +1240,7 @@ exception(enter, _OldState,
 		when is_list(Location) ->
 	nrf_release(Data);
 exception(enter, _OldState,  Data)->
-	{next_state, null, Data};
+	keep_state_and_data;
 exception(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
