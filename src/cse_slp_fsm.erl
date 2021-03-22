@@ -474,6 +474,8 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
+			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
@@ -532,6 +534,8 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			{next_state, t_alerting, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
 			{next_state, t_active, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}} ->
+			{next_state, exception, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
