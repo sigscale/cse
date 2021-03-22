@@ -1,3 +1,100 @@
+2021-03-22  Vance Shipley <vances@sigscale.org>
+
+	* don't release nrf on exception state enter
+	* handle no answer event
+	* no state transitions from enter clause
+	* only release active call
+	* handle call party busy event
+	* final call information including cause in nrf release
+	* save call information in state, include in nrf service information
+	* export cause type from cse_codec module
+	* make date conversion function symetrical
+	* prevent redundant nrf release
+	* handle missing addresses
+	* ignore old location information
+	* msc address has isdn-address string type
+	* vcs service information in nrf service rating
+	* correct vlr number in initial pdu
+	* codec for map isdn-addressstring
+	* use original called party for destination
+	* accept either bcd or normal called party
+	* replace consumed time, not add
+	* nrf update consumed unit time is incremental
+	* no location header in update
+	* edoc format cprrection
+	* recognize immediate tc-end by invoke id lower that dp arming
+	* only stop on fatal error or shutdown by supervisor
+	* correct function name in log reports
+	* document process distribution
+	* include edoc-info in installed doc
+	* include apply charging report in mo disconnect test case
+	* origination id in nrf service rating for mt calls
+	* correct parsing/validating granted unit
+	* remove unused variables
+	* correct function name in log reports
+	* stop on receipt of tc-end
+	* call information report doesn't change state
+	* do not ignore unknown events (programming error); no call information in analyse info
+	* alerting dp is a camel phase 4 feature
+	* handle apply charging report in analyse information state
+	* handle apply charging report in exception state
+	* handle mobile terminated calls
+	* expect call info report only in disconnect and abandon
+	* correct state in warning report
+	* log warning for unexpected bcsm events
+	* refactor nrf response handling
+	* parse nrf update response for granted time
+	* convert 100ms units to seconds
+	* handle tc-continue in all states
+	* handle tc-continue in all states
+	* transition from analyse_information straight to o_active
+	* refactor o-bcsm for abandon, disconnect
+	* time should be zero in abandon apply charging report
+	* wait for dha to stop
+	* handle exit in exception state
+	* add exception state
+	* handle tcap component sublayer terminating
+	* send tc-continue after tc-invoke apply charging
+	* orthogonal lines for visual consistency
+	* tie lifecycle of dha and slpi together
+	* require tcap version with corrected ism supervision
+	* align tc primitives class parameters with cap operation definitions
+	* abandon event in obcsm puml diagram
+	* include t-bcsm in edoc
+	* conversion from 100ms units to seconds
+	* handle interim updates and final release
+	* correct granted unit in test nrf server
+	* note ac macro names
+	* keep local invoke id in state
+	* require tcap 1.2.4
+	* handle cap phase 2 also
+	* handle route select failure in analyse information state
+	* convert called number to string
+	* tc-end before tc-continue must contain context name
+	* create data dir for tcap test suite in build dir
+	* ct data dir as httpd document home
+	* mock nrf server for test suite
+	* authorize with nrf on collect info
+	* codec function for isup cause
+	* start rating function for httpc request
+	* initialize counters table
+	* app env var for nrf_rating api uri
+	* capture identity data for state from initial dp; correct tc-u-error
+	* guard case so exit matches
+	* calling party should be international msisdn
+	* codec for tbcd-string type; correct error codes
+	* api function for date time from timestamp
+	* macro for unix epoch
+	* include zj in release package
+	* log module with iso8601 date time function
+	* edoc module description
+	* configure and start inets httpc
+	* handle cancel and end in routing state
+	* rename codec function
+	* handle tc-u-error and log warning
+	* codec function for error codes
+	* correct expected return value from sccp codec function
+
 2021-03-03  Vance Shipley <vances@sigscale.org>
 
 	* test case for mo disconnect
