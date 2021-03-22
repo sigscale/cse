@@ -1,5 +1,6 @@
 2021-03-22  Vance Shipley <vances@sigscale.org>
 
+	* ignore second leg disconnect event
 	* don't release nrf on exception state enter
 	* handle no answer event
 	* no state transitions from enter clause
