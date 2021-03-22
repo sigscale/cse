@@ -1239,11 +1239,7 @@ disconnect(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>exception</em> state.
 %% @private
-exception(enter, _OldState,
-		#statedata{nrf_reqid = undefined, nrf_location = Location} = Data)
-		when is_list(Location) ->
-	nrf_release(Data);
-exception(enter, _OldState,  Data)->
+exception(enter, _OldState,  _Data)->
 	keep_state_and_data;
 exception(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
