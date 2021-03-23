@@ -1,5 +1,6 @@
 2021-03-22  Vance Shipley <vances@sigscale.org>
 
+	* ensure nrf release on tc-end
 	* 400ms max time in exception state
 	* ignore second leg disconnect event
 	* don't release nrf on exception state enter
