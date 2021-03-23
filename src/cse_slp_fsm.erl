@@ -313,9 +313,17 @@ collect_information(cast, {nrf_start,
 			{next_state, analyse_information, NewData};
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
 				when is_list(Location) ->
+			NewIID = IID + 1,
 			NewData = Data#statedata{nrf_reqid = undefined,
-					nrf_location = Location},
-			{next_state, exception, NewData};
+					nrf_location = Location, iid = NewIID},
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, NewData, 0};
 		{{ok, JSON}, {_, Location}} when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
@@ -406,9 +414,17 @@ collect_information(cast, {nrf_start,
 			{next_state, terminating_call_handling, NewData};
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
 				when is_list(Location) ->
+			NewIID = IID + 1,
 			NewData = Data#statedata{nrf_reqid = undefined,
-					nrf_location = Location},
-			{next_state, exception, NewData};
+					nrf_location = Location, iid = NewIID},
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, NewData, 0};
 		{{ok, JSON}, {_, Location}} when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
@@ -822,7 +838,7 @@ o_active(cast, {nrf_update,
 							invokeID = NewIID, dialogueID = DialogueID, class = 4,
 							parameters = ReleaseCallArg},
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-					{next_state, exception, NewData}
+					{next_state, exception, NewData, 0}
 			end;
 		{ok, #{"serviceRating" := [#{"resultCode" := _},
 				#{"resultCode" := _}]}} ->
@@ -835,7 +851,7 @@ o_active(cast, {nrf_update,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData};
+			{next_state, exception, NewData, 0};
 		{ok, JSON} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
@@ -988,7 +1004,7 @@ t_active(cast, {nrf_update,
 							invokeID = NewIID, dialogueID = DialogueID, class = 4,
 							parameters = ReleaseCallArg},
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-					{next_state, exception, NewData}
+					{next_state, exception, NewData, 0}
 			end;
 		{ok, #{"serviceRating" := [#{"resultCode" := _},
 				#{"resultCode" := _}]}} ->
@@ -1001,7 +1017,7 @@ t_active(cast, {nrf_update,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData};
+			{next_state, exception, NewData, 0};
 		{ok, JSON} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
@@ -1244,15 +1260,15 @@ exception(enter, _OldState,  _Data)->
 exception(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{keep_state, Data, 400};
 exception(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = _Data) ->
+		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = _}} ->
-			keep_state_and_data;
+			{keep_state, Data, 400};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1269,7 +1285,7 @@ exception(cast, {'TC', 'INVOKE', indication,
 						timeInformation = {timeIfNoTariffSwitch, Time}}}} ->
 					NewData = Data#statedata{consumed = Time,
 							pending = Pending + ((Time - Consumed) div 10)},
-					{keep_state, NewData};
+					{keep_state, NewData, 400};
 				{error, Reason} ->
 					{stop, Reason}
 			end;
@@ -1287,6 +1303,8 @@ exception(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+exception(timeout, _, Data) ->
+	nrf_release(Data);
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId} = Data) ->
@@ -1311,13 +1329,13 @@ exception(cast, {nrf_release, {RequestId, {error, Reason}}},
 	{next_state, null, NewData};
 exception(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{keep_state, Data, 400};
 exception(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{keep_state, Data, 400};
 exception(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
