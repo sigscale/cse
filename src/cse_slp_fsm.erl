@@ -506,8 +506,8 @@ analyse_information(cast, {'TC', 'L-CANCEL', indication,
 analyse_information(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 analyse_information(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -562,8 +562,8 @@ terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
 terminating_call_handling(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 terminating_call_handling(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -626,8 +626,8 @@ routing(cast, {'TC', 'L-CANCEL', indication,
 routing(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
 
@@ -671,8 +671,8 @@ o_alerting(cast, {'TC', 'L-CANCEL', indication,
 o_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 o_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -724,8 +724,8 @@ t_alerting(cast, {'TC', 'L-CANCEL', indication,
 t_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 t_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -890,8 +890,8 @@ o_active(cast, {'TC', 'L-CANCEL', indication,
 o_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 o_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -1056,8 +1056,8 @@ t_active(cast, {'TC', 'L-CANCEL', indication,
 t_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
 t_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -1142,8 +1142,8 @@ abandon(cast, {'TC', 'L-CANCEL', indication,
 abandon(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	nrf_release(Data);
 abandon(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -1232,8 +1232,8 @@ disconnect(cast, {'TC', 'L-CANCEL', indication,
 disconnect(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
-		#statedata{did = DialogueID}) ->
-	keep_state_and_data;
+		#statedata{did = DialogueID} = Data) ->
+	nrf_release(Data);
 disconnect(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -1335,7 +1335,7 @@ exception(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-	{keep_state, Data, 400};
+	nrf_release(Data);
 exception(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
