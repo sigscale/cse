@@ -55,3 +55,13 @@
 		value = 31 :: 1..127,
 		diagnostic :: binary() | undefined}).
 
+%% ITU-T Q.763 ISUP 3.26
+-record(generic_number,
+		{nqi :: 0..10,
+		nai :: 1..4,
+		ni :: 0..1,
+		npi :: 1 | 3..6,
+		apri :: 0..2,
+		si :: 0..3,
+		address = [] :: [0..9 | 16#b]}).
+

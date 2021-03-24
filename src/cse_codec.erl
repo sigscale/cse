@@ -24,7 +24,8 @@
 
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
-		isdn_address/1, tbcd/1, date_time/1, error_code/1, cause/1]).
+		isdn_address/1, tbcd/1, generic_number/1,
+		date_time/1, error_code/1, cause/1]).
 
 -include("cse_codec.hrl").
 -include_lib("cap/include/CAP-errorcodes.hrl").
@@ -33,9 +34,10 @@
 -type called_party_bcd() :: #called_party_bcd{}.
 -type calling_party() :: #calling_party{}.
 -type isdn_address() :: #isdn_address{}.
+-type generic_number() :: #generic_number{}.
 -type cause() :: #cause{}.
 -export_types([called_party/0, called_party_bcd/0, calling_party/0,
-		isdn_address/0, cause/0]).
+		isdn_address/0, generic_number/0, cause/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_codec public API
@@ -168,6 +170,34 @@ tbcd([A2, A1 | T], Acc)
 tbcd([], Acc) ->
 	Acc.
 
+-spec generic_number(GenericNumber) -> GenericNumber
+	when
+		GenericNumber :: generic_number() | binary().
+%% @doc CODEC for ISUP Generic Number IE.
+generic_number(<<NQI:8, OE:1, NAI:7, NI:1, NPI:3, APRI:2, SI:2,
+		Address/binary>> = _GenericNumber) ->
+	generic_number1(OE, Address, #generic_number{nqi = NQI,
+			nai = NAI, ni = NI, npi = NPI, apri = APRI, si = SI}, []);
+generic_number(#generic_number{nqi = NQI, nai = NAI, ni = NI,
+		npi = NPI, apri = APRI, si = SI, address = Address}) ->
+	OE = length(Address) rem 2,
+	generic_number2(Address,
+			<<NQI:8, OE:1, NAI:7, NI:1, NPI:3, APRI:2, SI:2>>).
+%% @hidden
+generic_number1(0, <<A2:4, A1:4>>, GN, Acc) ->
+	GN#generic_number{address = lists:reverse([A2, A1 | Acc])};
+generic_number1(1, <<_:4, A:4>>, GN, Acc) ->
+	GN#generic_number{address = lists:reverse([A | Acc])};
+generic_number1(OE, <<A2:4, A1:4, Rest/binary>>, GN, Acc) ->
+	generic_number1(OE, Rest, GN, [A2, A1 | Acc]).
+%% @hidden
+generic_number2([A1, A2 | T], Acc) ->
+	generic_number2(T, <<Acc/binary, A2:4, A1:4>>);
+generic_number2([A], Acc) ->
+	<<Acc/binary, 0:4, A:4>>;
+generic_number2([], Acc) ->
+	Acc.
+
 -spec date_time(DateAndTime) -> DateAndTime
 	when
 		DateAndTime :: binary() | calendar:datetime().
@@ -243,7 +273,7 @@ error_code(?'errcode-unknownCSID') ->
 
 -spec cause(Cause) -> Cause
 	when
-		Cause :: #cause{} | binary().
+		Cause :: cause() | binary().
 %% @doc CODEC for ISUP Cause.
 cause(<<1:1, Coding:2, 0:1, Location:4, 1:1, Value:7>>) ->
 	cause(Coding, Location, #cause{value = Value});
