@@ -29,7 +29,9 @@
 -export([called_party/0, called_party/1,
 		calling_party/0, calling_party/1,
 		called_party_bcd/0, called_party_bcd/1,
-		tbcd/0, tbcd/1, date_time/0, date_time/1,
+		tbcd/0, tbcd/1, isdn_address/0, isdn_address/1,
+		generic_number/0, generic_number/1,
+		date_time/0, date_time/1,
 		cause/0, cause/1]).
 
 -include("cse_codec.hrl").
@@ -79,7 +81,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[called_party, called_party_bcd, calling_party, tbcd, date_time, cause].
+	[called_party, called_party_bcd, calling_party, isdn_address,
+			generic_number, tbcd, date_time, cause].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -146,6 +149,38 @@ tbcd(_Config) ->
 	Digits2 = cse_codec:tbcd(cse_codec:tbcd(Digits2)),
 	Digits3 = <<2:4, 1:4, 4:4, 3:4, 15:4, 5:4>>,
 	Digits3 = cse_codec:tbcd(cse_codec:tbcd(Digits3)).
+
+isdn_address() ->
+	[{userdata, [{doc, "Encode/decode MAP ISDN-Address"}]}].
+
+isdn_address(_Config) ->
+	NAI = nai(),
+	NPI = 1,
+	Address = lists:flatten([integer_to_list(D) || D <- address()]),
+	IA = #isdn_address{nai = NAI, npi = NPI, address = Address},
+	B = cse_codec:isdn_address(IA),
+	<<1:1, NAI:3, NPI:4, Rest/binary>> = B,
+	Address = cse_codec:tbcd(Rest),
+	IA = cse_codec:isdn_address(B).
+
+generic_number() ->
+	[{userdata, [{doc, "Encode/decode ISUP Generic Number IE"}]}].
+
+generic_number(_Config) ->
+	NQI = 0,
+	NAI = nai(),
+	NPI = 1,
+	NI = 0,
+	APRI = 0,
+	SI = 3,
+	Address = address(),
+	OE = length(Address) rem 2,
+	GN = #generic_number{nqi = 0, nai = NAI, npi = NPI,
+			ni = NI, apri = APRI, si = SI, address = Address},
+	B = cse_codec:generic_number(GN),
+	<<NQI, OE:1, NAI:7, NI:1, NPI:3, APRI:2, SI:2, Rest/binary>> = B,
+	Address = sccp_codec:bcd(Rest, OE),
+	GN = cse_codec:generic_number(B).
 
 date_time() ->
 	[{userdata, [{doc, "Encode/decode CAMEL CalledPartyBCD"}]}].
