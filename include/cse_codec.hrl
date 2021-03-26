@@ -65,3 +65,9 @@
 		si :: 0..3,
 		address = [] :: [0..9 | 16#b]}).
 
+%% ITU-T Q.763 ISUP 3.24
+-record(generic_digits,
+		{enc :: 0..3,
+		tod :: 0..3,
+		digits :: binary()}).
+

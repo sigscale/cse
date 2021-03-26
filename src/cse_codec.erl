@@ -24,7 +24,7 @@
 
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
-		isdn_address/1, tbcd/1, generic_number/1,
+		isdn_address/1, tbcd/1, generic_number/1, generic_digits/1,
 		date_time/1, error_code/1, cause/1]).
 
 -include("cse_codec.hrl").
@@ -35,9 +35,10 @@
 -type calling_party() :: #calling_party{}.
 -type isdn_address() :: #isdn_address{}.
 -type generic_number() :: #generic_number{}.
+-type generic_digits() :: #generic_digits{}.
 -type cause() :: #cause{}.
 -export_types([called_party/0, called_party_bcd/0, calling_party/0,
-		isdn_address/0, generic_number/0, cause/0]).
+		isdn_address/0, generic_number/0, generic_digits/0, cause/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_codec public API
@@ -197,6 +198,16 @@ generic_number2([A], Acc) ->
 	<<Acc/binary, 0:4, A:4>>;
 generic_number2([], Acc) ->
 	Acc.
+
+-spec generic_digits(GenericDigits) -> GenericDigits
+	when
+		GenericDigits :: generic_digits() | binary().
+%% @doc CODEC for ISUP Generic Digits IE.
+generic_digits(<<ENC:3, TOD:5, Digits/binary>> = _GenericDigits) ->
+	#generic_digits{enc = ENC, tod = TOD, digits = Digits};
+generic_digits(#generic_digits{enc = ENC, tod = TOD, digits = Digits})
+		when is_binary(Digits) ->
+	<<ENC:3, TOD:5, Digits/binary>>.
 
 -spec date_time(DateAndTime) -> DateAndTime
 	when

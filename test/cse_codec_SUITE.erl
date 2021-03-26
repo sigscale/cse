@@ -31,6 +31,7 @@
 		called_party_bcd/0, called_party_bcd/1,
 		tbcd/0, tbcd/1, isdn_address/0, isdn_address/1,
 		generic_number/0, generic_number/1,
+		generic_digits/0, generic_digits/1,
 		date_time/0, date_time/1,
 		cause/0, cause/1]).
 
@@ -82,7 +83,7 @@ sequences() ->
 %%
 all() ->
 	[called_party, called_party_bcd, calling_party, isdn_address,
-			generic_number, tbcd, date_time, cause].
+			generic_number, generic_digits, tbcd, date_time, cause].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -181,6 +182,20 @@ generic_number(_Config) ->
 	<<NQI, OE:1, NAI:7, NI:1, NPI:3, APRI:2, SI:2, Rest/binary>> = B,
 	Address = sccp_codec:bcd(Rest, OE),
 	GN = cse_codec:generic_number(B).
+
+generic_digits() ->
+	[{userdata, [{doc, "Encode/decode ISUP Generic Digits IE"}]}].
+
+generic_digits(_Config) ->
+	Address = address(),
+	ENC = length(Address) rem 2,
+	TOD = 0,
+	Digits = sccp_codec:bcd(Address),
+	GD = #generic_digits{enc = ENC, tod = TOD, digits = Digits},
+	B = cse_codec:generic_digits(GD),
+	<<ENC:3, TOD:5, Rest/binary>> = B,
+	Address = sccp_codec:bcd(Rest, ENC),
+	GD = cse_codec:generic_digits(B).
 
 date_time() ->
 	[{userdata, [{doc, "Encode/decode CAMEL CalledPartyBCD"}]}].
