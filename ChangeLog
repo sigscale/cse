@@ -1,3 +1,12 @@
+2021-03-27  Vance Shipley <vances@sigscale.org>
+
+	* ignore tc-l-cancel in collect_information state too
+	* include sasl in release but do not start
+	* require tcap version with supervision changes
+	* codec for isup generic digits
+	* test cases for isdn-address and generic number codecs
+	* isup generic number codec
+
 2021-03-22  Vance Shipley <vances@sigscale.org>
 
 	* ensure nrf release on tc-end
