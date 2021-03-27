@@ -60,6 +60,7 @@ AC_ERLANG_CHECK_LIB([stdlib],
 		[if echo -e "$ERLANG_LIB_VER_stdlib\n3.5" | sort -CV;
 		then AC_MSG_ERROR([>= stdlib-3.5 required!]); fi],
 		[AC_MSG_ERROR([stdlib was not found!])])
+AC_ERLANG_CHECK_LIB([sasl], [], [AC_MSG_WARN([sasl was not found!])])
 AC_ERLANG_CHECK_LIB([mnesia], [], [AC_MSG_WARN([mnesia was not found!])])
 AC_ERLANG_CHECK_LIB([inets], [], [AC_MSG_WARN([inets was not found!])])
 AC_ERLANG_CHECK_LIB([snmp], [], [AC_MSG_WARN([snmp was not found!])])
