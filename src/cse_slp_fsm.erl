@@ -460,6 +460,10 @@ collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData};
+collect_information(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
 collect_information(info, {'EXIT', DHA, Reason},
 		#statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
@@ -1303,7 +1307,7 @@ exception(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-exception(timeout, _, Data) ->
+exception(timeout, _EventContent, Data) ->
 	nrf_release(Data);
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
