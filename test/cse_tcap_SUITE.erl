@@ -36,6 +36,7 @@
 		apply_charging/0, apply_charging/1,
 		call_info_request/0, call_info_request/1,
 		mo_abandon/0, mo_abandon/1,
+		mt_abandon/0, mt_abandon/1,
 		mo_answer/0, mo_answer/1,
 		mo_disconnect/0, mo_disconnect/1]).
 
@@ -194,7 +195,7 @@ sequences() ->
 all() ->
 	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
 			continue, dp_arming, apply_charging, call_info_request,
-			mo_abandon, mo_answer, mo_disconnect].
+			mo_abandon, mt_abandon, mo_answer, mo_disconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -470,6 +471,41 @@ mo_abandon(Config) ->
 		{'DOWN', MonitorRef, _, _, normal} -> ok
 	end.
 
+mt_abandon() ->
+	[{userdata, [{doc, "EventReportBCSM:tAbandon received by SCF"}]}].
+
+mt_abandon(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_mt(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	MonitorRef = receive
+		{csl, DHA, _TCU} ->
+			monitor(process, DHA)
+	end,
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD1} -> UD1
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
+	UserData3 = pdu_t_abandon(SsfTid, ScfTid, 2),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	SccpParams4 = receive
+		{'N', 'UNITDATA', request, UD2} -> UD2
+	end,
+	#'N-UNITDATA'{userData = UserData4} = SccpParams4,
+	{ok, {'end', _End}} = ?Pkgs:decode(?PDUs, UserData4),
+	receive
+		{'DOWN', MonitorRef, _, _, normal} -> ok
+	end.
+
 mo_answer() ->
 	[{userdata, [{doc, "EventReportBCSM:oAnswer received by SCF"}]}].
 
@@ -666,6 +702,48 @@ pdu_o_abandon(OTID, DTID, InvokeID) ->
 			requestedInformationType = releaseCause,
 			requestedInformationValue = {releaseCauseValue, cse_codec:cause(Cause)}},
 	RequestedInformationList = [RI1, RI2, RI3, RI4],
+	InfoReportArg = #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+			legID = {receivingSideID, ?leg2},
+			requestedInformationList = RequestedInformationList},
+	Invoke3 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID + 2},
+			opcode = ?'opcode-callInformationReport',
+			argument = InfoReportArg},
+	Components = [{basicROS, {invoke, I}} || I <- [Invoke1, Invoke2, Invoke3]],
+	Continue = #'GenericSSF-gsmSCF-PDUs_continue'{
+			otid = <<OTID:32>>,
+			dtid = <<DTID:32>>,
+			components = Components},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'continue', Continue}),
+	UD.
+
+pdu_t_abandon(OTID, DTID, InvokeID) ->
+	EventReportArg = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{
+			eventTypeBCSM = tAbandon,
+			legID = {receivingSideID, ?leg2},
+			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+	Invoke1 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID},
+			opcode = ?'opcode-eventReportBCSM',
+			argument = EventReportArg},
+	ChargingResult = #'PduCallResult_timeDurationChargingResult'{
+			partyToCharge = {receivingSideID, ?leg2},
+			timeInformation = {timeIfNoTariffSwitch, 0}},
+	{ok, ChargingResultArg} = 'CAMEL-datatypes':encode('PduCallResult',
+			{timeDurationChargingResult, ChargingResult}),
+	Invoke2 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID + 1},
+			opcode = ?'opcode-applyChargingReport',
+			argument = ChargingResultArg},
+	TV1 = cse_codec:date_time(calendar:universal_time()),
+	RI1 = #'RequestedInformation'{
+			requestedInformationType = callStopTime,
+			requestedInformationValue = {callStopTimeValue, TV1}},
+	Cause = #cause{coding = itu, location = local_public, value = 16},
+	RI2 = #'RequestedInformation'{
+			requestedInformationType = releaseCause,
+			requestedInformationValue = {releaseCauseValue, cse_codec:cause(Cause)}},
+	RequestedInformationList = [RI1, RI2],
 	InfoReportArg = #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 			legID = {receivingSideID, ?leg2},
 			requestedInformationList = RequestedInformationList},
