@@ -661,9 +661,10 @@ pdu_o_abandon(OTID, DTID, InvokeID) ->
 	RI3 = #'RequestedInformation'{
 			requestedInformationType = callConnectedElapsedTime,
 			requestedInformationValue = {callConnectedElapsedTimeValue, 0}},
+	Cause = #cause{coding = itu, location = local_public, value = 16},
 	RI4 = #'RequestedInformation'{
 			requestedInformationType = releaseCause,
-			requestedInformationValue = {releaseCauseValue, <<224,144>>}},
+			requestedInformationValue = {releaseCauseValue, cse_codec:cause(Cause)}},
 	RequestedInformationList = [RI1, RI2, RI3, RI4],
 	InfoReportArg = #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 			legID = {receivingSideID, ?leg2},
@@ -700,8 +701,9 @@ pdu_o_answer(OTID, DTID, InvokeID) ->
 	UD.
 
 pdu_o_disconnect(OTID, DTID, InvokeID) ->
+	Cause = #cause{coding = itu, location = local_public, value = 16},
 	SI = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg_eventSpecificInformationBCSM_oDisconnectSpecificInfo'{
-			releaseCause = <<224,144>>},
+			releaseCause = cse_codec:cause(Cause)},
 	EventReportArg = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{
 			eventTypeBCSM = oDisconnect,
 			eventSpecificInformationBCSM = {oDisconnectSpecificInfo, SI},
@@ -732,9 +734,10 @@ pdu_o_disconnect(OTID, DTID, InvokeID) ->
 	RI3 = #'RequestedInformation'{
 			requestedInformationType = callConnectedElapsedTime,
 			requestedInformationValue = {callConnectedElapsedTimeValue, TV3}},
+	Cause = #cause{coding = itu, location = local_public, value = 16},
 	RI4 = #'RequestedInformation'{
 			requestedInformationType = releaseCause,
-			requestedInformationValue = {releaseCauseValue, <<224,144>>}},
+			requestedInformationValue = {releaseCauseValue, cse_codec:cause(Cause)}},
 	RequestedInformationList = [RI1, RI2, RI3, RI4],
 	InfoReportArg = #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 			legID = {receivingSideID, ?leg2},
