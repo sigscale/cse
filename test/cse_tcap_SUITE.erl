@@ -39,7 +39,8 @@
 		mt_abandon/0, mt_abandon/1,
 		mo_answer/0, mo_answer/1,
 		mt_answer/0, mt_answer/1,
-		mo_disconnect/0, mo_disconnect/1]).
+		mo_disconnect/0, mo_disconnect/1,
+		mt_disconnect/0, mt_disconnect/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
@@ -197,7 +198,7 @@ all() ->
 	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
 			continue, dp_arming, apply_charging, call_info_request,
 			mo_abandon, mt_abandon, mo_answer, mt_answer,
-			mo_disconnect].
+			mo_disconnect, mt_disconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -602,6 +603,44 @@ mo_disconnect(Config) ->
 		{'DOWN', MonitorRef, _, _, normal} -> ok
 	end.
 
+mt_disconnect() ->
+	[{userdata, [{doc, "EventReportBCSM:tDisconnect received by SCF"}]}].
+
+mt_disconnect(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_mt(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	MonitorRef = receive
+		{csl, DHA, _TCU} ->
+			monitor(process, DHA)
+	end,
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD1} -> UD1
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
+	UserData3 = pdu_t_answer(SsfTid, ScfTid, 2),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	UserData4 = pdu_t_disconnect(SsfTid, ScfTid, 3),
+	SccpParams4 = unitdata(UserData4, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams4}),
+	SccpParams5 = receive
+		{'N', 'UNITDATA', request, UD2} -> UD2
+	end,
+	#'N-UNITDATA'{userData = UserData5} = SccpParams5,
+	{ok, {'end', _End}} = ?Pkgs:decode(?PDUs, UserData5),
+	receive
+		{'DOWN', MonitorRef, _, _, normal} -> ok
+	end.
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -685,6 +724,44 @@ pdu_initial_mo(OTID, AC) ->
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
                npi = 1, address = "14165550001"}),
 			calledPartyBCDNumber = called_party_bcd(),
+			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
+	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, 1},
+			opcode = ?'opcode-initialDP',
+			argument = InitialDPArg},
+	Begin = #'GenericSSF-gsmSCF-PDUs_begin'{otid = <<OTID:32>>,
+			dialoguePortion = DialoguePortion,
+			components = [{basicROS, {invoke, Invoke}}]},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
+	UD.
+
+pdu_initial_mt(OTID, AC) ->
+	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
+	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
+			{dialogueRequest, AARQ}),
+	DialoguePortion = #'EXTERNAL'{'direct-reference' = {0,0,17,773,1,1,1},
+			'indirect-reference' = asn1_NOVALUE,
+			'data-value-descriptor' = asn1_NOVALUE,
+			encoding = {'single-ASN1-type', DialoguePDUs}},
+	LocationInformation = #'LocationInformation'{
+			ageOfLocationInformation = 0,
+			'vlr-number' = cse_codec:isdn_address(#isdn_address{nai = 1,
+					npi = 1, address = "14165550000"}),
+			cellGlobalIdOrServiceAreaIdOrLAI =
+			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
+	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
+			serviceKey = 100,
+			calledPartyNumber = isup_called_party(),
+			callingPartyNumber = isup_calling_party(),
+			callingPartysCategory = <<10>>,
+			locationNumber = isup_calling_party(),
+			bearerCapability = {bearerCap,<<128,144,163>>},
+			eventTypeBCSM = termAttemptAuthorized,
+			iMSI = <<0,1,16,16,50,84,118,152>>,
+			locationInformation = LocationInformation,
+			callReferenceNumber = crypto:strong_rand_bytes(4),
+			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
+               npi = 1, address = "14165550001"}),
 			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, 1},
@@ -881,41 +958,49 @@ pdu_o_disconnect(OTID, DTID, InvokeID) ->
 	{ok, UD} = ?Pkgs:encode(?PDUs, {'continue', Continue}),
 	UD.
 
-pdu_initial_mt(OTID, AC) ->
-	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
-	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
-			{dialogueRequest, AARQ}),
-	DialoguePortion = #'EXTERNAL'{'direct-reference' = {0,0,17,773,1,1,1},
-			'indirect-reference' = asn1_NOVALUE,
-			'data-value-descriptor' = asn1_NOVALUE,
-			encoding = {'single-ASN1-type', DialoguePDUs}},
-	LocationInformation = #'LocationInformation'{
-			ageOfLocationInformation = 0,
-			'vlr-number' = cse_codec:isdn_address(#isdn_address{nai = 1,
-					npi = 1, address = "14165550000"}),
-			cellGlobalIdOrServiceAreaIdOrLAI =
-			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
-	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
-			serviceKey = 100,
-			calledPartyNumber = isup_called_party(),
-			callingPartyNumber = isup_calling_party(),
-			callingPartysCategory = <<10>>,
-			locationNumber = isup_calling_party(),
-			bearerCapability = {bearerCap,<<128,144,163>>},
-			eventTypeBCSM = termAttemptAuthorized,
-			iMSI = <<0,1,16,16,50,84,118,152>>,
-			locationInformation = LocationInformation,
-			callReferenceNumber = crypto:strong_rand_bytes(4),
-			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
-               npi = 1, address = "14165550001"}),
-			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
-	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
-			invokeId = {present, 1},
-			opcode = ?'opcode-initialDP',
-			argument = InitialDPArg},
-	Begin = #'GenericSSF-gsmSCF-PDUs_begin'{otid = <<OTID:32>>,
-			dialoguePortion = DialoguePortion,
-			components = [{basicROS, {invoke, Invoke}}]},
-	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
+pdu_t_disconnect(OTID, DTID, InvokeID) ->
+	Cause = #cause{coding = itu, location = local_public, value = 16},
+	SI = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg_eventSpecificInformationBCSM_tDisconnectSpecificInfo'{
+			releaseCause = cse_codec:cause(Cause)},
+	EventReportArg = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{
+			eventTypeBCSM = tDisconnect,
+			eventSpecificInformationBCSM = {tDisconnectSpecificInfo, SI},
+			legID = {receivingSideID, ?leg2},
+			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+	Invoke1 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID},
+			opcode = ?'opcode-eventReportBCSM',
+			argument = EventReportArg},
+	ChargingResult = #'PduCallResult_timeDurationChargingResult'{
+			partyToCharge = {receivingSideID, ?leg2},
+			timeInformation = {timeIfNoTariffSwitch, rand:uniform(300)}},
+	{ok, ChargingResultArg} = 'CAMEL-datatypes':encode('PduCallResult',
+			{timeDurationChargingResult, ChargingResult}),
+	Invoke2 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID + 1},
+			opcode = ?'opcode-applyChargingReport',
+			argument = ChargingResultArg},
+	TV1 = cse_codec:date_time(calendar:universal_time()),
+	RI1 = #'RequestedInformation'{
+			requestedInformationType = callStopTime,
+			requestedInformationValue = {callStopTimeValue, TV1}},
+	Cause = #cause{coding = itu, location = local_public, value = 16},
+	RI2 = #'RequestedInformation'{
+			requestedInformationType = releaseCause,
+			requestedInformationValue = {releaseCauseValue, cse_codec:cause(Cause)}},
+	RequestedInformationList = [RI1, RI2],
+	InfoReportArg = #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+			legID = {receivingSideID, ?leg2},
+			requestedInformationList = RequestedInformationList},
+	Invoke3 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID + 2},
+			opcode = ?'opcode-callInformationReport',
+			argument = InfoReportArg},
+	Components = [{basicROS, {invoke, I}} || I <- [Invoke1, Invoke2, Invoke3]],
+	Continue = #'GenericSSF-gsmSCF-PDUs_continue'{
+			otid = <<OTID:32>>,
+			dtid = <<DTID:32>>,
+			components = Components},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'continue', Continue}),
 	UD.
 
