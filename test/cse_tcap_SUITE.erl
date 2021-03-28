@@ -29,7 +29,8 @@
 %% export test cases
 -export([start_dialogue/0, start_dialogue/1,
 		end_dialogue/0, end_dialogue/1,
-		collected_info/0, collected_info/1,
+		initial_dp_mo/0, initial_dp_mo/1,
+		initial_dp_mt/0, initial_dp_mt/1,
 		continue/0, continue/1,
 		dp_arming/0, dp_arming/1,
 		apply_charging/0, apply_charging/1,
@@ -191,7 +192,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, collected_info,
+	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
 			continue, dp_arming, apply_charging, call_info_request,
 			mo_abandon, mo_answer, mo_disconnect].
 
@@ -209,7 +210,7 @@ start_dialogue(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -244,7 +245,7 @@ end_dialogue(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -265,17 +266,17 @@ end_dialogue(Config) ->
 		{'DOWN', MonitorRef, _, _, normal} -> ok
 	end.
 
-collected_info() ->
-	[{userdata, [{doc, "InitialDP received by SLPI"}]}].
+initial_dp_mo() ->
+	[{userdata, [{doc, "MO InitialDP received by SLPI"}]}].
 
-collected_info(Config) ->
+initial_dp_mo(Config) ->
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -285,6 +286,27 @@ collected_info(Config) ->
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
 	analyse_information = get_state(TcUser).
+
+initial_dp_mt() ->
+	[{userdata, [{doc, "MT InitialDP received by SLPI"}]}].
+
+initial_dp_mt(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_mt(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	TcUser = receive
+		{csl, _DHA, TCU} -> TCU
+	end,
+	receive
+		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
+	end,
+	terminating_call_handling = get_state(TcUser).
 
 continue() ->
 	[{userdata, [{doc, "Continue received by SSF"}]}].
@@ -296,7 +318,7 @@ continue(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -319,7 +341,7 @@ dp_arming(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -354,7 +376,7 @@ apply_charging(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -387,7 +409,7 @@ call_info_request(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -423,7 +445,7 @@ mo_abandon(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -458,7 +480,7 @@ mo_answer(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -486,7 +508,7 @@ mo_disconnect(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -569,7 +591,7 @@ unitdata(UserData, CalledParty, CallingParty) ->
 			calledAddress = CalledParty,
 			callingAddress = CallingParty}.
 
-pdu_initial(OTID, AC) ->
+pdu_initial_mo(OTID, AC) ->
 	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
 	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
 			{dialogueRequest, AARQ}),
@@ -727,5 +749,43 @@ pdu_o_disconnect(OTID, DTID, InvokeID) ->
 			dtid = <<DTID:32>>,
 			components = Components},
 	{ok, UD} = ?Pkgs:encode(?PDUs, {'continue', Continue}),
+	UD.
+
+pdu_initial_mt(OTID, AC) ->
+	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
+	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
+			{dialogueRequest, AARQ}),
+	DialoguePortion = #'EXTERNAL'{'direct-reference' = {0,0,17,773,1,1,1},
+			'indirect-reference' = asn1_NOVALUE,
+			'data-value-descriptor' = asn1_NOVALUE,
+			encoding = {'single-ASN1-type', DialoguePDUs}},
+	LocationInformation = #'LocationInformation'{
+			ageOfLocationInformation = 0,
+			'vlr-number' = cse_codec:isdn_address(#isdn_address{nai = 1,
+					npi = 1, address = "14165550000"}),
+			cellGlobalIdOrServiceAreaIdOrLAI =
+			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
+	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
+			serviceKey = 100,
+			calledPartyNumber = isup_called_party(),
+			callingPartyNumber = isup_calling_party(),
+			callingPartysCategory = <<10>>,
+			locationNumber = isup_calling_party(),
+			bearerCapability = {bearerCap,<<128,144,163>>},
+			eventTypeBCSM = termAttemptAuthorized,
+			iMSI = <<0,1,16,16,50,84,118,152>>,
+			locationInformation = LocationInformation,
+			callReferenceNumber = crypto:strong_rand_bytes(4),
+			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
+               npi = 1, address = "14165550001"}),
+			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
+	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, 1},
+			opcode = ?'opcode-initialDP',
+			argument = InitialDPArg},
+	Begin = #'GenericSSF-gsmSCF-PDUs_begin'{otid = <<OTID:32>>,
+			dialoguePortion = DialoguePortion,
+			components = [{basicROS, {invoke, Invoke}}]},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
 	UD.
 
