@@ -38,6 +38,7 @@
 		mo_abandon/0, mo_abandon/1,
 		mt_abandon/0, mt_abandon/1,
 		mo_answer/0, mo_answer/1,
+		mt_answer/0, mt_answer/1,
 		mo_disconnect/0, mo_disconnect/1]).
 
 -include_lib("sccp/include/sccp.hrl").
@@ -195,7 +196,8 @@ sequences() ->
 all() ->
 	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
 			continue, dp_arming, apply_charging, call_info_request,
-			mo_abandon, mt_abandon, mo_answer, mo_disconnect].
+			mo_abandon, mt_abandon, mo_answer, mt_answer,
+			mo_disconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -534,6 +536,34 @@ mo_answer(Config) ->
 	ct:sleep(500),
 	o_active = get_state(TcUser).
 
+mt_answer() ->
+	[{userdata, [{doc, "EventReportBCSM:tAnswer received by SCF"}]}].
+
+mt_answer(Config) ->
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	UserData1 = pdu_initial_mt(SsfTid, AC),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	TcUser = receive
+		{csl, _DHA, TCU} -> TCU
+	end,
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD} -> UD
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {'continue',  Continue1}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_continue'{otid = <<ScfTid:32>>} = Continue1,
+	UserData3 = pdu_t_answer(SsfTid, ScfTid, 2),
+	SccpParams3 = unitdata(UserData3, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams3}),
+	ct:sleep(500),
+	t_active = get_state(TcUser).
+
 mo_disconnect() ->
 	[{userdata, [{doc, "EventReportBCSM:oDisconnect received by SCF"}]}].
 
@@ -765,6 +795,25 @@ pdu_o_answer(OTID, DTID, InvokeID) ->
 	EventReportBCSMArg = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{
 			eventTypeBCSM = oAnswer,
 			eventSpecificInformationBCSM = {oAnswerSpecificInfo, SI},
+			legID = {receivingSideID, ?leg2},
+			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, InvokeID},
+			opcode = ?'opcode-eventReportBCSM',
+			argument = EventReportBCSMArg},
+	Continue = #'GenericSSF-gsmSCF-PDUs_continue'{
+			otid = <<OTID:32>>,
+			dtid = <<DTID:32>>,
+			components = [{basicROS, {invoke, Invoke}}]},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'continue', Continue}),
+	UD.
+
+pdu_t_answer(OTID, DTID, InvokeID) ->
+	SI = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg_eventSpecificInformationBCSM_tAnswerSpecificInfo'{
+			destinationAddress = isup_called_party()},
+	EventReportBCSMArg = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{
+			eventTypeBCSM = tAnswer,
+			eventSpecificInformationBCSM = {tAnswerSpecificInfo, SI},
 			legID = {receivingSideID, ?leg2},
 			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
