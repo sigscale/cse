@@ -8,8 +8,6 @@
       [{services, []}]},
 {m3ua,
       []},
-{sccp,
-      []},
 {gtt,
       []},
 {cse,
