@@ -368,6 +368,9 @@ collect_information(cast, {nrf_start,
 							eventTypeBCSM = tAbandon,
 							monitorMode = notifyAndContinue},
 %					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+%							eventTypeBCSM = oTermSeized, % Alerting DP is a Phase 4 feature
+%							monitorMode = notifyAndContinue},
+%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 %							eventTypeBCSM = callAccepted, % Alerting DP is a Phase 4 feature
 %							monitorMode = notifyAndContinue},
 					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
@@ -604,6 +607,8 @@ routing(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			{next_state, exception, Data};
+		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oTermSeized}} ->
+			{next_state, o_alerting, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
