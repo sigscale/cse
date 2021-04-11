@@ -1,3 +1,19 @@
+2021-04-11  Vance Shipley <vances@sigscale.org>
+
+	* refactor call info report
+	* handle apply charging and call info before bcsm events
+	* configurable event monitor mode
+	* components present field not used in request
+	* state transition to o_alerting (phase 4)
+	* minor diagram corrections
+	* no sccp app env vars
+	* update copyright date
+	* mt disconnect test case
+	* mt answer test case
+	* mt abandon test case
+	* correct cause value coding in test cases
+	* seperate mo and mt test cases for initial-dp
+
 2021-03-27  Vance Shipley <vances@sigscale.org>
 
 	* ignore tc-l-cancel in collect_information state too
