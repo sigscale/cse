@@ -307,8 +307,7 @@ collect_information(cast, {nrf_start,
 					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-					appContextName = AC, qos = {true, true},
-					origAddress = SCF, componentsPresent = true},
+					appContextName = AC, qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, analyse_information, NewData};
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
@@ -411,8 +410,7 @@ collect_information(cast, {nrf_start,
 					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-					appContextName = AC, qos = {true, true},
-					origAddress = SCF, componentsPresent = true},
+					appContextName = AC, qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, terminating_call_handling, NewData};
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
@@ -830,8 +828,7 @@ o_active(cast, {nrf_update,
 							parameters = ApplyChargingArg},
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-							qos = {true, true}, origAddress = SCF,
-							componentsPresent = true},
+							qos = {true, true}, origAddress = SCF},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 					{keep_state, NewData};
 				Other when is_atom(Other) ->
@@ -996,8 +993,7 @@ t_active(cast, {nrf_update,
 							parameters = ApplyChargingArg},
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-							qos = {true, true}, origAddress = SCF,
-							componentsPresent = true},
+							qos = {true, true}, origAddress = SCF},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 					{keep_state, NewData};
 				Other when is_atom(Other) ->
