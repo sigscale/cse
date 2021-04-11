@@ -72,11 +72,11 @@
 		called ::  [$0..$9] | undefined,
 		calling :: [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
-		edp :: #{Event_type :: event_type() => monitor_mode()} | undefined,
+		edp :: #{event_type() => monitor_mode()} | undefined,
+		call_info :: #{attempt | connect | stop | cause =>
+				non_neg_integer() | string() | cse_codec:cause()} | undefined,
 		call_start :: string() | undefined,
 		charging_start :: string() | undefined,
-		call_end :: string() | undefined,
-		isup_cause :: cse_codec:cause() | undefined,
 		consumed = 0 :: non_neg_integer(),
 		pending = 0 :: non_neg_integer(),
 		msc :: [$0..$9] | undefined,
@@ -89,10 +89,6 @@
 -type statedata() :: #statedata{}.
 
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
--define(callAttemptElapsedTime,   0).
--define(callStopTime,             1).
--define(callConnectedElapsedTime, 2).
--define(releaseCause,            30).
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_fsm gen_statem callbacks
@@ -268,7 +264,7 @@ collect_information(cast, {nrf_start,
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
-			NewData = Data#statedata{iid = IID + 4,
+			NewData = Data#statedata{iid = IID + 4, call_info = #{},
 						nrf_reqid = undefined, nrf_location = Location},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = routeSelectFailure,
@@ -368,7 +364,7 @@ collect_information(cast, {nrf_start,
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
-			NewData = Data#statedata{iid = IID + 4,
+			NewData = Data#statedata{iid = IID + 4, call_info = #{},
 						nrf_reqid = undefined, nrf_location = Location},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = tBusy,
@@ -577,6 +573,33 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+analyse_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					keep_state_and_data;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+analyse_information(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
 analyse_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -680,6 +703,33 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+terminating_call_handling(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					keep_state_and_data;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+terminating_call_handling(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
 terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -780,6 +830,33 @@ routing(cast, {'TC', 'INVOKE', indication,
 			{next_state, o_active, Data#statedata{iid = IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+routing(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					keep_state_and_data;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+routing(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -887,6 +964,33 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					keep_state_and_data;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
 o_alerting(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -979,6 +1083,33 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+t_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
+				{ok, {timeDurationChargingResult,
+						#'PduCallResult_timeDurationChargingResult'{}}} ->
+					keep_state_and_data;
+				{error, Reason} ->
+					{stop, Reason}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+t_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
 t_alerting(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -1064,6 +1195,17 @@ o_active(cast, {'TC', 'INVOKE', indication,
 				{error, Reason} ->
 					{stop, Reason}
 			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1254,6 +1396,17 @@ t_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+t_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{keep_state, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
 t_active(cast, {nrf_update,
 		{RequestId, {{_, 200, _}, _Headers, Body}}},
 		#statedata{nrf_reqid = RequestId, nrf_uri = URI,
@@ -1383,8 +1536,10 @@ t_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>abandon</em> state.
 %% @private
-abandon(enter, _State, _Data) ->
+abandon(enter, #statedata{call_info = #{}} = _State, _Data) ->
 	keep_state_and_data;
+abandon(enter, _State, _Data) ->
+	{keep_state_and_data, 0};
 abandon(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
@@ -1409,6 +1564,17 @@ abandon(cast, {'TC', 'INVOKE', indication,
 abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID, nrf_location = undefined} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{next_state, null, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+abandon(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
@@ -1417,6 +1583,12 @@ abandon(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+abandon(timeout,  _EventContent,
+		#statedata{nrf_location = Location} = Data)
+		when is_list(Location) ->
+	nrf_release(Data);
+abandon(timeout,  _EventContent, Data) ->
+	{next_state, null, Data};
 abandon(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId} = Data) ->
@@ -1469,8 +1641,10 @@ abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-disconnect(enter, _State, _Data) ->
+disconnect(enter, #statedata{call_info = #{}} = _State, _Data) ->
 	keep_state_and_data;
+disconnect(enter, _State, _Data) ->
+	{keep_state_and_data, 0};
 disconnect(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
@@ -1499,6 +1673,17 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 disconnect(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID, nrf_location = undefined} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
+				requestedInformationList = CallInfo}} ->
+			{next_state, null, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+disconnect(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
@@ -1507,6 +1692,8 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+disconnect(timeout, _EventContent, Data) ->
+	nrf_release(Data);
 disconnect(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId} = Data) ->
@@ -1894,27 +2081,7 @@ nrf_update4(Consumed, SI, #statedata{charging_start = DateTime} = Data)
 nrf_update4(Consumed, SI, Data) ->
 	nrf_update5(Consumed, SI, Data).
 %% @hidden
-nrf_update5(Consumed, SI, #statedata{call_end = DateTime} = Data)
-		when is_list(DateTime) ->
-	nrf_update6(Consumed, SI#{"stopTime" => DateTime}, Data);
-nrf_update5(Consumed, SI, Data) ->
-	nrf_update6(Consumed, SI, Data).
-%% @hidden
-nrf_update6(Consumed, SI, #statedata{isup_cause = #cause{value = Value,
-		location = Location, diagnostic = Diagnostic}} = Data) ->
-	Cause1 = #{"causeValue" => Value,
-			"causeLocation" => atom_to_list(Location)},
-	Cause2 = case Diagnostic of
-		Diagnostic when is_binary(Diagnostic) ->
-			Cause1#{"causeDiagnostics" => base64:encode(Diagnostic)};
-		undefined ->
-			Cause1
-	end,
-	nrf_update7(Consumed, SI#{"isupCause" => Cause2}, Data);
-nrf_update6(Consumed, SI, Data) ->
-	nrf_update7(Consumed, SI, Data).
-%% @hidden
-nrf_update7(Consumed, ServiceInformation,
+nrf_update5(Consumed, ServiceInformation,
 		#statedata{msisdn = MSISDN, calling = MSISDN,
 		called = CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1922,8 +2089,8 @@ nrf_update7(Consumed, ServiceInformation,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_update8(Consumed, ServiceRating, Data);
-nrf_update7(Consumed, ServiceInformation,
+	nrf_update6(Consumed, ServiceRating, Data);
+nrf_update5(Consumed, ServiceInformation,
 		#statedata{msisdn = MSISDN, called = MSISDN,
 		calling = CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
@@ -1931,9 +2098,9 @@ nrf_update7(Consumed, ServiceInformation,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_update8(Consumed, ServiceRating, Data).
+	nrf_update6(Consumed, ServiceRating, Data).
 %% @hidden
-nrf_update8(Consumed, ServiceRating,
+nrf_update6(Consumed, ServiceRating,
 		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
 	Now = erlang:system_time(millisecond),
@@ -1946,9 +2113,9 @@ nrf_update8(Consumed, ServiceRating,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
-	nrf_update9(JSON, Data).
+	nrf_update7(JSON, Data).
 %% @hidden
-nrf_update9(JSON, #statedata{nrf_profile = Profile,
+nrf_update7(JSON, #statedata{nrf_profile = Profile,
 		nrf_uri = URI, nrf_location = Location} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
@@ -2011,23 +2178,34 @@ nrf_release4(SI, #statedata{charging_start = DateTime} = Data)
 nrf_release4(SI, Data) ->
 	nrf_release5(SI, Data).
 %% @hidden
-nrf_release5(SI, #statedata{call_end = DateTime} = Data)
-		when is_list(DateTime) ->
-	nrf_release6(SI#{"stopTime" => DateTime}, Data);
+nrf_release5(SI, #statedata{call_info = CallInfo} = Data)
+		when is_map(CallInfo) ->
+	case maps:find(stop, CallInfo) of
+		{ok, DateTime} ->
+			nrf_release6(SI#{"stopTime" => DateTime}, Data);
+		error ->
+			nrf_release6(SI, Data)
+	end;
 nrf_release5(SI, Data) ->
 	nrf_release6(SI, Data).
 %% @hidden
-nrf_release6(SI, #statedata{isup_cause = #cause{value = Value,
-		location = Location, diagnostic = Diagnostic}} = Data) ->
-	Cause1 = #{"causeValue" => Value,
-			"causeLocation" => atom_to_list(Location)},
-	Cause2 = case Diagnostic of
-		Diagnostic when is_binary(Diagnostic) ->
-			Cause1#{"causeDiagnostics" => base64:encode(Diagnostic)};
-		undefined ->
-			Cause1
-	end,
-	nrf_release7(SI#{"isupCause" => Cause2}, Data);
+nrf_release6(SI, #statedata{call_info = CallInfo} = Data)
+		when is_map(CallInfo) ->
+	case maps:find(cause, CallInfo) of
+		{ok, #cause{value = Value,
+				location = Location, diagnostic = Diagnostic}} ->
+			Cause1 = #{"causeValue" => Value,
+					"causeLocation" => atom_to_list(Location)},
+			Cause2 = case Diagnostic of
+				Diagnostic when is_binary(Diagnostic) ->
+					Cause1#{"causeDiagnostics" => base64:encode(Diagnostic)};
+				undefined ->
+					Cause1
+			end,
+			nrf_release7(SI#{"isupCause" => Cause2}, Data);
+		error ->
+			nrf_release7(SI, Data)
+	end;
 nrf_release6(SI, Data) ->
 	nrf_release7(SI, Data).
 %% @hidden
@@ -2168,21 +2346,27 @@ called_number(asn1_NOVALUE, asn1_NOVALUE) ->
 		RequestedInformationTypeList :: [#'GenericSSF-gsmSCF-PDUs_CallInformationReportArg_requestedInformationList_SEQOF'{}],
 		Data :: statedata().
 %% @doc Update state data with call information.
-call_info([#'GenericSSF-gsmSCF-PDUs_CallInformationReportArg_requestedInformationList_SEQOF'{
-		requestedInformationType = ?callStopTime,
-		requestedInformationValue = {callStopTimeValue, StopTime}}
-		| T] = _RequestedInformationTypeList, Data) ->
-	MilliSeconds = cse_log:date(cse_codec:date_time(StopTime)),
-	NewData = Data#statedata{call_end = cse_log:iso8601(MilliSeconds)},
+call_info([#'RequestedInformation'{requestedInformationType = callAttemptElapsedTime,
+		requestedInformationValue = {callAttemptElapsedTimeValue, Time}}
+		| T] = _RequestedInformationTypeList, #statedata{call_info = CallInfo} = Data) ->
+	NewData = Data#statedata{call_info = CallInfo#{attempt => Time}},
 	call_info(T, NewData);
-call_info([#'GenericSSF-gsmSCF-PDUs_CallInformationReportArg_requestedInformationList_SEQOF'{
-		requestedInformationType = ?releaseCause,
+call_info([#'RequestedInformation'{requestedInformationType = callConnectedElapsedTime,
+		requestedInformationValue = {callConnectedElapsedTimeValue, Time}}
+		| T] = _RequestedInformationTypeList, #statedata{call_info = CallInfo} = Data) ->
+	NewData = Data#statedata{call_info = CallInfo#{connect => Time}},
+	call_info(T, NewData);
+call_info([#'RequestedInformation'{requestedInformationType = callStopTime,
+		requestedInformationValue = {callStopTimeValue, Time}}
+		| T] = _RequestedInformationTypeList, #statedata{call_info = CallInfo} = Data) ->
+	MilliSeconds = cse_log:date(cse_codec:date_time(Time)),
+	NewData = Data#statedata{call_info = CallInfo#{stop => cse_log:iso8601(MilliSeconds)}},
+	call_info(T, NewData);
+call_info([#'RequestedInformation'{requestedInformationType = releaseCause,
 		requestedInformationValue = {releaseCauseValue, Cause}}
-		| T] = _RequestedInformationTypeList, Data) ->
-	NewData = Data#statedata{isup_cause = cse_codec:cause(Cause)},
+		| T] = _RequestedInformationTypeList, #statedata{call_info = CallInfo} = Data) ->
+	NewData = Data#statedata{call_info = CallInfo#{cause => cse_codec:cause(Cause)}},
 	call_info(T, NewData);
-call_info([_ | T], Data) ->
-	call_info(T, Data);
 call_info([], Data) ->
 	Data.
 
