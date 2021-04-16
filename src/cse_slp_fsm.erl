@@ -2013,7 +2013,7 @@ nrf_start5(ServiceInformation,
 %% @hidden
 nrf_start6(ServiceRating, #statedata{imsi = IMSI, msisdn = MSISDN} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
@@ -2104,7 +2104,7 @@ nrf_update6(Consumed, ServiceRating,
 		#statedata{imsi = IMSI, msisdn = MSISDN} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
 			"requestSubType" => "DEBIT"},
 	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
@@ -2232,7 +2232,7 @@ nrf_release8(ServiceRating,
 		#statedata{imsi = IMSI, msisdn = MSISDN,
 		pending = Consumed} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(counters, nrf_seq, 1),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	ServiceRating1 = ServiceRating#{"requestSubType" => "DEBIT",
 			"consumedUnit" => #{"time" => Consumed}},
 	JSON = #{"invocationSequenceNumber" => Sequence,

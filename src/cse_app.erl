@@ -81,8 +81,8 @@ start2(Profile) ->
 %% @hidden
 start3() ->
 	Options = [set, public, named_table, {write_concurrency, true}],
-	ets:new(counters, Options),
-	ets:insert(counters, {nrf_seq, 0}),
+	ets:new(cse_counters, Options),
+	ets:insert(cse_counters, {nrf_seq, 0}),
 	supervisor:start_link({local, cse_sup}, cse_sup, []).
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
