@@ -100,21 +100,25 @@ send_primitive({'N', 'UNITDATA', request,
 			called_party = CalledParty, calling_party = CallingParty},
 	case catch sccp_codec:sccp(SccpUnitData) of
 		UnitData when is_binary(UnitData) ->
-			RoutingKeys = gtt:find_pc(DPC),
-			Stream = 1,
-			NI = 2,
-			SI = 3,
-			SLS = 1,
-			case gtt:candidates(RoutingKeys) of
-				ActiveAsps when length(ActiveAsps) > 0 ->
-					{Fsm, _Status, ActiveWeights} = gtt:select_asp(ActiveAsps, Weights),
-					Ref = m3ua:cast(Fsm, Stream, undefined, OPC, DPC, NI, SI, SLS, UnitData),
-					NewQueue = Queue#{Ref => {Fsm, Now}},
-					F = fun({QueueSize, Delay, _}) ->
-								{QueueSize + 1, Delay, Now}
-					end,
-					NewWeights = maps:update_with(Fsm, F, ActiveWeights),
-					{noreply, State#state{queue = NewQueue, weights = NewWeights}};
+			case gtt:find_pc(DPC) of
+				RoutingKeys when length(RoutingKeys) > 0 ->
+					Stream = 1,
+					NI = 2,
+					SI = 3,
+					SLS = 1,
+					case gtt:candidates(RoutingKeys) of
+						ActiveAsps when length(ActiveAsps) > 0 ->
+							{Fsm, _Status, ActiveWeights} = gtt:select_asp(ActiveAsps, Weights),
+							Ref = m3ua:cast(Fsm, Stream, undefined, OPC, DPC, NI, SI, SLS, UnitData),
+							NewQueue = Queue#{Ref => {Fsm, Now}},
+							F = fun({QueueSize, Delay, _}) ->
+										{QueueSize + 1, Delay, Now}
+							end,
+							NewWeights = maps:update_with(Fsm, F, ActiveWeights),
+							{noreply, State#state{queue = NewQueue, weights = NewWeights}};
+						[] ->
+							{noreply, State}
+					end;
 				[] ->
 					{noreply, State}
 			end;
