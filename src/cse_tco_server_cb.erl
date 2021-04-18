@@ -80,7 +80,8 @@ init([Sup | ExtraArgs] = _Args) ->
 %% @private
 send_primitive({'N', 'UNITDATA', request,
 		#'N-UNITDATA'{userData = UserData,
-				calledAddress = CalledParty, callingAddress = CallingParty,
+				calledAddress = #party_address{pc = DPC} = CalledParty,
+				callingAddress = #party_address{pc = OPC} = CallingParty,
 				sequenceControl = SequenceControl, returnOption = ReturnOption,
 				importance = _Importance} = _UdataParams},
 		#state{queue = Queue, weights = Weights} = State) ->
@@ -99,20 +100,15 @@ send_primitive({'N', 'UNITDATA', request,
 			called_party = CalledParty, calling_party = CallingParty},
 	case catch sccp_codec:sccp(SccpUnitData) of
 		UnitData when is_binary(UnitData) ->
-			% @todo AS selection
-			RC = 0,
-			[#m3ua_as{rk = {_, Keys, _}}] = mnesia:dirty_read(m3ua_as, RC),
-			[{DPC, _, _} | _] = Keys,
+			RoutingKeys = gtt:find_pc(DPC),
 			Stream = 1,
-			OPC = undefined,
-			NI = undefined,
-			SI = undefined,
-			SLS = undefined,
-			% end: AS selection
-			case gtt:candidates([RC]) of
+			NI = 2,
+			SI = 3,
+			SLS = 1,
+			case gtt:candidates(RoutingKeys) of
 				ActiveAsps when length(ActiveAsps) > 0 ->
 					{Fsm, _Status, ActiveWeights} = gtt:select_asp(ActiveAsps, Weights),
-					Ref = m3ua:cast(Fsm, Stream, RC, OPC, DPC, NI, SI, SLS, UnitData),
+					Ref = m3ua:cast(Fsm, Stream, undefined, OPC, DPC, NI, SI, SLS, UnitData),
 					NewQueue = Queue#{Ref => {Fsm, Now}},
 					F = fun({QueueSize, Delay, _}) ->
 								{QueueSize + 1, Delay, Now}
