@@ -6,7 +6,7 @@
 ##
 AC_INIT([cse], [1.0.38], [issues@sigscale.org])
 AC_COPYRIGHT([Copyright (c) 2021 SigScale Global Inc.])
-AC_PREREQ(2.63)
+AC_PREREQ(2.64)
 AC_CONFIG_SRCDIR([src/cse_app.erl])
 AC_CONFIG_HEADERS([config.h])
 AC_LANG([Erlang])
@@ -57,8 +57,8 @@ AC_SUBST(eincludedir)
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_CHECK_LIB([kernel], [], [AC_MSG_ERROR([kernel was not found!])])
 AC_ERLANG_CHECK_LIB([stdlib],
-		[if echo -e "$ERLANG_LIB_VER_stdlib\n3.5" | sort -CV;
-		then AC_MSG_ERROR([>= stdlib-3.5 required!]); fi],
+		[AS_VERSION_COMPARE([$ERLANG_LIB_VER_stdlib], ["3.5"],
+				[AC_MSG_ERROR([>= stdlib-3.5 required!])])],
 		[AC_MSG_ERROR([stdlib was not found!])])
 AC_ERLANG_CHECK_LIB([sasl], [], [AC_MSG_WARN([sasl was not found!])])
 AC_ERLANG_CHECK_LIB([mnesia], [], [AC_MSG_WARN([mnesia was not found!])])
