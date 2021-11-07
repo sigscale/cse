@@ -11,6 +11,7 @@
 	{tcap, "@ERLANG_LIB_VER_tcap@"},
 	{sccp, "@ERLANG_LIB_VER_sccp@", load},
 	{map, "@ERLANG_LIB_VER_map@", load},
+	{inap, "@ERLANG_LIB_VER_inap@", load},
 	{cap, "@ERLANG_LIB_VER_cap@", load},
 	{gtt, "@ERLANG_LIB_VER_gtt@"},
 	{@PACKAGE@, "@VERSION@"}]}.

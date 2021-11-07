@@ -51,7 +51,6 @@
 -include_lib("cap/include/CAP-object-identifiers.hrl").
 -include_lib("cap/include/CAP-gsmSSF-gsmSCF-pkgs-contracts-acs.hrl").
 -include_lib("cap/include/CAP-datatypes.hrl").
--include_lib("cap/include/CS2-datatypes.hrl").
 -include_lib("cap/include/CAMEL-datatypes.hrl").
 -include("cse_codec.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -780,7 +779,7 @@ pdu_o_abandon(OTID, DTID, InvokeID) ->
 			eventTypeBCSM = oAbandon,
 			eventSpecificInformationBCSM = {oAbandonSpecificInfo, SI},
 			legID = {receivingSideID, ?leg1},
-			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+			miscCallInfo = #{messageType => notification}},
 	Invoke1 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',
@@ -828,7 +827,7 @@ pdu_t_abandon(OTID, DTID, InvokeID) ->
 	EventReportArg = #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{
 			eventTypeBCSM = tAbandon,
 			legID = {receivingSideID, ?leg2},
-			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+			miscCallInfo = #{messageType => notification}},
 	Invoke1 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',
@@ -873,7 +872,7 @@ pdu_o_answer(OTID, DTID, InvokeID) ->
 			eventTypeBCSM = oAnswer,
 			eventSpecificInformationBCSM = {oAnswerSpecificInfo, SI},
 			legID = {receivingSideID, ?leg2},
-			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+			miscCallInfo = #{messageType => notification}},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',
@@ -892,7 +891,7 @@ pdu_t_answer(OTID, DTID, InvokeID) ->
 			eventTypeBCSM = tAnswer,
 			eventSpecificInformationBCSM = {tAnswerSpecificInfo, SI},
 			legID = {receivingSideID, ?leg2},
-			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+			miscCallInfo = #{messageType => notification}},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',
@@ -912,7 +911,7 @@ pdu_o_disconnect(OTID, DTID, InvokeID) ->
 			eventTypeBCSM = oDisconnect,
 			eventSpecificInformationBCSM = {oDisconnectSpecificInfo, SI},
 			legID = {receivingSideID, ?leg2},
-			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+			miscCallInfo = #{messageType => notification}},
 	Invoke1 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',
@@ -966,7 +965,7 @@ pdu_t_disconnect(OTID, DTID, InvokeID) ->
 			eventTypeBCSM = tDisconnect,
 			eventSpecificInformationBCSM = {tDisconnectSpecificInfo, SI},
 			legID = {receivingSideID, ?leg2},
-			miscCallInfo = #'MiscCallInfo'{messageType = notification}},
+			miscCallInfo = #{messageType => notification}},
 	Invoke1 = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, InvokeID},
 			opcode = ?'opcode-eventReportBCSM',

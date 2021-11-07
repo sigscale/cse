@@ -25,6 +25,7 @@ check_DATA = .dialyzer_ok .common_test_ok
 			-pa $(top_builddir)/ebin \
 			-pa $(ERLANG_LIB_DIR_sccp)/ebin \
 			-pa $(ERLANG_LIB_DIR_tcap)/ebin \
+			-pa $(ERLANG_LIB_DIR_inap)/ebin \
 			-logdir log -config ct.cfg -spec test.spec -dir . \
 			-erl_args -noshell -sname $(LOGNAME)-ct
 
