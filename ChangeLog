@@ -1,3 +1,12 @@
+2021-11-07  Vance Shipley <vances@sigscale.org>
+
+	* install release pakage into releases directory
+	* use inap library for cs2 datatypes
+	* require stdlib 3.5 or greater
+	* ignore send when no asp active
+	* as selection by dpc
+	* avoid ets table name clash
+
 2021-04-11  Vance Shipley <vances@sigscale.org>
 
 	* refactor call info report
