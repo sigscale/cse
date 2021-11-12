@@ -43,7 +43,7 @@
 
 -record(state,
 		{sup :: pid(),
-		extra_args :: list(),
+		ac :: #{AC :: tuple() := Module :: atom()},
 		slp_sup :: pid() | undefined,
 		queue = #{} :: #{Ref :: reference() => {Fsm :: pid(), Now :: integer()}},
 		weights = #{} :: gtt:weights()}).
@@ -62,8 +62,9 @@
 %% @see //stdlib/gen_server:init/1
 %% @private
 init([Sup | ExtraArgs] = _Args) ->
+	ACs = proplists:get_value(ac, ExtraArgs),
 	process_flag(trap_exit, true),
-	{ok, #state{sup = Sup, extra_args = ExtraArgs}, {continue, init}}.
+	{ok, #state{sup = Sup, ac = ACs}, {continue, init}}.
 
 -spec send_primitive(Primitive, State) -> Result
 	when
@@ -153,31 +154,27 @@ send_primitive({'N', 'UNITDATA', request,
 %% @@see //tcap/tcap_tcap_server:start_aei/2
 %% @private
 start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
-		DialoguePDUs}} = _DialoguePortion, #state{slp_sup = SlpSup} = State) ->
+		DialoguePDUs}} = _DialoguePortion,
+		#state{slp_sup = SlpSup, ac = ACs} = State) ->
 	case 'DialoguePDUs':decode('DialoguePDU', DialoguePDUs) of
-		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC} = APDU}} ->
-			case AC of
-				AC when
-				AC == ?'id-ac-CAP-gsmSSF-scfGenericAC'; % Phase 4 (CAP-gsmSSF-scfGenericAC)
-				AC == {0,4,0,0,1,21,3,4};               % Phase 3 (capssf-scfGenericAC)
-				AC == {0,4,0,0,1,0,50,1} ->             % Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
-					case supervisor:start_child(SlpSup, [[APDU], []]) of
-						{ok, TCU} ->
-							case tcap:open(self(), TCU) of
-								{ok, DHA, CCO} ->
-									gen_statem:cast(TCU, {register_csl, DHA, CCO}),
-									{ok, DHA, CCO, TCU, State};
-								{error, Reason} ->
-									{error, Reason}
-							end;
+		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC} = APDU}}
+				when is_map_key(AC, ACs) ->
+			case supervisor:start_child(SlpSup, [[APDU], []]) of
+				{ok, TCU} ->
+					case tcap:open(self(), TCU) of
+						{ok, DHA, CCO} ->
+							gen_statem:cast(TCU, {register_csl, DHA, CCO}),
+							{ok, DHA, CCO, TCU, State};
 						{error, Reason} ->
 							{error, Reason}
 					end;
-				_ ->
-					error_logger:warning_report(["Unknown Application Context Name",
-							{'application-context-name', AC}]),
-					{error, unknown_context}
+				{error, Reason} ->
+					{error, Reason}
 			end;
+		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC}}} ->
+			error_logger:warning_report(["Unknown Application Context Name",
+					{'application-context-name', AC}]),
+			{error, unknown_context};
 		{error, Reason} ->
 			{error, Reason}
 	end.
