@@ -100,60 +100,10 @@ init_per_suite(Config) ->
 	catch application:unload(cse),
 	ok = application:load(cse),
 	{ok, Cb} = application:get_env(cse, tsl_callback),
-	Finfo = fun({?MODULE, TestCasePid}, State) ->
-				F = fun F(P, S, N) ->
-						case element(N, S) of
-							[{?MODULE, _}] ->
-								setelement(N, S, [{?MODULE, P}]);
-							_ ->
-								F(P, S, N + 1)
-						end
-				end,
-				{noreply, F(TestCasePid, State, 2)};
-			(Info, State) ->
-				Cb:handle_info(Info, State)
-	end,
-	Fsend = fun(Primitive, State) ->
-				F = fun F(S, N) ->
-						case element(N, S) of
-							[{?MODULE, Pid}] ->
-								Pid;
-							_ ->
-								F(S, N + 1)
-						end
-				end,
-				F(State, 2) ! Primitive,
-				{noreply, State}
-	end,
-	Fstart = fun(DialoguePortion, State) ->
-				case Cb:start_aei(DialoguePortion, State) of
-					{ok, DHA, CCO, TCU, State} ->
-						F = fun F(S, N) ->
-								case element(N, S) of
-									[{?MODULE, Pid}] ->
-										Pid;
-									_ ->
-										F(S, N + 1)
-								end
-						end,
-						F(State, 2) ! {csl, DHA, TCU},
-						{ok, DHA, CCO, TCU, State};
-					{error, Reason} ->
-						{error, Reason}
-				end
-	end,
-	Callback = #tcap_tco_cb{init = fun Cb:init/1,
-		handle_call = fun Cb:handle_call/3,
-		handle_cast =  fun Cb:handle_cast/2,
-		handle_info = Finfo,
-		terminate = fun Cb:terminate/2,
-		handle_continue = fun Cb:handle_continue/2,
-		send_primitive = Fsend,
-		start_aei = Fstart,
-		code_change = fun Cb:code_change/3,
-		format_status = fun Cb:format_status/2},
+	Callback = callback(Cb),
 	ok = application:set_env(cse, tsl_callback, Callback),
-	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined}]),
+	{ok, TslArgs} = application:get_env(cse, tsl_args),
+	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
 	ok = application:set_env(cse, nrf_uri,
 			"http://localhost:" ++ integer_to_list(HttpdPort)),
 	ok = application:start(cse),
@@ -643,6 +593,111 @@ mt_disconnect(Config) ->
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
+
+-spec callback(Cb :: atom()) -> #tcap_tco_cb{}.
+%% @doc Construct the callback fun() used as a wrapper around the
+%% 	cse application's callback.
+%% @hidden
+callback(Cb) ->
+	Finit = fun(Args) ->
+			case Cb:init(Args) of
+				{ok, State} ->
+					{ok, {{?MODULE, undefined}, State}};
+				{ok, State, Timeout} ->
+					{ok, {{?MODULE, undefined}, State}, Timeout};
+				{stop, Reason} ->
+					{stop, Reason};
+				ignore ->
+					ignore
+			end
+	end,
+	Fcall = fun(Request, From, {{?MODULE, Pid}, State}) ->
+			case Cb:handle_call(Request, From, State) of
+				{reply, Reply, NewState} ->
+					{reply, Reply, {{?MODULE, Pid}, NewState}};
+				{reply, Reply, NewState, Timeout} ->
+					{reply, Reply, {{?MODULE, Pid}, NewState}, Timeout};
+				{noreply, NewState} ->
+					{noreply, {{?MODULE, Pid}, NewState}};
+				{noreply, NewState, Timeout} ->
+					{noreply, {{?MODULE, Pid}, NewState}, Timeout};
+				{stop, Reason, NewState} ->
+					{stop, Reason, {{?MODULE, Pid}, NewState}}
+			end
+	end,
+	Fcast = fun(Request, {{?MODULE, Pid}, State}) ->
+			case Cb:handle_cast(Request, State) of
+				{noreply, NewState} ->
+					{noreply, {{?MODULE, Pid}, NewState}};
+				{noreply, NewState, Timeout} ->
+					{noreply, {{?MODULE, Pid}, NewState}, Timeout};
+				{stop, Reason, NewState} ->
+					{stop, Reason, {{?MODULE, Pid}, NewState}};
+				{primitive, Primitive, NewState} ->
+					{primitive, Primitive, {{?MODULE, Pid}, NewState}}
+			end
+	end,
+	Finfo = fun({?MODULE, Pid}, {{?MODULE, _}, State}) ->
+				{noreply, {{?MODULE, Pid}, State}};
+			(Info, {{?MODULE, Pid}, State}) ->
+				case Cb:handle_info(Info, State) of
+					{noreply, NewState} ->
+						{noreply, {{?MODULE, Pid}, NewState}};
+					{noreply, NewState, Timeout} ->
+						{noreply, {{?MODULE, Pid}, NewState}, Timeout};
+					{stop, Reason, NewState} ->
+						{stop, Reason, {{?MODULE, Pid}, NewState}};
+					{primitive, Primitive, NewState} ->
+						{primitive, Primitive, {{?MODULE, Pid}, NewState}}
+				end
+	end,
+	Fterm = fun(Reason, {{?MODULE, _}, State}) ->
+			Cb:terminate(Reason, State)
+	end,
+	Fcont = fun(Info, {{?MODULE, Pid}, State}) ->
+			case Cb:handle_continue(Info, State) of
+				{noreply, NewState} ->
+					{noreply, {{?MODULE, Pid}, NewState}};
+				{noreply, NewState, Timeout} ->
+					{noreply, {{?MODULE, Pid}, NewState}, Timeout};
+				{stop, Reason, NewState} ->
+					{stop, Reason, {{?MODULE, Pid}, NewState}}
+			end
+	end,
+	Fsend = fun(Primitive, {{?MODULE, Pid}, State}) when is_pid(Pid) ->
+			Pid ! Primitive,
+			{noreply, {{?MODULE, Pid}, State}}
+	end,
+	Fstart = fun(DialoguePortion, {{?MODULE, Pid}, State}) ->
+			case Cb:start_aei(DialoguePortion, State) of
+				{ok, DHA, CCO, TCU, State} ->
+					Pid ! {csl, DHA, TCU},
+					{ok, DHA, CCO, TCU, {{?MODULE, Pid}, State}};
+				{error, Reason} ->
+					{error, Reason}
+			end
+	end,
+	Fcode = fun(OldVersion, {{?MODULE, Pid}, State}, Extra) ->
+			case Cb:code_change(OldVersion, State, Extra) of
+				{ok, NewState} ->
+					{ok, {{?MODULE, Pid}, NewState}};
+				{error, Reason} ->
+					{error, Reason}
+			end
+	end,
+	Fstat = fun(Opt, [PDict | {{?MODULE, _Pid}, State}]) ->
+			Cb:format_status(Opt, [PDict | State])
+	end,
+	#tcap_tco_cb{init = Finit,
+		handle_call = Fcall,
+		handle_cast =  Fcast,
+		handle_info = Finfo,
+		terminate = Fterm,
+		handle_continue = Fcont,
+		send_primitive = Fsend,
+		start_aei = Fstart,
+		code_change = Fcode,
+		format_status = Fstat}.
 
 get_state(Fsm) ->
 	{_,_,_,[_,_,_,_,[_,_,{data,[{_,{State,_}}]}]]} = sys:get_status(Fsm),
