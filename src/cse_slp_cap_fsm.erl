@@ -1,4 +1,4 @@
-%%% cse_slp_fsm.erl
+%%% cse_slp_cap_fsm.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021 SigScale Global Inc.
@@ -21,7 +21,7 @@
 %%% 	the {@link //cse. cse} application.
 %%%
 %%%
--module(cse_slp_fsm).
+-module(cse_slp_cap_fsm).
 -copyright('Copyright (c) 2021 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
@@ -58,7 +58,7 @@
 		| change_position | service_change.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
 
-%% the cse_slp_fsm state data
+%% the cse_slp_cap_fsm state data
 -record(statedata,
 		{dha :: pid() | undefined,
 		cco :: pid() | undefined,
@@ -91,7 +91,7 @@
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
 
 %%----------------------------------------------------------------------
-%%  The cse_slp_fsm gen_statem callbacks
+%%  The cse_slp_cap_fsm gen_statem callbacks
 %%----------------------------------------------------------------------
 
 -spec callback_mode() -> Result

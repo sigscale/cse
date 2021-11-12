@@ -8,7 +8,7 @@
 				cse_server,
 				cse_tco_sup,
 				cse_slp_sup,
-				cse_slp_fsm,
+				cse_slp_cap_fsm,
 				cse_tco_server_cb,
 				cse_codec,
 				cse_log]},
