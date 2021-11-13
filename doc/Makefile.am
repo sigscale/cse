@@ -37,6 +37,8 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/supervision.png .
 	-cp -n $(top_srcdir)/doc/o-bcsm-camel.png .
 	-cp -n $(top_srcdir)/doc/t-bcsm-camel.png .
+	-cp -n $(top_srcdir)/doc/o-bcsm-inap.png .
+	-cp -n $(top_srcdir)/doc/t-bcsm-inap.png .
 	-cp -n $(top_srcdir)/doc/messaging.png .
 	-cp -n $(top_srcdir)/doc/distribution.png .
 
