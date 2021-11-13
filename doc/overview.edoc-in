@@ -2,11 +2,79 @@
 @version %VERSION%
 @title %DESCRIPTION%
 
-@doc This application implements a CAMEL Service Environment (CSE).
+@reference <a href="https://www.itu.int/rec/T-REC-I.312-199210-I">Q.1201</a>
+		Principles of Intelligent Network Architecture
+@reference <a href="https://www.itu.int/rec/T-REC-Q.1204-199303-I">Q.1204</a>
+		Intelligent Network Distributed Functional Plane Architecture
+@reference <a href="https://www.etsi.org/deliver/etsi_i_ets/300300_300399/30037401/01_60/ets_30037401e01p.pdf">
+		ETS 300 374-1</a> Intelligent Network Application Protocol (INAP);
+		Capability Set 1 (CS1)
+@reference <a href="https://www.etsi.org/deliver/etsi_en/301100_301199/30114001/01.03.04_60/en_30114001v010304p.pdf">
+		ETSI EN 301 140-1</a> Intelligent Network Application Protocol (INAP);
+		Capability Set 2 (CS2)
+@reference <a href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=29&amp;GSMSpecPart2=078">
+		3GPP TS 29.078</a> Customised Applications for Mobile network Enhanced Logic (CAMEL)
+		Application Part (CAP)
+
+@doc This application implements a Service Control Function (SCF) in an Intelligent Network (IN).
 
 ==Introduction==
+SigScale CSE (CAMEL Service Environment) is an Intelligent Network (IN)
+platform to support a network operator's customized service logic. The
+3GPP CAMEL Application Part (CAP) protocol is supported as well as ETSI
+INAP for wireline operators.
 
-===Service Logic Programs (SLP)===
+This application provides a Service Execution Environment (SEE) for
+Service Logic Programs (SLP) implementing an operator's custom services.
+It is a highly concurrent SEE, with low resource requirements, supporting
+instantaneous SLP instantiation.
+
+===IN Service Processing Model===
+The IN arose from an inability of network operators to rapidly create
+and deploy new supplementary services. The IN addresses this through
+reusable, modularized, network functions and standardized communication
+between network functions via service independent interfaces.
+
+A high level overview of an IN service processing model is given
+in ITU-T Q.1201 Figure 16 as depicted below:
+
+<img alt="IN Processing Model" src="in-processing-model.png" />
+
+Basic Call Processing (BCP) is provided in network functions such as
+Mobile Switching Centers (MSC). The "hooks" are introduced into
+individual BCPs to communicate with centralized service logic. During
+an interaction session the BCP may be suspended.
+
+The IN service logic is able, via the "hooks"functionality, to
+interact with the BCP. In this way IN service logic can control the
+sub-processes in the basic call process and the sequencing of these
+sub-processes.  Thus, by changing centralized service logic, a new
+service that uses existing network capabilities can readily be
+implemented.
+
+===IN Functional Architecture===
+The main elements in the high level IN functional architecture
+are depicted in the diagram below:
+
+<img alt="IN Functional Architecture" src="in-functional-architecture.png" />
+
+This application implements the Service Control Function (SCF)
+which provides the service logic programs (SLPs) that are used to
+deliver IN services.
+
+The Service Switching Function (SSF) is colocated with Mobile
+Switching Center (MSC), Serving GPRS Support Node (SGSN) and
+wireline circuit switches.
+
+An optional Service Resource Function (SRF) provides capabilities
+to interact with the subscriber by playing or detecting tones,
+including DTMF, as well as playing or recording voice. An SRF may
+be embedded in a Service Switching Point (SSP) or provided by an
+external Intelligent Peripheral (IP). The bearer channels of an
+IP are established with a Service Switching Point (SSP) using
+telephony signaling (i.e. ISUP).
+
+==Service Logic Programs (SLP)==
 The SLP instances (SLPI) are implemented as finte state machines
 with the {@link //stdlib/gen_statem. gen_statem} behaviour.
 
@@ -24,7 +92,7 @@ is depicted in <a href="#figure1-2">Figure 1-2</a>.
 		name="figure1-2" src="t-bcsm-camel.png" /><br />
 Figure 1-2: T-BCSM</p>
 
-===Messaging===
+==Messaging==
 Iinterprocess communication is depicted in
 <a href="#figure1-2">Figure 1-2</a>. An SLPI process sends primitive
 requests to Dialogue Handler (DHA) and Component Coordinator (CCO)
@@ -40,7 +108,7 @@ process in the {@link //tcap. tcap} application's Transaction Sublayer
 		name="figure1-2" src="messaging.png" /><br />
 Figure 1-2: Messaging</p>
 
-===Distribution===
+==Distribution==
 Process instances of the applications may be distributed across nodes
 as depicted in <a href="#figure1-3">Figure 1-3</a>.
 
