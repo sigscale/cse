@@ -16,11 +16,25 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% @reference 3GPP TS
+%%% 	<a href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=23&amp;GSMSpecPart2=078">23.078</a>
+%%% 	CAMEL Phase 4; Stage 2
+%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
-%%% 	module implements a Service Logic Program (SLP) instance within
-%%% 	the {@link //cse. cse} application.
+%%% 	module implements a Service Logic Program (SLP) instance for CAMEL
+%%% 	Application Part (CAP) within the {@link //cse. cse} application.
 %%%
+%%% 	This Finite State Machine (FSM) includes states and transitions
+%%% 	from the CAP originating and terminating basic call state machines
+%%% 	(BCSM) given in 3GPP TS 23.078.
 %%%
+%%% 	==O-BCSM==
+%%% 	<img alt="o-bcsm state diagram" src="o-bcsm-camel.png" />
+%%%
+%%% 	==T-BCSM==
+%%% 	<img alt="t-bcsm state diagram" src="t-bcsm-camel.png" />
+%%%
+
 -module(cse_slp_cap_fsm).
 -copyright('Copyright (c) 2021 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
