@@ -37,7 +37,7 @@
 %%----------------------------------------------------------------------
 
 init([] = _Args) ->
-	ChildSpecs = [fsm(cse_slp_cap_fsm)],
+	ChildSpecs = [fsm()],
 	SupFlags = #{strategy => simple_one_for_one},
 	{ok, {SupFlags, ChildSpecs}}.
 
@@ -45,17 +45,18 @@ init([] = _Args) ->
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec fsm(StartMod) -> Result
+-spec fsm() -> Result
 	when
-		StartMod :: atom(),
 		Result :: supervisor:child_spec().
 %% @doc Build a supervisor child specification for a
 %% 	{@link //stdlib/gen_statem. gen_statem} behaviour.
 %% @private
 %%
-fsm(StartMod) ->
-	StartArgs = [StartMod],
-	StartFunc = {gen_statem, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			restart => temporary, modules => [StartMod]}.
+fsm() ->
+	{ok, TslArgs} = application:get_env(tsl_args),
+	ACs = proplists:get_value(ac, TslArgs),
+	Modules = maps:values(ACs),
+	StartFunc = {gen_statem, start_link, []},
+	#{id => slp_fsm, start => StartFunc,
+			restart => temporary, modules => Modules}.
 

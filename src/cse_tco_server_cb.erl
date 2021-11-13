@@ -159,7 +159,8 @@ start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
 	case 'DialoguePDUs':decode('DialoguePDU', DialoguePDUs) of
 		{ok, {dialogueRequest, #'AARQ-apdu'{'application-context-name' = AC} = APDU}}
 				when is_map_key(AC, ACs) ->
-			case supervisor:start_child(SlpSup, [[APDU], []]) of
+			Module = map_get(AC, ACs),
+			case supervisor:start_child(SlpSup, [Module, [APDU], []]) of
 				{ok, TCU} ->
 					case tcap:open(self(), TCU) of
 						{ok, DHA, CCO} ->
