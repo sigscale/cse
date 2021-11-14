@@ -1,3 +1,16 @@
+2021-11-14  Vance Shipley <vances@sigscale.org>
+
+	* initial inap support
+	* describe slp fsm for cap with bcsm diagrams
+	* terminating bcsm state diagram for inap
+	* describe application purpose and in architecture principles
+	* diagrams for in architecture overview
+	* start the slp with module from tsl_args
+	* rename slp fsm to be cap specific
+	* refactored application-context handling to use the tsl_arg app env var
+	* refactor test suite tcap_tco_callback as fun wrappers
+	* update dependent library versions
+
 2021-11-07  Vance Shipley <vances@sigscale.org>
 
 	* install release pakage into releases directory
