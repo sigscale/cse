@@ -9,6 +9,7 @@
 				cse_tco_sup,
 				cse_slp_sup,
 				cse_slp_cap_fsm,
+				cse_slp_inap_fsm,
 				cse_tco_server_cb,
 				cse_codec,
 				cse_log]},
@@ -24,7 +25,7 @@
 				"sccp-2.0.0",
 				"tcap-1.2.6",
 				"map-1.0.2",
-				"inap-1.0.3",
+				"inap-1.0.4",
 				"cap-1.0.2"]},
 		{env,
 				[{tsl_name, cse_tsl},
@@ -32,10 +33,12 @@
 				{tsl_args,
 						[{ac, #{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
 								=> cse_slp_cap_fsm,
-						{0,4,0,0,1,21,3,4}     % CAP Phase 3 (capssf-scfGenericAC)
+						{0,4,0,0,1,21,3,4}          % CAP Phase 3 (capssf-scfGenericAC)
 								=> cse_slp_cap_fsm,
-						{0,4,0,0,1,0,50,1}     % CAP Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
-								=> cse_slp_cap_fsm}}]},
+						{0,4,0,0,1,0,50,1}          % CAP Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
+								=> cse_slp_cap_fsm,
+						{0,4,0,1,1,20,5,4}          % INAP CS2 (id-as-ssf-scfGenericAS)
+								=> cse_slp_inap_fsm}}]},
 				{tsl_opts, []},
 				{nrf_profile, nrf},
 				{nrf_uri, "http://nrf.5gc.mnc001.mcc001.3gppnetwork.org"},

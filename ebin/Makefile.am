@@ -13,6 +13,7 @@ beam_DATA = cse.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
 		cse_slp_cap_fsm.beam \
+		cse_slp_inap_fsm.beam \
 		cse_tco_server_cb.beam \
 		cse_codec.beam \
 		cse_log.beam
