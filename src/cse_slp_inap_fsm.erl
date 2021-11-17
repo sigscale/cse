@@ -57,6 +57,8 @@
 		o_alerting/3, t_alerting/3, o_active/3, t_active/3,
 		o_suspended/3, t_suspended/3, disconnect/3, abandon/3,
 		exception/3]).
+%% export the private api
+-export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
@@ -89,6 +91,7 @@
 		ac :: tuple() | undefined,
 		scf :: sccp_codec:party_address() | undefined,
 		ssf :: sccp_codec:party_address() | undefined,
+		direction :: originating | terminating | undefined,
 		called ::  [$0..$9] | undefined,
 		calling :: [$0..$9] | undefined,
 		call_ref :: binary() | undefined,
@@ -99,7 +102,6 @@
 		charging_start :: string() | undefined,
 		consumed = 0 :: non_neg_integer(),
 		pending = 0 :: non_neg_integer(),
-		isup :: [$0..$9] | undefined,
 		nrf_profile :: atom(),
 		nrf_uri :: string(),
 		nrf_location :: string() | undefined,
@@ -477,6 +479,315 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 %%  private api
 %%----------------------------------------------------------------------
+
+-spec nrf_start_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_start/1}.
+%% @private
+nrf_start_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_start, ReplyInfo}).
+
+-spec nrf_update_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_update/1}.
+%% @private
+nrf_update_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_update, ReplyInfo}).
+
+-spec nrf_release_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_release/1}.
+%% @private
+nrf_release_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_release, ReplyInfo}).
+
+%%----------------------------------------------------------------------
+%%  internal functions
+%%----------------------------------------------------------------------
+
+-spec nrf_start(Data) -> Result
+	when
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
+%% @doc Start rating a session.
+nrf_start(#statedata{call_start = CallStart,
+		charging_start = ChargingStart} = Data)
+		when is_list(CallStart), is_list(ChargingStart) ->
+	nrf_start1(#{"startTime" => CallStart,
+			"startOfCharging" => ChargingStart}, Data);
+nrf_start(#statedata{call_start = CallStart} = Data)
+		when is_list(CallStart) ->
+	nrf_start1(#{"startTime" => CallStart}, Data).
+%% @hidden
+nrf_start1(ServiceInformation,
+		#statedata{direction = originating, called = CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
+	nrf_start2(ServiceRating, Data);
+nrf_start1(ServiceInformation,
+		#statedata{direction = terminating, calling = CallingNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
+	nrf_start2(ServiceRating, Data).
+%% @hidden
+nrf_start2(ServiceRating,
+		#statedata{direction = originating, calling = CallingNumber} = Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["msisdn-" ++ CallingNumber],
+			"serviceRating" => [ServiceRating]},
+	nrf_start3(JSON, Data);
+nrf_start2(ServiceRating,
+		#statedata{direction = terminating, called = CalledNumber} = Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["msisdn-" ++ CalledNumber],
+			"serviceRating" => [ServiceRating]},
+	nrf_start3(JSON, Data).
+%% @hidden
+nrf_start3(JSON, #statedata{nrf_profile = Profile, nrf_uri = URI} = Data) ->
+	MFA = {?MODULE, nrf_start_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Body = zj:encode(JSON),
+	Request = {URI ++ "/ratingdata", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#statedata{nrf_reqid = RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			{next_state, exception, Data};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			{next_state, exception, Data}
+	end.
+
+-spec nrf_update(Consumed, Data) -> Result
+	when
+		Consumed :: non_neg_integer(),
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
+%% @doc Interim update during a rating session.
+nrf_update(Consumed, #statedata{call_start = CallStart,
+		charging_start = ChargingStart} = Data)
+		when is_list(CallStart), is_list(ChargingStart) ->
+	nrf_update1(Consumed, #{"startTime" => CallStart,
+			"startOfCharging" => ChargingStart}, Data);
+nrf_update(Consumed, #statedata{call_start = CallStart} = Data)
+		when is_list(CallStart) ->
+	nrf_update1(Consumed, #{"startTime" => CallStart}, Data).
+%% @hidden
+nrf_update1(Consumed, ServiceInformation,
+		#statedata{direction = originating, called = CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_update2(Consumed, ServiceRating, Data);
+nrf_update1(Consumed, ServiceInformation,
+		#statedata{direction = terminating, calling = CallingNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_update2(Consumed, ServiceRating, Data).
+%% @hidden
+nrf_update2(Consumed, ServiceRating,
+		#statedata{direction = originating, calling = CallingNumber} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
+			"requestSubType" => "DEBIT"},
+	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["msisdn-" ++ CallingNumber],
+			"serviceRating" => [Debit, Reserve]},
+	nrf_update3(JSON, Data);
+nrf_update2(Consumed, ServiceRating,
+		#statedata{direction = terminating, called = CalledNumber} = Data)
+		when is_integer(Consumed), Consumed >= 0 ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
+			"requestSubType" => "DEBIT"},
+	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["msisdn-" ++ CalledNumber],
+			"serviceRating" => [Debit, Reserve]},
+	nrf_update3(JSON, Data).
+%% @hidden
+nrf_update3(JSON, #statedata{nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	MFA = {?MODULE, nrf_update_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Body = zj:encode(JSON),
+	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#statedata{nrf_reqid = RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = Data#statedata{nrf_location = undefined},
+			{next_state, exception, NewData};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = Data#statedata{nrf_location = undefined},
+			{next_state, exception, NewData}
+	end.
+
+-spec nrf_release(Data) -> Result
+	when
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
+%% @doc Final update to release a rating session.
+nrf_release(#statedata{call_start = CallStart,
+		charging_start = ChargingStart} = Data)
+		when is_list(CallStart), is_list(ChargingStart) ->
+	nrf_release1(#{"startTime" => CallStart,
+			"startOfCharging" => ChargingStart}, Data);
+nrf_release(#statedata{call_start = CallStart} = Data)
+		when is_list(CallStart) ->
+	nrf_release1(#{"startTime" => CallStart}, Data).
+%% @hidden
+nrf_release1(SI, #statedata{call_info = #{stop := DateTime}} = Data) ->
+	nrf_release2(SI#{"stopTime" => DateTime}, Data);
+nrf_release1(SI, Data) ->
+	nrf_release2(SI, Data).
+%% @hidden
+nrf_release2(SI, #statedata{call_info = #{cause := Cause}} = Data) ->
+	case Cause of
+		#{value := Value, location := Location, diagnostic := Diagnostic} ->
+			IsupCause = #{"causeValue" => Value,
+					"causeLocation" => atom_to_list(Location),
+					"causeDiagnostics" => base64:encode(Diagnostic)},
+			nrf_release3(SI#{"isupCause" => IsupCause}, Data);
+		#{value := Value, location := Location} ->
+			IsupCause = #{"causeValue" => Value,
+					"causeLocation" => atom_to_list(Location)},
+			nrf_release3(SI#{"isupCause" => IsupCause}, Data)
+	end;
+nrf_release2(SI, Data) ->
+	nrf_release3(SI, Data).
+%% @hidden
+nrf_release3(ServiceInformation,
+		#statedata{direction = originating, called = CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_release4(ServiceRating, Data);
+nrf_release3(ServiceInformation,
+		#statedata{direction = terminating, calling = CallingNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_release4(ServiceRating, Data).
+%% @hidden
+nrf_release4(ServiceRating,
+		#statedata{direction = originating, calling = CallingNumber,
+      pending = Consumed} = Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
+			"requestSubType" => "DEBIT"},
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["msisdn-" ++ CallingNumber],
+			"serviceRating" => [Debit]},
+	nrf_release5(JSON, Data);
+nrf_release4(ServiceRating,
+		#statedata{direction = terminating, called = CalledNumber,
+      pending = Consumed} = Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
+			"requestSubType" => "DEBIT"},
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => ["msisdn-" ++ CalledNumber],
+			"serviceRating" => [Debit]},
+	nrf_release5(JSON, Data).
+%% @hidden
+nrf_release5(JSON, #statedata{nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data)
+		when is_list(Location) ->
+	MFA = {?MODULE, nrf_release_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Body = zj:encode(JSON),
+	Request = {URI ++ Location ++ "/release", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#statedata{nrf_reqid = RequestId,
+					nrf_location = undefined, pending = 0},
+			{keep_state, NewData};
+		{error, Reason} ->
+			case Reason of
+				{failed_connect, _} ->
+					?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()}]);
+				_ ->
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()}])
+			end,
+			NewData = Data#statedata{nrf_location = undefined},
+			{next_state, null, NewData}
+	end.
 
 -spec calling_number(Address) -> Number
 	when
