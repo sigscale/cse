@@ -438,8 +438,121 @@ present_call(_Event, _EventContent, _Data) ->
 %% @private
 o_alerting(enter, _State, _Data) ->
 	keep_state_and_data;
-o_alerting(_Event, _EventContent, _Data) ->
-	keep_state_and_data.
+o_alerting(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID, edp = EDP, iid = IID,
+		dha = DHA, cco = CCO} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+		{ok, #{eventTypeBCSM := routeSelectFailure}}
+				when map_get(route_fail, EDP) == interrupted ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, Data#statedata{iid = IID + 1}};
+		{ok, #{eventTypeBCSM := routeSelectFailure}} ->
+			{next_state, exception, Data};
+		{ok, #{eventTypeBCSM := oAbandon}}
+				when map_get(abandon, EDP) == interrupted ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, abandon, Data#statedata{iid = IID + 1}};
+		{ok, #{eventTypeBCSM := oAbandon}} ->
+			{next_state, abandon, Data};
+		{ok, #{eventTypeBCSM := oNoAnswer}}
+				when map_get(no_answer, EDP) == interrupted ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, Data#statedata{iid = IID + 1}};
+		{ok, #{eventTypeBCSM := oNoAnswer}} ->
+			{next_state, exception, Data};
+		{ok, #{eventTypeBCSM := oCalledPartyBusy}}
+				when map_get(busy, EDP) == interrupted ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, Data#statedata{iid = IID + 1}};
+		{ok, #{eventTypeBCSM := oCalledPartyBusy}} ->
+			{next_state, exception, Data};
+		{ok, #{eventTypeBCSM := oAnswer}}
+				when map_get(answer, EDP) == interrupted ->
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+			{next_state, o_active, Data#statedata{iid = IID + 1}};
+		{ok, #{eventTypeBCSM := oAnswer}} ->
+			{next_state, o_active, Data};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+?LOG_INFO([{state, o_alerting}, {slpi, self()}, {chargingResultArg, ChargingResultArg}]),
+			keep_state_and_data;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+?LOG_INFO([{state, o_alerting}, {slpi, self()}, {requestedInformationList, CallInfo}]),
+			{keep_state, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_alerting(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
+o_alerting(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
+o_alerting(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+		error = Error, parameters = Parameters}} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, o_alerting}, {ssf, SSF}]),
+	{next_state, exception, Data};
+o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
 
 -spec t_alerting(EventType, EventContent, Data) -> Result
 	when
