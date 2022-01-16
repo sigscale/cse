@@ -1,4 +1,4 @@
-%%% cse_tcap_SUITE.erl
+%%% cse_cap_SUITE.erl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021 SigScale Global Inc.
 %%% @end
@@ -14,10 +14,11 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Test suite for the Transaction Capabilities stack integration
-%%% of the {@link //cse. cse} application.
+%%% Test suite for the Transaction Capabilities stack with
+%%% CAMEL Application Part (CAP) integration of the
+%%% {@link //cse. cse} application.
 %%%
--module(cse_tcap_SUITE).
+-module(cse_cap_SUITE).
 -copyright('Copyright (c) 2021 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
@@ -55,8 +56,7 @@
 -include("cse_codec.hrl").
 -include_lib("common_test/include/ct.hrl").
 
--define(SSN_CAMEL, 146).
-
+-define(SSN_CAP, 146).
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
 -define(PDUs, 'GenericSSF-gsmSCF-PDUs').
 
@@ -711,7 +711,7 @@ party() ->
 party(N, Acc) when length(Acc) < 11 ->
 	party(N - 1, [rand:uniform(10) - 1 | Acc]);
 party(0, Acc) ->
-	#party_address{ssn = ?SSN_CAMEL,
+	#party_address{ssn = ?SSN_CAP,
 			nai = international,
 			translation_type = undefined,
 			numbering_plan = isdn_tele,
