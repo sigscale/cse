@@ -45,7 +45,8 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([null/3, collect_information/3, analyse_information/3,
+-export([null/3, authorize_origination_attempt/3,
+		collect_information/3, analyse_information/3,
 		routing/3, o_alerting/3, o_active/3, disconnect/3,
 		abandon/3, terminating_call_handling/3, t_alerting/3,
 		t_active/3, exception/3]).
@@ -62,7 +63,8 @@
 -include_lib("kernel/include/logger.hrl").
 -include("cse_codec.hrl").
 
--type state() :: null | collect_information | analyse_information
+-type state() :: null | authorize_origination_attempt
+		| collect_information | analyse_information
 		| routing | o_alerting | o_active | disconnect | abandon
 		| terminating_call_handling | t_alerting | t_active
 		| exception.
@@ -174,6 +176,19 @@ null(cast, {'TC', 'L-CANCEL', indication,
 	keep_state_and_data;
 null(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 	{stop, Reason}.
+
+-spec authorize_origination_attempt(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>authorize_origination_attempt</em> state.
+%% @private
+authorize_origination_attempt(enter, null, _Data) ->
+	keep_state_and_data;
+authorize_origination_attempt(_EventType, _OldState, _Data) ->
+	keep_state_and_data.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
