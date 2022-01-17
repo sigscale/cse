@@ -25,7 +25,7 @@
 				"sccp-2.0.0",
 				"tcap-1.2.6",
 				"map-1.0.2",
-				"inap-1.0.4",
+				"inap-1.0.9",
 				"cap-1.0.2"]},
 		{env,
 				[{tsl_name, cse_tsl},
