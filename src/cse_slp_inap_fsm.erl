@@ -169,7 +169,28 @@ null(enter, _OldState, #statedata{did = DialogueID, dha = DHA}) ->
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	link(DHA),
 	NewData = Data#statedata{dha = DHA, cco = CCO},
-	{next_state, analyse_information, NewData};
+	{keep_state, NewData};
+null(cast, {'TC', 'BEGIN', indication,
+		#'TC-BEGIN'{appContextName = AC,
+		dialogueID = DialogueID, qos = _QoS,
+		destAddress = DestAddress, origAddress = OrigAddress,
+		componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
+		#statedata{did = undefined} = Data) ->
+	NewData = Data#statedata{did = DialogueID, ac = AC,
+			scf = DestAddress, ssf = OrigAddress},
+	{keep_state, NewData};
+null(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-initialDP',
+		dialogueID = DialogueID, parameters = Argument} = Invoke},
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_InitialDPArg', Argument) of
+		{ok, #{eventTypeBCSM := analyzedInformation} = InitialDPArg} ->
+			Actions = [{next_event, internal, {Invoke, InitialDPArg}}],
+			{next_state, analyse_information, Data, Actions};
+		{ok, #{eventTypeBCSM := termAttemptAuthorized} = InitialDPArg} ->
+			Actions = [{next_event, internal, {Invoke, InitialDPArg}}],
+			{next_state, select_facility, Data, Actions}
+	end;
 null(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -213,51 +234,34 @@ collect_information(_Event, _EventContent, _Data) ->
 %% @private
 analyse_information(enter, _State, _Data) ->
 	keep_state_and_data;
-analyse_information(cast, {'TC', 'BEGIN', indication,
-		#'TC-BEGIN'{appContextName = AC,
-		dialogueID = DialogueID, qos = _QoS,
-		destAddress = DestAddress, origAddress = OrigAddress,
-		componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
-		#statedata{did = undefined} = Data) ->
-	NewData = Data#statedata{did = DialogueID, ac = AC,
-			scf = DestAddress, ssf = OrigAddress},
-	{keep_state, NewData};
 analyse_information(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
-analyse_information(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-initialDP',
-		dialogueID = DialogueID, invokeID = _InvokeID,
-		lastComponent = true, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-SCF-PDUs_InitialDPArg', Argument) of
-		{ok, #{eventTypeBCSM := EventTypeBCSM,
+analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
+		dialogueID = DialogueID, invokeID = _InvokeID, lastComponent = true},
+		#{eventTypeBCSM := analyzedInformation = EventTypeBCSM,
 				serviceKey := ServiceKey,
 				callingPartysCategory := CallingPartyCategory,
 				callingPartyNumber := CallingPartyNumber,
-				calledPartyNumber := CalledPartyNumber} = InitialDPArg} ->
-			CallingDN = calling_number(CallingPartyNumber),
-			CalledDN = called_number(CalledPartyNumber),
+				calledPartyNumber := CalledPartyNumber} = InitialDPArg},
+		#statedata{did = DialogueID} = Data) ->
+	CallingDN = calling_number(CallingPartyNumber),
+	CalledDN = called_number(CalledPartyNumber),
 ?LOG_INFO([{state, analyse_information}, {slpi, self()}, {service_key, ServiceKey}, {event, EventTypeBCSM}, {category, CallingPartyCategory}, {calling, CallingDN}, {called, CalledDN}, {initalDPArg, InitialDPArg}]),
-			%% @todo EDP shall be dynamically determined by SLP selection
-			EDP = #{route_fail => interrupted,
-					busy => interrupted,
-					no_answer => interrupted,
-					abandon => notifyAndContinue,
-					answer => notifyAndContinue,
-					disconnect1 => interrupted,
-					disconnect2 => interrupted},
-			NewData = Data#statedata{direction = originating,
-					calling = CallingDN, called = CalledDN, edp = EDP,
-					call_start = cse_log:iso8601(erlang:system_time(millisecond))},
-			nrf_start(NewData);
-		{ok, InitialDPArg} ->
-			?LOG_WARNING([{state, analyse_information},
-					{slpi, self()}, {initalDPArg, InitialDPArg}]),
-			{keep_state, Data}
-	end;
+	%% @todo EDP shall be dynamically determined by SLP selection
+	EDP = #{route_fail => interrupted,
+			busy => interrupted,
+			no_answer => interrupted,
+			abandon => notifyAndContinue,
+			answer => notifyAndContinue,
+			disconnect1 => interrupted,
+			disconnect2 => interrupted},
+	NewData = Data#statedata{direction = originating,
+			calling = CallingDN, called = CalledDN, edp = EDP,
+			call_start = cse_log:iso8601(erlang:system_time(millisecond))},
+	nrf_start(NewData);
 analyse_information(cast, {nrf_start,
 		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
 		#statedata{direction = originating, nrf_reqid = RequestId,
