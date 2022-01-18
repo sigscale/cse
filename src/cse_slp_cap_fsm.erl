@@ -169,7 +169,30 @@ null(enter, _OldState, #statedata{did = DialogueID, dha = DHA}) ->
 null(cast, {register_csl, DHA, CCO}, Data) ->
 	link(DHA),
 	NewData = Data#statedata{dha = DHA, cco = CCO},
-	{next_state, collect_information, NewData};
+	{keep_state, NewData};
+null(cast, {'TC', 'BEGIN', indication,
+		#'TC-BEGIN'{appContextName = AC,
+		dialogueID = DialogueID, qos = _QoS,
+		destAddress = DestAddress, origAddress = OrigAddress,
+		componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
+		#statedata{did = undefined} = Data) ->
+	NewData = Data#statedata{did = DialogueID, ac = AC,
+			scf = DestAddress, ssf = OrigAddress},
+	{keep_state, NewData};
+null(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-initialDP',
+		dialogueID = DialogueID, parameters = Argument} = Invoke},
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
+		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
+				eventTypeBCSM = collectedInfo} = InitialDPArg} ->
+			Actions = [{next_event, internal, {Invoke, InitialDPArg}}],
+			{next_state, collect_information, Data, Actions};
+		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
+				eventTypeBCSM = termAttemptAuthorized} = InitialDPArg} ->
+			Actions = [{next_event, internal, {Invoke, InitialDPArg}}],
+			{next_state, terminating_call_handling, Data, Actions}
+	end;
 null(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
@@ -200,90 +223,41 @@ authorize_origination_attempt(_EventType, _OldState, _Data) ->
 %% @private
 collect_information(enter, _State, _Data) ->
 	keep_state_and_data;
-collect_information(cast, {'TC', 'BEGIN', indication,
-		#'TC-BEGIN'{appContextName = AC,
-		dialogueID = DialogueID, qos = _QoS,
-		destAddress = DestAddress, origAddress = OrigAddress,
-		componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
-		#statedata{did = undefined} = Data) ->
-	NewData = Data#statedata{did = DialogueID, ac = AC,
-			scf = DestAddress, ssf = OrigAddress},
-	{keep_state, NewData};
-collect_information(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-initialDP',
-		dialogueID = DialogueID, invokeID = _InvokeID,
-		lastComponent = true, parameters = Argument}} = _EventContent,
-		#statedata{did = DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_InitialDPArg', Argument) of
-		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
+collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
+		dialogueID = DialogueID, invokeID = _InvokeID, lastComponent = true},
+		#'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
 				callingPartyNumber = CallingPartyNumber,
 				originalCalledPartyID = OriginalCalledPartyID,
 				calledPartyBCDNumber = CalledPartyBCDNumber,
 				locationInformation = LocationInformation,
 				locationNumber = LocationNumber,
 				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
-				mscAddress = MscAddress} = _InitialDPArg} ->
-			{Vlr1, Msc1, Isup1} = case LocationInformation of
-				#'LocationInformation'{'vlr-number' = LIvlr,
-						'msc-Number' = LImsc, locationNumber = LIisup,
-						ageOfLocationInformation = Age} when Age < 15 ->
-					{LIvlr, LImsc, LIisup};
-				_ ->
-					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
-			end,
-			MSC = isdn_address(Msc1, MscAddress),
-			VLR = isdn_address(Vlr1),
-			ISUP = calling_number(Isup1, LocationNumber),
-			MSISDN = calling_number(CallingPartyNumber),
-			DN = called_number(OriginalCalledPartyID, CalledPartyBCDNumber),
-			%% @todo EDP shall be dynamically determined by SLP selection
-			EDP = #{route_fail => interrupted, busy => interrupted,
-					no_answer => interrupted, abandon => notifyAndContinue,
-					answer => notifyAndContinue, disconnect1 => interrupted,
-					disconnect2 => interrupted},
-			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
-					msisdn = MSISDN, called = DN, calling = MSISDN,
-					isup = ISUP, vlr = VLR, msc = MSC, edp = EDP,
-					call_ref = CallReferenceNumber,
-					call_start = cse_log:iso8601(erlang:system_time(millisecond))},
-			nrf_start(NewData);
-		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = termAttemptAuthorized,
-				callingPartyNumber = CallingPartyNumber,
-				calledPartyNumber = CalledPartyNumber,
-				locationInformation = LocationInformation,
-				locationNumber = LocationNumber,
-				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
-				mscAddress = MscAddress} = _InitialDPArg} ->
-			{Vlr1, Msc1, Isup1} = case LocationInformation of
-				#'LocationInformation'{'vlr-number' = LIvlr,
-						'msc-Number' = LImsc, locationNumber = LIisup,
-						ageOfLocationInformation = Age} when Age < 15 ->
-					{LIvlr, LImsc, LIisup};
-				_ ->
-					{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
-			end,
-			MSC = isdn_address(Msc1, MscAddress),
-			VLR = isdn_address(Vlr1),
-			ISUP = calling_number(Isup1, LocationNumber),
-			MSISDN = calling_number(CallingPartyNumber),
-			DN = called_number(CalledPartyNumber, asn1_NOVALUE),
-			%% @todo EDP shall be dynamically determined by SLP selection
-			EDP = #{route_fail => interrupted, busy => interrupted,
-					no_answer => interrupted, abandon => notifyAndContinue,
-					answer => notifyAndContinue, disconnect1 => interrupted,
-					disconnect2 => interrupted},
-			NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
-					msisdn = MSISDN, called = MSISDN, calling = DN,
-					isup = ISUP, vlr = VLR, msc = MSC, edp = EDP,
-					call_ref = CallReferenceNumber,
-					call_start = cse_log:iso8601(erlang:system_time(millisecond))},
-			nrf_start(NewData);
-		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
-				eventTypeBCSM = EventType} = InitialDPArg} ->
-			?LOG_WARNING([{state, collect_information}, {eventTypeBCSM, EventType},
-					{slpi, self()}, {initalDPArg, InitialDPArg}]),
-			{keep_state, Data}
-	end;
+				mscAddress = MscAddress}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{Vlr1, Msc1, Isup1} = case LocationInformation of
+		#'LocationInformation'{'vlr-number' = LIvlr,
+				'msc-Number' = LImsc, locationNumber = LIisup,
+				ageOfLocationInformation = Age} when Age < 15 ->
+			{LIvlr, LImsc, LIisup};
+		_ ->
+			{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
+	end,
+	MSC = isdn_address(Msc1, MscAddress),
+	VLR = isdn_address(Vlr1),
+	ISUP = calling_number(Isup1, LocationNumber),
+	MSISDN = calling_number(CallingPartyNumber),
+	DN = called_number(OriginalCalledPartyID, CalledPartyBCDNumber),
+	%% @todo EDP shall be dynamically determined by SLP selection
+	EDP = #{route_fail => interrupted, busy => interrupted,
+			no_answer => interrupted, abandon => notifyAndContinue,
+			answer => notifyAndContinue, disconnect1 => interrupted,
+			disconnect2 => interrupted},
+	NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
+			msisdn = MSISDN, called = DN, calling = MSISDN,
+			isup = ISUP, vlr = VLR, msc = MSC, edp = EDP,
+			call_ref = CallReferenceNumber,
+			call_start = cse_log:iso8601(erlang:system_time(millisecond))},
+	nrf_start(NewData);
 collect_information(cast, {nrf_start,
 		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
 		#statedata{nrf_reqid = RequestId, msisdn = MSISDN, calling = MSISDN,
@@ -351,109 +325,6 @@ collect_information(cast, {nrf_start,
 					appContextName = AC, qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, analyse_information, NewData};
-		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
-				when is_list(Location) ->
-			NewIID = IID + 1,
-			NewData = Data#statedata{nrf_reqid = undefined,
-					nrf_location = Location, iid = NewIID},
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = NewIID, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData, 0};
-		{{ok, JSON}, {_, Location}} when is_list(Location) ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
-					{profile, Profile}, {uri, URI}, {location, Location},
-					{slpi, self()}, {json, JSON}]),
-			NewData = Data#statedata{nrf_reqid = undefined,
-					nrf_location = Location},
-			{next_state, exception, NewData};
-		{{error, Partial, Remaining}, {_, Location}} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
-					{profile, Profile}, {uri, URI}, {location, Location},
-					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			NewData = Data#statedata{nrf_reqid = undefined,
-					nrf_location = Location},
-			{next_state, exception, NewData};
-		{{ok, _}, false} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			NewData = Data#statedata{nrf_reqid = undefined},
-			{next_state, exception, NewData}
-	end;
-collect_information(cast, {nrf_start,
-		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
-		#statedata{nrf_reqid = RequestId, msisdn = MSISDN, called = MSISDN,
-		nrf_profile = Profile, nrf_uri = URI, did = DialogueID, iid = IID,
-		dha = DHA, cco = CCO, scf = SCF, ac = AC, edp = EDP} = Data) ->
-	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
-				"grantedUnit" := #{"time" := GrantedTime}}]}},
-				{_, Location}} when is_list(Location) ->
-			NewData = Data#statedata{iid = IID + 4, call_info = #{},
-						nrf_reqid = undefined, nrf_location = Location},
-			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tBusy,
-							monitorMode =  map_get(busy, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tNoAnswer,
-							monitorMode =  map_get(no_answer, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tAnswer,
-							monitorMode =  map_get(answer, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tAbandon,
-							monitorMode =  map_get(abandon, EDP)},
-%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-%							eventTypeBCSM = oTermSeized, % Alerting DP is a Phase 4 feature
-%							monitorMode =  map_get(term_seize, EDP)},
-%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-%							eventTypeBCSM = callAccepted, % Alerting DP is a Phase 4 feature
-%							monitorMode =  map_get(call_accept, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tDisconnect,
-							monitorMode =  map_get(disconnect1, EDP),
-							legID = {sendingSideID, ?leg1}},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tDisconnect,
-							monitorMode =  map_get(disconnect2, EDP),
-							legID = {sendingSideID, ?leg2}}],
-			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
-			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 2,
-					parameters = RequestReportBCSMEventArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
-			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
-					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
-					requestedInformationTypeList = [callStopTime, releaseCause]}),
-			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
-					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
-					parameters = CallInformationRequestArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = GrantedTime * 10},
-			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
-					'PduAChBillingChargingCharacteristics',
-					{timeDurationCharging, TimeDurationCharging}),
-			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
-					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
-					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
-					partyToCharge = {sendingSideID, ?leg2}}),
-			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
-					invokeID = IID + 3, dialogueID = DialogueID, class = 2,
-					parameters = ApplyChargingArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
-			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
-					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-					appContextName = AC, qos = {true, true}, origAddress = SCF},
-			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, terminating_call_handling, NewData};
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
 				when is_list(Location) ->
 			NewIID = IID + 1,
@@ -667,6 +538,40 @@ terminating_call_handling(cast, {'TC', 'CONTINUE', indication,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
 	keep_state_and_data;
+terminating_call_handling(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
+		dialogueID = DialogueID, invokeID = _InvokeID, lastComponent = true},
+		#'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = termAttemptAuthorized,
+				callingPartyNumber = CallingPartyNumber,
+				calledPartyNumber = CalledPartyNumber,
+				locationInformation = LocationInformation,
+				locationNumber = LocationNumber,
+				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
+				mscAddress = MscAddress}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	{Vlr1, Msc1, Isup1} = case LocationInformation of
+		#'LocationInformation'{'vlr-number' = LIvlr,
+				'msc-Number' = LImsc, locationNumber = LIisup,
+				ageOfLocationInformation = Age} when Age < 15 ->
+			{LIvlr, LImsc, LIisup};
+		_ ->
+			{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
+	end,
+	MSC = isdn_address(Msc1, MscAddress),
+	VLR = isdn_address(Vlr1),
+	ISUP = calling_number(Isup1, LocationNumber),
+	MSISDN = calling_number(CallingPartyNumber),
+	DN = called_number(CalledPartyNumber, asn1_NOVALUE),
+	%% @todo EDP shall be dynamically determined by SLP selection
+	EDP = #{route_fail => interrupted, busy => interrupted,
+			no_answer => interrupted, abandon => notifyAndContinue,
+			answer => notifyAndContinue, disconnect1 => interrupted,
+			disconnect2 => interrupted},
+	NewData = Data#statedata{imsi = cse_codec:tbcd(IMSI),
+			msisdn = MSISDN, called = MSISDN, calling = DN,
+			isup = ISUP, vlr = VLR, msc = MSC, edp = EDP,
+			call_ref = CallReferenceNumber,
+			call_start = cse_log:iso8601(erlang:system_time(millisecond))},
+	nrf_start(NewData);
 terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
@@ -759,6 +664,124 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
+terminating_call_handling(cast, {nrf_start,
+		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
+		#statedata{nrf_reqid = RequestId, msisdn = MSISDN, called = MSISDN,
+		nrf_profile = Profile, nrf_uri = URI, did = DialogueID, iid = IID,
+		dha = DHA, cco = CCO, scf = SCF, ac = AC, edp = EDP} = Data) ->
+	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
+		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
+				"grantedUnit" := #{"time" := GrantedTime}}]}},
+				{_, Location}} when is_list(Location) ->
+			NewData = Data#statedata{iid = IID + 4, call_info = #{},
+						nrf_reqid = undefined, nrf_location = Location},
+			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tBusy,
+							monitorMode =  map_get(busy, EDP)},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tNoAnswer,
+							monitorMode =  map_get(no_answer, EDP)},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tAnswer,
+							monitorMode =  map_get(answer, EDP)},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tAbandon,
+							monitorMode =  map_get(abandon, EDP)},
+%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+%							eventTypeBCSM = oTermSeized, % Alerting DP is a Phase 4 feature
+%							monitorMode =  map_get(term_seize, EDP)},
+%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+%							eventTypeBCSM = callAccepted, % Alerting DP is a Phase 4 feature
+%							monitorMode =  map_get(call_accept, EDP)},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tDisconnect,
+							monitorMode =  map_get(disconnect1, EDP),
+							legID = {sendingSideID, ?leg1}},
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+							eventTypeBCSM = tDisconnect,
+							monitorMode =  map_get(disconnect2, EDP),
+							legID = {sendingSideID, ?leg2}}],
+			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
+					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
+			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 2,
+					parameters = RequestReportBCSMEventArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
+			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
+					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
+					requestedInformationTypeList = [callStopTime, releaseCause]}),
+			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
+					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
+					parameters = CallInformationRequestArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+					maxCallPeriodDuration = GrantedTime * 10},
+			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+					'PduAChBillingChargingCharacteristics',
+					{timeDurationCharging, TimeDurationCharging}),
+			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+					partyToCharge = {sendingSideID, ?leg2}}),
+			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+					invokeID = IID + 3, dialogueID = DialogueID, class = 2,
+					parameters = ApplyChargingArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
+			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					appContextName = AC, qos = {true, true}, origAddress = SCF},
+			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+			{keep_state, NewData};
+		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
+				when is_list(Location) ->
+			NewIID = IID + 1,
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location, iid = NewIID},
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, NewData, 0};
+		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {json, JSON}]),
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{error, Partial, Remaining}, {_, Location}} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {location, Location},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
+			NewData = Data#statedata{nrf_reqid = undefined,
+					nrf_location = Location},
+			{next_state, exception, NewData};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = Data#statedata{nrf_reqid = undefined},
+			{next_state, exception, NewData}
+	end;
+terminating_call_handling(cast, {nrf_start,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined},
+	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {slpi, self()}]),
+	{next_state, exception, NewData};
+terminating_call_handling(cast, {nrf_start, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined},
+	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {slpi, self()}]),
+	{next_state, exception, NewData};
 terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
