@@ -73,7 +73,7 @@
 		| o_alerting | t_alerting | o_active | t_active
 		| o_suspended | t_suspended | disconnect | abandon
 		| exception.
--type event_type() :: collected_info | analyzed_info | route_fail
+-type event_type() :: collected_info | analysed_info | route_fail
 		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
 		| abandon | term_attempt.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
@@ -184,7 +184,7 @@ null(cast, {'TC', 'INVOKE', indication,
 		dialogueID = DialogueID, parameters = Argument} = Invoke},
 		#statedata{did = DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_InitialDPArg', Argument) of
-		{ok, #{eventTypeBCSM := analyzedInformation} = InitialDPArg} ->
+		{ok, #{eventTypeBCSM := analysedInformation} = InitialDPArg} ->
 			Actions = [{next_event, internal, {Invoke, InitialDPArg}}],
 			{next_state, analyse_information, Data, Actions};
 		{ok, #{eventTypeBCSM := termAttemptAuthorized} = InitialDPArg} ->
@@ -241,7 +241,7 @@ analyse_information(cast, {'TC', 'CONTINUE', indication,
 	keep_state_and_data;
 analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		dialogueID = DialogueID, invokeID = _InvokeID, lastComponent = true},
-		#{eventTypeBCSM := analyzedInformation = EventTypeBCSM,
+		#{eventTypeBCSM := analysedInformation = EventTypeBCSM,
 				serviceKey := ServiceKey,
 				callingPartysCategory := CallingPartyCategory,
 				callingPartyNumber := CallingPartyNumber,
