@@ -744,7 +744,7 @@ pdu_initial_mo(OTID, AC) ->
 			callingPartysCategory => <<10>>,
 			locationNumber => isup_calling_party(),
 			bearerCapability => {bearerCap,<<128,144,163>>},
-			eventTypeBCSM => collectedInfo,
+			eventTypeBCSM => analysedInformation,
 			callReferenceNumber => crypto:strong_rand_bytes(4),
 			calledPartyNumber => isup_called_party()},
 	Invoke = #{invokeId => {present, 1},
