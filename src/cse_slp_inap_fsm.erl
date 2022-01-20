@@ -888,7 +888,7 @@ nrf_start(#statedata{call_start = CallStart} = Data)
 %% @hidden
 nrf_start1(ServiceInformation,
 		#statedata{direction = originating, called = CalledNumber} = Data) ->
-	ServiceContextId = "32260@3gpp.org",
+	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
@@ -897,7 +897,7 @@ nrf_start1(ServiceInformation,
 	nrf_start2(ServiceRating, Data);
 nrf_start1(ServiceInformation,
 		#statedata{direction = terminating, calling = CallingNumber} = Data) ->
-	ServiceContextId = "32260@3gpp.org",
+	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
@@ -965,7 +965,7 @@ nrf_update(Consumed, #statedata{call_start = CallStart} = Data)
 %% @hidden
 nrf_update1(Consumed, ServiceInformation,
 		#statedata{direction = originating, called = CalledNumber} = Data) ->
-	ServiceContextId = "32260@3gpp.org",
+	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
@@ -973,7 +973,7 @@ nrf_update1(Consumed, ServiceInformation,
 	nrf_update2(Consumed, ServiceRating, Data);
 nrf_update1(Consumed, ServiceInformation,
 		#statedata{direction = terminating, calling = CallingNumber} = Data) ->
-	ServiceContextId = "32260@3gpp.org",
+	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
@@ -1071,7 +1071,7 @@ nrf_release2(SI, Data) ->
 %% @hidden
 nrf_release3(ServiceInformation,
 		#statedata{direction = originating, called = CalledNumber} = Data) ->
-	ServiceContextId = "32260@3gpp.org",
+	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
@@ -1079,7 +1079,7 @@ nrf_release3(ServiceInformation,
 	nrf_release4(ServiceRating, Data);
 nrf_release3(ServiceInformation,
 		#statedata{direction = terminating, calling = CallingNumber} = Data) ->
-	ServiceContextId = "32260@3gpp.org",
+	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
