@@ -1588,7 +1588,7 @@ t_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>abandon</em> state.
 %% @private
-abandon(enter, #statedata{call_info = #{}} = _EventContent, _Data) ->
+abandon(enter, _EventContent, #statedata{call_info = #{}} = _Data) ->
 	keep_state_and_data;
 abandon(enter, _EventContent, _Data) ->
 	{keep_state_and_data, 0};
@@ -1693,7 +1693,7 @@ abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-disconnect(enter, #statedata{call_info = #{}} = _EventContent, _Data) ->
+disconnect(enter, _EventContent, #statedata{call_info = #{}} = _Data) ->
 	keep_state_and_data;
 disconnect(enter, _EventContent, _Data) ->
 	{keep_state_and_data, 0};
@@ -1798,7 +1798,7 @@ disconnect(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>exception</em> state.
 %% @private
-exception(enter, _OldState,  _Data)->
+exception(enter, _EventContent,  _Data)->
 	keep_state_and_data;
 exception(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
