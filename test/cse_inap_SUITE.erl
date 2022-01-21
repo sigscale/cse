@@ -238,7 +238,7 @@ initial_dp_mo(Config) ->
 	receive
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
-	analyse_information = get_state(TcUser).
+	o_alerting = get_state(TcUser).
 
 initial_dp_mt() ->
 	[{userdata, [{doc, "MT InitialDP received by SLPI"}]}].
