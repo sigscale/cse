@@ -461,18 +461,15 @@ o_alerting(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	keep_state_and_data;
 o_alerting(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID, edp = EDP, iid = IID,
 		dha = DHA, cco = CCO} = Data) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #{eventTypeBCSM := routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
-erlang:display({?MODULE, ?LINE, interrupted}),
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
@@ -482,11 +479,9 @@ erlang:display({?MODULE, ?LINE, interrupted}),
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#statedata{iid = IID + 1}};
 		{ok, #{eventTypeBCSM := routeSelectFailure}} ->
-erlang:display({?MODULE, ?LINE, routeSelectFailure}),
 			{next_state, exception, Data};
 		{ok, #{eventTypeBCSM := oAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
-erlang:display({?MODULE, ?LINE, interrupted}),
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
@@ -496,11 +491,9 @@ erlang:display({?MODULE, ?LINE, interrupted}),
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, abandon, Data#statedata{iid = IID + 1}};
 		{ok, #{eventTypeBCSM := oAbandon}} ->
-erlang:display({?MODULE, ?LINE, oAbandon, EDP}),
 			{next_state, abandon, Data};
 		{ok, #{eventTypeBCSM := oNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
-erlang:display({?MODULE, ?LINE, interrupted}),
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
@@ -510,11 +503,9 @@ erlang:display({?MODULE, ?LINE, interrupted}),
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#statedata{iid = IID + 1}};
 		{ok, #{eventTypeBCSM := oNoAnswer}} ->
-erlang:display({?MODULE, ?LINE, oNoAnswer}),
 			{next_state, exception, Data};
 		{ok, #{eventTypeBCSM := oCalledPartyBusy}}
 				when map_get(busy, EDP) == interrupted ->
-erlang:display({?MODULE, ?LINE, interrupted}),
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
@@ -524,11 +515,9 @@ erlang:display({?MODULE, ?LINE, interrupted}),
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#statedata{iid = IID + 1}};
 		{ok, #{eventTypeBCSM := oCalledPartyBusy}} ->
-erlang:display({?MODULE, ?LINE, oCalledPartyBusy}),
 			{next_state, exception, Data};
 		{ok, #{eventTypeBCSM := oAnswer}}
 				when map_get(answer, EDP) == interrupted ->
-erlang:display({?MODULE, ?LINE, interrupted}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
@@ -536,17 +525,14 @@ erlang:display({?MODULE, ?LINE, interrupted}),
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, o_active, Data#statedata{iid = IID + 1}};
 		{ok, #{eventTypeBCSM := oAnswer}} ->
-erlang:display({?MODULE, ?LINE, oAnswer}),
 			{next_state, o_active, Data};
 		{error, Reason} ->
-erlang:display({?MODULE, ?LINE, Reason}),
 			{stop, Reason}
 	end;
 o_alerting(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
 ?LOG_INFO([{state, o_alerting}, {slpi, self()}, {chargingResultArg, ChargingResultArg}]),
@@ -558,7 +544,6 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #{requestedInformationList := CallInfo}} ->
 ?LOG_INFO([{state, o_alerting}, {slpi, self()}, {requestedInformationList, CallInfo}]),
@@ -569,19 +554,16 @@ erlang:display({?MODULE, ?LINE, _EventContent}),
 o_alerting(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	keep_state_and_data;
 o_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	{next_state, exception, Data, 0};
 o_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
 		#statedata{did = DialogueID, ssf = SSF} = Data) ->
-erlang:display({?MODULE, ?LINE, _EventContent}),
 	?LOG_WARNING([{'TC', 'U-ERROR'},
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
@@ -1239,14 +1221,14 @@ nrf_release1(SI, Data) ->
 %% @hidden
 nrf_release2(SI, #statedata{call_info = #{cause := Cause}} = Data) ->
 	case Cause of
-		#{value := Value, location := Location, diagnostic := Diagnostic} ->
+		#cause{value = Value, location = Location, diagnostic = undefined} ->
+			IsupCause = #{"causeValue" => Value,
+					"causeLocation" => atom_to_list(Location)},
+			nrf_release3(SI#{"isupCause" => IsupCause}, Data);
+		#cause{value = Value, location = Location, diagnostic = Diagnostic} ->
 			IsupCause = #{"causeValue" => Value,
 					"causeLocation" => atom_to_list(Location),
 					"causeDiagnostics" => base64:encode(Diagnostic)},
-			nrf_release3(SI#{"isupCause" => IsupCause}, Data);
-		#{value := Value, location := Location} ->
-			IsupCause = #{"causeValue" => Value,
-					"causeLocation" => atom_to_list(Location)},
 			nrf_release3(SI#{"isupCause" => IsupCause}, Data)
 	end;
 nrf_release2(SI, Data) ->
