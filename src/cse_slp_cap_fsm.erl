@@ -221,7 +221,7 @@ authorize_origination_attempt(_EventType, _OldState, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
-collect_information(enter, _State, _Data) ->
+collect_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		dialogueID = DialogueID, invokeID = _InvokeID, lastComponent = true},
@@ -389,7 +389,7 @@ collect_information(info, {'EXIT', DHA, Reason},
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>analyse_information</em> state.
 %% @private
-analyse_information(enter, _State, _Data) ->
+analyse_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 analyse_information(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -531,7 +531,7 @@ analyse_information(info, {'EXIT', DHA, Reason},
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>terminating_call_handling</em> state.
 %% @private
-terminating_call_handling(enter, _State, _Data) ->
+terminating_call_handling(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 terminating_call_handling(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -813,7 +813,7 @@ terminating_call_handling(info, {'EXIT', DHA, Reason},
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>routing</em> state.
 %% @private
-routing(enter, _State, _Data) ->
+routing(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 routing(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -942,7 +942,7 @@ routing(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_alerting</em> state.
 %% @private
-o_alerting(enter, _State, _Data) ->
+o_alerting(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 o_alerting(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -1073,7 +1073,7 @@ o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>t_alerting</em> state.
 %% @private
-t_alerting(enter, _State, _Data) ->
+t_alerting(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 t_alerting(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -1192,7 +1192,7 @@ t_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_active</em> state.
 %% @private
-o_active(enter, _State, Data) ->
+o_active(enter, _EventContent, Data) ->
 	StartCharging = cse_log:iso8601(erlang:system_time(millisecond)),
 	{keep_state, Data#statedata{charging_start = StartCharging}};
 o_active(cast, {'TC', 'CONTINUE', indication,
@@ -1390,7 +1390,7 @@ o_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>t_active</em> state.
 %% @private
-t_active(enter, _State, Data) ->
+t_active(enter, _EventContent, Data) ->
 	StartCharging = cse_log:iso8601(erlang:system_time(millisecond)),
 	{keep_state, Data#statedata{charging_start = StartCharging}};
 t_active(cast, {'TC', 'CONTINUE', indication,
@@ -1588,9 +1588,9 @@ t_active(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>abandon</em> state.
 %% @private
-abandon(enter, #statedata{call_info = #{}} = _State, _Data) ->
+abandon(enter, #statedata{call_info = #{}} = _EventContent, _Data) ->
 	keep_state_and_data;
-abandon(enter, _State, _Data) ->
+abandon(enter, _EventContent, _Data) ->
 	{keep_state_and_data, 0};
 abandon(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -1693,9 +1693,9 @@ abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-disconnect(enter, #statedata{call_info = #{}} = _State, _Data) ->
+disconnect(enter, #statedata{call_info = #{}} = _EventContent, _Data) ->
 	keep_state_and_data;
-disconnect(enter, _State, _Data) ->
+disconnect(enter, _EventContent, _Data) ->
 	{keep_state_and_data, 0};
 disconnect(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,

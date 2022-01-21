@@ -206,7 +206,7 @@ null(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>authorize_attempt</em> state.
 %% @private
-authorize_attempt(enter, _State, _Data) ->
+authorize_attempt(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 authorize_attempt(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -219,7 +219,7 @@ authorize_attempt(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
-collect_information(enter, _State, _Data) ->
+collect_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 collect_information(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -232,7 +232,7 @@ collect_information(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>analyse_information</em> state.
 %% @private
-analyse_information(enter, _State, _Data) ->
+analyse_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 analyse_information(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -390,7 +390,7 @@ analyse_information(info, {'EXIT', DHA, Reason},
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>select_route</em> state.
 %% @private
-select_route(enter, _State, _Data) ->
+select_route(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 select_route(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -403,7 +403,7 @@ select_route(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>select_facility</em> state.
 %% @private
-select_facility(enter, _State, _Data) ->
+select_facility(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 select_facility(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -416,7 +416,7 @@ select_facility(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>authorize_call_setup</em> state.
 %% @private
-authorize_call_setup(enter, _State, _Data) ->
+authorize_call_setup(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 authorize_call_setup(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -429,7 +429,7 @@ authorize_call_setup(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>send_call</em> state.
 %% @private
-send_call(enter, _State, _Data) ->
+send_call(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 send_call(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -442,7 +442,7 @@ send_call(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>present_call</em> state.
 %% @private
-present_call(enter, _State, _Data) ->
+present_call(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 present_call(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -455,7 +455,7 @@ present_call(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_alerting</em> state.
 %% @private
-o_alerting(enter, _State, _Data) ->
+o_alerting(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 o_alerting(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
@@ -581,7 +581,7 @@ o_alerting(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>t_alerting</em> state.
 %% @private
-t_alerting(enter, _State, _Data) ->
+t_alerting(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 t_alerting(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -594,7 +594,7 @@ t_alerting(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_active</em> state.
 %% @private
-o_active(enter, _State, _Data) ->
+o_active(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 o_active(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -607,7 +607,7 @@ o_active(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>t_active</em> state.
 %% @private
-t_active(enter, _State, _Data) ->
+t_active(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 t_active(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -620,7 +620,7 @@ t_active(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>o_suspended</em> state.
 %% @private
-o_suspended(enter, _State, _Data) ->
+o_suspended(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 o_suspended(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -633,7 +633,7 @@ o_suspended(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>t_suspended</em> state.
 %% @private
-t_suspended(enter, _State, _Data) ->
+t_suspended(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 t_suspended(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -646,7 +646,7 @@ t_suspended(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>abandon</em> state.
 %% @private
-abandon(enter, _State, _Data) ->
+abandon(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 abandon(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
@@ -659,7 +659,7 @@ abandon(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-disconnect(enter, _State, _Data) ->
+disconnect(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 disconnect(_Event, _EventContent, _Data) ->
 	keep_state_and_data.
