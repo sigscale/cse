@@ -467,11 +467,11 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID, edp = EDP, iid = IID,
 		dha = DHA, cco = CCO} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #{eventTypeBCSM := routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -483,7 +483,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #{eventTypeBCSM := oAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -495,7 +495,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #{eventTypeBCSM := oNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -507,7 +507,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #{eventTypeBCSM := oCalledPartyBusy}}
 				when map_get(busy, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -690,7 +690,7 @@ exception(cast, {'TC', 'INVOKE', indication,
 				legID := {receivingSideID, Leg1}}}
 				when map_get(disconnect1, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -701,7 +701,7 @@ exception(cast, {'TC', 'INVOKE', indication,
 				legID := {receivingSideID, Leg2}}}
 				when map_get(disconnect2, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
