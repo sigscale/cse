@@ -954,6 +954,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID, edp = EDP, iid = IID,
 		dha = DHA, cco = CCO} = Data) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
@@ -969,6 +970,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
+erlang:display({?MODULE, ?LINE, oAbandon, EDP}),
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
@@ -978,6 +980,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, abandon, Data#statedata{iid = IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
+erlang:display({?MODULE, ?LINE, oAbandon, EDP}),
 			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
@@ -1596,13 +1599,16 @@ abandon(cast, {'TC', 'CONTINUE', indication,
 		#'TC-CONTINUE'{dialogueID = DialogueID,
 		componentsPresent = true}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	keep_state_and_data;
 abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID} = _Data) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
+erlang:display({?MODULE, ?LINE, ChargingResultArg}),
 			case 'CAMEL-datatypes':decode('PduCallResult', ChargingResultArg) of
 				{ok, {timeDurationChargingResult,
 						#'PduCallResult_timeDurationChargingResult'{}}} ->
@@ -1611,17 +1617,21 @@ abandon(cast, {'TC', 'INVOKE', indication,
 					{stop, Reason}
 			end;
 		{error, Reason} ->
+erlang:display({?MODULE, ?LINE, Reason}),
 			{stop, Reason}
 	end;
 abandon(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#statedata{did = DialogueID, nrf_location = undefined} = Data) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_CallInformationReportArg'{
 				requestedInformationList = CallInfo}} ->
+erlang:display({?MODULE, ?LINE, CallInfo}),
 			{next_state, null, call_info(CallInfo, Data)};
 		{error, Reason} ->
+erlang:display({?MODULE, ?LINE, Reason}),
 			{stop, Reason}
 	end;
 abandon(cast, {'TC', 'INVOKE', indication,
@@ -1633,17 +1643,21 @@ abandon(cast, {'TC', 'INVOKE', indication,
 				requestedInformationList = CallInfo}} ->
 			nrf_release(call_info(CallInfo, Data));
 		{error, Reason} ->
+erlang:display({?MODULE, ?LINE, Reason}),
 			{stop, Reason}
 	end;
 abandon(timeout,  _EventContent,
 		#statedata{nrf_location = Location} = Data)
 		when is_list(Location) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	nrf_release(Data);
 abandon(timeout,  _EventContent, Data) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	{next_state, null, Data};
 abandon(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#statedata{nrf_reqid = RequestId} = Data) ->
+erlang:display({?MODULE, ?LINE, nrf_release}),
 	NewData = Data#statedata{nrf_reqid = undefined},
 	{next_state, null, NewData};
 abandon(cast, {nrf_release,
@@ -1666,11 +1680,13 @@ abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
 abandon(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#statedata{did = DialogueID}) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	keep_state_and_data;
 abandon(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#statedata{did = DialogueID} = Data) ->
+erlang:display({?MODULE, ?LINE, _EventContent}),
 	nrf_release(Data);
 abandon(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
