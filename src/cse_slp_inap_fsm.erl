@@ -646,10 +646,94 @@ t_suspended(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>abandon</em> state.
 %% @private
-abandon(enter, _EventContent, _Data) ->
+abandon(enter, _EventContent, #statedata{call_info = #{}} = _Data) ->
 	keep_state_and_data;
-abandon(_Event, _EventContent, _Data) ->
-	keep_state_and_data.
+abandon(enter, _EventContent, _Data) ->
+	{keep_state_and_data, 0};
+abandon(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+abandon(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			keep_state_and_data;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+abandon(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID, nrf_location = undefined} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+			{next_state, null, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+abandon(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+			nrf_release(call_info(CallInfo, Data));
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+abandon(timeout, _EventContent,
+		#statedata{nrf_location = Location} = Data)
+		when is_list(Location) ->
+	nrf_release(Data);
+abandon(timeout, _EventContent, Data) ->
+	{next_state, null, Data};
+abandon(cast, {nrf_release,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, null, NewData};
+abandon(cast, {nrf_release,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, null, NewData};
+abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, null, NewData};
+abandon(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
+abandon(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	nrf_release(Data);
+abandon(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+		error = Error, parameters = Parameters}} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, abandon}, {ssf, SSF}]),
+	{next_state, null, Data};
+abandon(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
 
 -spec disconnect(EventType, EventContent, Data) -> Result
 	when
@@ -659,10 +743,91 @@ abandon(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-disconnect(enter, _EventContent, _Data) ->
+disconnect(enter, _EventContent, #statedata{call_info = #{}} = _Data) ->
 	keep_state_and_data;
-disconnect(_Event, _EventContent, _Data) ->
-	keep_state_and_data.
+disconnect(enter, _EventContent, _Data) ->
+	{keep_state_and_data, 0};
+disconnect(cast, {'TC', 'CONTINUE', indication,
+		#'TC-CONTINUE'{dialogueID = DialogueID,
+		componentsPresent = true}} = _EventContent,
+		#statedata{did = DialogueID} = _Data) ->
+	keep_state_and_data;
+disconnect(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID, consumed = Consumed,
+		pending = Pending} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, ChargingResultArg} ->
+			keep_state_and_data;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+disconnect(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID, nrf_location = undefined} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+			{next_state, null, call_info(CallInfo, Data)};
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+disconnect(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+		dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+			nrf_release(call_info(CallInfo, Data));
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+disconnect(timeout, _EventContent, Data) ->
+	nrf_release(Data);
+disconnect(cast, {nrf_release,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId} = Data) ->
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, null, NewData};
+disconnect(cast, {nrf_release,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, null, NewData};
+disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
+		#statedata{nrf_reqid = RequestId, nrf_profile = Profile,
+		nrf_uri = URI, nrf_location = Location} = Data) ->
+	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}]),
+	NewData = Data#statedata{nrf_reqid = undefined},
+	{next_state, null, NewData};
+disconnect(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#statedata{did = DialogueID}) ->
+	keep_state_and_data;
+disconnect(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+		componentsPresent = false}} = _EventContent,
+		#statedata{did = DialogueID} = Data) ->
+	nrf_release(Data);
+disconnect(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+		error = Error, parameters = Parameters}} = _EventContent,
+		#statedata{did = DialogueID, ssf = SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, disconnect}, {ssf, SSF}]),
+	{next_state, null, Data};
+disconnect(info, {'EXIT', DHA, Reason}, #statedata{dha = DHA} = _Data) ->
+	{stop, Reason}.
 
 -spec exception(EventType, EventContent, Data) -> Result
 	when
