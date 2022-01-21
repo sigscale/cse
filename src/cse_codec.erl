@@ -222,6 +222,8 @@ date_time(<<Y2:4, Y1:4, Y4:4, Y3:4, M2:4, M1:4, D2:4, D1:4,
 	Minute = (Min1 * 10) + Min2,
 	Second = (S1 * 10) + S2,
 	{{Year, Month, Day}, {Hour, Minute, Second}};
+date_time(DateAndTime) when byte_size(DateAndTime) == 6 ->
+	date_time(<<0:4, 2:4, DateAndTime/binary>>);
 date_time({{Year, Month, Day}, {Hour, Minute, Second}}) ->
 	Y1 = Year div 1000,
 	Y2 = (Year div 100) - (Y1 * 10),
