@@ -259,7 +259,7 @@ initial_dp_mt(Config) ->
 	receive
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
-	terminating_call_handling = get_state(TcUser).
+	t_alerting = get_state(TcUser).
 
 continue() ->
 	[{userdata, [{doc, "Continue received by SSF"}]}].
@@ -300,20 +300,21 @@ dp_arming(Config) ->
 		{'N', 'UNITDATA', request, UD} -> UD
 	end,
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
-	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
+	{ok, {'continue', Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#{components := Components} = Continue,
 	F1 = fun({basicROS, {invoke, #{opcode := OpCode}}})
 					when OpCode == ?'opcode-requestReportBCSMEvent' ->
 				true;
 			(_) -> false
 	end,
-	[{basicROS, {invoke, #{bcsmEvents := BCSMEvents}}}]
+	[{basicROS, {invoke, #{argument := Argument}}}]
 			= lists:filter(F1, Components),
 	F2 = fun(#{eventTypeBCSM := _EventTyep, monitorMode := _Mode}) ->
 				true;
 			(_) ->
 				false
 	end,
+	#{bcsmEvents := BCSMEvents} = Argument,
 	true = lists:all(F2, BCSMEvents).
 
 apply_charging() ->
@@ -335,13 +336,14 @@ apply_charging(Config) ->
 	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
 	{ok, {'continue',  Continue}} = ?Pkgs:decode(?PDUs, UserData2),
 	#{components := Components} = Continue,
-	F1 = fun({basicROS, {invoke, #{opcodse := OpCode}}})
+	F1 = fun({basicROS, {invoke, #{opcode := OpCode}}})
 					when OpCode == ?'opcode-applyCharging' ->
 				true;
 			(_) -> false
 	end,
-	[{basicROS, {invoke, #{argument := A}}}] = lists:filter(F1, Components),
-	{sendingSideID, ?leg1} = maps:get(partyToCharge, A).
+	[{basicROS, {invoke, #{argument := Argument}}}] = lists:filter(F1, Components),
+	{sendingSideID, ?leg1} = maps:get(partyToCharge, Argument),
+	<<0>> = maps:get(aChBillingChargingCharacteristics, Argument).
 
 call_info_request() ->
 	[{userdata, [{doc, "CallInformationRequest received by SSF"}]}].
