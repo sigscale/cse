@@ -16,6 +16,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 
+-record(gtt,
+		{num :: string() | '_' | '$1',
+		value :: term() | undefined | '_' | '$2'}).
+
 -record(resource,
 		{id :: string() | undefined | '_',
 		href :: string() | undefined | '_',
