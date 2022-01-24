@@ -27,6 +27,9 @@
 -export([add_resource/1]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
+-export([add_service/1, get_service/1, get_services/0, delete_service/1]).
+
+-export_type([event_type/0, monitor_mode/0]).
 
 -include("cse.hrl").
 -include_lib("inets/include/mod_auth.hrl").
@@ -347,6 +350,87 @@ add_resource2({atomic, #resource{} = NewResource}) ->
 add_resource2({aborted, Reason}) ->
 	{error, Reason}.
 
+-spec add_service(Service) -> Result
+	when
+		Service :: #service{},
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Create a new Service.
+add_service(#service{key = Key, module = Module, edp = Edp} = Service)
+		when is_integer(Key), is_atom(Module) ->
+	case is_edp(Edp) of
+		true ->
+			F = fun() ->
+					mnesia:write(Service)
+			end,
+			add_service1(mnesia:transaction(F));
+		false ->
+			{error, bad_arg}
+	end.
+%% @hidden
+add_service1({atomic, ok}) ->
+	ok;
+add_service1({aborted, Reason}) ->
+	{error, Reason}.
+
+-spec get_service(Key) -> Result
+	when
+		Key :: integer(),
+		Result :: {ok, #service{}} | {error, Reason},
+		Reason :: not_found | term().
+%% @doc Find a service by key.
+%%
+get_service(Key) when is_integer(Key) ->
+	F = fun() ->
+			mnesia:read(service, Key)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, [#service{} = Service]} ->
+			{ok, Service};
+		{atomic, []} ->
+			{error, not_found}
+	end.
+
+-spec get_services() -> Result
+	when
+		Result :: Services | {error, Reason},
+		Services :: [#service{}],
+		Reason :: term().
+%% @doc Get the all service records.
+get_services() ->
+	MatchSpec = [{'_', [], ['$_']}],
+	F = fun F(start, Acc) ->
+		F(mnesia:select(service, MatchSpec,
+				?CHUNKSIZE, read), Acc);
+		F('$end_of_table', Acc) ->
+				{ok, lists:flatten(lists:reverse(Acc))};
+		F({error, Reason}, _Acc) ->
+				{error, Reason};
+		F({Services, Cont}, Acc) ->
+				F(mnesia:select(Cont), [Services | Acc])
+	end,
+	case mnesia:ets(F, [start, []]) of
+		{error, Reason} ->
+			{error, Reason};
+		{ok, Result} ->
+			Result
+	end.
+
+-spec delete_service(Key) -> ok
+	when
+		Key :: integer().
+%% @doc Delete an entry from the service table.
+delete_service(Key) when is_integer(Key) ->
+	F = fun() ->
+		mnesia:delete(service, Key, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, _} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
@@ -425,3 +509,33 @@ match_condition(Var, {gt, Term}) ->
 match_condition(Var, {gte, Term}) ->
 	{'>=', Var, Term}.
 
+-type event_type() :: collected_info | analysed_info | route_fail
+		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
+		| abandon | term_attempt.
+-type monitor_mode() :: interrupted | notifyAndContinue | transparent.
+-spec is_edp(Edp) -> boolean()
+	when
+		Edp :: #{event_type() => monitor_mode()}.
+%% @doc Checks whether `Edp' is correct.
+%% @hidden
+is_edp(Edp) when is_map(Edp) ->
+	EventTypes = [collected_info, analysed_info, route_fail, busy, no_answer,
+			answer, mid_call, disconnect1, disconnect2, abandon, term_attempt],
+	F = fun(E) ->
+		lists:member(E, EventTypes)
+	end,
+	is_edp(lists:all(F, maps:keys(Edp)), Edp).
+%% @hidden
+is_edp(true, Edp) ->
+	MonitorModes = [interrupted, notifyAndContinue, transparent],
+	F = fun(E) ->
+		lists:member(E, MonitorModes)
+	end,
+	is_edp1(lists:all(F, maps:values(Edp)));
+is_edp(false, _Edp) ->
+	false.
+%% @hidden
+is_edp1(true) ->
+	true;
+is_edp1(false) ->
+	false.
