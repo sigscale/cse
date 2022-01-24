@@ -246,44 +246,52 @@ install3(Nodes, Acc) ->
 	end.
 %% @hidden
 install4(Nodes, Acc) ->
-	case application:load(inets) of
+	case create_table(service, Nodes) of
 		ok ->
-			error_logger:info_msg("Loaded inets.~n"),
-			install5(Nodes, Acc);
-		{error, {already_loaded, inets}} ->
-			install5(Nodes, Acc)
+			install5(Nodes, [service | Acc]);
+		{error, Reason} ->
+			{error, Reason}
 	end.
 %% @hidden
 install5(Nodes, Acc) ->
-	case is_mod_auth_mnesia() of
-		true ->
+	case application:load(inets) of
+		ok ->
+			error_logger:info_msg("Loaded inets.~n"),
 			install6(Nodes, Acc);
-		false ->
-			error_logger:info_msg("Httpd service not defined. "
-					"User table not created~n"),
-			install8(Nodes, Acc)
+		{error, {already_loaded, inets}} ->
+			install6(Nodes, Acc)
 	end.
 %% @hidden
 install6(Nodes, Acc) ->
-	case create_table(httpd_user, Nodes) of
-		ok ->
-			install7(Nodes, [httpd_user | Acc]);
-		{error, Reason} ->
-			{error, Reason}
+	case is_mod_auth_mnesia() of
+		true ->
+			install7(Nodes, Acc);
+		false ->
+			error_logger:info_msg("Httpd service not defined. "
+					"User table not created~n"),
+			install9(Nodes, Acc)
 	end.
 %% @hidden
 install7(Nodes, Acc) ->
-	case create_table(httpd_group, Nodes) of
+	case create_table(httpd_user, Nodes) of
 		ok ->
-			install8(Nodes, [httpd_group | Acc]);
+			install8(Nodes, [httpd_user | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-install8(_Nodes, Tables) ->
+install8(Nodes, Acc) ->
+	case create_table(httpd_group, Nodes) of
+		ok ->
+			install9(Nodes, [httpd_group | Acc]);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+install9(_Nodes, Tables) ->
 	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
 		ok ->
-			install9(Tables, lists:member(httpd_user, Tables));
+			install10(Tables, lists:member(httpd_user, Tables));
 		{timeout, Tables} ->
 			error_logger:error_report(["Timeout waiting for tables",
 					{tables, Tables}]),
@@ -294,21 +302,21 @@ install8(_Nodes, Tables) ->
 			{error, Reason}
 	end.
 %% @hidden
-install9(Tables, true) ->
+install10(Tables, true) ->
 	case inets:start() of
 		ok ->
 			error_logger:info_msg("Started inets.~n"),
-			install10(Tables);
+			install11(Tables);
 		{error, {already_started, inets}} ->
-			install10(Tables);
+			install11(Tables);
 		{error, Reason} ->
 			error_logger:error_msg("Failed to start inets~n"),
 			{error, Reason}
 	end;
-install9(Tables, false) ->
+install10(Tables, false) ->
 	{ok, Tables}.
 %% @hidden
-install10(Tables) ->
+install11(Tables) ->
 	case cse:list_users() of
 		{ok, []} ->
 			UserData = [{locale, "en"}],
@@ -349,6 +357,9 @@ install10(Tables) ->
 create_table(resource, Nodes) when is_list(Nodes) ->
 	create_table1(resource, mnesia:create_table(resource, [{disc_copies, Nodes},
 			{attributes, record_info(fields, resource)}]));
+create_table(service, Nodes) when is_list(Nodes) ->
+	create_table1(service, mnesia:create_table(service, [{disc_copies, Nodes},
+			{attributes, record_info(fields, service)}]));
 create_table(httpd_user, Nodes) when is_list(Nodes) ->
 	create_table1(httpd_user, mnesia:create_table(httpd_user, [{type, bag},
 			{disc_copies, Nodes}, {attributes, record_info(fields, httpd_user)}]));
