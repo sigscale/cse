@@ -74,9 +74,9 @@ suite() ->
 %% Initiation before the whole suite.
 %%
 init_per_suite(Config) ->
-	PrivDir = ?config(priv_dir, Config),
+	DataDir = ?config(data_dir, Config),
 	application:load(mnesia),
-	ok = application:set_env(mnesia, dir, PrivDir),
+	ok = application:set_env(mnesia, dir, DataDir),
 	{ok, [m3ua_asp, m3ua_as]} = m3ua_app:install(),
 	{ok, [gtt_ep,gtt_as,gtt_pc]} = gtt_app:install(),
 	ok = application:start(inets),
@@ -97,6 +97,9 @@ init_per_suite(Config) ->
 	ok = application:start(m3ua),
 	ok = application:start(tcap),
 	ok = application:start(gtt),
+{atomic, ok} = mnesia:create_table(service, [{attributes, [key, module, edp]}, {disc_copies, [node()]}]),
+EDP = #{route_fail => interrupted, busy => interrupted, no_answer => interrupted, abandon => notifyAndContinue, answer => notifyAndContinue, disconnect1 => interrupted, disconnect2 => interrupted},
+{atomic, ok} = mnesia:transaction(fun() -> mnesia:write(service, {service, 100, cse_slp_prepaid_inap_fsm, EDP}, write) end),
 	catch application:unload(cse),
 	ok = application:load(cse),
 	{ok, Cb} = application:get_env(cse, tsl_callback),
@@ -120,7 +123,8 @@ end_per_suite(_Config) ->
 	ok = application:stop(m3ua),
 	ok = application:stop(sigscale_mibs),
 	ok = application:stop(snmp),
-	ok = application:stop(inets).
+	ok = application:stop(inets),
+	ok = application:stop(mnesia).
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before each test case.
