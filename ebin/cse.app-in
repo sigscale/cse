@@ -10,6 +10,8 @@
 				cse_slp_sup,
 				cse_slp_cap_fsm,
 				cse_slp_inap_fsm,
+				cse_slp_prepaid_cap_fsm,
+				cse_slp_prepaid_inap_fsm,
 				cse_tco_server_cb,
 				cse_codec,
 				cse_log,

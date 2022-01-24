@@ -24,10 +24,10 @@ platform to support a network operator's customized service logic. The
 3GPP CAMEL Application Part (CAP) protocol is supported as well as ETSI
 INAP for wireline operators.
 
-This application provides a Service Execution Environment (SEE) for
-Service Logic Programs (SLP) implementing an operator's custom services.
-It is a highly concurrent SEE, with low resource requirements, supporting
-instantaneous SLP instantiation.
+This application provides a Service Logic Execution Environment (SLEE) for
+Service Logic Processing Programs (SLP) implementing an operator's custom
+services.  It is a highly concurrent SLEE, with low resource requirements,
+supporting instantaneous SLP instantiation.
 
 ===IN Service Processing Model===
 The IN arose from an inability of network operators to rapidly create
@@ -74,7 +74,7 @@ external Intelligent Peripheral (IP). The bearer channels of an
 IP are established with a Service Switching Point (SSP) using
 telephony signaling (i.e. ISUP).
 
-==Service Logic Programs (SLP)==
+==Service Logic Processing Programs (SLP)==
 The SLP instances (SLPI) are implemented as finte state machines
 with the {@link //stdlib/gen_statem. gen_statem} behaviour.
 
