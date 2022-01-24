@@ -24,11 +24,14 @@
 
 %% export the cse  public API
 -export([start/0, stop/0]).
+-export([add_resource/1]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
 
+-include("cse.hrl").
 -include_lib("inets/include/mod_auth.hrl").
 
+-define(PathInventory, "/resourceInventoryManagement/v4/").
 -define(CHUNKSIZE, 100).
 
 %%----------------------------------------------------------------------
@@ -305,6 +308,44 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 			end
 	end,
 	{Cont, lists:filter(F, Users)}.
+
+-spec add_resource(Resource) -> Result
+	when
+		Result :: {ok, Resource} | {error, Reason},
+		Reason :: term().
+%% @doc Create a new Resource.
+add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
+		specification = #specification_ref{id = "1"}} = Resource)
+		when is_list(Name) ->
+	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
+		[num, value] ->
+			add_resource1(Resource);
+		_ ->
+			exit(table_not_found)
+	end;
+add_resource(#resource{id = undefined, last_modified = undefined,
+		specification = #specification_ref{id = SpecId}} = Resource)
+		when SpecId /= "1" ->
+	add_resource1(Resource).
+%% @hidden
+add_resource1(#resource{} = Resource) ->
+	TS = erlang:system_time(millisecond),
+	N = erlang:unique_integer([positive]),
+	Id = integer_to_list(TS) ++ integer_to_list(N),
+	LM = {TS, N},
+	Href = ?PathInventory ++ "resource/" ++ Id,
+	NewResource = Resource#resource{id = Id,
+			href = Href, last_modified = LM},
+	F = fun() ->
+			ok = mnesia:write(NewResource),
+			NewResource
+	end,
+	add_resource2(mnesia:transaction(F)).
+%% @hidden
+add_resource2({atomic, #resource{} = NewResource}) ->
+	{ok, NewResource};
+add_resource2({aborted, Reason}) ->
+	{error, Reason}.
 
 %%----------------------------------------------------------------------
 %%  internal functions
