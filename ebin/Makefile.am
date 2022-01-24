@@ -16,7 +16,8 @@ beam_DATA = cse.beam \
 		cse_slp_inap_fsm.beam \
 		cse_tco_server_cb.beam \
 		cse_codec.beam \
-		cse_log.beam
+		cse_log.beam \
+		cse_gtt.beam
 
 %.beam:	$(top_srcdir)/src/%.erl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
