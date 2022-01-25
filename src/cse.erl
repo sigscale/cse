@@ -27,7 +27,7 @@
 -export([add_resource/1]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
--export([add_service/1, get_service/1, get_services/0, delete_service/1]).
+-export([add_service/3, get_service/1, get_services/0, delete_service/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 
@@ -350,27 +350,33 @@ add_resource2({atomic, #resource{} = NewResource}) ->
 add_resource2({aborted, Reason}) ->
 	{error, Reason}.
 
--spec add_service(Service) -> Result
+-type event_type() :: collected_info | analysed_info | route_fail
+		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
+		| abandon | term_attempt.
+-type monitor_mode() :: interrupted | notifyAndContinue | transparent.
+-spec add_service(Key, Module, Edp) -> Result
 	when
-		Service :: #service{},
-		Result :: ok | {error, Reason},
+		Key :: integer(),
+		Module :: atom(),
+		Edp :: #{event_type() => monitor_mode()},
+		Result :: {ok, #service{}} | {error, Reason},
 		Reason :: term().
 %% @doc Create a new Service.
-add_service(#service{key = Key, module = Module, edp = Edp} = Service)
-		when is_integer(Key), is_atom(Module) ->
+add_service(Key, Module, Edp) when is_integer(Key), is_atom(Module) ->
 	case is_edp(Edp) of
 		true ->
+			Service = #service{key = Key, module = Module, edp = Edp},
 			F = fun() ->
 					mnesia:write(Service)
 			end,
-			add_service1(mnesia:transaction(F));
+			add_service(mnesia:transaction(F), Service);
 		false ->
 			{error, bad_arg}
 	end.
 %% @hidden
-add_service1({atomic, ok}) ->
-	ok;
-add_service1({aborted, Reason}) ->
+add_service({atomic, ok}, Service) ->
+	{ok, Service};
+add_service({aborted, Reason}, _S) ->
 	{error, Reason}.
 
 -spec get_service(Key) -> Result
@@ -509,10 +515,6 @@ match_condition(Var, {gt, Term}) ->
 match_condition(Var, {gte, Term}) ->
 	{'>=', Var, Term}.
 
--type event_type() :: collected_info | analysed_info | route_fail
-		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
-		| abandon | term_attempt.
--type monitor_mode() :: interrupted | notifyAndContinue | transparent.
 -spec is_edp(Edp) -> boolean()
 	when
 		Edp :: #{event_type() => monitor_mode()}.
