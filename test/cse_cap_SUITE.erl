@@ -98,6 +98,7 @@ init_per_suite(Config) ->
 	ok = application:start(tcap),
 	ok = application:start(gtt),
 	catch application:unload(cse),
+	{ok, _} = cse_app:install(),
 	ok = application:load(cse),
 	{ok, Cb} = application:get_env(cse, tsl_callback),
 	Callback = callback(Cb),
@@ -107,6 +108,14 @@ init_per_suite(Config) ->
 	ok = application:set_env(cse, nrf_uri,
 			"http://localhost:" ++ integer_to_list(HttpdPort)),
 	ok = application:start(cse),
+	EDP = #{abandon => notifyAndContinue,
+			answer => notifyAndContinue,
+			busy => interrupted,
+			disconnect1 => interrupted,
+			disconnect2 => interrupted,
+			no_answer => interrupted,
+			route_fail => interrupted},
+	{ok, _} = cse:add_service(100, cse_slp_prepaid_cap_fsm, EDP),
 	{ok, TCO} = application:get_env(cse, tsl_name),
 	[{tco, TCO}, {orig_cb, Cb} | Config].
 
