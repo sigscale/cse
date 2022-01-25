@@ -59,6 +59,7 @@
 		cco => pid() | undefined,
 		did => 0..4294967295 | undefined,
 		ac => tuple() | undefined,
+		tr_state => idle | init_sent | init_received | active,
 		scf => sccp_codec:party_address() | undefined,
 		ssf => sccp_codec:party_address() | undefined}.
 
@@ -116,7 +117,7 @@ null(cast, {'TC', 'BEGIN', indication,
 				destAddress = DestAddress, origAddress = OrigAddress,
 				componentsPresent = true, userInfo = _UserInfo}} = _EventContent,
 		Data) when not is_map_key(did, Data) ->
-	NewData = Data#{did => DialogueID, ac => AC,
+	NewData = Data#{did => DialogueID, ac => AC, tr_state => init_received,
 			scf => DestAddress, ssf => OrigAddress},
 	{keep_state, NewData};
 null(cast, {'TC', 'INVOKE', indication,

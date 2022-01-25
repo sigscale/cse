@@ -91,6 +91,7 @@
 		did => 0..4294967295 | undefined,
 		iid => 0..127,
 		ac => tuple() | undefined,
+		tr_state => idle | init_sent | init_received | active,
 		scf => sccp_codec:party_address() | undefined,
 		ssf => sccp_codec:party_address() | undefined,
 		direction => originating | terminating | undefined,
@@ -156,19 +157,22 @@ init(_Args) ->
 %% @private
 null(enter, null, _Data) ->
 	keep_state_and_data;
-null(enter, _OldState,
-		#{iid := IID, did := DialogueID, ac := AC, dha := DHA})
-		when IID < 4 -> % @todo add tr state to Data
+null(enter, _EventContent,
+		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
+	End = #'TC-END'{dialogueID = DialogueID,
+			qos = {true, true}, termination = basic},
+	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+	NewData = Data#{tr_state => idle},
+	{keep_state, NewData};
+null(enter, _EventContent,
+		#{tr_state := init_received, did := DialogueID,
+				ac := AC, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	keep_state_and_data;
-null(enter, _OldState, #{did := DialogueID, dha := DHA}) ->
-	End = #'TC-END'{dialogueID = DialogueID,
-			qos = {true, true}, termination = basic},
-	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	keep_state_and_data;
+	NewData = Data#{tr_state => idle},
+	{keep_state, NewData};
 null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				dialogueID = DialogueID},
 				#{eventTypeBCSM := analysedInformation}} = EventContent,
@@ -264,7 +268,8 @@ analyse_information(cast, {nrf_start,
 				{_, Location}} when is_list(Location) ->
 			Data1 = maps:remove(nrf_reqid, Data),
 			Data2 = maps:remove(nrf_location, Data1),
-			NewData = Data2#{iid => IID + 4, call_info => #{}},
+			NewData = Data2#{iid => IID + 4,
+					call_info => #{}, tr_state => active},
 			BCSMEvents = [#{eventTypeBCSM => routeSelectFailure,
 							monitorMode => map_get(route_fail, EDP)},
 					#{eventTypeBCSM => oCalledPartyBusy,
@@ -424,7 +429,7 @@ select_facility(cast, {nrf_start,
 				{_, Location}} when is_list(Location) ->
 			Data1 = maps:remove(nrf_reqid, Data),
 			NewData = Data1#{iid => IID + 4, call_info => #{},
-					nrf_location => Location},
+					nrf_location => Location, tr_state => active},
 			BCSMEvents = [#{eventTypeBCSM => routeSelectFailure,
 							monitorMode => map_get(route_fail, EDP)},
 					#{eventTypeBCSM => oCalledPartyBusy,
@@ -648,7 +653,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, o_active, Data#{iid => IID + 1}};
+			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #{eventTypeBCSM := oAnswer}} ->
 			{next_state, o_active, Data};
 		{error, Reason} ->
@@ -762,7 +767,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, t_active, Data#{iid => IID + 1}};
+			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #{eventTypeBCSM := tAnswer}} ->
 			{next_state, t_active, Data};
 		{error, Reason} ->
@@ -899,7 +904,7 @@ o_active(cast, {nrf_update,
 				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
 					Data1 = maps:remove(nrf_reqid, Data),
-					NewData = Data1#{iid => NewIID},
+					NewData = Data1#{iid => NewIID, tr_state => active},
 					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ApplyChargingArg',
 							#{aChBillingChargingCharacteristics => <<0>>,
 							partyToCharge => {sendingSideID, ?leg1}}),
@@ -1082,7 +1087,7 @@ t_active(cast, {nrf_update,
 				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
 					Data1 = maps:remove(nrf_reqid, Data),
-					NewData = Data1#{iid => NewIID},
+					NewData = Data1#{iid => NewIID, tr_state => active},
 					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ApplyChargingArg',
 							#{aChBillingChargingCharacteristics => <<0>>,
 							partyToCharge => {sendingSideID, ?leg2}}),
