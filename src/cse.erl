@@ -354,9 +354,10 @@ add_resource2({aborted, Reason}) ->
 		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
 		| abandon | term_attempt.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
+
 -spec add_service(Key, Module, Edp) -> Result
 	when
-		Key :: integer(),
+		Key :: 1..4294967295,
 		Module :: atom(),
 		Edp :: #{event_type() => monitor_mode()},
 		Result :: {ok, #service{}} | {error, Reason},
@@ -381,7 +382,7 @@ add_service({aborted, Reason}, _S) ->
 
 -spec get_service(Key) -> Result
 	when
-		Key :: integer(),
+		Key :: 1..4294967295,
 		Result :: {ok, #service{}} | {error, Reason},
 		Reason :: not_found | term().
 %% @doc Find a service by key.
@@ -424,7 +425,7 @@ get_services() ->
 
 -spec delete_service(Key) -> ok
 	when
-		Key :: integer().
+		Key :: 1..4294967295,
 %% @doc Delete an entry from the service table.
 delete_service(Key) when is_integer(Key) ->
 	F = fun() ->
