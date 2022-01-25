@@ -355,18 +355,25 @@ add_resource2({aborted, Reason}) ->
 		| abandon | term_attempt.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
 
--spec add_service(Key, Module, Edp) -> Result
+-spec add_service(Key, Module, EDP) -> Result
 	when
 		Key :: 1..4294967295,
 		Module :: atom(),
-		Edp :: #{event_type() => monitor_mode()},
+		EDP :: #{event_type() => monitor_mode()},
 		Result :: {ok, #service{}} | {error, Reason},
 		Reason :: term().
-%% @doc Create a new Service.
-add_service(Key, Module, Edp) when is_integer(Key), is_atom(Module) ->
-	case is_edp(Edp) of
+%% @doc Add a Service Logic Processing Program (SLP).
+%%
+%% 	The `serviceKey' of an `InitialDP' identifies the IN service
+%% 	logic which should be provided for the call.  An SLP is
+%%		implemented in a `Module'. Event Detection Points (`EDP')
+%% 	required by the SLP are provided to control the `SSF'.
+%%
+add_service(Key, Module, EDP) when is_integer(Key),
+		is_atom(Module), is_map(EDP)  ->
+	case is_edp(EDP) of
 		true ->
-			Service = #service{key = Key, module = Module, edp = Edp},
+			Service = #service{key = Key, module = Module, edp = EDP},
 			F = fun() ->
 					mnesia:write(Service)
 			end,
@@ -516,26 +523,26 @@ match_condition(Var, {gt, Term}) ->
 match_condition(Var, {gte, Term}) ->
 	{'>=', Var, Term}.
 
--spec is_edp(Edp) -> boolean()
+-spec is_edp(EDP) -> boolean()
 	when
-		Edp :: #{event_type() => monitor_mode()}.
-%% @doc Checks whether `Edp' is correct.
+		EDP :: #{event_type() => monitor_mode()}.
+%% @doc Checks whether `EDP' is correct.
 %% @hidden
-is_edp(Edp) when is_map(Edp) ->
+is_edp(EDP) when is_map(EDP) ->
 	EventTypes = [collected_info, analysed_info, route_fail, busy, no_answer,
 			answer, mid_call, disconnect1, disconnect2, abandon, term_attempt],
 	F = fun(E) ->
 		lists:member(E, EventTypes)
 	end,
-	is_edp(lists:all(F, maps:keys(Edp)), Edp).
+	is_edp(lists:all(F, maps:keys(EDP)), EDP).
 %% @hidden
-is_edp(true, Edp) ->
+is_edp(true, EDP) ->
 	MonitorModes = [interrupted, notifyAndContinue, transparent],
 	F = fun(E) ->
 		lists:member(E, MonitorModes)
 	end,
-	is_edp1(lists:all(F, maps:values(Edp)));
-is_edp(false, _Edp) ->
+	is_edp1(lists:all(F, maps:values(EDP)));
+is_edp(false, _EDP) ->
 	false.
 %% @hidden
 is_edp1(true) ->
