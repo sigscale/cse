@@ -51,6 +51,7 @@
 %% export the callbacks for gen_statem states.
 -export([null/3]).
 
+-include("cse.hrl").
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
 -include_lib("inap/include/CS2-operationcodes.hrl").
@@ -131,7 +132,7 @@ null(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_InitialDPArg', Argument) of
 		{ok, #{serviceKey := ServiceKey} = InitialDPArg} ->
 			case cse:get_service(ServiceKey) of
-				{ok, {service, ServiceKey, CbModule, EDP}}
+				{ok, #service{key = ServiceKey, module = CbModule, edp = EDP}}
 						when is_atom(CbModule), is_map(EDP) ->
 					NewData = Data#{edp => EDP},
 					Actions = [{push_callback_module, CbModule},
