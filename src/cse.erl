@@ -425,7 +425,7 @@ get_services() ->
 
 -spec delete_service(Key) -> ok
 	when
-		Key :: 1..4294967295,
+		Key :: 1..4294967295.
 %% @doc Delete an entry from the service table.
 delete_service(Key) when is_integer(Key) ->
 	F = fun() ->
