@@ -129,17 +129,14 @@ null(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 				serviceKey = ServiceKey} = InitialDPArg}
 				when is_integer(ServiceKey) ->
-			F = fun() ->
-					mnesia:read(service, ServiceKey, read)
-			end,
-			case mnesia:async_dirty(F) of
-				[{service, ServiceKey, CbModule, EDP}]
+			case cse:get_service(ServiceKey) of
+				{ok, {service, ServiceKey, CbModule, EDP}}
 						when is_atom(CbModule), is_map(EDP) ->
 					NewData = Data#{edp => EDP},
 					Actions = [{push_callback_module, CbModule},
 							{next_event, internal, {Invoke, InitialDPArg}}],
 					{keep_state, NewData, Actions};
-				[] ->
+				{error, not_found} ->
 					Error = #'TC-U-ERROR'{dialogueID = DialogueID,
 							invokeID = InvokeID,
 							error = ?'errcode-missingCustomerRecord'},

@@ -63,3 +63,8 @@
 		value :: term() | undefined | '_'}).
 -type resource_char() :: #resource_char{}.
 
+-record(service,
+		{key :: 1..4294967295,
+		module :: atom(),
+		edp :: #{cse:event_type() => cse:monitor_mode()}}).
+
