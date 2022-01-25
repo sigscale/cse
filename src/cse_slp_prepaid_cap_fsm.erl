@@ -156,18 +156,21 @@ init(_Args) ->
 null(enter, null = _EventContent, _Data) ->
 	keep_state_and_data;
 null(enter, _EventContent,
-		#{iid := IID, did := DialogueID, ac := AC, dha := DHA})
-		when IID < 4 -> % @todo add tr state to Data
+		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
+	End = #'TC-END'{dialogueID = DialogueID,
+			qos = {true, true}, termination = basic},
+	gen_statem:cast(DHA, {'TC', 'END', request, End}),
+	NewData = Data#{tr_state => idle},
+	{keep_state, NewData};
+null(enter, _EventContent,
+		#{tr_state := init_received, did := DialogueID,
+				ac := AC, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			appContextName = AC, qos = {true, true},
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	keep_state_and_data;
-null(enter, _OldState, #{did := DialogueID, dha := DHA}) ->
-	End = #'TC-END'{dialogueID = DialogueID,
-			qos = {true, true}, termination = basic},
-	gen_statem:cast(DHA, {'TC', 'END', request, End}),
-	keep_state_and_data;
+	NewData = Data#{tr_state => idle},
+	{keep_state, NewData};
 null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				dialogueID = DialogueID},
 				#'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
@@ -266,7 +269,8 @@ collect_information(cast, {nrf_start,
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
 			Data1 = maps:remove(nrf_reqid, Data),
-			NewData = Data1#{iid => IID + 4, call_info => #{}, nrf_location => Location},
+			NewData = Data1#{iid => IID + 4, call_info => #{},
+					nrf_location => Location, tr_state => active},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = routeSelectFailure,
 							monitorMode = map_get(route_fail, EDP)},
@@ -407,7 +411,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, routing, Data#{iid => IID + 1}};
+			{next_state, routing, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = analyzedInformation}} ->
 			{next_state, routing, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}}
@@ -429,7 +433,7 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, o_active, Data#{iid => IID + 1}};
+			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}}
@@ -607,7 +611,7 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, t_alerting, Data#{iid => IID + 1}};
+			{next_state, t_alerting, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = callAccepted}} ->
 			{next_state, t_alerting, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}}
@@ -617,7 +621,7 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, t_active, Data#{iid => IID + 1}};
+			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
 			{next_state, t_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}}
@@ -673,7 +677,8 @@ terminating_call_handling(cast, {nrf_start,
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
 			Data1 = maps:remove(nrf_reqid, Data),
-			NewData = Data1#{iid => IID + 4, call_info => #{}, nrf_location => Location},
+			NewData = Data1#{iid => IID + 4, call_info => #{},
+					nrf_location => Location, tr_state => active},
 			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
 							eventTypeBCSM = tBusy,
 							monitorMode =  map_get(busy, EDP)},
@@ -844,7 +849,7 @@ routing(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, o_alerting, Data#{iid => IID + 1}};
+			{next_state, o_alerting, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oTermSeized}} ->
 			{next_state, o_alerting, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}}
@@ -878,7 +883,7 @@ routing(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, o_active, Data#{iid => IID + 1}};
+			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
 		{error, Reason} ->
@@ -1009,7 +1014,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, o_active, Data#{iid => IID + 1}};
+			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
 			{next_state, o_active, Data};
 		{error, Reason} ->
@@ -1128,7 +1133,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, t_active, Data#{iid => IID + 1}};
+			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
 			{next_state, t_active, Data};
 		{error, Reason} ->
@@ -1283,7 +1288,7 @@ o_active(cast, {nrf_update,
 				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
 					Data1 = maps:remove(nrf_reqid, Data),
-					NewData = Data1#{iid => NewIID},
+					NewData = Data1#{iid => NewIID, tr_state => active},
 					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
 							maxCallPeriodDuration = GrantedTime * 10},
 					{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
@@ -1483,7 +1488,7 @@ t_active(cast, {nrf_update,
 				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
 					Data1 = maps:remove(nrf_reqid, Data),
-					NewData = Data1#{iid => NewIID},
+					NewData = Data1#{iid => NewIID, tr_state => active},
 					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
 							maxCallPeriodDuration = GrantedTime * 10},
 					{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
