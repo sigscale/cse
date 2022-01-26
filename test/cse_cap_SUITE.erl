@@ -108,9 +108,10 @@ init_per_suite(Config) ->
 			disconnect2 => interrupted,
 			no_answer => interrupted,
 			route_fail => interrupted},
-	{ok, _} = cse:add_service(100, cse_slp_prepaid_cap_fsm, EDP),
+	ServiceKey = rand:uniform(2147483647),
+	{ok, _} = cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, EDP),
 	{ok, TCO} = application:get_env(cse, tsl_name),
-	[{tco, TCO}, {orig_cb, Cb} | Config].
+	[{tco, TCO}, {orig_cb, Cb}, {service_key, ServiceKey} | Config].
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
 %% Cleanup after the whole suite.
@@ -153,13 +154,14 @@ start_dialogue() ->
 	[{userdata, [{doc, "Start a TCAP Dialogue"}]}].
 
 start_dialogue(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -188,13 +190,14 @@ end_dialogue() ->
 	[{userdata, [{doc, "End a TCAP Dialogue"}]}].
 
 end_dialogue(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -219,13 +222,14 @@ initial_dp_mo() ->
 	[{userdata, [{doc, "MO InitialDP received by SLPI"}]}].
 
 initial_dp_mo(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -240,13 +244,14 @@ initial_dp_mt() ->
 	[{userdata, [{doc, "MT InitialDP received by SLPI"}]}].
 
 initial_dp_mt(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -261,13 +266,14 @@ continue() ->
 	[{userdata, [{doc, "Continue received by SSF"}]}].
 
 continue(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -284,13 +290,14 @@ dp_arming() ->
 	[{userdata, [{doc, "RequestReportBCSMEvent received by SSF"}]}].
 
 dp_arming(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -319,13 +326,14 @@ apply_charging() ->
 	[{userdata, [{doc, "ApplyCharging received by SSF"}]}].
 
 apply_charging(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -352,13 +360,14 @@ call_info_request() ->
 	[{userdata, [{doc, "CallInformationRequest received by SSF"}]}].
 
 call_info_request(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -388,13 +397,14 @@ mo_abandon() ->
 	[{userdata, [{doc, "EventReportBCSM:oAbandon received by SCF"}]}].
 
 mo_abandon(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -423,13 +433,14 @@ mt_abandon() ->
 	[{userdata, [{doc, "EventReportBCSM:tAbandon received by SCF"}]}].
 
 mt_abandon(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -458,13 +469,14 @@ mo_answer() ->
 	[{userdata, [{doc, "EventReportBCSM:oAnswer received by SCF"}]}].
 
 mo_answer(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -486,13 +498,14 @@ mt_answer() ->
 	[{userdata, [{doc, "EventReportBCSM:tAnswer received by SCF"}]}].
 
 mt_answer(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -514,13 +527,14 @@ mo_disconnect() ->
 	[{userdata, [{doc, "EventReportBCSM:oDisconnect received by SCF"}]}].
 
 mo_disconnect(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -552,13 +566,14 @@ mt_disconnect() ->
 	[{userdata, [{doc, "EventReportBCSM:tDisconnect received by SCF"}]}].
 
 mt_disconnect(Config) ->
+	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
 	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -746,7 +761,7 @@ unitdata(UserData, CalledParty, CallingParty) ->
 			calledAddress = CalledParty,
 			callingAddress = CallingParty}.
 
-pdu_initial_mo(OTID, AC) ->
+pdu_initial_mo(OTID, AC, ServiceKey) ->
 	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
 	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
 			{dialogueRequest, AARQ}),
@@ -761,7 +776,7 @@ pdu_initial_mo(OTID, AC) ->
 			cellGlobalIdOrServiceAreaIdOrLAI =
 			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
 	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
-			serviceKey = 100,
+			serviceKey = ServiceKey,
 			callingPartyNumber = isup_calling_party(),
 			callingPartysCategory = <<10>>,
 			locationNumber = isup_calling_party(),
@@ -785,7 +800,7 @@ pdu_initial_mo(OTID, AC) ->
 	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
 	UD.
 
-pdu_initial_mt(OTID, AC) ->
+pdu_initial_mt(OTID, AC, ServiceKey) ->
 	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
 	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
 			{dialogueRequest, AARQ}),
@@ -800,7 +815,7 @@ pdu_initial_mt(OTID, AC) ->
 			cellGlobalIdOrServiceAreaIdOrLAI =
 			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
 	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
-			serviceKey = 100,
+			serviceKey = ServiceKey,
 			calledPartyNumber = isup_called_party(),
 			callingPartyNumber = isup_calling_party(),
 			callingPartysCategory = <<10>>,
