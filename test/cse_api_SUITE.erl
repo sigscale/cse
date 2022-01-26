@@ -48,26 +48,15 @@ init_per_suite(Config) ->
 	PrivDir = ?config(priv_dir, Config),
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, PrivDir),
-	{ok, [m3ua_asp, m3ua_as]} = m3ua_app:install(),
-	{ok,[gtt_ep,gtt_as,gtt_pc]} = gtt_app:install(),
-	ok = application:start(inets),
-	ok = application:start(snmp),
-	ok = application:start(sigscale_mibs),
-	ok = application:start(m3ua),
-	ok = application:start(tcap),
-	ok = application:start(gtt),
+	ok = cse_test_lib:init_tables(),
+	ok = cse_test_lib:start([inets, snmp, sigscale_mibs, m3ua, tcap, gtt]),
 	Config.
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
 %% Cleanup after the whole suite.
 %%
 end_per_suite(_Config) ->
-	ok = application:stop(gtt),
-	ok = application:stop(tcap),
-	ok = application:stop(m3ua),
-	ok = application:stop(sigscale_mibs),
-	ok = application:stop(snmp),
-	ok = application:stop(inets).
+	ok = cse_test_lib:stop().
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before each test case.
