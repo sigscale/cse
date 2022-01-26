@@ -357,7 +357,7 @@ add_resource2({aborted, Reason}) ->
 
 -spec add_service(Key, Module, EDP) -> Result
 	when
-		Key :: 1..4294967295,
+		Key :: 0..2147483647,
 		Module :: atom(),
 		EDP :: #{event_type() => monitor_mode()},
 		Result :: {ok, #service{}} | {error, Reason},
