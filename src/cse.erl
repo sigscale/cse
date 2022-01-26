@@ -389,7 +389,7 @@ add_service({aborted, Reason}, _S) ->
 
 -spec get_service(Key) -> Result
 	when
-		Key :: 1..4294967295,
+		Key :: 0..2147483647,
 		Result :: {ok, #service{}} | {error, Reason},
 		Reason :: not_found | term().
 %% @doc Find a service by key.
@@ -432,7 +432,7 @@ get_services() ->
 
 -spec delete_service(Key) -> ok
 	when
-		Key :: 1..4294967295.
+		Key :: 0..2147483647.
 %% @doc Delete an entry from the service table.
 delete_service(Key) when is_integer(Key) ->
 	F = fun() ->
