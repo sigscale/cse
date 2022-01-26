@@ -1,3 +1,9 @@
+January 26, 2022
+----------------
+	- ETSI INAP support
+	- Service Key table for dynamic local SLP modules
+	- SLP modules seperate from from cap/inap modules
+
 March 22, 2021
 -------------
 	- live network testing

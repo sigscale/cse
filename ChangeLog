@@ -1,3 +1,56 @@
+2022-01-26  Vance Shipley <vances@sigscale.org>
+
+	* random servive keys in test suites
+	* beams depend on includes
+	* correct service key value range
+	* table initialization and application start using test lib
+	* test utility library
+	* add service key to slp map in test suites
+	* api documentation updates
+	* change add_service/1 to add_service/3
+	* use service record
+	* track transaction state
+	* use public erlang api of service
+	* service table is initialized during install
+	* erlang api for service
+	* install service table
+	* introduce service record
+	* make cse record specs
+	* update slp and slee wording
+	* initial and service specific gen_statem callback modules
+	* erlang api for gtt table
+	* new module for gtt erlang api
+	* record definition for gtt table
+	* erlang api to add resource
+	* erlang api to handle httpd_user table
+	* add httpd service configurations
+	* install resource, httpd_user and httpd_group tables
+	* erlang api record spec with resource record
+	* port terminating handling from cap to inap
+	* remove debug
+	* inap date and time is six bytes (yymmddhhmmss)
+	* parse cause as record, not map
+	* test: expect alerting state after mo
+	* inap abondon and disconnect state handlers
+	* correct call_info pattern in enter clause
+	* rename variable in state enter clauses
+	* generic pdus in inap, not gsm
+	* voice call service (vcs) context in nrf
+	* test: event type in inap initialdp
+	* analyse/analyze spelling difference cap/inap
+	* stay in null state until initialdp
+	* add missing o-bcsm state
+	* update test specification with new suite names
+	* test suite for inap
+	* rename test suite for cap specific
+	* require inap v1.0.9
+	* handle tcap continue and u-error in analyse_information state
+	* missing arrow in inap o-bcsm diagram
+	* alerting state in originating call inap slp fsm
+	* exception handling state in inap slp fsm
+	* default nrf_uri example with full path
+	* port nrf handlers from cap to inap slp fsm
+
 2021-11-14  Vance Shipley <vances@sigscale.org>
 
 	* initial inap support
