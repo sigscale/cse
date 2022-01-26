@@ -77,8 +77,13 @@ init_per_suite(Config) ->
 	DataDir = ?config(data_dir, Config),
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, DataDir),
-	{ok, [m3ua_asp, m3ua_as]} = m3ua_app:install(),
-	{ok, [gtt_ep,gtt_as,gtt_pc]} = gtt_app:install(),
+	catch application:unload(cse),
+	ok = application:load(cse),
+	{ok, Cb} = application:get_env(cse, tsl_callback),
+	Callback = callback(Cb),
+	ok = application:set_env(cse, tsl_callback, Callback),
+	{ok, TslArgs} = application:get_env(cse, tsl_args),
+	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
 	ok = application:start(inets),
 	HttpdPort = case inets:start(httpd,
 			[{port, 0},
@@ -92,22 +97,10 @@ init_per_suite(Config) ->
 		{error, InetsReason} ->
 			ct:fail(InetsReason)
 	end,
-	ok = application:start(snmp),
-	ok = application:start(sigscale_mibs),
-	ok = application:start(m3ua),
-	ok = application:start(tcap),
-	ok = application:start(gtt),
-	catch application:unload(cse),
-	{ok, _} = cse_app:install(),
-	ok = application:load(cse),
-	{ok, Cb} = application:get_env(cse, tsl_callback),
-	Callback = callback(Cb),
-	ok = application:set_env(cse, tsl_callback, Callback),
-	{ok, TslArgs} = application:get_env(cse, tsl_args),
-	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
 	ok = application:set_env(cse, nrf_uri,
 			"http://localhost:" ++ integer_to_list(HttpdPort)),
-	ok = application:start(cse),
+	ok = cse_test_lib:init_tables(),
+	ok = cse_test_lib:start(),
 	EDP = #{abandon => notifyAndContinue,
 			answer => notifyAndContinue,
 			busy => interrupted,
@@ -123,14 +116,7 @@ init_per_suite(Config) ->
 %% Cleanup after the whole suite.
 %%
 end_per_suite(_Config) ->
-	ok = application:stop(cse),
-	ok = application:stop(gtt),
-	ok = application:stop(tcap),
-	ok = application:stop(m3ua),
-	ok = application:stop(sigscale_mibs),
-	ok = application:stop(snmp),
-	ok = application:stop(inets),
-	ok = application:stop(mnesia).
+	ok = cse_test_lib:stop().
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before each test case.
