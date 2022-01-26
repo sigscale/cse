@@ -21,7 +21,7 @@ beam_DATA = cse.beam \
 		cse_log.beam \
 		cse_gtt.beam
 
-%.beam:	$(top_srcdir)/src/%.erl
+%.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
 
 %.app:   %.app-in
