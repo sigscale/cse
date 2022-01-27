@@ -27,7 +27,7 @@
 -export([add_resource/1]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
--export([add_service/3, get_service/1, get_services/0, delete_service/1]).
+-export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 
@@ -387,14 +387,14 @@ add_service({atomic, ok}, Service) ->
 add_service({aborted, Reason}, _S) ->
 	{error, Reason}.
 
--spec get_service(Key) -> Result
+-spec find_service(Key) -> Result
 	when
 		Key :: 0..2147483647,
 		Result :: {ok, #service{}} | {error, Reason},
 		Reason :: not_found | term().
 %% @doc Find a service by key.
 %%
-get_service(Key) when is_integer(Key) ->
+find_service(Key) when is_integer(Key) ->
 	F = fun() ->
 			mnesia:read(service, Key)
 	end,
@@ -402,7 +402,9 @@ get_service(Key) when is_integer(Key) ->
 		{atomic, [#service{} = Service]} ->
 			{ok, Service};
 		{atomic, []} ->
-			{error, not_found}
+			{error, not_found};
+		{aborted, Reason} ->
+			{error, Reason}
 	end.
 
 -spec get_services() -> Result
