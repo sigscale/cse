@@ -45,6 +45,7 @@ suite() ->
 %% Initiation before the whole suite.
 %%
 init_per_suite(Config) ->
+	catch application:unload(mnesia),
 	PrivDir = ?config(priv_dir, Config),
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, PrivDir),

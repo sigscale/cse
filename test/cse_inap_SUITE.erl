@@ -74,7 +74,8 @@ suite() ->
 %% Initiation before the whole suite.
 %%
 init_per_suite(Config) ->
-	DataDir = ?config(data_dir, Config),
+	catch application:unload(mnesia),
+	DataDir = ?config(priv_dir, Config),
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, DataDir),
 	catch application:unload(cse),
@@ -84,7 +85,7 @@ init_per_suite(Config) ->
 	ok = application:set_env(cse, tsl_callback, Callback),
 	{ok, TslArgs} = application:get_env(cse, tsl_args),
 	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
-	ok = application:start(inets),
+	catch application:start(inets),
 	HttpdPort = case inets:start(httpd,
 			[{port, 0},
 			{server_name, atom_to_list(?MODULE)},
