@@ -18,7 +18,8 @@ modhtml = cse.html \
 		cse_log.html \
 		cse_gtt.html \
 		cse_rest.html \
-		mod_cse_rest_accepted_content.html
+		mod_cse_rest_accepted_content.html \
+		mod_cse_rest_get.html
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \
