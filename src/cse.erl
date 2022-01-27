@@ -1,7 +1,7 @@
 %%% cse.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2021 SigScale Global Inc.
+%%% @copyright 2021-2022 SigScale Global Inc.
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 %%%   {@link //cse. cse} application.
 %%%
 -module(cse).
--copyright('Copyright (c) 2021 SigScale Global Inc.').
+-copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse  public API
@@ -28,7 +28,7 @@
 		query_resource/5]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
--export([add_service/3, get_service/1, get_services/0, delete_service/1]).
+-export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 
@@ -509,7 +509,7 @@ query_resource5('$end_of_table') ->
 
 -spec add_service(Key, Module, EDP) -> Result
 	when
-		Key :: 1..4294967295,
+		Key :: 0..2147483647,
 		Module :: atom(),
 		EDP :: #{event_type() => monitor_mode()},
 		Result :: {ok, #service{}} | {error, Reason},
@@ -539,14 +539,14 @@ add_service({atomic, ok}, Service) ->
 add_service({aborted, Reason}, _S) ->
 	{error, Reason}.
 
--spec get_service(Key) -> Result
+-spec find_service(Key) -> Result
 	when
-		Key :: 1..4294967295,
+		Key :: 0..2147483647,
 		Result :: {ok, #service{}} | {error, Reason},
 		Reason :: not_found | term().
 %% @doc Find a service by key.
 %%
-get_service(Key) when is_integer(Key) ->
+find_service(Key) when is_integer(Key) ->
 	F = fun() ->
 			mnesia:read(service, Key)
 	end,
@@ -554,37 +554,36 @@ get_service(Key) when is_integer(Key) ->
 		{atomic, [#service{} = Service]} ->
 			{ok, Service};
 		{atomic, []} ->
-			{error, not_found}
+			{error, not_found};
+		{aborted, Reason} ->
+			{error, Reason}
 	end.
 
--spec get_services() -> Result
+-spec get_services() -> Services
 	when
-		Result :: Services | {error, Reason},
-		Services :: [#service{}],
-		Reason :: term().
-%% @doc Get the all service records.
+		Services :: [#service{}].
+%% @doc Get all service records.
 get_services() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-		F(mnesia:select(service, MatchSpec,
-				?CHUNKSIZE, read), Acc);
-		F('$end_of_table', Acc) ->
-				{ok, lists:flatten(lists:reverse(Acc))};
-		F({error, Reason}, _Acc) ->
+				F(mnesia:select(service, MatchSpec, ?CHUNKSIZE, read), Acc);
+			F('$end_of_table', Acc) ->
+				{ok, Acc};
+			F({error, Reason}, _Acc) ->
 				{error, Reason};
-		F({Services, Cont}, Acc) ->
+			F({Services, Cont}, Acc) ->
 				F(mnesia:select(Cont), [Services | Acc])
 	end,
 	case mnesia:ets(F, [start, []]) of
+		{ok, Acc} ->
+			lists:flatten(lists:reverse(Acc));
 		{error, Reason} ->
-			{error, Reason};
-		{ok, Result} ->
-			Result
+			exit(Reason)
 	end.
 
 -spec delete_service(Key) -> ok
 	when
-		Key :: 1..4294967295.
+		Key :: 0..2147483647.
 %% @doc Delete an entry from the service table.
 delete_service(Key) when is_integer(Key) ->
 	F = fun() ->

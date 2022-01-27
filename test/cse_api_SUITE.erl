@@ -1,6 +1,6 @@
 %%% cse_api_SUITE.erl
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2021 SigScale Global Inc.
+%%% @copyright 2021-2022 SigScale Global Inc.
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 %%% Test suite for the public API of the {@link //cse. cse} application.
 %%%
 -module(cse_api_SUITE).
--copyright('Copyright (c) 2021 SigScale Global Inc.').
+-copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% common_test required callbacks
@@ -27,8 +27,13 @@
 
 %% export test cases
 -export([start_cse/0, start_cse/1, stop_cse/0, stop_cse/1]).
+-export([add_service/0, add_service/1,
+		find_service/0, find_service/1,
+		get_services/0, get_services/1,
+		delete_service/0, delete_service/1,
+		no_service/0, no_service/1]).
 
--include_lib("m3ua/include/m3ua.hrl").
+-include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
 
 %%---------------------------------------------------------------------
@@ -45,41 +50,36 @@ suite() ->
 %% Initiation before the whole suite.
 %%
 init_per_suite(Config) ->
+	catch application:unload(mnesia),
 	PrivDir = ?config(priv_dir, Config),
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, PrivDir),
-	{ok, [m3ua_asp, m3ua_as]} = m3ua_app:install(),
-	{ok,[gtt_ep,gtt_as,gtt_pc]} = gtt_app:install(),
-	ok = application:start(inets),
-	ok = application:start(snmp),
-	ok = application:start(sigscale_mibs),
-	ok = application:start(m3ua),
-	ok = application:start(tcap),
-	ok = application:start(gtt),
+	ok = cse_test_lib:init_tables(),
+	ok = cse_test_lib:start([inets, snmp, sigscale_mibs, m3ua, tcap, gtt]),
 	Config.
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
 %% Cleanup after the whole suite.
 %%
 end_per_suite(_Config) ->
-	ok = application:stop(gtt),
-	ok = application:stop(tcap),
-	ok = application:stop(m3ua),
-	ok = application:stop(sigscale_mibs),
-	ok = application:stop(snmp),
-	ok = application:stop(inets).
+	ok = cse_test_lib:stop().
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before each test case.
 %%
+init_per_testcase(start_cse, Config) ->
+	Config;
 init_per_testcase(_TestCase, Config) ->
+	ok = cse:start(),
    Config.
 
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.
 %%
+end_per_testcase(stop_cse, _Config) ->
+	ok;
 end_per_testcase(_TestCase, _Config) ->
-	ok.
+	ok = cse:stop().
 
 -spec sequences() -> Sequences :: [{SeqName :: atom(), Testcases :: [atom()]}].
 %% Group test cases into a test sequence.
@@ -91,7 +91,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_cse, stop_cse].
+	[start_cse, stop_cse, add_service, find_service, get_services,
+			delete_service, no_service].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -101,17 +102,70 @@ start_cse() ->
 	[{userdata, [{doc, "Start the CAMEL Service Enviromnment (CSE)"}]}].
 
 start_cse(_Config) ->
-	ok = cse:start(),
-	catch cse:stop().
+	ok = cse:start().
 
 stop_cse() ->
 	[{userdata, [{doc, "Stop the CAMEL Service Enviromnment (CSE)"}]}].
 
 stop_cse(_Config) ->
-	cse:start(),
 	ok = cse:stop().
+
+add_service() ->
+	[{userdata, [{doc, "Add an IN service logic processing program (SLP)"}]}].
+
+add_service(_Config) ->
+	ServiceKey = rand:uniform(2147483647),
+	Module = cse_slp_prepaid_cap_fsm,
+	EDP = edp(),
+	{ok, Service} = cse:add_service(ServiceKey, Module, EDP),
+	#service{key = ServiceKey, module = Module, edp = EDP} = Service.
+
+find_service() ->
+	[{userdata, [{doc, "Find an IN service logic processing program (SLP)"}]}].
+
+find_service(_Config) ->
+	ServiceKey = rand:uniform(2147483647),
+	Module = cse_slp_prepaid_cap_fsm,
+	EDP = edp(),
+	cse:add_service(ServiceKey, Module, EDP),
+	{ok, Service} = cse:find_service(ServiceKey),
+	#service{key = ServiceKey, module = Module, edp = EDP} = Service.
+
+get_services() ->
+	[{userdata, [{doc, "List all IN service logic processing programs (SLP)"}]}].
+
+get_services(_Config) ->
+	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
+	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
+	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
+	F = fun(S) -> is_record(S, service) end,
+	lists:all(F, cse:get_services()).
+
+delete_service() ->
+	[{userdata, [{doc, "Remove an IN service logic processing program (SLP)"}]}].
+
+delete_service(_Config) ->
+	ServiceKey = rand:uniform(2147483647),
+	cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, edp()),
+	ok = cse:delete_service(ServiceKey).
+
+no_service() ->
+	[{userdata, [{doc, "Attempt to find a non-existent SLP"}]}].
+
+no_service(_Config) ->
+	ServiceKey = rand:uniform(2147483647),
+	{error, not_found} = cse:find_service(ServiceKey).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
+
+edp() ->
+	#{abandon => notifyAndContinue,
+			answer => notifyAndContinue,
+			busy => interrupted,
+			disconnect1 => interrupted,
+			disconnect2 => interrupted,
+			no_answer => interrupted,
+			route_fail => interrupted}.
 

@@ -1,7 +1,7 @@
 %%% cse_slp_cap_fsm.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2021 SigScale Global Inc.
+%%% @copyright 2021-2022 SigScale Global Inc.
 %%% @author Vance Shipley <vances@sigscale.org> [http://www.sigscale.org]
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@
 %%% 	new callback.
 %%%
 -module(cse_slp_cap_fsm).
--copyright('Copyright (c) 2021 SigScale Global Inc.').
+-copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
 -behaviour(gen_statem).
@@ -130,7 +130,7 @@ null(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 				serviceKey = ServiceKey} = InitialDPArg}
 				when is_integer(ServiceKey) ->
-			case cse:get_service(ServiceKey) of
+			case cse:find_service(ServiceKey) of
 				{ok, #service{key = ServiceKey, module = CbModule, edp = EDP}}
 						when is_atom(CbModule), is_map(EDP) ->
 					NewData = Data#{edp => EDP},

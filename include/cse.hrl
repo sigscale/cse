@@ -64,7 +64,7 @@
 -type resource_char() :: #resource_char{}.
 
 -record(service,
-		{key :: 1..4294967295,
+		{key :: 0..2147483647,
 		module :: atom(),
 		edp :: #{cse:event_type() => cse:monitor_mode()}}).
 
