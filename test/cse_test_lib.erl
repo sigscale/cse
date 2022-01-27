@@ -15,44 +15,28 @@
 		Result :: ok | {error, Reason :: term()}.
 %% @doc Initial mnesia tables for applications.
 init_tables() ->
-	case mnesia:system_info(is_running) of
-		no ->
-			ok = application:start(mnesia),
-			init_tables();
-		S when S == starting; S == stopping ->
-			receive
-				after ?TIMEOUT ->
-					init_tables()
-			end;
-		yes ->
-			init_tables([m3ua, gtt, cse])
-	end.
+	init_tables([m3ua, gtt, cse]).
 %% @hidden
 init_tables([m3ua | T]) ->
 	init_tables([m3ua_asp, m3ua_as], m3ua_app, T);
 init_tables([gtt | T]) ->
-	init_tables([gtt_ep, gtt_as, gtt_pc], cse_app, T);
+	init_tables([gtt_ep, gtt_as, gtt_pc], gtt_app, T);
 init_tables([cse | T]) ->
 	init_tables([resource, service], cse_app, T);
 init_tables([]) ->
 	ok.
 %% @hidden
 init_tables(Tables, Mod, T) ->
-	case mnesia:wait_for_tables(Tables, ?TIMEOUT) of
-		{timeout, _} ->
-			case Mod:install() of
-				{ok, Installed} ->
-					case lists:subtract(Tables, Installed) of
-						[] ->
-							init_tables(T);
-						Other ->
-							{error, Other}
-					end;
-				{error, Reason} ->
-					{error, Reason}
+	case Mod:install() of
+		{ok, Installed} ->
+			case lists:subtract(Tables, Installed) of
+				[] ->
+					init_tables(T);
+				Other ->
+					{error, Other}
 			end;
-		ok ->
-			init_tables(T)
+		{error, Reason} ->
+			{error, Reason}
 	end.
 
 start() ->
@@ -76,6 +60,8 @@ stop() ->
 stop([H | T]) ->
 	case application:stop(H) of
 		ok  ->
+			stop(T);
+		{error, {not_started, H}} ->
 			stop(T);
 		{error, Reason} ->
 			{error, Reason}
