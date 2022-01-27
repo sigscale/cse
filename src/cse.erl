@@ -24,7 +24,7 @@
 
 %% export the cse  public API
 -export([start/0, stop/0]).
--export([add_resource/1, get_resources/0, get_resource/1, delete_resource/1,
+-export([add_resource/1, get_resources/0, find_resource/1, delete_resource/1,
 		query_resource/5]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
@@ -374,14 +374,14 @@ get_resources() ->
 			Result
 	end.
 
--spec get_resource(ResourceID) -> Result
+-spec find_resource(ResourceID) -> Result
 	when
 		ResourceID :: string(),
 		Result :: {ok, Resource} | {error, Reason},
 		Resource :: resource(),
 		Reason :: not_found | term().
 %% @doc Get a Resource by identifier.
-get_resource(ResourceID) when is_list(ResourceID) ->
+find_resource(ResourceID) when is_list(ResourceID) ->
 	F = fun() ->
 			mnesia:read(resource, ResourceID, read)
 	end,
