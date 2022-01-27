@@ -1,3 +1,14 @@
+2022-01-27  Vance Shipley <vances@sigscale.org>
+
+	* test cases for service table api functions
+	* get functions should return value or raise an exception
+	* rename find api function to match pattern
+	* per suite mnesia directory
+	* refactor initialize tables
+	* use utils lib in api test suite
+	* use util library to stop applications in inap test suite
+	* correct service key value range
+
 2022-01-26  Vance Shipley <vances@sigscale.org>
 
 	* random servive keys in test suites
