@@ -194,6 +194,9 @@ parse_query(_, #mod{parsed_header = RequestHeaders,
 do_get(Resource, ModData, ["resourceCatalogManagement",
 		"v4", "resourceSpecification"], Query) ->
 	do_response(ModData, Resource:get_resource_specs(Query));
+do_get(Resource, ModData, ["resourceCatalogManagement",
+		"v4", "resourceSpecification", Id], []) ->
+	do_response(ModData, Resource:get_resource_spec(Id));
 do_get(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _, _) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.4",
