@@ -23,6 +23,8 @@
                   [mod_alias,
                   mod_auth,
                   mod_responsecontrol,
+                  mod_cse_rest_accepted_content,
+                  mod_cse_rest_get,
                   mod_get,
                   mod_disk_log]},
             {mime_types,
