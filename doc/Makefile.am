@@ -16,7 +16,8 @@ modhtml = cse.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \
-		cse_gtt.html
+		cse_gtt.html \
+		cse_rest.html
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \
