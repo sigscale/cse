@@ -407,29 +407,26 @@ find_service(Key) when is_integer(Key) ->
 			{error, Reason}
 	end.
 
--spec get_services() -> Result
+-spec get_services() -> Services
 	when
-		Result :: Services | {error, Reason},
-		Services :: [#service{}],
-		Reason :: term().
-%% @doc Get the all service records.
+		Services :: [#service{}].
+%% @doc Get all service records.
 get_services() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-		F(mnesia:select(service, MatchSpec,
-				?CHUNKSIZE, read), Acc);
-		F('$end_of_table', Acc) ->
-				{ok, lists:flatten(lists:reverse(Acc))};
-		F({error, Reason}, _Acc) ->
+				F(mnesia:select(service, MatchSpec, ?CHUNKSIZE, read), Acc);
+			F('$end_of_table', Acc) ->
+				{ok, Acc};
+			F({error, Reason}, _Acc) ->
 				{error, Reason};
-		F({Services, Cont}, Acc) ->
+			F({Services, Cont}, Acc) ->
 				F(mnesia:select(Cont), [Services | Acc])
 	end,
 	case mnesia:ets(F, [start, []]) of
+		{ok, Acc} ->
+			lists:flatten(lists:reverse(Acc));
 		{error, Reason} ->
-			{error, Reason};
-		{ok, Result} ->
-			Result
+			exit(Reason)
 	end.
 
 -spec delete_service(Key) -> ok
