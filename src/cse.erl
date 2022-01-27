@@ -24,7 +24,8 @@
 
 %% export the cse  public API
 -export([start/0, stop/0]).
--export([add_resource/1]).
+-export([add_resource/1, get_resources/0, get_resource/1, delete_resource/1,
+		query_resource/5]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
@@ -349,6 +350,157 @@ add_resource2({atomic, #resource{} = NewResource}) ->
 	{ok, NewResource};
 add_resource2({aborted, Reason}) ->
 	{error, Reason}.
+
+-spec get_resources() -> Result
+	when
+		Result :: [#resource{}] | {error, Reason},
+		Reason :: term().
+%% @doc List all entries in the resource table.
+get_resources() ->
+	MatchSpec = [{'_', [], ['$_']}],
+	F = fun(F, start, Acc) ->
+				F(F, mnesia:select(resource, MatchSpec, ?CHUNKSIZE, read), Acc);
+			(_F, '$end_of_table', Acc) ->
+				{ok, lists:flatten(lists:reverse(Acc))};
+			(_F, {error, Reason}, _Acc) ->
+				{error, Reason};
+			(F,{Offer, Cont}, Acc) ->
+				F(F, mnesia:select(Cont), [Offer | Acc])
+	end,
+	case mnesia:ets(F, [F, start, []]) of
+		{error, Reason} ->
+			{error, Reason};
+		{ok, Result} ->
+			Result
+	end.
+
+-spec get_resource(ResourceID) -> Result
+	when
+		ResourceID :: string(),
+		Result :: {ok, Resource} | {error, Reason},
+		Resource :: resource(),
+		Reason :: not_found | term().
+%% @doc Get a Resource by identifier.
+get_resource(ResourceID) when is_list(ResourceID) ->
+	F = fun() ->
+			mnesia:read(resource, ResourceID, read)
+	end,
+	case mnesia:transaction(F) of
+		{aborted, Reason} ->
+			{error, Reason};
+		{atomic, [Resource]} ->
+			{ok, Resource};
+		{atomic, []} ->
+			{error, not_found}
+	end.
+
+-spec delete_resource(ResourceID) -> Result
+	when
+		ResourceID :: string(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Delete a Resource.
+delete_resource(ResourceID) when is_list(ResourceID) ->
+	F = fun() ->
+			case mnesia:read(resource, ResourceID) of
+				[#resource{id = ResourceID} = Resource] ->
+					{mnesia:delete(resource, ResourceID, write), Resource};
+				[] ->
+					mnesia:abort(not_found)
+			end
+	end,
+	case mnesia:transaction(F) of
+		{aborted, Reason} ->
+			{error, Reason};
+		{atomic, {ok, #resource{name = Name,
+				specification = #specification_ref{id = "1"}}}} ->
+			cse_gtt:clear_table(Name);
+		{atomic, {ok, _R}} ->
+			ok
+	end.
+
+-spec query_resource(Cont, MatchId, MatchName,
+		MatchResSpecId, MatchRelName) -> Result
+	when
+		Cont :: start | any(),
+		MatchId :: Match,
+		MatchName :: Match,
+		MatchResSpecId :: Match,
+		MatchRelName :: Match,
+		Match :: {exact, string()} | {like, string()} | '_',
+		Result :: {Cont1, [#resource{}]} | {error, Reason},
+		Cont1 :: eof | any(),
+		Reason :: term().
+%% @doc Query resources
+query_resource(Cont, '_', MatchName, MatchResSpecId, MatchRelName) ->
+	MatchHead = #resource{_ = '_'},
+	query_resource1(Cont, MatchHead, MatchName,
+			MatchResSpecId, MatchRelName);
+query_resource(Cont, {Op, String}, MatchName, MatchResSpecId, MatchRelName)
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead = case lists:last(String) of
+		$% when Op == like ->
+			#resource{id = lists:droplast(String) ++ '_', _ = '_'};
+		_ ->
+			#resource{id = String, _ = '_'}
+	end,
+	query_resource1(Cont, MatchHead, MatchName,
+			MatchResSpecId, MatchRelName).
+%% @hidden
+query_resource1(Cont, MatchHead, '_', MatchResSpecId, MatchRelName) ->
+	query_resource2(Cont, MatchHead, MatchResSpecId, MatchRelName);
+query_resource1(Cont, MatchHead1, {Op, String}, MatchResSpecId, MatchRelName)
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead2 = case lists:last(String) of
+		$% when Op == like ->
+			MatchHead1#resource{name = lists:droplast(String) ++ '_'};
+		_ ->
+			MatchHead1#resource{name = String}
+	end,
+	query_resource2(Cont, MatchHead2, MatchResSpecId, MatchRelName).
+query_resource2(Cont, MatchHead, '_', MatchRelName) ->
+	query_resource3(Cont, MatchHead, MatchRelName);
+query_resource2(Cont, MatchHead1, {Op, String}, MatchRelName)
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead2 = case lists:last(String) of
+		$% when Op == like ->
+			MatchHead1#resource{specification = #specification_ref{id
+					= lists:droplast(String) ++ '_', _ = '_'}};
+		_ ->
+			MatchHead1#resource{specification
+					= #specification_ref{id = String, _ = '_'}}
+	end,
+	query_resource3(Cont, MatchHead2, MatchRelName).
+query_resource3(Cont, MatchHead, '_') ->
+	MatchSpec = [{MatchHead, [], ['$_']}],
+	query_resource4(Cont, MatchSpec);
+query_resource3(Cont, MatchHead1, {Op, String})
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead2 = case lists:last(String) of
+		$% when Op == like ->
+			MatchHead1#resource{related = [#resource_rel{name
+					= lists:droplast(String) ++ '_', _ = '_'}]};
+		_ ->
+			MatchHead1#resource{related
+					= [#resource_rel{name = String, _ = '_'}]}
+	end,
+	MatchSpec = [{MatchHead2, [], ['$_']}],
+	query_resource4(Cont, MatchSpec).
+query_resource4(start, MatchSpec) ->
+	F = fun() ->
+			mnesia:select(resource, MatchSpec, ?CHUNKSIZE, read)
+	end,
+	query_resource5(mnesia:ets(F));
+query_resource4(Cont, _MatchSpec) ->
+	F = fun() ->
+			mnesia:select(Cont)
+	end,
+	query_resource5(mnesia:ets(F)).
+%% @hidden
+query_resource5({Resources, Cont}) ->
+	{Cont, Resources};
+query_resource5('$end_of_table') ->
+		{eof, []}.
 
 -type event_type() :: collected_info | analysed_info | route_fail
 		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2

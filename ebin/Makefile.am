@@ -19,7 +19,11 @@ beam_DATA = cse.beam \
 		cse_tco_server_cb.beam \
 		cse_codec.beam \
 		cse_log.beam \
-		cse_gtt.beam
+		cse_gtt.beam \
+		cse_rest.beam \
+		mod_cse_rest_accepted_content.beam \
+		mod_cse_rest_get.beam \
+		cse_rest_res_resource.beam
 
 %.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
