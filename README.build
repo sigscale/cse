@@ -23,14 +23,14 @@ ln -st ~/public_html/cse ../../cse.build/test/log
 mv ~/public_html/cse/log ~/public_html/cse/test
 
 ## Configure project
-ERLANG_INSTALL_LIB_DIR=$(pwd)/shell/lib ERL_LIBS=$(pwd)/shell/lib ../cse/configure
+ERLANG_INSTALL_LIB_DIR=$PWD/shell/lib ERL_LIBS=$PWD/shell/lib ../cse/configure
 
 ## Install in shell/lib
-ERL_LIBS=$(pwd)/shell/lib make install
+ERL_LIBS=$PWD/shell/lib make install
 
 ## Validate, verify and test
-ERL_LIBS=$(pwd)/shell/lib make check
+ERL_LIBS=$PWD/shell/lib make check
 
 ## Scrub it clean
-ERL_LIBS=$(pwd)/shell/lib make distclean; rm -rf *.boot *.rel *.script *.tar.gz Makefile config.* cse.rel doc ebin include test stamp-h1 sys.config shell/lib/cse-*
+ERL_LIBS=$PWD/shell/lib make distclean; rm -rf *.boot *.rel *.script *.tar.gz Makefile config.* cse.rel doc ebin include test stamp-h1 sys.config shell/lib/cse-*
 
