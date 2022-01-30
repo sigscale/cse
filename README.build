@@ -13,7 +13,7 @@ ln -st shell/lib ../../$(ls -d ../sccp.build/shell/lib/sccp-*)
 ln -st shell/lib ../../$(ls -d ../sigscale_mibs.build/shell/lib/sigscale_mibs-*)
 ln -st shell/lib ../../$(ls -d ../tcap.build/shell/lib/tcap-*)
 ZJ=$(basename $(ls -d ../zj-*)) 
-mkdir -p shell/lib/$(ZJ)/ebin
+mkdir -p shell/lib/$ZJ/ebin
 cp -r ../$ZJ/ebin shell/lib/$ZJ/
 
 ## Make edoc available
