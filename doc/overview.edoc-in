@@ -117,6 +117,19 @@ as depicted in <a href="#figure1-3">Figure 1-3</a>.
 Figure 1-3: Distribution</p>
 
 ==Installation==
+Before running the {@link //cse. cse} application for the first time
+it is necessary to initialize {@link //mnesia. mnesia} tables and
+configure a {@link //gtt. gtt} application server (AS) and SCTP
+endpoint (EP).
+```
+otp@cse:~$ ERL_LIBS=lib erl -sname cse -config releases/%VERSION%/sys
+(cse@cse)1> m3ua_app:install().
+(cse@cse)2> gtt_app:install().
+(cse@cse)3> cse_app:install().
+(cse@cse)4> gtt:add_as(sg1, sg, 0, 0, [{2057, [], []}], loadshare, 1, 2).
+(cse@cse)5> gtt:add_ep(ep1, {{0,0,0,0}, 2905, [{ppi,false},{use_rc,false}]}, undefined, server, sgp, gtt_m3ua_cb, [{ssn, #{146 => cse_tsl}}], [sg1]).
+(cse@cse)5> q().
+'''
 
 ==Operation==
 
