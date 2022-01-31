@@ -23,10 +23,12 @@
 
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/1]).
+-export([get_resource/1]).
 
 -include("cse.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
+-define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
 
 -spec content_types_accepted() -> ContentTypes
 	when
@@ -78,6 +80,46 @@ get_resource_specs([] = _Query) ->
 get_resource_specs(_Query) ->
 	{error, 400}.
 
+-spec get_resource(Id) -> Result
+	when
+		Id :: string(),
+		Result   :: {ok, Headers, Body} | {error, Status},
+		Headers  :: [tuple()],
+		Body     :: iolist(),
+		Status   :: 400 | 404 | 500.
+%% @doc Respond to `GET /resourceInventoryManagement/v4/resource/{id}'.
+%%    Retrieve resource from inventory management.
+get_resource(Id) ->
+	try
+		string:tokens(Id, "-")
+	of
+		[Table, Prefix] ->
+			LM = {erlang:system_time(millisecond),
+					erlang:unique_integer([positive])},
+			Headers = [{content_type, "application/json"},
+					{etag, cse_rest:etag(LM)}],
+			Value = cse_gtt:lookup_first(Table, Prefix),
+			Body = zj:encode(gtt(Table, {Prefix, Value})),
+			{ok, Headers, Body};
+		_ ->
+			case cse:find_resource(Id) of
+				{ok, #resource{last_modified = LM} = Resource} ->
+					Headers = [{content_type, "application/json"},
+							{etag, cse_rest:etag(LM)}],
+					Body = zj:encode(resource(Resource)),
+					{ok, Headers, Body};
+				{error, not_found} ->
+					{error, 404};
+				{error, _Reason} ->
+					{error, 500}
+			end
+	catch
+		error:badarg ->
+			{error, 404};
+		_:_Reason1 ->
+			{error, 500}
+	end.
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
@@ -112,6 +154,23 @@ prefix_row_spec() ->
 				"description" => "Prefix value"}
 		]
 	}.
+
+-spec gtt(Table, Gtt) -> Gtt
+	when
+		Table :: string(),
+		Gtt :: {Prefix, Value} | map(),
+		Prefix :: string(),
+		Value :: term().
+%% @doc CODEC for gtt.
+%% @private
+gtt(Table, {Prefix, Value} = _Gtt) ->
+	Id = Table ++ "-" ++ Prefix,
+	#{"id" => Id, "href" => ?inventoryPath ++ Id,
+			"resourceSpecification" => #{"id" => "2", "href" => ?specPath "2",
+					"name" => "PrefixTableRow"},
+			"resourceCharacteristic" => [
+					#{"name" => "prefix", "value" => Prefix},
+					#{"name" => "value", "value" => Value}]}.
 
 -spec resource(Resource) -> Resource
 	when
