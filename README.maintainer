@@ -14,10 +14,11 @@ Note:
 
 ## Building
 	1. mkdir ../cse.build        (create build directory)
-	2. cd ../cse.build           (change working directory for build)
-	3. ../cse/configure          (creates Makefiles)
-	4. make                      (builds entire package)
-	5. make check                (run dialyzer and common_test)
+	2. cp README.build ../cse.build/README
+	3. cd ../cse.build           (change working directory for build)
+	4. ../cse/configure          (creates Makefiles)
+	5. make                      (builds entire package)
+	6. make check                (run dialyzer and common_test)
 
 ## Installing
 	1. sudo make install         (installs embedded application in system)
