@@ -42,5 +42,7 @@
 				{tsl_opts, []},
 				{nrf_profile, nrf},
 				{nrf_uri, "http://nrf.5gc.mnc001.mcc001.3gppnetwork.org/nrf-rating/v1"},
-				{nrf_options, [{keep_alive_timeout, 4000}]}]},
+				{nrf_options, [{keep_alive_timeout, 4000}]},
+				{rest_page_size, 1000},
+				{rest_page_timeout, 60000}]},
 		{mod, {cse_app,[]}}]}.
