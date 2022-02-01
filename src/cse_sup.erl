@@ -49,7 +49,8 @@
 init(_Args) ->
 	ChildSpecs = [server(cse_server, {local, cse}, [], []),
 			bridge(cse_tco_sup, [self()]),
-			supervisor(cse_slp_sup, [])],
+			supervisor(cse_slp_sup, []),
+			supervisor(cse_rest_pagination_sup, cse_rest_pagination_sup, [])],
 	SupFlags = #{},
 	{ok, {SupFlags, ChildSpecs}}.
 
@@ -71,6 +72,22 @@ supervisor(StartMod, Args) ->
 	StartFunc = {supervisor, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
+
+-spec supervisor(StartMod, RegName, Args) -> Result
+	when
+		StartMod :: atom(),
+		RegName :: atom(),
+		Args :: [term()],
+		Result :: supervisor:child_spec().
+%% @doc Build a supervisor child specification for a
+%%    {@link //stdlib/supervisor. supervisor} behaviour
+%%    with registered name.
+%% @private
+%%
+supervisor(StartMod, RegName, Args) ->
+	StartArgs = [{local, RegName}, StartMod, Args],
+	StartFunc = {supervisor, start_link, StartArgs},
+	{StartMod, StartFunc, permanent, infinity, supervisor, [StartMod]}.
 
 -spec bridge(StartMod, Args) -> Result
 	when
