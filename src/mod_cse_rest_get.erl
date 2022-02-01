@@ -200,6 +200,9 @@ do_get(Resource, ModData, ["resourceCatalogManagement",
 do_get(Resource, ModData, ["resourceInventoryManagement",
 		"v4", "resource", Id], []) ->
 	do_response(ModData, Resource:get_resource(Id));
+do_get(Resource, #mod{parsed_header = Headers} = ModData,
+		["resourceInventoryManagement", "v4", "resource"], Query) ->
+	do_response(ModData, Resource:get_resource(Query, Headers));
 do_get(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _, _) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.4",
