@@ -23,7 +23,7 @@
 
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/1]).
--export([get_resource/1, get_resource/2]).
+-export([get_resource/1, get_resource/2, add_resource/1]).
 
 -include("cse.hrl").
 
@@ -274,6 +274,72 @@ query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
 		{error, _Reason} ->
 			{error, 500}
 	end.
+
+-spec add_resource(RequestBody) -> Result
+	when
+		RequestBody :: [tuple()],
+		Result   :: {ok, Headers, Body} | {error, Status},
+		Headers  :: [tuple()],
+		Body     :: iolist(),
+		Status   :: 400 | 500 .
+%% @doc Respond to
+%% 	`POST /resourceInventoryManagement/v1/resource'.
+%%    Add a new resource in inventory.
+add_resource(RequestBody) ->
+	try
+		{ok, ResMap} = zj:decode(RequestBody),
+		resource(ResMap)
+	of
+		#resource{name = Name,
+				specification = #specification_ref{id = "1"}} = Resource ->
+			F = fun F(eof, Acc) ->
+						lists:flatten(Acc);
+					F(Cont1, Acc) ->
+						{Cont2, L} = cse:query_resource(Cont1, '_', {exact, Name},
+								{exact, "1"}, '_'),
+						F(Cont2, [L | Acc])
+			end,
+			case F(start, []) of
+				[] ->
+					add_resource1(cse:add_resource(Resource));
+				[#resource{} | _] ->
+					{error, 400}
+			end;
+		#resource{specification = #specification_ref{id = "2"},
+				related = [#resource_rel{name = Table}],
+				characteristic = Chars} = Resource1 ->
+			F = fun(CharName) ->
+						case lists:keyfind(CharName, #resource_char.name, Chars) of
+							#resource_char{value = Value} ->
+								Value;
+							false ->
+								{error, 400}
+						end
+			end,
+			Prefix = F("prefix"),
+			{ok, #gtt{}} = cse_gtt:insert(Table, Prefix, F("value")),
+			Id = Table ++ "-" ++ Prefix,
+			Href = "/resourceInventoryManagement/v4/resource/" ++ Id,
+			LM = {erlang:system_time(millisecond),
+					erlang:unique_integer([positive])},
+			Resource2 = Resource1#resource{id = Id, href = F("prefix"),
+					last_modified = LM},
+			Headers = [{content_type, "application/json"},
+					{location, Href}, {etag, cse_rest:etag(LM)}],
+			Body = zj:encode(resource(Resource2)),
+			{ok, Headers, Body}
+	catch
+		_:_Reason ->
+			{error, 400}
+	end.
+%% @hidden
+add_resource1({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
+	Headers = [{content_type, "application/json"},
+			{location, Href}, {etag, cse_rest:etag(LM)}],
+	Body = zj:encode(resource(Resource)),
+	{ok, Headers, Body};
+add_resource1({error, _Reason}) ->
+	{error, 400}.
 
 %%----------------------------------------------------------------------
 %%  internal functions
