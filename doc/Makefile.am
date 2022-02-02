@@ -9,6 +9,7 @@ modhtml = cse.html \
 		cse_diameter_sup.html \
 		cse_diameter_service_fsm_sup.html \
 		cse_diameter_service_fsm.html \
+		cse_diameter_base_application_cb.html \
 		cse_server.html \
 		cse_tco_sup.html \
 		cse_slp_sup.html \
