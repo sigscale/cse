@@ -28,7 +28,8 @@
 				gtt,
 				tcap]},
 		{env,
-				[{tsl_name, cse_tsl},
+				[{diameter, [{{0,0,0,0}, 3868, []}]},
+				{tsl_name, cse_tsl},
 				{tsl_callback, cse_tco_server_cb},
 				{tsl_args,
 						[{ac, #{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
