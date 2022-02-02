@@ -66,6 +66,7 @@ AC_ERLANG_CHECK_LIB([sasl], [], [AC_MSG_WARN([sasl was not found!])])
 AC_ERLANG_CHECK_LIB([mnesia], [], [AC_MSG_WARN([mnesia was not found!])])
 AC_ERLANG_CHECK_LIB([inets], [], [AC_MSG_WARN([inets was not found!])])
 AC_ERLANG_CHECK_LIB([snmp], [], [AC_MSG_WARN([snmp was not found!])])
+AC_ERLANG_CHECK_LIB([diameter], [], [AC_MSG_WARN([diameter was not found!])])
 AC_ERLANG_CHECK_LIB([sigscale_mibs], [], [AC_MSG_WARN([sigscale_mibs was not found!])])
 AC_ERLANG_CHECK_LIB([m3ua], [], [AC_MSG_ERROR([m3ua was not found!])])
 AC_ERLANG_CHECK_LIB([sccp], [], [AC_MSG_ERROR([sccp was not found!])])
@@ -97,6 +98,6 @@ AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_ERROR([zj was not found!])])
 ## Output:  create output files
 ##
 
-AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile
+AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile src/Makefile
 		test/Makefile $PACKAGE_NAME.rel sys.config])
 

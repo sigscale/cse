@@ -1,5 +1,4 @@
-## Makefile.am
-##
+## Makefile.am ##
 ## Process this file with automake to produce Makefile.in
 
 appdir = $(beamdir)
@@ -26,10 +25,36 @@ beam_DATA = cse.beam \
 		cse_rest.beam \
 		mod_cse_rest_accepted_content.beam \
 		mod_cse_rest_get.beam \
-		cse_rest_res_resource.beam
+		cse_rest_res_resource.beam \
+		cse_rest_pagination_server.beam \
+		cse_rest_pagination_sup.beam \
+		cse_rest_query_scanner.beam \
+		cse_rest_query_parser.beam \
+		diameter_gen_ietf.beam \
+		diameter_gen_etsi.beam \
+		diameter_gen_3gpp.beam
 
 %.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
+
+cse_rest_query_scanner.beam:$(top_builddir)/src/cse_rest_query_scanner.erl
+	$(ERLC) $<
+
+cse_rest_query_parser.beam:$(top_builddir)/src/cse_rest_query_parser.erl
+	$(ERLC) $<
+
+diameter_gen_ietf.beam:$(top_builddir)/src/diameter_gen_ietf.erl \
+		$(top_builddir)/include/diameter_gen_ietf.hrl
+	$(ERLC) $(ERLCFLAGS) -I $(top_builddir)/include $<
+
+diameter_gen_etsi.beam:$(top_builddir)/src/diameter_gen_etsi.erl \
+		$(top_builddir)/include/diameter_gen_etsi.hrl
+	$(ERLC) $(ERLCFLAGS) -I $(top_builddir)/include $<
+
+diameter_gen_3gpp.beam:$(top_builddir)/src/diameter_gen_3gpp.erl \
+		$(top_builddir)/include/diameter_gen_etsi.hrl \
+		$(top_builddir)/include/diameter_gen_3gpp.hrl
+	$(ERLC) $(ERLCFLAGS) -I $(top_builddir)/include $<
 
 %.app:   %.app-in
 	sed -e 's/%APP_NAME%/$(PACKAGE_NAME)/' \
