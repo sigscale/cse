@@ -235,6 +235,12 @@ query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
 	case gen_server:call(PageServer, {Start, End}) of
 		{error, Status} ->
 			{error, Status};
+		{[] = Result, ContentRange} ->
+			Body = zj:encode(Result),
+			Headers = [{content_type, "application/json"},
+					{etag, Etag}, {accept_ranges, "items"},
+					{content_range, ContentRange}],
+			{ok, Headers, Body};
 		{[#gtt{} | _] = Result, ContentRange} ->
 			case lists:keyfind("resourceRelationship.resource.name", 1,
 					Query) of
