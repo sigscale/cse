@@ -487,12 +487,12 @@ resource_rel([name | T], #resource_rel{name = Name} = R,
 resource_rel([name | T], #{"resource" := #{"name" := Name}} = M, Acc)
 		when is_list(Name) ->
 	resource_rel(T, M, Acc#resource_rel{name = Name});
-resource_rel([referred_type | T], #resource_rel{referred_type = RefType} = R,
-		#{"resource" := Res} = Acc) when is_list(RefType) ->
-	resource_rel(T, R, Acc#{"resource" => Res#{"@referredType" => RefType}});
-resource_rel([referred_type | T], #{"resource" := #{"@referredType" := RefType}} = M,
-		Acc) when is_list(RefType) ->
-	resource_rel(T, M, Acc#resource_rel{referred_type = RefType});
+resource_rel([rel_type | T], #resource_rel{rel_type = Type} = R,
+		Acc) when is_list(Type) ->
+	resource_rel(T, R, Acc#{"relationshipType" => Type});
+resource_rel([rel_type | T], #{"relationshipType" := Type} = M,
+		Acc) when is_list(Type) ->
+	resource_rel(T, M, Acc#resource_rel{rel_type = Type});
 resource_rel([_ | T], R, Acc) ->
 	resource_rel(T, R, Acc);
 resource_rel([], _, Acc) ->
