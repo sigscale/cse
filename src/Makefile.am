@@ -5,3 +5,12 @@
 
 erl_DATA = cse_rest_query_scanner.erl \
 		cse_rest_query_parser.erl
+
+%.erl:%.xrl
+	$(ERLC) $<
+
+%.erl:%.yrl
+	$(ERLC) $<
+
+CLEANFILES = $(erl_DATA)
+

@@ -30,6 +30,7 @@
 				inets,
 				gtt,
 				tcap]},
+		{included_applications, [cap, inap, map]},
 		{env,
 				[{tsl_name, cse_tsl},
 				{tsl_callback, cse_tco_server_cb},
