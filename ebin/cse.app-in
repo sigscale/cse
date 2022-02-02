@@ -19,6 +19,7 @@
 				cse_rest,
 				mod_cse_rest_accepted_content,
 				mod_cse_rest_get,
+				mod_cse_rest_post,
 				cse_rest_res_resource,
 				cse_rest_pagination_server,
 				cse_rest_pagination_sup]},
