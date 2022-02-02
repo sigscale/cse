@@ -5,6 +5,7 @@
 				[cse,
 				cse_app,
 				cse_sup,
+				cse_diameter_sup,
 				cse_server,
 				cse_tco_sup,
 				cse_slp_sup,
