@@ -20,7 +20,9 @@ modhtml = cse.html \
 		cse_rest.html \
 		mod_cse_rest_accepted_content.html \
 		mod_cse_rest_get.html \
-		cse_rest_res_resource.html
+		cse_rest_res_resource.html \
+		cse_rest_pagination_server.html \
+		cse_rest_pagination_sup.html
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \

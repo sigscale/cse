@@ -23,7 +23,9 @@ beam_DATA = cse.beam \
 		cse_rest.beam \
 		mod_cse_rest_accepted_content.beam \
 		mod_cse_rest_get.beam \
-		cse_rest_res_resource.beam
+		cse_rest_res_resource.beam \
+		cse_rest_pagination_server.beam \
+		cse_rest_pagination_sup.beam
 
 %.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<

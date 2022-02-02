@@ -97,6 +97,6 @@ AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_ERROR([zj was not found!])])
 ## Output:  create output files
 ##
 
-AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile
+AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile src/Makefile
 		test/Makefile $PACKAGE_NAME.rel sys.config])
 

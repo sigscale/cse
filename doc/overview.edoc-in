@@ -150,5 +150,7 @@ application environment variables (`~/releases/<VERSION>/sys.config'):
 	<dt>`tsl_args'</dt>
 		<dd>Extra arguments in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/4'}.
 				(default: `[]')</dd>
+	<dt>rest_page_size</dt>
+		<dd>Defines the maximum number of items to return for a REST collection.</dd>
 </dl>
 
