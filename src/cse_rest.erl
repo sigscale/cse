@@ -388,7 +388,7 @@ range({Start, End}) when is_integer(Start), is_integer(End) ->
 %% 	```
 %% 	1> In = {struct,[{"a",{array,[{struct,[{"name","bob"},{"value",6}]},
 %% 	1> {stuct,[{"b",7}]},{struct,[{"name","sue"},{"value",5},{"other", 8}]}]}},{"b",1}]},
-%% 	1> ocs_rest:fields("b,a.name=sue,a.value", In).
+%% 	1> cse_rest:fields("b,a.name=sue,a.value", In).
 %% 	{struct, [{"a",{array,[{struct,[{"name","sue"},{"value",5}]}]}},{"b",1}]}
 %% 	'''
 %%
