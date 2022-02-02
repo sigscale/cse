@@ -50,7 +50,7 @@ init(_Args) ->
 	ChildSpecs = [server(cse_server, {local, cse}, [], []),
 			bridge(cse_tco_sup, [self()]),
 			supervisor(cse_slp_sup, []),
-			supervisor(cse_diameter_sup, [])],
+			supervisor(cse_diameter_sup, []),
 			supervisor(cse_rest_pagination_sup, cse_rest_pagination_sup, [])],
 	SupFlags = #{},
 	{ok, {SupFlags, ChildSpecs}}.

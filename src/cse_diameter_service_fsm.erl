@@ -240,7 +240,7 @@ service_options(Options) ->
 			"example.net"
 	end,
 	OriginHost = case inet:gethostname() of
-		Hostname when  when length(Hostname) > 0 ->
+		Hostname when length(Hostname) > 0 ->
 			Hostname;
 		_ ->
 			cse
@@ -265,7 +265,7 @@ service_options(Options) ->
 	F = fun({K, V}, Acc) ->
 		lists:keyreplace(K, 1, Acc, {K, V})
 	end,
-	ServiceOptions = lists:foldl(F, BaseOptions, Options),
+	lists:foldl(F, BaseOptions, Options).
 
 -spec transport_options(Options, Address, Port) -> Result
 	when
