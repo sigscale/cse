@@ -1,0 +1,809 @@
+
+@name   diameter_gen_ietf
+@prefix ietf
+@vendor 0 IETF
+@inherits diameter_gen_base_rfc6733
+
+@avp_types
+   ;; RFC4006 DIAMETER Credit Control Application (DCCA)
+   Accounting-EAP-Auth-Method                              465  Unsigned64       -
+   Callback-Id                                              20  UTF8String       M
+   Called-Station-Id                                        30  UTF8String       M
+   Calling-Station-Id                                       31  UTF8String       M
+   Callback-Number                                          19  UTF8String       M
+   Connect-Info                                             77  UTF8String       M
+   Configuration-Token                                      78  OctetString      M
+   CC-Correlation-Id                                       411  OctetString      -
+   CC-Input-Octets                                         412  Unsigned64       M
+   CC-Money                                                413  Grouped          -
+   CC-Output-Octets                                        414  Unsigned64       M
+   CC-Request-Number                                       415  Unsigned32       M
+   CC-Request-Type                                         416  Enumerated       M
+   CC-Service-Specific-Units                               417  Unsigned64       M
+   CC-Session-Failover                                     418  Enumerated       M
+   CC-Time                                                 420  Unsigned32       M
+   CC-Total-Octets                                         421  Unsigned64       M
+   CC-Unit-Type                                            454  Enumerated       M
+   Cost-Information                                        423  Grouped          M
+   Cost-Unit                                               424  UTF8String       M
+   Credit-Control-Failure-Handling                         427  Enumerated       M
+   Currency-Code                                           425  Unsigned32       M
+   Direct-Debiting-Failure-Handling                        428  Enumerated       M
+   EAP-Key-Name                                            102  OctetString      -
+   EAP-Master-Session-Key                                  464  OctetString      -
+   EAP-Payload                                             462  OctetString      M
+   EAP-Reissued-Payload                                    463  OctetString      -
+   Exponent                                                429  Integer32        M
+   Filter-Id                                                11  UTF8String       M
+   Final-Unit-Action                                       449  Enumerated       M
+   Final-Unit-Indication                                   430  Grouped          M
+   Framed-Appletalk-Link                                    37  Unsigned32       M
+   Framed-Appletalk-Network                                 38  Unsigned32       M
+   Framed-Appletalk-Zone                                    39  OctetString      M
+   Framed-Compression                                       13  Enumerated       M
+   Framed-Interface-Id                                      96  Unsigned64       M
+   Framed-IP-Address                                         8  OctetString      M
+   Framed-IP-Netmask                                         9  OctetString      M
+   Framed-IPv6-Pool                                        100  OctetString      M
+   Framed-IPv6-Prefix                                       97  OctetString      M
+   Framed-IPv6-Route                                        99  UTF8String       M
+   Framed-IPX-Network                                       23  Unsigned32       M
+   Framed-MTU                                               12  Unsigned32       M
+   Framed-Pool                                              88  OctetString      M
+   Framed-Protocol                                           7  Enumerated       M
+   Framed-Route                                             22  UTF8String       M
+   Framed-Routing                                           10  Enumerated       M
+   Granted-Service-Unit                                    431  Grouped          M
+   G-S-U-Pool-Identifier                                   453  Unsigned32       M
+   G-S-U-Pool-Reference                                    457  Grouped          M
+   Idle-Timeout                                             28  Unsigned32       M
+   Multiple-Services-Credit-Control                        456  Grouped          M
+   Multiple-Services-Indicator                             455  Enumerated       M
+   NAS-Identifier                                           32  UTF8String       M
+   NAS-IP-Address                                            4  OctetString      M
+   NAS-IPv6-Address                                         95  OctetString      M
+   NAS-Filter-Rule                                         400  IPFilterRule     M
+   NAS-Port                                                  5  Unsigned32       M
+   NAS-Port-Id                                              87  UTF8String       M
+   NAS-Port-Type                                            61  Enumerated       M
+   Originating-Line-Info                                    94  OctetString      M
+   Port-Limit                                               62  Unsigned32       M
+   QoS-Filter-Rule                                         407  QoSFilterRule    -
+   Rating-Group                                            432  Unsigned32       M
+   Redirect-Address-Type                                   433  Enumerated       M
+   Redirect-Server                                         434  Grouped          M
+   Redirect-Server-Address                                 435  UTF8String       M
+   Reply-Message                                            18  UTF8String       M
+   Requested-Action                                        436  Enumerated       M
+   Requested-Service-Unit                                  437  Grouped          M
+   Restriction-Filter-Rule                                 438  OctetString      M
+   Service-Context-Id                                      461  UTF8String       M
+   Service-Identifier                                      439  Unsigned32       M
+   Service-Type                                              6  Enumerated       M
+   State                                                    24  OctetString      M
+   Subscription-Id                                         443  Grouped          M
+   Subscription-Id-Data                                    444  UTF8String       M
+   Subscription-Id-Type                                    450  Enumerated       M
+   Tariff-Change-Usage                                     452  Enumerated       M
+   Tariff-Time-Change                                      451  Time             M
+   Tunneling                                               401  Grouped          M
+   Tunnel-Type                                              64  Enumerated       M
+   Tunnel-Medium-Type                                       65  Enumerated       M
+   Tunnel-Client-Endpoint                                   66  UTF8String       M
+   Tunnel-Server-Endpoint                                   67  UTF8String       M
+   Tunnel-Password                                          69  OctetString      M
+   Tunnel-Private-Group-Id                                  81  OctetString      M
+   Tunnel-Assignment-Id                                     82  OctetString      M
+   Tunnel-Preference                                        83  Unsigned32       M
+   Tunnel-Client-Auth-Id                                    90  UTF8String       M
+   Tunnel-Server-Auth-Id                                    91  UTF8String       M
+   Unit-Value                                              445  Grouped          M
+   Used-Service-Unit                                       446  Grouped          M
+   User-Equipment-Info                                     458  Grouped          -
+   User-Equipment-Info-Type                                459  Enumerated       -
+   User-Equipment-Info-Value                               460  OctetString      -
+   Value-Digits                                            447  Integer64        M
+   Validity-Time                                           448  Unsigned32       M
+   ;; RFC7683 DIAMETER Overload Indication Conveyance(DOIC)
+   OC-Supported-Features                                   621  Grouped          -
+   OC-Feature-Vector                                       622  Unsigned64       -
+   OC-OLR                                                  623  Grouped          -
+   OC-Sequence-Number                                      624  Unsigned64       -
+   OC-Validity-Duration                                    625  Unsigned32       -
+   OC-Report-Type                                          626  Enumerated       -
+   OC-Reduction-Percentage                                 627  Unsigned32       -
+   ;; RFC7944 DIAMETER Routing Message Priority(DRMP)
+   DRMP                                                    301  Enumerated       -
+   ;; RFC5447 DIAMETER Mobile IPv6
+   MIP6-Agent-Info                                         486  Grouped          -
+   MIP6-Home-Link-Prefix                                   125  OctetString      M
+   MIP6-Feature-Vector                                     124  Unsigned64       M
+   ;; RFC4004 DIAMETER Mobile IPv4 Application
+   MIP-Home-Agent-Address                                  334  Address          -
+   MIP-Home-Agent-Host                                     348  Grouped          -
+   ;; RFC8581 DIAMETER Agent Overload and the Peer Overload Report
+   SourceID                                                649  DiameterIdentity -
+   ;; RFC8583 DIAMETER Load Information Conveyance
+   Load                                                    650  Grouped          -
+   Load-Type                                               651  Enumerated       -
+   Load-Value                                              652  Unsigned64       -
+   ;; RFC4590 RADIUS Extension for Digest Authentication
+   Digest-Realm                                            104  UTF8String       M
+   Digest-QoP                                              110  UTF8String       M
+   Digest-Algorithm                                        111  UTF8String       M
+   Digest-HA1                                              121  UTF8String       M
+   ;; RFC5777 Traffic Classification and Quality of Service (QoS) Attributes for Diameter
+   QoS-Resources                                           508  Grouped          M
+   Filter-Rule                                             509  Grouped          -
+   Filter-Rule-Precedence                                  510  Unsigned32       -
+   Classifier                                              511  Grouped          -
+   Classifier-ID                                           512  OctetString      -
+   Protocol                                                513  Enumerated       -
+   Direction                                               514  Enumerated       -
+   From-Spec                                               515  Grouped          -
+   To-Spec                                                 516  Grouped          -
+   Negated                                                 517  Enumerated       -
+   IP-Address                                              518  Address          -
+   IP-Address-Range                                        519  Grouped          -
+   IP-Address-Start                                        520  Address          -
+   IP-Address-End                                          521  Address          -
+   IP-Address-Mask                                         522  Grouped          -
+   IP-Bit-Mask-Width                                       523  Unsigned32       -
+   MAC-Address                                             524  OctetString      -
+   MAC-Address-Mask                                        525  Grouped          -
+   MAC-Address-Mask-Pattern                                526  OctetString      -
+   EUI64-Address                                           527  OctetString      -
+   EUI64-Address-Mask                                      528  Grouped          -
+   EUI64-Address-Mask-Pattern                              529  OctetString      -
+   Port                                                    530  Integer32        -
+   Port-Range                                              531  Grouped          -
+   Port-Start                                              532  Integer32        -
+   Port-End                                                533  Integer32        -
+   Use-Assigned-Address                                    534  Enumerated       -
+   Diffserv-Code-Point                                     535  Enumerated       -
+   Fragmentation-Flag                                      536  Enumerated       -
+   IP-Option                                               537  Grouped          -
+   IP-Option-Type                                          538  Enumerated       -
+   IP-Option-Value                                         539  OctetString      -
+   TCP-Option                                              540  Grouped          -
+   TCP-Option-Type                                         541  Enumerated       -
+   TCP-Option-Value                                        542  OctetString      -
+   TCP-Flags                                               543  Grouped          -
+   TCP-Flag-Type                                           544  Unsigned32       -
+   ICMP-Type                                               545  Grouped          -
+   ICMP-Type-Number                                        546  Enumerated       -
+   ICMP-Code                                               547  Enumerated       -
+   ETH-Option                                              548  Grouped          -
+   ETH-Proto-Type                                          549  Grouped          -
+   ETH-Ether-Type                                          550  OctetString      -
+   ETH-SAP                                                 551  OctetString      -
+   VLAN-ID-Range                                           552  Grouped          -
+   S-VID-Start                                             553  Unsigned32       -
+   S-VID-End                                               554  Unsigned32       -
+   C-VID-Start                                             555  Unsigned32       -
+   C-VID-End                                               556  Unsigned32       -
+   User-Priority-Range                                     557  Grouped          -
+   Low-User-Priority                                       558  Unsigned32       -
+   High-User-Priority                                      559  Unsigned32       -
+   Time-Of-Day-Condition                                   560  Grouped          -
+   Time-Of-Day-Start                                       561  Unsigned32       -
+   Time-Of-Day-End                                         562  Unsigned32       -
+   Day-Of-Week-Mask                                        563  Unsigned32       -
+   Day-Of-Month-Mask                                       564  Unsigned32       -
+   Month-Of-Year-Mask                                      565  Unsigned32       -
+   Absolute-Start-Time                                     566  Time             -
+   Absolute-Start-Fractional-Seconds                       567  Unsigned32       -
+   Absolute-End-Time                                       568  Time             -
+   Absolute-End-Fractional-Seconds                         569  Unsigned32       -
+   Timezone-Flag                                           570  Enumerated       -
+   Timezone-Offset                                         571  Integer32        -
+   Treatment-Action                                        572  Enumerated       -
+   QoS-Profile-Id                                          573  Unsigned32       -
+   QoS-Profile-Template                                    574  Grouped          -
+   QoS-Semantics                                           575  Enumerated       -
+   QoS-Parameters                                          576  Grouped          -
+   Excess-Treatment                                        577  Grouped          -
+   QoS-Capability                                          578  Grouped          M
+   ;; RFC5778 Diameter Mobile IPv6: Support for Home Agent to Diameter Server Interaction
+   Service-Selection                                       493  UTF8String       M
+   ;; RFC5779 Diameter Proxy Mobile IPv6: Mobile Access Gateway and Local Mobility Anchor Interaction with Diameter Server
+   Mobile-Node-Identifier                                  506  UTF8String       M
+
+
+@grouped
+
+   Load ::= <AVP Header: 650 >
+      [ Load-Type ]
+      [ Load-Value ]
+      [ SourceID ]
+     *[ AVP ]
+
+   OC-OLR ::= <AVP Header: 623>
+      < OC-Sequence-Number >
+      < OC-Report-Type >
+      [ OC-Reduction-Percentage ]
+      [ OC-Validity-Duration ]
+     *[ AVP ]
+
+   MIP-Home-Agent-Host ::= < AVP Header: 348 >
+      { Destination-Realm }
+      { Destination-Host }
+     *[ AVP ]
+
+   MIP6-Agent-Info ::= <AVP Header: 486>
+    *2[ MIP-Home-Agent-Address ]
+      [ MIP-Home-Agent-Host ]
+      [ MIP6-Home-Link-Prefix ]
+     *[ AVP ]
+
+   OC-Supported-Features ::= <AVP Header: 621 >
+      [ OC-Feature-Vector ]
+     *[ AVP ]
+
+   CC-Money ::= <AVP Header: 413>
+      { Unit-Value }
+      [ Currency-Code ]
+
+   Cost-Information ::= <AVP Header: 423>
+      { Unit-Value }
+      { Currency-Code }
+      [ Cost-Unit ]
+
+   Final-Unit-Indication ::= <AVP Header: 430>
+      { Final-Unit-Action }
+     *[ Restriction-Filter-Rule ]
+     *[ Filter-Id ]
+      [ Redirect-Server ]
+
+   ;; overidden in 3gpp_ro.dia
+   Granted-Service-Unit ::= <AVP Header: 431>
+      [ Tariff-Time-Change ]
+      [ CC-Time ]
+      [ CC-Money ]
+      [ CC-Total-Octets ]
+      [ CC-Input-Octets ]
+      [ CC-Output-Octets ]
+      [ CC-Service-Specific-Units ]
+     *[ AVP ]
+
+   ;; overidden in 3gpp_ro.dia
+   Multiple-Services-Credit-Control ::= <AVP Header: 456>
+      [ Granted-Service-Unit ]
+      [ Requested-Service-Unit ]
+     *[ Used-Service-Unit ]
+      [ Tariff-Change-Usage ]
+     *[ Service-Identifier ]
+      [ Rating-Group ]
+     *[ G-S-U-Pool-Reference ]
+      [ Validity-Time ]
+      [ Result-Code ]
+      [ Final-Unit-Indication ]
+     *[ AVP ]
+
+   G-S-U-Pool-Reference ::= <AVP Header: 457>
+      { G-S-U-Pool-Identifier }
+      { CC-Unit-Type }
+      { Unit-Value }
+
+   Redirect-Server ::= <AVP Header: 434>
+      { Redirect-Address-Type }
+      { Redirect-Server-Address }
+
+   ;; overidden in 3gpp_ro.dia
+   Requested-Service-Unit ::= <AVP Header: 437>
+      [ CC-Time ]
+      [ CC-Money ]
+      [ CC-Total-Octets ]
+      [ CC-Input-Octets ]
+      [ CC-Output-Octets ]
+      [ CC-Service-Specific-Units ]
+     *[ AVP ]
+
+   Subscription-Id ::= <AVP Header: 443>
+      { Subscription-Id-Type }
+      { Subscription-Id-Data }
+
+   Unit-Value ::= <AVP Header: 445>
+      { Value-Digits }
+      [ Exponent ]
+
+   ;; overidden in 3gpp_ro.dia
+   Used-Service-Unit ::= <AVP Header: 446>
+      [ Tariff-Change-Usage ]
+      [ CC-Time ]
+      [ CC-Money ]
+      [ CC-Total-Octets ]
+      [ CC-Input-Octets ]
+      [ CC-Output-Octets ]
+      [ CC-Service-Specific-Units ]
+     *[ AVP ]
+
+   User-Equipment-Info ::= <AVP Header: 458>
+      { User-Equipment-Info-Type }
+      { User-Equipment-Info-Value }
+
+   Tunneling ::= <AVP Header: 401>
+      { Tunnel-Type }
+      { Tunnel-Medium-Type }
+      { Tunnel-Client-Endpoint }
+      { Tunnel-Server-Endpoint }
+      [ Tunnel-Preference ]
+      [ Tunnel-Client-Auth-Id ]
+      [ Tunnel-Server-Auth-Id ]
+      [ Tunnel-Assignment-Id ]
+      [ Tunnel-Password ]
+      [ Tunnel-Private-Group-Id ]
+
+   QoS-Resources ::= <AVP Header: 508>
+    1*{ Filter-Rule }
+     *[ AVP ]
+
+   Filter-Rule ::= <AVP Header: 509>
+      [ Filter-Rule-Precedence ]
+      [ Classifier ]
+     *[ Time-Of-Day-Condition ]
+      [ Treatment-Action ]
+      [ QoS-Semantics ]
+      [ QoS-Profile-Template ]
+      [ QoS-Parameters ]
+      [ Excess-Treatment ]
+     *[ AVP ]
+
+   Classifier ::= <AVP Header: 511>
+      { Classifier-ID }
+      [ Protocol ]
+      [ Direction ]
+     *[ From-Spec ]
+     *[ To-Spec ]
+     *[ Diffserv-Code-Point ]
+      [ Fragmentation-Flag ]
+     *[ IP-Option ]
+     *[ TCP-Option ]
+      [ TCP-Flags ]
+     *[ ICMP-Type ]
+     *[ ETH-Option ]
+     *[ AVP ]
+
+   From-Spec ::= <AVP Header: 515>
+     *[ IP-Address ]
+     *[ IP-Address-Range ]
+     *[ IP-Address-Mask ]
+     *[ MAC-Address ]
+     *[ MAC-Address-Mask]
+     *[ EUI64-Address ]
+     *[ EUI64-Address-Mask]
+     *[ Port ]
+     *[ Port-Range ]
+      [ Negated ]
+      [ Use-Assigned-Address ]
+     *[ AVP ]
+
+   To-Spec ::= <AVP Header: 516>
+     *[ IP-Address ]
+     *[ IP-Address-Range ]
+     *[ IP-Address-Mask ]
+     *[ MAC-Address ]
+     *[ MAC-Address-Mask]
+     *[ EUI64-Address ]
+     *[ EUI64-Address-Mask]
+     *[ Port ]
+     *[ Port-Range ]
+      [ Negated ]
+      [ Use-Assigned-Address ]
+     *[ AVP ]
+
+   IP-Address-Range ::= <AVP Header: 519>
+      [ IP-Address-Start ]
+      [ IP-Address-End ]
+     *[ AVP ]
+
+   IP-Address-Mask ::= <AVP Header: 522>
+      { IP-Address }
+      { IP-Bit-Mask-Width }
+     *[ AVP ]
+
+   MAC-Address-Mask ::= <AVP Header: 525>
+      { MAC-Address }
+      { MAC-Address-Mask-Pattern }
+     *[ AVP ]
+
+   EUI64-Address-Mask ::= <AVP Header: 528>
+      { EUI64-Address }
+      { EUI64-Address-Mask-Pattern }
+     *[ AVP ]
+
+   Port-Range ::= <AVP Header: 531>
+      [ Port-Start ]
+      [ Port-End ]
+     *[ AVP ]
+
+   IP-Option ::= <AVP Header: 537>
+      { IP-Option-Type }
+     *[ IP-Option-Value ]
+      [ Negated ]
+     *[ AVP ]
+
+   TCP-Option ::= <AVP Header: 540>
+      { TCP-Option-Type }
+     *[ TCP-Option-Value ]
+      [ Negated ]
+     *[ AVP ]
+
+   TCP-Flags ::= <AVP Header: 543>
+      { TCP-Flag-Type }
+      [ Negated ]
+     *[ AVP ]
+
+   ICMP-Type ::= <AVP Header: 545>
+      { ICMP-Type-Number }
+     *[ ICMP-Code ]
+      [ Negated ]
+     *[ AVP ]
+
+   ETH-Option ::= <AVP Header: 548>
+      { ETH-Proto-Type }
+     *[ VLAN-ID-Range ]
+     *[ User-Priority-Range ]
+     *[ AVP ]
+
+   ETH-Proto-Type ::= <AVP Header: 549>
+     *[ ETH-Ether-Type ]
+     *[ ETH-SAP ]
+     *[ AVP ]
+
+   VLAN-ID-Range ::= < AVP Header: 552 >
+      [ S-VID-Start ]
+      [ S-VID-End ]
+      [ C-VID-Start ]
+      [ C-VID-End ]
+     *[ AVP ]
+
+   User-Priority-Range ::= <AVP Header: 557>
+     *[ Low-User-Priority ]
+     *[ High-User-Priority ]
+     *[ AVP ]
+
+   Time-Of-Day-Condition ::= < AVP Header: 560 >
+      [ Time-Of-Day-Start ]
+      [ Time-Of-Day-End ]
+      [ Day-Of-Week-Mask ]
+      [ Day-Of-Month-Mask ]
+      [ Month-Of-Year-Mask ]
+      [ Absolute-Start-Time ]
+      [ Absolute-End-Time ]
+      [ Timezone-Flag ]
+     *[ AVP ]
+
+   QoS-Profile-Template ::= <AVP Header: 574>
+      { Vendor-Id }
+      { QoS-Profile-Id }
+     *[ AVP ]
+
+   QoS-Parameters  ::= <AVP Header: 576>
+     *[ AVP ]
+
+   Excess-Treatment ::= <AVP Header: 577>
+      { Treatment-Action }
+      [ QoS-Profile-Template ]
+      [ QoS-Parameters ]
+     *[ AVP ]
+
+   QoS-Capability ::= <AVP Header: 578>
+    1*{ QoS-Profile-Template }
+     *[ AVP ]
+
+@enum OC-Report-Type
+   HOST_REPORT                      0
+   REALM_REPORT                     1
+
+@enum Load-Type
+   HOST                             1
+   PEER                             2
+
+@enum DRMP
+   PRIORITY_15                     15
+   PRIORITY_14                     14
+   PRIORITY_13                     13
+   PRIORITY_12                     12
+   PRIORITY_11                     11
+   PRIORITY_10                     10
+   PRIORITY_9                       9
+   PRIORITY_8                       8
+   PRIORITY_7                       7
+   PRIORITY_6                       6
+   PRIORITY_5                       5
+   PRIORITY_4                       4
+   PRIORITY_3                       3
+   PRIORITY_2                       2
+   PRIORITY_1                       1
+   PRIORITY_0                       0
+
+@enum CC-Request-Type
+   INITIAL_REQUEST                  1
+   UPDATE_REQUEST                   2
+   TERMINATION_REQUEST              3
+   EVENT_REQUEST                    4
+
+@enum CC-Session-Failover
+   FAILOVER_NOT_SUPPORTED           0
+   FAILOVER_SUPPORTED               1
+
+@enum CC-Unit-Type
+   TIME                             0
+   MONEY                            1
+   TOTAL-OCTETS                     2
+   INPUT-OCTETS                     3
+   OUTPUT-OCTETS                    4
+   SERVICE-SPECIFIC-UNITS           5
+
+@enum Credit-Control-Failure-Handling
+   TERMINATE                        0
+   CONTINUE                         1
+   RETRY_AND_TERMINATE              2
+
+@enum Direct-Debiting-Failure-Handling
+   TERMINATE_OR_BUFFER              0
+   CONTINUE                         1
+
+@enum Final-Unit-Action
+   TERMINATE                        0
+   REDIRECT                         1
+   REDIRECT_ACCESS                  2
+
+@enum Multiple-Services-Indicator
+   MULTIPLE_SERVICES_NOT_SUPPORTED  0
+   MULTIPLE_SERVICES_SUPPORTED      1
+
+@enum Redirect-Address-Type
+   IPV4_ADDRESS                     0
+   IPV6_ADDRESS                     1
+   URL                              2
+   SIP_URI                          3
+
+@enum Requested-Action
+   DIRECT_DEBITING                  0
+   REFUND_ACCOUNT                   1
+   CHECK_BALANCE                    2
+   PRICE_ENQUIRY                    3
+
+@enum Subscription-Id-Type
+   END_USER_E164                    0
+   END_USER_IMSI                    1
+   END_USER_SIP_URI                 2
+   END_USER_NAI                     3
+   END_USER_PRIVATE                 4
+
+@enum Tariff-Change-Usage
+   UNIT_BEFORE_TARIFF_CHANGE        0
+   UNIT_AFTER_TARIFF_CHANGE         1
+   UNIT_INDETERMINATE               2
+
+@enum User-Equipment-Info-Type
+   IMEISV                           0
+   MAC                              1
+   EUI64                            2
+   MODIFIED_EUI64                   3
+
+@define Result-Code
+   END_USER_SERVICE_DENIED       4010
+   CREDIT_CONTROL_NOT_APPLICABLE 4011
+   CREDIT_LIMIT_REACHED          4012
+   USER_UNKNOWN                  5030
+   RATING_FAILED                 5031
+
+@enum Framed-Routing
+   NONE                             0
+   SEND_ROUTING_PACKETS             1
+   LISTEN_FOR_ROUTING_PACKETS       2
+   SEND_AND_LISTEN                  3
+
+@enum Framed-Protocol
+   PPP                              1
+   SLIP                             2
+   ARAP                             3
+   GANDALF__PROPRIETARY_PROTOCOL    4
+   XYLOGICS_IPX_SLIP                5
+   X_75_SYNCHRONOUS                 6
+   GPRS_PDP_CONTEXT                 7
+
+@enum Framed-Compression
+   NONE                             0
+   VJ_TCP_IP_HEADER_COMPRESSION     1
+   IPX_HEADER_COMPRESSION           2
+   STAC_LZS_COMPRESSION             3
+
+@enum Service-Type
+   LOGIN                            1
+   FRAMED                           2
+   CALLBACK_LOGIN                   3
+   CALLBACK_FRAMED                  4
+   OUTBOUND                         5
+   ADMINISTRATIVE                   6
+   NAS_PROMPT                       7
+   AUTHENTICATE_ONLY                8
+   CALLBACK_NAS_PROMPT              9
+   CALL_CHECK                      10
+   CALLBACK_ADMINISTRATIVE         11
+
+@enum Tunnel-Type
+   PPTP                             1
+   L2F                              2
+   L2TP                             3
+   ATMP                             4
+   VTP                              5
+   AH                               6
+   IP_IP                            7
+   MIN_IP_IP                        8
+   ESP                              9
+   GRE                             10
+   DVS                             11
+   IP_IN_IP_TUNNELING              12
+   VLAN                            13
+
+@enum Tunnel-Medium-Type
+   IPV4                             1
+   IPV6                             2
+   NSAP                             3
+   HDLC                             4
+   BBN_1822                         5
+   ALL_802_AND_ETHERNET             6
+   E_163                            7
+   E_164                            8
+   F_69                             9
+   X_121                           10
+   IPX                             11
+   APPLETALK                       12
+   DECNET_IV                       13
+   BANYAN_VINES                    14
+   E_164_NSAP_FORMAT_SUBADDRESS    15
+
+@enum NAS-Port-Type
+   ASYNC                            0
+   SYNC                             1
+   ISDN_SYNC                        2
+   ISDN_ASYNC_V_120                 3
+   ISDN_ASYNC_V_110                 4
+   VIRTUAL                          5
+   PIAFS                            6
+   HDLC_CLEAR_CHANNEL               7
+   X_25                             8
+   X_75                             9
+   G_3_FAX                         10
+   SDSL                            11
+   ADSL_CAP                        12
+   ADSL_DMT                        13
+   IDSL                            14
+   ETHERNET                        15
+   XDSL                            16
+   CABLE                           17
+   WIRELESS_OTHER                  18
+   WIRELESS_IEEE_802_11            19
+   TOKEN_RING                      20
+   FDDI                            21
+   WIRELESS_CDMA2000               22
+   WIRELESS_UMTS                   23
+   WIRELESS_1X_EV                  24
+   IAPP                            25
+
+@enum Negated
+   False                            0
+   True                             1
+
+@enum Use-Assigned-Address
+   False                            0
+   True                             1
+
+@enum Diffserv-Code-Point
+   CS0                              0
+   CS1                              8
+   CS2                             16
+   CS3                             24
+   CS4                             32
+   CS5                             40
+   CS6                             48
+   CS7                             56
+   AF11                            10
+   AF12                            12
+   AF13                            14
+   AF21                            18
+   AF22                            20
+   AF23                            22
+   AF31                            26
+   AF32                            28
+   AF33                            30
+   AF41                            34
+   AF42                            36
+   AF43                            38
+   EF                              46
+   VOICE-ADMIT                     44
+   LE                               1
+
+@enum Fragmentation-Flag
+   DF                               0
+   MF                               1
+
+@enum IP-Option-Type
+   EOOL                             0
+   NOP                              1
+   SEC                            130
+   LSR                            131
+   TS                              68
+   E-SEC                          133
+   CIPSO                          134
+   RR                               7
+   SID                            136
+   SSR                            137
+   ZSU                             10
+   MTUP                            11
+   MTUR                            12
+   FINN                           205
+   VISA                           142
+   ENCODE                          15
+   IMITD                          144
+   EIP                            145
+   TR                              82
+   ADDEXT                         147
+   RTRALT                         148
+   SDB                            149
+   DPS                            151
+   UMP                            152
+   QS                              25
+
+@enum TCP-Option-Type
+   MSS                              1
+   SACK                             5
+   SNAP                            24
+   TCP-AO                          29
+   MPTCP                           30
+   TVP-ENO                         69
+
+@enum ICMP-Type-Number
+   ECHO_REPLY                       0
+   DESTINATION_UNREACHABLE          3
+   REDIRECT                         5
+   UNASSIGNED                       7
+   ECHO                             8
+   ROUTER_ADVERTISEMENT             9
+   ROUTER_SOLICITATION             10
+   TIME_EXCEEDED                   11
+   PARAMETER_PROBLEM               12
+   TIMESTAMP                       13
+   TIMESTAMP_REPLY                 14
+   PHOTURIS                        40
+
+@enum ICMP-Code
+   NETWORK_UNREACHABLE              0
+   HOST_UNREACHABLE                 1
+   PROTOCOL_UNREACHABLE             2
+   PORT_UNREACHABLE                 3
+   FRAGMENTATION_NEEDED             4
+   SOURCE_ROUTE_FAILED              5
+   NETWORK_UNKNOWN                  6
+   HOST_UNKNOWN                     7
+   SOURCE_HOST_ISOLATED             8
+   NETWORK_PROHIBITED               9
+   HOST_PROHIBITED                 10
+   NETWORK_UNREACHABLE_SERVICE     11
+   HOST_UNREACHABLE_SERVICE        12
+   PROHIBITED                      13
+   HOST_PRECEDENCE_VIOLATION       14
+   PRECEDENCE_CUTOFF               15
+   
+@enum Timezone-Flag
+   UTC                              0
+   LOCAL                            1
+   OFFSET                           2
+
+@enum Treatment-Action
+   DROP                             0
+   SHAPE                            1
+   MARK                             2
+   PERMIT                           3
+
+@enum QoS-Semantics
+   QOS_DESIRED                      0
+   QOS_AVAILABLE                    1
+   QOS_DELIVERED                    2
+   MINIMUM_QOS                      3
+   QOS_AUTHORIZED                   4
+
