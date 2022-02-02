@@ -3,5 +3,5 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-erl_DATA = ocs_rest_query_scanner.erl \
-		ocs_rest_query_parser.erl
+erl_DATA = cse_rest_query_scanner.erl \
+		cse_rest_query_parser.erl
