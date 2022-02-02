@@ -23,7 +23,7 @@
 
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/1]).
--export([get_resource/1, get_resource/2, add_resource/1]).
+-export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
 
 -include("cse.hrl").
 
@@ -339,6 +339,35 @@ add_resource1({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
 	Body = zj:encode(resource(Resource)),
 	{ok, Headers, Body};
 add_resource1({error, _Reason}) ->
+	{error, 400}.
+
+-spec delete_resource(Id) -> Result
+   when
+      Id :: string(),
+      Result :: {ok, Headers :: [tuple()], Body :: iolist()}
+            | {error, ErrorCode :: integer()} .
+%% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
+%%    request to remove a table row.
+delete_resource(Id) ->
+	try
+		case string:tokens(Id, "-") of
+			[Table, Prefix] ->
+				Name = list_to_existing_atom(Table),
+				ok = cse_gtt:delete(Name, Prefix),
+				{ok, [], []};
+			[Id] ->
+				delete_resource1(cse:delete_resource(Id))
+		end
+	catch
+		error:badarg ->
+			{error, 404};
+		_:_ ->
+			{error, 400}
+	end.
+%% @hidden
+delete_resource1(ok) ->
+	{ok, [], []};
+delete_resource1({error, _Reason}) ->
 	{error, 400}.
 
 %%----------------------------------------------------------------------
