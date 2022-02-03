@@ -31,7 +31,7 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [],
+		Args :: [term()],
 		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
 		SupFlags :: supervisor:sup_flags(),
 		ChildSpec :: supervisor:child_spec().
@@ -39,7 +39,7 @@
 %% @see //stdlib/supervisor:init/1
 %% @private
 %%
-init(_Args) ->
+init([] = _Args) ->
 	ChildSpecs = [supervisor(cse_diameter_service_fsm_sup)],
 	SupFlags = #{strategy => simple_one_for_one},
 	{ok, {SupFlags, ChildSpecs}}.
@@ -61,3 +61,4 @@ supervisor(StartMod) ->
 	StartFunc = {supervisor, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc, 
 			type => supervisor, modules => [StartMod]}.
+
