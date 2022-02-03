@@ -76,7 +76,7 @@ callback_mode() ->
 		Reason :: term().
 %% @doc Initialize the {@module} finite state machine.
 %%
-%% 	Initialize a Service Logic Processing Program (SLP) instance.
+%% 	Initialize a Diameter Service instance.
 %%
 %% @see //stdlib/gen_statem:init/1
 %% @private
