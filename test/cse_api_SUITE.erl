@@ -32,6 +32,7 @@
 		get_services/0, get_services/1,
 		delete_service/0, delete_service/1,
 		no_service/0, no_service/1]).
+-export([announce/0, announce/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -92,7 +93,7 @@ sequences() ->
 %%
 all() ->
 	[start_cse, stop_cse, add_service, find_service, get_services,
-			delete_service, no_service].
+			delete_service, no_service, announce].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -155,6 +156,22 @@ no_service() ->
 no_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	{error, not_found} = cse:find_service(ServiceKey).
+
+announce() ->
+	[{userdata, [{doc, "Make announcement word list"}]}].
+
+announce(_Config) ->
+	Amount = rand:uniform(1000000000000),
+	Words = [zero, one, two, three, four, five, six, seven,
+			eight, nine, ten, eleven, twelve, thirteen, fourteen,
+			fifteen, sixteen, seventeen, eighteen, nineteen,
+			twenty, thirty, forty, fifty, sixty, seventy, eighty,
+			ninety, hundred, thousand, million, billion, trillion,
+			dollar, dollars, cent, cents, 'and', negative],
+	F = fun(Word) ->
+			lists:member(Word, Words)
+	end,
+	lists:all(F, cse:announce(Amount)).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

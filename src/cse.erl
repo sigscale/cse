@@ -24,11 +24,13 @@
 
 %% export the cse  public API
 -export([start/0, stop/0]).
+-export([start_diameter/3]).
 -export([add_resource/1, get_resources/0, find_resource/1, delete_resource/1,
 		query_resource/5]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
+-export([announce/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 
@@ -57,6 +59,19 @@ start() ->
 %% @doc Stop the {@link //cse. cse} application.
 stop() ->
 	application:stop(cse).
+
+-spec start_diameter(Address, Port, Options) -> Result
+	when
+		Address :: inet:ip_address(),
+		Port :: pos_integer(),
+		Options :: [Option],
+		Option :: diameter:service_opt(),
+		Result :: Result :: {ok, Pid} | {error, Reason},
+		Pid :: pid(),
+		Reason :: term().
+%% @doc Start a DIAMETER request handler.
+start_diameter(Address, Port, Options) ->
+	gen_server:call(cse, {start, diameter, Address, Port, Options}).
 
 -spec add_user(Username, Password, UserData) -> Result
 	when
@@ -595,6 +610,146 @@ delete_service(Key) when is_integer(Key) ->
 		{aborted, Reason} ->
 			exit(Reason)
 	end.
+
+<<<<<<< HEAD
+-spec announce(Amount) -> Result
+	when
+		Amount :: integer(),
+		Result :: [Word],
+		Word :: zero |one | two | three | four | five | six
+				| seven | eight | nine | ten | eleven | twelve
+				| thirteen | fourteen | fifteen | sixteen
+				| seventeen | eighteen | nineteen | twenty
+				| thirty | forty | fifty | sixty | seventy
+				| eighty | ninety | hundred | thousand
+				| million | billion | trillion | dollar | dollars
+				| cent | cents | 'and' | negative.
+%% @doc Convert a monetary amount to an announcement list.
+%%
+%% 	Given an `Amount', in cents, returns a list of words
+%% 	which "spell out" the monetary amount. It is expected
+%% 	that the caller will map the result `Word's to specific
+%% 	announcement file identifiers for use in an IN
+%% 	`PlayAnnouncement' operation or DIAMETER
+%% 	`Announcement-Information' AVP.
+%%
+announce(Amount) when is_integer(Amount), Amount < 0  ->
+	announce(-Amount, [negative]);
+announce(0) ->
+	[zero];
+announce(Amount) when is_integer(Amount), Amount > 0 ->
+	announce(Amount, []).
+%% @hidden
+announce(Amount, Acc) when Amount > 99 ->
+	NewAcc = case announce1(Amount div 100, []) of
+		[one]  ->
+			Acc ++ [one, dollar];
+		Dollars ->
+			Acc ++ Dollars ++ [dollars]
+	end,
+	case Amount rem 100 of
+		0 ->
+			NewAcc;
+		Cents ->
+			announce(Cents, NewAcc ++ ['and'])
+	end;
+announce(Amount, Acc) when Amount < 100 ->
+	case announce1(Amount, []) of
+		[one]  ->
+			Acc ++ [one, cent];
+		Cents ->
+			Acc ++ Cents ++ [cents]
+	end.
+%% @hidden
+announce1(Amount, Acc)
+		when Amount > 999999999999, Amount < 1000000000000000 ->
+	Trillions = announce1(Amount div 1000000000000, []),
+	NewAcc = Acc ++ Trillions ++ [trillion],
+	announce1(Amount rem 1000000000000, NewAcc);
+announce1(Amount, Acc)
+		when Amount > 999999999, Amount < 1000000000000 ->
+	Billions = announce1(Amount div 1000000000, []),
+	NewAcc = Acc ++ Billions ++ [billion],
+	announce1(Amount rem 1000000000, NewAcc);
+announce1(Amount, Acc)
+		when Amount > 999999, Amount < 1000000000 ->
+	Millions = announce1(Amount div 1000000, []),
+	NewAcc = Acc ++ Millions ++ [million],
+	announce1(Amount rem 1000000, NewAcc);
+announce1(Amount, Acc)
+		when Amount > 999, Amount < 1000000 ->
+	Thousands = announce1(Amount div 1000, []),
+	NewAcc = Acc ++ Thousands ++ [thousand],
+	announce1(Amount rem 1000, NewAcc);
+announce1(Amount, Acc)
+		when Amount > 99, Amount < 1000 ->
+	Hundreds = announce1(Amount div 100, []),
+	NewAcc = Acc ++ Hundreds ++ [hundred],
+	announce1(Amount rem 100, NewAcc);
+announce1(Amount, Acc)
+		when Amount > 89, Amount < 100 ->
+	announce1(Amount - 90, Acc ++ [ninety]);
+announce1(Amount, Acc)
+		when Amount > 79, Amount < 90 ->
+	announce1(Amount - 80, Acc ++ [eighty]);
+announce1(Amount, Acc)
+		when Amount > 69, Amount < 80 ->
+	announce1(Amount - 70, Acc ++ [seventy]);
+announce1(Amount, Acc)
+		when Amount > 59, Amount < 70 ->
+	announce1(Amount - 60, Acc ++ [sixty]);
+announce1(Amount, Acc)
+		when Amount > 49, Amount < 60 ->
+	announce1(Amount - 50, Acc ++ [fifty]);
+announce1(Amount, Acc)
+		when Amount > 39, Amount < 50 ->
+	announce1(Amount - 40, Acc ++ [forty]);
+announce1(Amount, Acc)
+		when Amount > 29, Amount < 40 ->
+	announce1(Amount - 30, Acc ++ [thirty]);
+announce1(Amount, Acc)
+		when Amount > 19, Amount < 30 ->
+	announce1(Amount - 20, Acc ++ [twenty]);
+announce1(19, Acc) ->
+	Acc ++ [nineteen];
+announce1(18, Acc) ->
+	Acc ++ [eighteen];
+announce1(17, Acc) ->
+	Acc ++ [seventeen];
+announce1(16, Acc) ->
+	Acc ++ [sixteen];
+announce1(15, Acc) ->
+	Acc ++ [fifteen];
+announce1(14, Acc) ->
+	Acc ++ [fourteen];
+announce1(13, Acc) ->
+	Acc ++ [thirteen];
+announce1(12, Acc) ->
+	Acc ++ [twelve];
+announce1(11, Acc) ->
+	Acc ++ [eleven];
+announce1(10, Acc) ->
+	Acc ++ [ten];
+announce1(9, Acc) ->
+	Acc ++ [nine];
+announce1(8, Acc) ->
+	Acc ++ [eight];
+announce1(7, Acc) ->
+	Acc ++ [seven];
+announce1(6, Acc) ->
+	Acc ++ [six];
+announce1(5, Acc) ->
+	Acc ++ [five];
+announce1(4, Acc) ->
+	Acc ++ [four];
+announce1(3, Acc) ->
+	Acc ++ [three];
+announce1(2, Acc) ->
+	Acc ++ [two];
+announce1(1, Acc) ->
+	Acc ++ [one];
+announce1(0, Acc) ->
+	Acc.
 
 %%----------------------------------------------------------------------
 %%  internal functions

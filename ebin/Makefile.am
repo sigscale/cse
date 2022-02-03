@@ -8,6 +8,10 @@ EXTRA_DIST = cse.app
 beam_DATA = cse.beam \
 		cse_app.beam \
 		cse_sup.beam \
+		cse_diameter_sup.beam \
+		cse_diameter_service_fsm_sup.beam \
+		cse_diameter_service_fsm.beam \
+		cse_diameter_base_application_cb.beam \
 		cse_server.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \

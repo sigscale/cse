@@ -90,8 +90,26 @@ start2(Profile) ->
 start3() ->
 	Options = [set, public, named_table, {write_concurrency, true}],
 	ets:new(cse_counters, Options),
-	ets:insert(cse_counters, {nrf_seq, 0}),
-	supervisor:start_link({local, cse_sup}, cse_sup, []).
+	case catch ets:insert(cse_counters, {nrf_seq, 0}) of
+		true ->
+			start4();
+		{'EXIT', Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start4() ->
+	{ok, DiameterServices} = application:get_env(diameter),
+	F1 = fun({Addr, Port, Options}) ->
+		case cse:start_diameter(Addr, Port, Options) of
+			{ok, _Sup} ->
+				ok;
+			{error, Reason} ->
+				throw(Reason)
+		end
+	end,
+	TopSup = supervisor:start_link({local, cse_sup}, cse_sup, []),
+	lists:foreach(F1, DiameterServices),
+	TopSup.
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
 	when

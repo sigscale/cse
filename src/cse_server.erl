@@ -33,7 +33,7 @@
 % export the private api
 -export([]).
 
--record(state, {}).
+-record(state, {sup :: pid()}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -48,9 +48,9 @@
 				| {stop, Reason :: term()} | ignore.
 %% @see //stdlib/gen_server:init/1
 %% @private
-init([]) ->
+init([Sup]) ->
 	process_flag(trap_exit, true),
-	{ok, #state{}}.
+	{ok, #state{sup = Sup}}.
 
 -spec handle_call(Request, From, State) -> Result
 	when
@@ -65,6 +65,12 @@ init([]) ->
 				| {stop, Reason :: term(), NewState :: state()}.
 %% @see //stdlib/gen_server:handle_call/3
 %% @private
+handle_call({start, diameter, Address, Port, Options}, _From,
+		#state{sup = Sup} = State) ->
+	Children = supervisor:which_children(Sup),
+	{_, DiameterSup, _, _} = lists:keyfind(cse_diameter_sup, 1, Children),
+   Result = supervisor:start_child(DiameterSup, [[Address, Port, Options]]),
+   {reply, Result, State};
 handle_call(Request, _From, State) ->
 	{stop, Request, State}.
 
