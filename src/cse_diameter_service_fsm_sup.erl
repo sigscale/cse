@@ -31,7 +31,7 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [],
+		Args :: [term()],
 		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
 		SupFlags :: supervisor:sup_flags(),
 		ChildSpec :: supervisor:child_spec().
@@ -41,7 +41,7 @@
 %%
 init(Args) ->
 	ChildSpecs = [fsm(cse_diameter_service_fsm, Args)],
-	SupFlags = #{strategy => one_for_one},
+	SupFlags = #{},
 	{ok, {SupFlags, ChildSpecs}}.
 
 %%----------------------------------------------------------------------
@@ -58,7 +58,7 @@ init(Args) ->
 %% @private
 %%
 fsm(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
+	StartArgs = [StartMod, Args, []],
 	StartFunc = {gen_statem, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			restart => permanent, modules => [StartMod]}.
