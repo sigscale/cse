@@ -314,8 +314,6 @@ split_options([{'Origin-Realm', DiameterIdentity} = H | T], Acc1, Acc2)
 split_options([{'Host-IP-Address', Addresses} = H | T], Acc1, Acc2)
 		when is_list(Addresses), is_tuple(hd(Addresses)) ->
 	split_options(T, Acc1, [H | Acc2]);
-split_options([{callback, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Vendor-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{'Product-Name', _} | T], Acc1, Acc2) ->
