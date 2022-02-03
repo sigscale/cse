@@ -109,7 +109,6 @@ do(#mod{method = Method, request_uri = Uri,
 
 %% @hidden
 do_post(Resource, ModData, Body, ["resourceInventoryManagement", "v4", "resource"]) ->
-erlang:display({?MODULE, ?LINE}),
 	do_response(ModData, Resource:add_resource(Body)).
 
 %% @hidden
