@@ -67,7 +67,7 @@
         },
         "deprecated" : false
       }
-    },
+    }
   },
   "definitions" : {
     "ResourceSpecification" : {
