@@ -1,0 +1,324 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "description" : "TMF639 Resource Inventory Management",
+    "version" : "4.0.0",
+    "title" : "Resource Inventory Management"
+  },
+  "basePath" : "/resourceInventoryManagement/v4/",
+  "tags" : [ {
+    "name" : "resource",
+    "description" : ""
+  } ],
+  "schemes" : [ "http", "https" ],
+  "consumes" : [ "application/json" ],
+  "produces" : [ "application/json" ],
+  "paths" : {
+    "/resource/" : {
+      "get" : {
+        "tags" : [ "resource" ],
+        "summary" : "This operation lists all resources available",
+        "operationId" : "listresources",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "query",
+          "description" : "Id of the resource",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "category",
+          "in" : "query",
+          "description" : "Category of the resource",
+          "required" : true,
+          "type" : "string"
+        }, {
+          "name" : "resourceSpecification.id",
+          "in" : "query",
+          "description" : "Id of the resource specification",
+          "required" : true,
+          "type" : "string"
+        }, {
+          "name" : "resourceRelationship.name",
+          "in" : "query",
+          "description" : "Name of the resource relationship",
+          "required" : true,
+          "type" : "string"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "schema" : {
+              "$ref" : "#/definitions/Resource"
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "post" : {
+        "tags" : [ "resource" ],
+        "summary" : "This operation creates a Resource entity",
+        "operationId" : "createResourceEntry",
+        "parameters" : [ {
+          "in" : "body",
+          "name" : "resource",
+          "description" : "The Resource to be created",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/Resource"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Success",
+            "schema" : {
+              "$ref" : "#/definitions/Resource"
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    },
+    "/resource/{Id}" : {
+      "get" : {
+        "tags" : [ "resource" ],
+        "summary" : "This operation lists a individual Resource entity",
+        "operationId" : "listResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "type" : "string"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Sucess",
+            "schema" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/definitions/Resource"
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "delete" : {
+        "tags" : [ "resource" ],
+        "summary" : "Deletes a 'Resource' by Id",
+        "operationId" : "deleteResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "type" : "string"
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted",
+            "schema" : {
+              "$ref" : "#/definitions/Resource"
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "patch" : {
+        "tags" : [ "resource" ],
+        "summary" : "Patches a 'Resource' by Id",
+        "operationId" : "updateResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "type" : "string"
+        }, {
+          "in" : "body",
+          "name" : "Resource",
+          "description" : "The Resource to be updated",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/Resource"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Updated",
+            "schema" : {
+              "$ref" : "#/definitions/Resource"
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    }
+  },
+  "definitions" : {
+    "Resource" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string",
+          "description" : "Identifier of an instance of the resource."
+        },
+        "href" : {
+          "type" : "string",
+          "description" : "The URI for the object itself."
+        },
+        "name" : {
+          "type" : "string",
+          "description" : "A string used to give a name to the resource."
+        },
+        "description" : {
+          "type" : "string",
+          "description" : "free-text description of the resource."
+        },
+        "version" : {
+          "type" : "string",
+          "description" : "identifies the specific version of an instance of a resource."
+        },
+        "lifecycleState" : {
+          "type" : "string",
+          "description" : "The life cycle state of the resource."
+        },
+        "lastUpdate" : {
+          "type" : "string",
+          "description" : "The last date the resource was update on."
+        },
+        "category" : {
+          "type" : "string",
+          "description" : "Category of the resource."
+        },
+        "resourceSpecCharacteristic" : {
+          "$ref" : "#/definitions/ResourceCharacteristic"
+        },
+        "resourceRelationship" : {
+          "$ref" : "#/definitions/ResourceRelationship"
+        },
+        "resourceSpecification" : {
+          "$ref" : "#/definitions/ResourceSpecification"
+        }
+      },
+      "description" : "Resource is an abstract entity that describes the common set of attributes shared by all concrete resources"
+    },
+    "ResourceSpecification" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "description" : "Name of the resource specification."
+        },
+        "id" : {
+          "type" : "string",
+          "description" : "Id of the resource specification."
+        }
+      }
+    },
+    "ResourceCharacteristic" : {
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/definitions/ResourceCharacteristicValue"
+      }
+    },
+    "ResourceCharacteristicValue" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "object",
+          "description" : "Name of the characteristic.",
+          "properties" : { }
+        },
+        "value" : {
+          "type" : "string",
+          "description" : "Value of the characteristic."
+        }
+      }
+    },
+    "ResourceRelationship" : {
+      "type" : "array",
+      "items" : {
+        "$ref" : "#/definitions/ResourceRelationshipValue"
+      }
+    },
+    "ResourceRelationshipValue" : {
+      "type" : "object",
+      "properties" : {
+        "resource" : {
+          "$ref" : "#/definitions/RefResource"
+        },
+        "relationshipType" : {
+          "type" : "string",
+          "description" : "The type of resource relationship."
+        }
+      }
+    },
+    "RefResource" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string",
+          "description" : "Unique identifier of the parent resource"
+        },
+        "href" : {
+          "type" : "string",
+          "description" : "Reference of the parent resource"
+        },
+        "name" : {
+          "type" : "string",
+          "description" : "Name of the parent resource"
+        },
+        "@referredType" : {
+          "type" : "string",
+          "description" : "The actual type of the target instance"
+        }
+      }
+    }
+  }
+}

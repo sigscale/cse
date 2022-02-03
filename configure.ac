@@ -46,11 +46,14 @@ erldir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/src
 beamdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/ebin
 eincludedir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/include
 reldir=$ERLANG_INSTALL_LIB_DIR/../releases
+schemadir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/schema
 AC_SUBST(appdir)
 AC_SUBST(erldir)
 AC_SUBST(beamdir)
 AC_SUBST(eincludedir)
 AC_SUBST(reldir)
+AC_SUBST(privdir)
+AC_SUBST(schemadir)
 
 
 ##
@@ -99,5 +102,6 @@ AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_ERROR([zj was not found!])])
 ##
 
 AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile src/Makefile
+		priv/Makefile priv/schema/Makefile
 		test/Makefile $PACKAGE_NAME.rel sys.config])
 
