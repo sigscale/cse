@@ -29,6 +29,7 @@
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
+-export([start_diameter/3]).
 
 -export_type([event_type/0, monitor_mode/0]).
 
@@ -595,6 +596,19 @@ delete_service(Key) when is_integer(Key) ->
 		{aborted, Reason} ->
 			exit(Reason)
 	end.
+
+-spec start_diameter(Address, Port, Options) -> Result
+	when
+		Address :: inet:ip_address(),
+		Port :: pos_integer(),
+		Options :: [Option],
+		Option :: diameter:service_opt(),
+		Result :: Result :: {ok, Pid} | {error, Reason},
+		Pid :: pid(),
+		Reason :: term().
+%% @doc Start a DIAMETER request handler.
+start_diameter(Address, Port, Options) ->
+	gen_server:call(cse, {start, diameter, Address, Port, Options}).
 
 %%----------------------------------------------------------------------
 %%  internal functions
