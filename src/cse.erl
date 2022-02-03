@@ -33,6 +33,7 @@
 -export([announce/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
+-export_type([word/0]).
 
 -include("cse.hrl").
 -include_lib("inets/include/mod_auth.hrl").
@@ -611,11 +612,7 @@ delete_service(Key) when is_integer(Key) ->
 			exit(Reason)
 	end.
 
--spec announce(Amount) -> Result
-	when
-		Amount :: integer(),
-		Result :: [Word],
-		Word :: zero |one | two | three | four | five | six
+-type word() :: zero |one | two | three | four | five | six
 				| seven | eight | nine | ten | eleven | twelve
 				| thirteen | fourteen | fifteen | sixteen
 				| seventeen | eighteen | nineteen | twenty
@@ -623,6 +620,12 @@ delete_service(Key) when is_integer(Key) ->
 				| eighty | ninety | hundred | thousand
 				| million | billion | trillion | dollar | dollars
 				| cent | cents | 'and' | negative.
+
+-spec announce(Amount) -> Result
+	when
+		Amount :: integer(),
+		Result :: [Word],
+		Word :: word().
 %% @doc Convert a monetary amount to an announcement list.
 %%
 %% 	Given an `Amount', in cents, returns a list of words
