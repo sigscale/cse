@@ -240,7 +240,7 @@ service_options(Options) ->
 			"example.net"
 	end,
 	OriginHost = case inet:gethostname() of
-		Hostname when length(Hostname) > 0 ->
+		{ok, Hostname} ->
 			Hostname;
 		_ ->
 			"cse"
