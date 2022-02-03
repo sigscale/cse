@@ -24,6 +24,7 @@
 
 %% export the cse  public API
 -export([start/0, stop/0]).
+-export([start_diameter/3]).
 -export([add_resource/1, get_resources/0, find_resource/1, delete_resource/1,
 		query_resource/5]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
@@ -58,6 +59,19 @@ start() ->
 %% @doc Stop the {@link //cse. cse} application.
 stop() ->
 	application:stop(cse).
+
+-spec start_diameter(Address, Port, Options) -> Result
+	when
+		Address :: inet:ip_address(),
+		Port :: pos_integer(),
+		Options :: [Option],
+		Option :: diameter:service_opt(),
+		Result :: Result :: {ok, Pid} | {error, Reason},
+		Pid :: pid(),
+		Reason :: term().
+%% @doc Start a DIAMETER request handler.
+start_diameter(Address, Port, Options) ->
+	gen_server:call(cse, {start, diameter, Address, Port, Options}).
 
 -spec add_user(Username, Password, UserData) -> Result
 	when
@@ -597,6 +611,7 @@ delete_service(Key) when is_integer(Key) ->
 			exit(Reason)
 	end.
 
+<<<<<<< HEAD
 -spec announce(Amount) -> Result
 	when
 		Amount :: integer(),
