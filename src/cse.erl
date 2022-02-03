@@ -611,7 +611,6 @@ delete_service(Key) when is_integer(Key) ->
 			exit(Reason)
 	end.
 
-<<<<<<< HEAD
 -spec announce(Amount) -> Result
 	when
 		Amount :: integer(),
