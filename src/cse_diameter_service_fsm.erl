@@ -243,7 +243,7 @@ service_options(Options) ->
 		Hostname when length(Hostname) > 0 ->
 			Hostname;
 		_ ->
-			cse
+			"cse"
 	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
@@ -253,9 +253,6 @@ service_options(Options) ->
 		{'Product-Name', "SigScale CSE"},
 		{'Firmware-Revision', Version},
 		{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
-		{'Vendor-Specific-Application-Id',
-				[#'diameter_base_Vendor-Specific-Application-Id'{
-						'Vendor-Id' = ?IANA_PEN_3GPP}]},
 		{restrict_connections, false},
 		{string_decode, false},
 		{application, [{alias, ?BASE_APPLICATION},
