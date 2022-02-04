@@ -16,8 +16,8 @@ implementing the behaviour.  For supervisors the <tt>sup_flags()</tt> are
 also provided as
 <tt>{RestartStrategy::strategy(), Intensity::integer(), Period::integer()}</tt>.
 
-<img alt="supervision heirachy" src="supervision.png" />
+<img alt="supervision heirachy" src="supervision.svg" />
 <br />
-<a href="supervision.png">Figure 1-1</a>
+<a href="supervision.svg">Figure 1-1</a>
 
 
