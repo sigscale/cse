@@ -16,11 +16,7 @@
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
-%%% 	module implements functions to subscribe to a {@link //diameter. diameter}
-%%% 	service and to react to events sent by {@link //diameter. diameter} service.
-%%%
-%%% @reference <a href="https://tools.ietf.org/pdf/rfc4006.pdf">
-%%% 	RFC4006 - DIAMETER Credit-Control Application</a>
+%%% 	module handles {@link //diameter. diameter} service  events.
 %%%
 -module(cse_diameter_service_fsm).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
@@ -129,15 +125,15 @@ started(info, #diameter_event{info = Event, service = Service},
 	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
 			{peer, binary_to_list(Peer)}]),
-	{next_state, started, Data};
+	keep_state_and_data;
 started(info, #diameter_event{info = {watchdog,
 			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
-	{next_state, started, Data};
+	keep_state_and_data;
 started(info, #diameter_event{info = Event, service = Service},
 		Data) ->
 	error_logger:info_report(["DIAMETER event",
 			{service, Service}, {event, Event}]),
-	{next_state, started, Data};
+	keep_state_and_data;
 started(info, {'EXIT', _Pid, noconnection}, Data) ->
 	{next_state, started, Data};
 started(EventType, EventContent, Data) ->
