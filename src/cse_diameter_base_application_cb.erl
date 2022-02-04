@@ -1,4 +1,4 @@
-%%% cse_diameter_base_application_cb.erl 
+%%% cse_diameter_base_application_cb.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2016 - 2021 SigScale Global Inc.
@@ -15,9 +15,9 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc This {@link //stdlib/gen_server. gen_server} behaviour callback
-%%% 	module receives {@link //diameter. diameter} messages on a port assigned
-%%% 	for authentication in the {@link //cse. cse} application.
+%%% @doc This {@link //stdlib/gen_server. gen_server} behaviour
+%%% 	callback	module handles {@link //diameter. diameter} messages
+%%% 	in the {@link //cse. cse} application.
 %%%
 %%% @reference <a href="https://tools.ietf.org/pdf/rfc6733.pdf">
 %%% 	RFC6733 - DIAMETER base protocol</a>
@@ -50,7 +50,7 @@
 		Peer ::  peer(),
 		State :: state(),
 		NewState :: state().
-%% @doc Invoked when the peer connection is available
+%% @doc Invoked when the peer connection is available.
 peer_up(_SvcName, _Peer, State) ->
     State.
 
@@ -60,7 +60,7 @@ peer_up(_SvcName, _Peer, State) ->
 		Peer :: peer(),
 		State :: state(),
 		NewState :: state().
-%% @doc Invoked when the peer connection is not available
+%% @doc Invoked when the peer connection is not available.
 peer_down(_SvcName, _Peer, State) ->
     State.
 
@@ -74,8 +74,8 @@ peer_down(_SvcName, _Peer, State) ->
 		Selection :: {ok, Peer} | {Peer, NewState},
 		Peer :: peer() | false,
 		Result :: Selection | false.
-%% @doc Invoked as a consequence of a call to diameter:call/4 to select
-%% a destination peer for an outgoing request. 
+%% @doc Invoked as a consequence of a call to diameter:call/4 to select.
+%% a destination peer for an outgoing request.
 pick_peer([Peer | _], _, _SvcName, _State) ->
 	{ok, Peer}.
 
@@ -89,7 +89,7 @@ pick_peer([Peer | _], _, _SvcName, _State) ->
 		Discard :: {discard, Reason} | discard,
 		Reason :: term(),
 		PostF :: diameter:evaluable().
-%% @doc Invoked to return a request for encoding and transport 
+%% @doc Invoked to return a request for encoding and transport.
 prepare_request(#diameter_packet{} = Packet, _ServiceName, _Peer) ->
 	{send, Packet}.
 
@@ -104,7 +104,6 @@ prepare_request(#diameter_packet{} = Packet, _ServiceName, _Peer) ->
 		Reason :: term(),
 		PostF :: diameter:evaluable().
 %% @doc Invoked to return a request for encoding and retransmission.
-%% In case of peer connection is lost alternate peer is selected.
 prepare_retransmit(_Packet, _SvcName, _Peer) ->
     discard.
 
@@ -127,7 +126,7 @@ handle_answer(Packet, _Request, _SvcName, _Peer) ->
 		Peer :: peer(),
 		Result :: term().
 %% @doc Invoked when an error occurs before an answer message is received
-%% in response to an outgoing request.
+%% 	in response to an outgoing request.
 handle_error(_Reason, _Request, _SvcName, _Peer) ->
 	not_implemented.
 
