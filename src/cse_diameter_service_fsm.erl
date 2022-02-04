@@ -107,8 +107,8 @@ init([Address, Port, Options] = _Args) ->
 %% @private
 wait_for_start(info, #diameter_event{info = start}, Data) ->
 	{next_state, started, Data};
-wait_for_start(EventType, EventContent, Data) ->
-	handle_event(EventType, EventContent, wait_for_start, Data).
+wait_for_start(_EventType, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec started(EventType, EventContent, Data) -> Result
 	when
@@ -119,7 +119,7 @@ wait_for_start(EventType, EventContent, Data) ->
 %% @doc Handles events received in the <em>started</em> state.
 %% @private
 started(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == up;
+		_Data) when element(1, Event) == up;
 		element(1, Event) == down ->
 	{_PeerRef, #diameter_caps{origin_host = {_, Peer}}} = element(3, Event),
 	error_logger:info_report(["DIAMETER peer connection state changed",
@@ -127,17 +127,16 @@ started(info, #diameter_event{info = Event, service = Service},
 			{peer, binary_to_list(Peer)}]),
 	keep_state_and_data;
 started(info, #diameter_event{info = {watchdog,
-			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
+			_Ref, _PeerRef, {_From, _To}, _Config}}, _Data) ->
 	keep_state_and_data;
-started(info, #diameter_event{info = Event, service = Service},
-		Data) ->
+started(info, #diameter_event{info = Event, service = Service}, _Data) ->
 	error_logger:info_report(["DIAMETER event",
 			{service, Service}, {event, Event}]),
 	keep_state_and_data;
-started(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{next_state, started, Data};
-started(EventType, EventContent, Data) ->
-	handle_event(EventType, EventContent, started, Data).
+started(info, {'EXIT', _Pid, noconnection}, _Data) ->
+	keep_state_and_data;
+started(_EventType, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec wait_for_stop(EventType, EventContent, Data) -> Result
 	when
@@ -165,8 +164,8 @@ wait_for_stop(info, #diameter_event{info = Event, service = Service},
 	{stop, shutdown, Data};
 wait_for_stop(info, {'EXIT', _Pid, noconnection}, Data) ->
 	{stop, shutdown, Data};
-wait_for_stop(EventType, EventContent, Data) ->
-	handle_event(EventType, EventContent, wait_for_stop, Data).
+wait_for_stop(_EventType, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
