@@ -40,14 +40,14 @@ doc_DATA = overview.edoc $(modhtml) \
 		index.html stylesheet.css edoc-info \
 		sigscale-logo.png \
 		supervision.svg \
-		in-processing-model.png \
-		in-functional-architecture.png \
-		o-bcsm-camel.png \
-		t-bcsm-camel.png \
-		o-bcsm-inap.png \
-		t-bcsm-inap.png \
-		messaging.png \
-		distribution.png
+		in-processing-model.svg \
+		in-functional-architecture.svg \
+		o-bcsm-camel.svg \
+		t-bcsm-camel.svg \
+		o-bcsm-inap.svg \
+		t-bcsm-inap.svg \
+		messaging.svg \
+		distribution.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
@@ -64,15 +64,15 @@ overview.edoc: overview.edoc-in
 			mv $$i.tmp $$i; \
 	done
 	-cp -n $(top_srcdir)/doc/sigscale-logo.png .
-	-cp -n $(top_srcdir)/doc/in-processing-model.png .
-	-cp -n $(top_srcdir)/doc/in-functional-architecture.png .
+	-cp -n $(top_srcdir)/doc/in-processing-model.svg .
+	-cp -n $(top_srcdir)/doc/in-functional-architecture.svg .
 	-cp -n $(top_srcdir)/doc/supervision.svg .
-	-cp -n $(top_srcdir)/doc/o-bcsm-camel.png .
-	-cp -n $(top_srcdir)/doc/t-bcsm-camel.png .
-	-cp -n $(top_srcdir)/doc/o-bcsm-inap.png .
-	-cp -n $(top_srcdir)/doc/t-bcsm-inap.png .
-	-cp -n $(top_srcdir)/doc/messaging.png .
-	-cp -n $(top_srcdir)/doc/distribution.png .
+	-cp -n $(top_srcdir)/doc/o-bcsm-camel.svg .
+	-cp -n $(top_srcdir)/doc/t-bcsm-camel.svg .
+	-cp -n $(top_srcdir)/doc/o-bcsm-inap.svg .
+	-cp -n $(top_srcdir)/doc/t-bcsm-inap.svg .
+	-cp -n $(top_srcdir)/doc/messaging.svg .
+	-cp -n $(top_srcdir)/doc/distribution.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml)
 

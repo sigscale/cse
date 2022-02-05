@@ -35,10 +35,10 @@
 %%% 	(BCSM) given in ITU-T Q.1224.
 %%%
 %%% 	==O-BCSM==
-%%% 	<img alt="o-bcsm state diagram" src="o-bcsm-inap.png" />
+%%% 	<img alt="o-bcsm state diagram" src="o-bcsm-inap.svg" />
 %%%
 %%% 	==T-BCSM==
-%%% 	<img alt="t-bcsm state diagram" src="t-bcsm-inap.png" />
+%%% 	<img alt="t-bcsm state diagram" src="t-bcsm-inap.svg" />
 %%%
 %%% 	This module is not intended to be started directly but rather
 %%% 	pushed onto the callback stack of the
