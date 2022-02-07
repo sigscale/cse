@@ -637,13 +637,7 @@ specification_ref(#specification_ref{} = ResourceSpecificationRef) ->
 			ResourceSpecificationRef, #{});
 specification_ref(#{} = ResourceSpecificationRef) ->
 	specification_ref(record_info(fields, specification_ref),
-			ResourceSpecificationRef, #specification_ref{});
-specification_ref([#specification_ref{} | _] = List) ->
-	Fields = record_info(fields, specification_ref),
-	[specification_ref(Fields, R, #{}) || R <- List];
-specification_ref([#{} | _] = List) ->
-	Fields = record_info(fields, specification_ref),
-	[specification_ref(Fields, R, #specification_ref{}) || R <- List].
+			ResourceSpecificationRef, #specification_ref{}).
 %% @hidden
 specification_ref([id | T], #specification_ref{id = Id} = R, Acc)
 		when is_list(Id) ->
