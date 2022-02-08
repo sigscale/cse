@@ -768,10 +768,10 @@ announce1(0, Acc) ->
 add_session(SessionId, PID) when is_binary(SessionId),
 		is_pid(PID) ->
 	Service = {SessionId, PID},
-	case ets:insert(session, Service) of
-		{atomic, ok} ->
+	case catch ets:insert(session, Service) of
+		true ->
 			{ok, Service};
-		{aborted, Reason} ->
+		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
 
