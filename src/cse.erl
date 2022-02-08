@@ -31,7 +31,7 @@
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 -export([announce/1]).
--export([add_session/2, get_session/1]).
+-export([add_session/2, get_session/1, get_sessions/0]).
 
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
@@ -781,15 +781,32 @@ add_session(SessionId, PID) when is_binary(SessionId),
 		Result :: {ok, {SessionId, PID}} | {error, Reason},
 		PID :: pid(),
 		Reason :: not_found | term().
-%% @doc Get a Resource by identifier.
+%% @doc Get a Session by SessionId.
 get_session(SessionId) when is_binary(SessionId) ->
-	case catch ets:lookup(SessionId) of
+	case catch ets:lookup(session, SessionId) of
 		[] ->
 			{error, not_found};
 		{'EXIT', Reason} ->
 			{error, Reason};
 		[{SessionId, PID}] ->
 			{SessionId, PID}
+	end.
+
+-spec get_sessions() -> Result
+	when
+		Result :: Sessions | {error, Reason},
+		Sessions :: [Session],
+		Session :: {SessionId, PID},
+		SessionId :: binary(),
+		PID :: pid(),
+		Reason :: term().
+%% @doc Get all entries from the Session table.
+get_sessions() ->
+	case catch ets:tab2list(session) of
+		Sessions when length(Sessions) > 0 ->
+			Sessions;
+		{'EXIT', Reason} ->
+			{error, Reason}
 	end.
 
 %%----------------------------------------------------------------------
