@@ -31,7 +31,7 @@
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 -export([announce/1]).
--export([add_session/2]).
+-export([add_session/2, get_session/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
@@ -773,6 +773,23 @@ add_session(SessionId, PID) when is_binary(SessionId),
 			{ok, Service};
 		{aborted, Reason} ->
 			{error, Reason}
+	end.
+
+-spec get_session(SessionId) -> Result
+	when
+		SessionId :: binary(),
+		Result :: {ok, {SessionId, PID}} | {error, Reason},
+		PID :: pid(),
+		Reason :: not_found | term().
+%% @doc Get a Resource by identifier.
+get_session(SessionId) when is_binary(SessionId) ->
+	case catch ets:lookup(SessionId) of
+		[] ->
+			{error, not_found};
+		{'EXIT', Reason} ->
+			{error, Reason};
+		[{SessionId, PID}] ->
+			{SessionId, PID}
 	end.
 
 %%----------------------------------------------------------------------
