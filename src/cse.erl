@@ -31,6 +31,7 @@
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 -export([announce/1]).
+-export([add_session/2]).
 
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
@@ -752,6 +753,27 @@ announce1(1, Acc) ->
 	Acc ++ [one];
 announce1(0, Acc) ->
 	Acc.
+
+-spec add_session(SessionId, PID) -> Result
+	when
+		SessionId :: binary(),
+		PID :: pid(),
+		Result :: {ok, {SessionId, PID}} | {error, Reason},
+		Reason :: term().
+%% @doc Add a Session Table Entry
+%%
+%% 	The `SessionId' identifies a Diameter session.
+%% 	The `PID' identifies a SLIP process.
+%%
+add_session(SessionId, PID) when is_binary(SessionId),
+		is_pid(PID) ->
+	Service = {SessionId, PID},
+	case ets:insert(session, Service) of
+		{atomic, ok} ->
+			{ok, Service};
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
 
 %%----------------------------------------------------------------------
 %%  internal functions
