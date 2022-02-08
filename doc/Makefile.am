@@ -26,6 +26,7 @@ modhtml = cse.html \
 		mod_cse_rest_get.html \
 		mod_cse_rest_post.html \
 		mod_cse_rest_delete.html \
+		mod_cse_rest_patch.html \
 		cse_rest_res_resource.html \
 		cse_rest_pagination_server.html \
 		cse_rest_pagination_sup.html \
