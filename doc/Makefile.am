@@ -38,7 +38,16 @@ modhtml = cse.html \
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \
 		index.html stylesheet.css edoc-info \
-		sigscale-logo.png supervision.png
+		sigscale-logo.png \
+		supervision.svg \
+		in-processing-model.svg \
+		in-functional-architecture.svg \
+		o-bcsm-camel.svg \
+		t-bcsm-camel.svg \
+		o-bcsm-inap.svg \
+		t-bcsm-inap.svg \
+		messaging.svg \
+		distribution.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
@@ -55,18 +64,15 @@ overview.edoc: overview.edoc-in
 			mv $$i.tmp $$i; \
 	done
 	-cp -n $(top_srcdir)/doc/sigscale-logo.png .
-	-cp -n $(top_srcdir)/doc/in-processing-model.png .
-	-cp -n $(top_srcdir)/doc/in-functional-architecture.png .
-	-cp -n $(top_srcdir)/doc/supervision.png .
-	-cp -n $(top_srcdir)/doc/o-bcsm-camel.png .
-	-cp -n $(top_srcdir)/doc/t-bcsm-camel.png .
-	-cp -n $(top_srcdir)/doc/o-bcsm-inap.png .
-	-cp -n $(top_srcdir)/doc/t-bcsm-inap.png .
-	-cp -n $(top_srcdir)/doc/messaging.png .
-	-cp -n $(top_srcdir)/doc/distribution.png .
+	-cp -n $(top_srcdir)/doc/in-processing-model.svg .
+	-cp -n $(top_srcdir)/doc/in-functional-architecture.svg .
+	-cp -n $(top_srcdir)/doc/supervision.svg .
+	-cp -n $(top_srcdir)/doc/o-bcsm-camel.svg .
+	-cp -n $(top_srcdir)/doc/t-bcsm-camel.svg .
+	-cp -n $(top_srcdir)/doc/o-bcsm-inap.svg .
+	-cp -n $(top_srcdir)/doc/t-bcsm-inap.svg .
+	-cp -n $(top_srcdir)/doc/messaging.svg .
+	-cp -n $(top_srcdir)/doc/distribution.svg .
 
-CLEANFILES = overview.edoc edoc-info index.html \
-		modules-frame.html overview-summary.html packages-frame.html \
-		stylesheet.css erlang.png sigscale-logo.png \
-		$(modhtml)
+CLEANFILES = $(doc_DATA) $(modhtml)
 

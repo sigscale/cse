@@ -11,7 +11,7 @@ $(PACKAGE_VERSION).tar.gz: $(PACKAGE_NAME).rel sys.config
 	cp $(PACKAGE_NAME).rel $(PACKAGE_VERSION).rel
 	$(ERL) -noinput \
 		-eval "systools:make_script(\"$(PACKAGE_VERSION)\")" \
-		-eval "systools:make_tar(\"$(PACKAGE_VERSION)\", [{dirs, [include,priv,doc]}])" \
+		-eval "systools:make_tar(\"$(PACKAGE_VERSION)\", [{dirs, [include,doc]}])" \
 		-s init stop
 
 install-data-hook: $(PACKAGE_VERSION).tar.gz

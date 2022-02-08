@@ -30,10 +30,10 @@
 %%% 	(BCSM) given in 3GPP TS 23.078.
 %%%
 %%% 	==O-BCSM==
-%%% 	<img alt="o-bcsm state diagram" src="o-bcsm-camel.png" />
+%%% 	<img alt="o-bcsm state diagram" src="o-bcsm-camel.svg" />
 %%%
 %%% 	==T-BCSM==
-%%% 	<img alt="t-bcsm state diagram" src="t-bcsm-camel.png" />
+%%% 	<img alt="t-bcsm state diagram" src="t-bcsm-camel.svg" />
 %%%
 %%% 	This module is not intended to be started directly but rather
 %%% 	pushed onto the callback stack of the

@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" viewBox="204.1875 607.5 1213.3125 806.5" width="1213.3125" height="806.5">
+  <defs>
+    <font-face font-family="Montserrat" font-size="24" panose-1="0 0 5 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-75" underline-thickness="50" slope="0" x-height="525" cap-height="700" ascent="968.0023" descent="-251.00708" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Montserrat-Regular"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Montserrat" font-size="22" panose-1="0 0 5 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-75" underline-thickness="50" slope="0" x-height="525" cap-height="700" ascent="968.0023" descent="-251.00708" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Montserrat-Regular"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 5 6" markerWidth="5" markerHeight="6" color="#3ca779">
+      <g>
+        <path d="M 2.88 0 L 0 -1.08 L 0 1.08 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_2" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-4 -3 5 6" markerWidth="5" markerHeight="6" color="#3ca779">
+      <g>
+        <path d="M -2.88 0 L 0 1.08 L 0 -1.08 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <font-face font-family="Montserrat" font-size="16" panose-1="0 0 5 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-75" underline-thickness="50" slope="0" x-height="525" cap-height="700" ascent="968.0023" descent="-251.00708" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Montserrat-Regular"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Montserrat" font-size="32" panose-1="0 0 5 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-75" underline-thickness="50" slope="0" x-height="525" cap-height="700" ascent="968.0023" descent="-251.00708" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Montserrat-Regular"/>
+      </font-face-src>
+    </font-face>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.19.4\n2022-02-04 12:01:35 +0000</metadata>
+  <g id="Distribution" stroke="none" stroke-opacity="1" fill="none" fill-opacity="1" stroke-dasharray="none">
+    <title>Distribution</title>
+    <g id="Distribution_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_71">
+        <path d="M 1400.5 608.5 L 849 608.5 C 840.1634 608.5 833 615.66344 833 624.5 L 833 909 C 833 917.8366 840.1634 925 849 925 L 1400.5 925 C 1409.3366 925 1416.5 917.8366 1416.5 909 L 1416.5 624.5 C 1416.5 615.66344 1409.3366 608.5 1400.5 608.5 C 1400.5 608.5 1400.5 608.5 1400.5 608.5 Z" fill="#d6d6d6"/>
+        <text transform="translate(843 618.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">nodeZ</tspan>
+        </text>
+      </g>
+      <g id="Graphic_70">
+        <path d="M 772.6875 608.5 L 221.1875 608.5 C 212.35094 608.5 205.1875 615.66344 205.1875 624.5 L 205.1875 909 C 205.1875 917.8366 212.35094 925 221.1875 925 L 772.6875 925 C 781.5241 925 788.6875 917.8366 788.6875 909 L 788.6875 624.5 C 788.6875 615.66344 781.5241 608.5 772.6875 608.5 C 772.6875 608.5 772.6875 608.5 772.6875 608.5 Z" fill="#d6d6d6"/>
+        <text transform="translate(215.1875 618.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">nodeN</tspan>
+        </text>
+      </g>
+      <g id="Graphic_31">
+        <path d="M 646.875 987.5 L 755.375 987.5 C 764.2116 987.5 771.375 994.6634 771.375 1003.5 L 771.375 1397 C 771.375 1405.8366 764.2116 1413 755.375 1413 L 646.875 1413 C 638.03844 1413 630.875 1405.8366 630.875 1397 L 630.875 1003.5 C 630.875 994.6634 638.03844 987.5 646.875 987.5 Z" fill="#d6d6d6"/>
+        <text transform="translate(640.875 1376)" fill="black">
+          <tspan font-family="Montserrat" font-size="22" font-weight="400" fill="black" x="23.895" y="21">nodeA</tspan>
+        </text>
+      </g>
+      <g id="Graphic_47">
+        <path d="M 831.5 987.5 L 940 987.5 C 948.8366 987.5 956 994.6634 956 1003.5 L 956 1397 C 956 1405.8366 948.8366 1413 940 1413 L 831.5 1413 C 822.6634 1413 815.5 1405.8366 815.5 1397 L 815.5 1003.5 C 815.5 994.6634 822.6634 987.5 831.5 987.5 Z" fill="#d6d6d6"/>
+        <text transform="translate(825.5 1376)" fill="black">
+          <tspan font-family="Montserrat" font-size="22" font-weight="400" fill="black" x="23.488" y="21">nodeB</tspan>
+        </text>
+      </g>
+      <g id="Graphic_73">
+        <path d="M 969 1120 L 565.25 1120 C 556.41344 1120 549.25 1127.1634 549.25 1136 L 549.25 1344.5 C 549.25 1353.3366 556.41344 1360.5 565.25 1360.5 L 969 1360.5 C 977.8366 1360.5 985 1353.3366 985 1344.5 L 985 1136 C 985 1127.1634 977.8366 1120 969 1120 C 969 1120 969 1120 969 1120 Z" fill="#fffed6"/>
+        <text transform="translate(559.25 1130)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">AS 1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_67">
+        <path d="M 1383.1875 662 L 1162.8125 662 C 1153.976 662 1146.8125 669.16344 1146.8125 678 L 1146.8125 886.5 C 1146.8125 895.3366 1153.976 902.5 1162.8125 902.5 L 1383.1875 902.5 C 1392.024 902.5 1399.1875 895.3366 1399.1875 886.5 L 1399.1875 678 C 1399.1875 669.16344 1392.024 662 1383.1875 662 C 1383.1875 662 1383.1875 662 1383.1875 662 Z" fill="#a8d7ff"/>
+        <text transform="translate(1156.8125 672)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="191.863" y="23">AEI</tspan>
+        </text>
+      </g>
+      <g id="Graphic_52">
+        <path d="M 1086.6875 662 L 866.3125 662 C 857.4759 662 850.3125 669.16344 850.3125 678 L 850.3125 886.5 C 850.3125 895.3366 857.4759 902.5 866.3125 902.5 L 1086.6875 902.5 C 1095.524 902.5 1102.6875 895.3366 1102.6875 886.5 L 1102.6875 678 C 1102.6875 669.16344 1095.524 662 1086.6875 662 C 1086.6875 662 1086.6875 662 1086.6875 662 Z" fill="#a8d7ff"/>
+        <text transform="translate(860.3125 672)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">AEI</tspan>
+        </text>
+      </g>
+      <g id="Line_61">
+        <line x1="983.3775" y1="845" x2="965.3725" y2="845" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_53">
+        <line x1="1284.1316" y1="844.1337" x2="1266.1184" y2="844.3663" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_66">
+        <circle cx="1032.4375" cy="845" r="40.0000639160759" fill="white"/>
+        <text transform="translate(1005.4375 835.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="8.152" y="15">DHA</tspan>
+        </text>
+      </g>
+      <g id="Graphic_65">
+        <circle cx="1032.4375" cy="721.5" r="40.0000639160758" fill="white"/>
+        <text transform="translate(1005.4375 712)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.288" y="15">SLPI</tspan>
+        </text>
+      </g>
+      <g id="Line_63">
+        <line x1="1032.4375" y1="795.94" x2="1032.4375" y2="770.56" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_62">
+        <line x1="1005.0365" y1="750.6412" x2="949.9198" y2="809.2583" marker-end="url(#FilledArrow_Marker)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_60">
+        <circle cx="916.3125" cy="845" r="40.0000639160758" fill="white"/>
+        <text transform="translate(889.3125 835.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.024" y="15">CCO</tspan>
+        </text>
+      </g>
+      <g id="Graphic_59">
+        <circle cx="1217.0625" cy="845" r="40.0000639160758" fill="white"/>
+        <text transform="translate(1190.0625 835.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="8.152" y="15">DHA</tspan>
+        </text>
+      </g>
+      <g id="Graphic_58">
+        <circle cx="1333.1875" cy="843.5" r="40.0000639160759" fill="white"/>
+        <text transform="translate(1306.1875 834)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.024" y="15">CCO</tspan>
+        </text>
+      </g>
+      <g id="Graphic_57">
+        <circle cx="1217.0625" cy="721.5" r="40.0000639160758" fill="white"/>
+        <text transform="translate(1190.0625 712)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.288" y="15">SLPI</tspan>
+        </text>
+      </g>
+      <g id="Line_56">
+        <line x1="1217.0625" y1="795.94" x2="1217.0625" y2="770.56" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_55">
+        <line x1="1244.6407" y1="750.4734" x2="1299.3629" y2="807.9641" marker-end="url(#FilledArrow_Marker)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_51">
+        <text transform="translate(1114.398 762.75)" fill="black">
+          <tspan font-family="Montserrat" font-size="32" font-weight="400" fill="black" x="7709389e-19" y="31">…</tspan>
+        </text>
+      </g>
+      <g id="Graphic_32">
+        <path d="M 755.375 662 L 535 662 C 526.16344 662 519 669.16344 519 678 L 519 886.5 C 519 895.3366 526.16344 902.5 535 902.5 L 755.375 902.5 C 764.2116 902.5 771.375 895.3366 771.375 886.5 L 771.375 678 C 771.375 669.16344 764.2116 662 755.375 662 C 755.375 662 755.375 662 755.375 662 Z" fill="#a8d7ff"/>
+        <text transform="translate(529 672)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="191.863" y="23">AEI</tspan>
+        </text>
+      </g>
+      <g id="Graphic_49">
+        <path d="M 458.875 662 L 238.5 662 C 229.66344 662 222.5 669.16344 222.5 678 L 222.5 886.5 C 222.5 895.3366 229.66344 902.5 238.5 902.5 L 458.875 902.5 C 467.71156 902.5 474.875 895.3366 474.875 886.5 L 474.875 678 C 474.875 669.16344 467.71156 662 458.875 662 C 458.875 662 458.875 662 458.875 662 Z" fill="#a8d7ff"/>
+        <text transform="translate(232.5 672)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">AEI</tspan>
+        </text>
+      </g>
+      <g id="Line_26">
+        <line x1="661.3394" y1="1030.2846" x2="444.4106" y2="873.7154" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_28">
+        <line x1="376.74524" y1="750.1831" x2="321.69452" y2="806.8201" marker-end="url(#FilledArrow_Marker)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_29">
+        <line x1="355.581" y1="843.7438" x2="336.544" y2="843.2562" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_35">
+        <circle cx="287.5" cy="842" r="40.0000639160759" fill="white"/>
+        <text transform="translate(260.5 832.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.024" y="15">CCO</tspan>
+        </text>
+      </g>
+      <g id="Graphic_9">
+        <circle cx="701.125" cy="1059" r="40.0000639160758" fill="white"/>
+        <text transform="translate(674.125 1049.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="10.144" y="15">TCO</tspan>
+        </text>
+      </g>
+      <g id="Graphic_15">
+        <circle cx="701.125" cy="1182.5" r="40.0000639160758" fill="white"/>
+        <text transform="translate(674.125 1173)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="10.6" y="15">ASP</tspan>
+        </text>
+      </g>
+      <g id="Line_21">
+        <line x1="701.125" y1="1133.44" x2="701.125" y2="1108.06" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_24">
+        <circle cx="701.125" cy="1306" r="40.0000639160758" fill="white"/>
+        <text transform="translate(674.125 1296.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="6.064" y="15">SCTP</tspan>
+        </text>
+      </g>
+      <g id="Line_25">
+        <line x1="701.125" y1="1256.94" x2="701.125" y2="1231.56" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_46">
+        <circle cx="885.75" cy="1059" r="40.0000639160758" fill="white"/>
+        <text transform="translate(858.75 1049.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="10.144" y="15">TCO</tspan>
+        </text>
+      </g>
+      <g id="Graphic_45">
+        <circle cx="885.75" cy="1182.5" r="40.0000639160759" fill="white"/>
+        <text transform="translate(858.75 1173)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="10.6" y="15">ASP</tspan>
+        </text>
+      </g>
+      <g id="Line_44">
+        <line x1="885.75" y1="1133.44" x2="885.75" y2="1108.06" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_43">
+        <circle cx="885.75" cy="1306" r="40.0000639160758" fill="white"/>
+        <text transform="translate(858.75 1296.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="6.064" y="15">SCTP</tspan>
+        </text>
+      </g>
+      <g id="Line_42">
+        <line x1="885.75" y1="1256.94" x2="885.75" y2="1231.56" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_41">
+        <line x1="845.9644" y1="1030.2846" x2="629.0356" y2="873.7154" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_48">
+        <line x1="656.31905" y1="844.1337" x2="638.30595" y2="844.3663" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_64">
+        <line x1="742.3427" y1="1032.3768" x2="991.2198" y2="871.6232" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_54">
+        <line x1="926.9677" y1="1032.3768" x2="1175.8448" y2="871.6232" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_11">
+        <circle cx="404.625" cy="845" r="40.0000639160758" fill="white"/>
+        <text transform="translate(377.625 835.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="8.152" y="15">DHA</tspan>
+        </text>
+      </g>
+      <g id="Graphic_17">
+        <circle cx="404.625" cy="721.5" r="40.0000639160758" fill="white"/>
+        <text transform="translate(377.625 712)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.288" y="15">SLPI</tspan>
+        </text>
+      </g>
+      <g id="Line_27">
+        <line x1="404.625" y1="795.94" x2="404.625" y2="770.56" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_40">
+        <circle cx="589.25" cy="845" r="40.0000639160758" fill="white"/>
+        <text transform="translate(562.25 835.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="8.152" y="15">DHA</tspan>
+        </text>
+      </g>
+      <g id="Graphic_39">
+        <circle cx="705.375" cy="843.5" r="40.0000639160759" fill="white"/>
+        <text transform="translate(678.375 834)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.024" y="15">CCO</tspan>
+        </text>
+      </g>
+      <g id="Graphic_38">
+        <circle cx="589.25" cy="721.5" r="40.0000639160758" fill="white"/>
+        <text transform="translate(562.25 712)" fill="black">
+          <tspan font-family="Montserrat" font-size="16" font-weight="400" fill="black" x="9.288" y="15">SLPI</tspan>
+        </text>
+      </g>
+      <g id="Line_37">
+        <line x1="589.25" y1="795.94" x2="589.25" y2="770.56" marker-end="url(#FilledArrow_Marker)" marker-start="url(#FilledArrow_Marker_2)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_36">
+        <line x1="616.8282" y1="750.4734" x2="671.5504" y2="807.9641" marker-end="url(#FilledArrow_Marker)" stroke="#3ca779" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_50">
+        <text transform="translate(486.5855 762.75)" fill="black">
+          <tspan font-family="Montserrat" font-size="32" font-weight="400" fill="black" x="7709389e-19" y="31">…</tspan>
+        </text>
+      </g>
+      <g id="Graphic_74">
+        <text transform="translate(800.49175 762.75)" fill="black">
+          <tspan font-family="Montserrat" font-size="32" font-weight="400" fill="black" x="7709389e-19" y="31">…</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
