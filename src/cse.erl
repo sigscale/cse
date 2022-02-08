@@ -31,7 +31,7 @@
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 -export([announce/1]).
--export([add_session/2, get_session/1, get_sessions/0]).
+-export([add_session/2, get_session/1, get_sessions/0, delete_session/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
@@ -807,6 +807,18 @@ get_sessions() ->
 			Sessions;
 		{'EXIT', Reason} ->
 			{error, Reason}
+	end.
+
+-spec delete_session(SessionId) -> ok
+	when
+		SessionId :: binary().
+%% @doc Delete an entry from the session table.
+delete_session(SessionId) when is_binary(SessionId) ->
+	case catch ets:delete(session, SessionId) of
+		true ->
+			ok;
+		{'EXIT', Reason} ->
+			exit(Reason)
 	end.
 
 %%----------------------------------------------------------------------
