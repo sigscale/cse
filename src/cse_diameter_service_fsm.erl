@@ -234,12 +234,7 @@ service_options(Options) ->
 		_ ->
 			"example.net"
 	end,
-	OriginHost = case inet:gethostname() of
-		{ok, Hostname} ->
-			Hostname;
-		_ ->
-			"cse"
-	end,
+	OriginHost = inet:gethostname(),
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
 	BaseOptions = [{'Origin-Host', OriginHost},
