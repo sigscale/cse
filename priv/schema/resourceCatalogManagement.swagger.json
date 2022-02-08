@@ -24,8 +24,54 @@
         "responses" : {
           "200" : {
             "description" : "ResourceSpecification",
-            "schema" : {
-              "$ref" : "#/definitions/ResourceSpecification"
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/definitions/ResourceSpecification"
+                  }
+                },
+                "examples" : [
+                  "Prefix Table" : {
+                    "summary" : "Prefix Table Spec",
+                    "description" : "Prefix Table Specification",
+                    "value" : {
+                      "id" : "1",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
+                      "name" : "PrefixTable",
+                      "description" : "Prefix table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Prefix Row" : {
+                    "summary" : "Prefix Row Spec",
+                    "description" : "Prefix Row Specification",
+                    "value" : {
+                      "id" : "2",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                      "name" : "PrefixRow",
+                      "description" : "Prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix of the row",
+                        "valueType" : "String"
+                      },
+                      {
+                        "name" : "value",
+                        "description" : "Prefix value"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  }
+                ]
+              }
             }
           },
           "404" : {
@@ -54,8 +100,37 @@
         "responses" : {
           "200" : {
             "description" : "ResourceSpecification",
-            "schema" : {
-              "$ref" : "#/definitions/ResourceSpecification"
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/definitions/ResourceSpecification"
+                },
+                "examples" : {
+                  "Prefix Row" : {
+                    "summary" : "Prefix Row Spec",
+                    "description" : "Prefix Row Specification",
+                    "value" : {
+                      "id" : "2",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                      "name" : "PrefixRow",
+                      "description" : "Prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix of the row",
+                        "valueType" : "String"
+                      },
+                      {
+                        "name" : "value",
+                        "description" : "Prefix value"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  }
+                }
+              }
             }
           },
           "404" : {
