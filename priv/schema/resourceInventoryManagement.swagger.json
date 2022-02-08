@@ -47,8 +47,45 @@
         "responses" : {
           "200" : {
             "description" : "Success",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/definitions/Resource"
+                  }
+                },
+                "examples" : [
+                  "Resource" : {
+                    "summary" : "Get all the resources",
+                    "value" : {
+                      "id" : "example-12369",
+                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                      "name" : "example_row",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1643717589355194",
+                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                          "name" : "prefix"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "12369"
+                      }, {
+                        "name" : "value",
+                        "value" : "post request"
+                      } ],
+                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                    }
+                  }
+                ]
+              }
             }
           },
           "400" : {
@@ -67,6 +104,43 @@
         "tags" : [ "resource" ],
         "summary" : "This operation creates a Resource entity",
         "operationId" : "createResourceEntry",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/definitions/Resource"
+              },
+              "examples" : {
+                "Resource" : {
+                  "summary" : "Resource inventory to populate table",
+                  "value" : {
+                    "name" : "example_row",
+                    "resourceSpecification" : {
+                      "id" : "2",
+                      "name" : "PrefixTableRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1643717589355194",
+                        "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                        "name" : "prefix"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "12369"
+                    }, {
+                      "name" : "value",
+                      "value" : "post request"
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        },
         "parameters" : [ {
           "in" : "body",
           "name" : "resource",
@@ -79,8 +153,50 @@
         "responses" : {
           "201" : {
             "description" : "Success",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
+            "headers" : {
+              "Location" : {
+                "schema" : {
+                  "description" : "ResourceRef",
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/definitions/Resource"
+                },
+                "examples" : {
+                  "Resource" : {
+                    "summary" : "Resource inventory to populate table",
+                    "value" : {
+                      "id" : "example-12369",
+                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                      "name" : "example_row",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1643717589355194",
+                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                          "name" : "prefix"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "12369"
+                      }, {
+                        "name" : "value",
+                        "value" : "post request"
+                      } ],
+                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                    }
+                  }
+                }
+              }
             }
           },
           "400" : {
@@ -111,10 +227,42 @@
         "responses" : {
           "200" : {
             "description" : "Sucess",
-            "schema" : {
-              "type" : "array",
-              "items" : {
-                "$ref" : "#/definitions/Resource"
+
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/definitions/Resource"
+                },
+                "examples" : {
+                  "Resource" : {
+                    "summary" : "Get one of the resources",
+                    "value" : {
+                      "id" : "example-12369",
+                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                      "name" : "example_row",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1643717589355194",
+                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                          "name" : "prefix"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "12369"
+                      }, {
+                        "name" : "value",
+                        "value" : "post request"
+                      } ],
+                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                    }
+                  }
+                }
               }
             }
           },
@@ -144,44 +292,6 @@
         "responses" : {
           "204" : {
             "description" : "Deleted",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
-            }
-          },
-          "400" : {
-            "description" : "Bad Request"
-          },
-          "404" : {
-            "description" : "Not Found"
-          },
-          "500" : {
-            "description" : "Internal Server Error"
-          }
-        },
-        "deprecated" : false
-      },
-      "patch" : {
-        "tags" : [ "resource" ],
-        "summary" : "Patches a 'Resource' by Id",
-        "operationId" : "updateResource",
-        "parameters" : [ {
-          "name" : "Id",
-          "in" : "path",
-          "description" : "Id of the resource",
-          "required" : true,
-          "type" : "string"
-        }, {
-          "in" : "body",
-          "name" : "Resource",
-          "description" : "The Resource to be updated",
-          "required" : true,
-          "schema" : {
-            "$ref" : "#/definitions/Resource"
-          }
-        } ],
-        "responses" : {
-          "201" : {
-            "description" : "Updated",
             "schema" : {
               "$ref" : "#/definitions/Resource"
             }
