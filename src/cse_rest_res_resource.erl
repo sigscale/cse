@@ -231,7 +231,7 @@ query_filter(MFA, Codec, Query, Filters, Headers) ->
 	end.
 
 %% @hidden
-query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
+query_page(Codec, PageServer, Etag, Query, _Filters, Start, End) ->
 	case gen_server:call(PageServer, {Start, End}) of
 		{error, Status} ->
 			{error, Status};
@@ -247,8 +247,7 @@ query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
 				{_, Table} ->
 					Objects = [gtt(Table, {Prefix, Value})
 							|| #gtt{num = Prefix, value = Value} <- Result],
-					JsonObj = query_page1(Objects, Filters, []),
-					Body = zj:encode(JsonObj),
+					Body = zj:encode(Objects),
 					Headers = [{content_type, "application/json"},
 							{etag, Etag}, {accept_ranges, "items"},
 							{content_range, ContentRange}],
@@ -257,20 +256,13 @@ query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
 					{error, 400}
 			end;
 		{Result, ContentRange} ->
-			JsonObj = query_page1(lists:map(Codec, Result), Filters, []),
+			JsonObj = lists:map(Codec, Result),
 			Body = zj:encode(JsonObj),
 			Headers = [{content_type, "application/json"},
 					{etag, Etag}, {accept_ranges, "items"},
 					{content_range, ContentRange}],
 			{ok, Headers, Body}
 	end.
-%% @hidden
-query_page1(Json, [], []) ->
-	Json;
-query_page1([H | T], Filters, Acc) ->
-	query_page1(T, Filters, [cse_rest:fields(Filters, H) | Acc]);
-query_page1([], _, Acc) ->
-	lists:reverse(Acc).
 
 %% @hidden
 query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
