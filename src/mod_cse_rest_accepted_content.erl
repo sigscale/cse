@@ -94,7 +94,7 @@ do(#mod{request_uri = Uri, data = Data} = ModData) ->
 		undefined ->
 			case proplists:get_value(response, Data) of
 				undefined ->
-					Path = http_uri:decode(Uri),
+					Path = uri_string:percent_decode(Uri),
 					case string:tokens(Path, "/?") of
 						["resourceCatalogManagement",
 								"v4", "resourceSpecification" | _] ->
