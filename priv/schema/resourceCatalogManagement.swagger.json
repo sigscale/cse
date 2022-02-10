@@ -1,0 +1,223 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "TMF634 Resource Catalog Management",
+    "version" : "4.0.0",
+    "title" : "Resource Catalog Management",
+    "license" : {
+      "name" : "Apache 2.0"
+    },
+    "contact" : {
+      "name" : "SigScale",
+      "email" : "support@sigscale.com",
+      "url" : "http://www.sigscale.com"
+    }
+  },
+  "servers" : [ {
+    "url" : "{apiRoot}/resourceCatalogManagement/v4",
+    "variables" : {
+      "apiRoot" : {
+        "default" : "https://example.com",
+        "description" : "apiRoot as defined in subclause 4.4 of 3GPP TS 29.501."
+      }
+    }
+  } ],
+  "paths" : {
+    "/resourceSpecification" : {
+      "get" : {
+        "tags" : [ "resourceSpecification" ],
+        "summary" : "listResourceSpecifications",
+        "description" : "List or find 'ResourceSpecification' entities",
+        "operationId" : "listResourceSpecifications",
+        "parameters" : [ ],
+        "responses" : {
+          "200" : {
+            "description" : "ResourceSpecification",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ResourceSpecification"
+                  }
+                },
+                "examples" : {
+                  "PrefixTableSpec" : {
+                    "summary" : "Prefix Table Spec",
+                    "description" : "Prefix Table Specification",
+                    "value" : {
+                      "id" : "1",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
+                      "name" : "PrefixTable",
+                      "description" : "Prefix table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "version" : "1.0"
+                    }
+                  },
+                  "PrefixRowSpec" : {
+                    "summary" : "Prefix Row Spec",
+                    "description" : "Prefix Row Specification",
+                    "value" : {
+                      "id" : "2",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                      "name" : "PrefixRow",
+                      "description" : "Prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix of the row",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Prefix value"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found\n\nList of supported error codes:\n- 60: Resource not found"
+          },
+          "500" : {
+            "description" : "Internal Server Error\n\nList of supported error codes:\n- 1: Internal error"
+          }
+        },
+        "deprecated" : false
+      }
+    },
+    "/resourceSpecification/{id}" : {
+      "get" : {
+        "tags" : [ "resourceSpecification" ],
+        "summary" : "Retrieves a 'ResourceSpecification' by Id",
+        "description" : "List or find 'ResourceSpecification' entities",
+        "operationId" : "listResourceSpecification",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Identifier of the Resource Specification ",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "ResourceSpecification",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceSpecification"
+                },
+                "examples" : {
+                  "Prefix Row" : {
+                    "summary" : "Prefix Row Spec",
+                    "description" : "Prefix Row Specification",
+                    "value" : {
+                      "id" : "2",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                      "name" : "PrefixRow",
+                      "description" : "Prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix of the row",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Prefix value"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ResourceSpecification" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier of this REST resource"
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "Hyperlink reference to this REST resource"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name given to this REST resource"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Description of this REST resource"
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "Resource Specification version"
+          },
+          "lastUpdate" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Date and time of the last update of this REST resource"
+          },
+          "lifecycleStatus" : {
+            "type" : "string",
+            "description" : "Used to indicate the current lifecycle status of the resource specification"
+          },
+          "category" : {
+            "type" : "string",
+            "description" : "Category of the target resource like NetworkConnectivity, PhysicalLinks, Generic, L2Network and so on."
+          },
+          "resourceSpecCharacteristic" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceSpecCharacteristic"
+            }
+          }
+        },
+        "description" : "Resources are physical or non-physical components (or some combination of these) within an enterprise's infrastructure or inventory. They are typically consumed or used by services (for example a physical port\n  assigned to a service) or contribute to the realization of a Product (for\nexample, a SIM card). They can be drawn from the Application, Computing and Network domains, and include, for example, Network Elements, software, IT systems, content and information, and technology components.\nA ResourceSpecification is an abstract base class for representing a generic means for implementing a particular type of Resource. In essence, a ResourceSpecification defines the common attributes and relationships of a set of related Resources, while Resource defines a specific instance that is based on a particular ResourceSpecification."
+      },
+      "ResourceSpecCharacteristic" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "A word, term, or phrase by which this characteristic specification is known and distinguished from other characteristic specifications."
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "A narrative that explains the CharacteristicSpecification."
+          },
+          "valueType" : {
+            "type" : "string",
+            "description" : "A kind of value that the characteristic can take on, such as numeric, text and so forth"
+          }
+        },
+        "description" : "This class defines the characteristic features of a resource specification. Every ResourceSpecification has a variety of important attributes, methods, constraints, and\nrelationships, which distinguish a resource specification from other resource specifications."
+      }
+    }
+  }
+}

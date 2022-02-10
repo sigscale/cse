@@ -1,0 +1,449 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "TMF639 Resource Inventory Management",
+    "version" : "4.0.0",
+    "title" : "Resource Inventory Management",
+    "license" : {
+      "name" : "Apache 2.0"
+    },
+    "contact" : {
+      "name" : "SigScale",
+      "email" : "support@sigscale.com",
+      "url" : "http://www.sigscale.com"
+    }
+  },
+  "servers" : [ {
+    "url" : "{apiRoot}/resourceInventoryManagement/v4",
+    "variables" : {
+      "apiRoot" : {
+        "default" : "https://example.com",
+        "description" : "apiRoot as defined in subclause 4.4 of 3GPP TS 29.501."
+      }
+    }
+  } ],
+  "paths" : {
+    "/resource/" : {
+      "get" : {
+        "tags" : [ "resource" ],
+        "summary" : "This operation lists all resources available",
+        "operationId" : "listresources",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "query",
+          "description" : "Id of the resource",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "category",
+          "in" : "query",
+          "description" : "Category of the resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "resourceSpecification.id",
+          "in" : "query",
+          "description" : "Id of the resource specification",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "resourceRelationship.name",
+          "in" : "query",
+          "description" : "Name of the resource relationship",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Resource"
+                  }
+                },
+                "examples" : {
+                  "Resource" : {
+                    "summary" : "Response Resource",
+                    "value" : {
+                      "id" : "example-12369",
+                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                      "name" : "example_row",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1643717589355194",
+                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                          "name" : "prefix"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "12369"
+                      }, {
+                        "name" : "value",
+                        "value" : "post request"
+                      } ],
+                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    },
+    "/resource/{Resource}" : {
+      "post" : {
+        "tags" : [ "resource" ],
+        "summary" : "This operation creates a Resource entity",
+        "operationId" : "createResourceEntry",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Resource"
+              },
+              "examples" : {
+                "Resource" : {
+                  "summary" : "Post Resource",
+                  "value" : {
+                    "name" : "example_row",
+                    "resourceSpecification" : {
+                      "id" : "2",
+                      "name" : "PrefixTableRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1643717589355194",
+                        "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                        "name" : "prefix"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "12369"
+                    }, {
+                      "name" : "value",
+                      "value" : "post request"
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters" : [ {
+          "name" : "Resource",
+          "in" : "path",
+          "description" : "The Resource to be created",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Success",
+            "headers" : {
+              "Location" : {
+                "schema" : {
+                  "description" : "ResourceRef",
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resource"
+                },
+                "examples" : {
+                  "Resource" : {
+                    "summary" : "Created Resource",
+                    "value" : {
+                      "id" : "example-12369",
+                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                      "name" : "example_row",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1643717589355194",
+                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                          "name" : "prefix"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "12369"
+                      }, {
+                        "name" : "value",
+                        "value" : "post request"
+                      } ],
+                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    },
+    "/resource/{Id}" : {
+      "get" : {
+        "tags" : [ "resource" ],
+        "summary" : "This operation lists a individual Resource entity",
+        "operationId" : "listResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Sucess",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resource"
+                },
+                "examples" : {
+                  "Resource" : {
+                    "summary" : "Resource Response",
+                    "value" : {
+                      "id" : "example-12369",
+                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                      "name" : "example_row",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1643717589355194",
+                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                          "name" : "prefix"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "12369"
+                      }, {
+                        "name" : "value",
+                        "value" : "post request"
+                      } ],
+                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "delete" : {
+        "tags" : [ "resource" ],
+        "summary" : "Deletes a 'Resource' by Id",
+        "operationId" : "deleteResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted"
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Resource" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Identifier of an instance of the resource."
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "The URI for the object itself."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "A string used to give a name to the resource."
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "free-text description of the resource."
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "identifies the specific version of an instance of a resource."
+          },
+          "lifecycleState" : {
+            "type" : "string",
+            "description" : "The life cycle state of the resource."
+          },
+          "lastUpdate" : {
+            "type" : "string",
+            "description" : "The last date the resource was update on."
+          },
+          "category" : {
+            "type" : "string",
+            "description" : "Category of the resource."
+          },
+          "resourceSpecCharacteristic" : {
+            "$ref" : "#/components/schemas/ResourceCharacteristic"
+          },
+          "resourceRelationship" : {
+            "$ref" : "#/components/schemas/ResourceRelationship"
+          },
+          "resourceSpecification" : {
+            "$ref" : "#/components/schemas/ResourceSpecification"
+          }
+        },
+        "description" : "Resource is an abstract entity that describes the common set of attributes shared by all concrete resources"
+      },
+      "ResourceSpecification" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the resource specification."
+          },
+          "id" : {
+            "type" : "string",
+            "description" : "Id of the resource specification."
+          }
+        }
+      },
+      "ResourceCharacteristic" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/ResourceCharacteristicValue"
+        }
+      },
+      "ResourceCharacteristicValue" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the characteristic."
+          },
+          "value" : {
+            "description" : "Value of the characteristic."
+          }
+        }
+      },
+      "ResourceRelationship" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/ResourceRelationshipValue"
+        }
+      },
+      "ResourceRelationshipValue" : {
+        "type" : "object",
+        "properties" : {
+          "resource" : {
+            "$ref" : "#/components/schemas/RefResource"
+          },
+          "relationshipType" : {
+            "type" : "string",
+            "description" : "The type of resource relationship."
+          }
+        }
+      },
+      "RefResource" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier of the parent resource"
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "Reference of the parent resource"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the parent resource"
+          }
+        }
+      }
+    }
+  }
+}
