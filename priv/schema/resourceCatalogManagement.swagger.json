@@ -2,7 +2,7 @@
   "openapi" : "3.0.0",
   "info" : {
     "description" : "TMF634 Resource Catalog Management",
-    "version" : "4.0.0",
+    "version" : "4.0.1",
     "title" : "Resource Catalog Management",
     "license" : {
       "name" : "Apache 2.0"
@@ -14,20 +14,14 @@
     }
   },
   "servers" : [ {
-    "url" : "{apiRoot}/resourceCatalogManagement/v4",
-    "variables" : {
-      "apiRoot" : {
-        "default" : "https://example.com",
-        "description" : "apiRoot as defined in subclause 4.4 of 3GPP TS 29.501."
-      }
-    }
+    "url" : "http://cse.example.net/resourceCatalogManagement/v4"
   } ],
   "paths" : {
     "/resourceSpecification" : {
       "get" : {
         "tags" : [ "resourceSpecification" ],
-        "summary" : "listResourceSpecifications",
-        "description" : "List or find 'ResourceSpecification' entities",
+        "summary" : "List 'ResourceSpecification' entities",
+        "description" : "List all 'ResourceSpecification' entities",
         "operationId" : "listResourceSpecifications",
         "parameters" : [ ],
         "responses" : {
@@ -39,54 +33,43 @@
                   "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/ResourceSpecification"
-                  }
-                },
-                "examples" : {
-                  "PrefixTableSpec" : {
-                    "summary" : "Prefix Table Spec",
-                    "description" : "Prefix Table Specification",
-                    "value" : {
-                      "id" : "1",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
-                      "name" : "PrefixTable",
-                      "description" : "Prefix table specification",
-                      "category" : "PrefixTable",
-                      "lastUpdate" : "2022-02-07",
-                      "lifecycleStatus" : "Active",
-                      "version" : "1.0"
-                    }
                   },
-                  "PrefixRowSpec" : {
-                    "summary" : "Prefix Row Spec",
-                    "description" : "Prefix Row Specification",
-                    "value" : {
-                      "id" : "2",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
-                      "name" : "PrefixRow",
-                      "description" : "Prefix row specification",
-                      "category" : "PrefixRow",
-                      "lastUpdate" : "2022-02-07",
-                      "lifecycleStatus" : "Active",
-                      "resourceSpecCharacteristic" : [ {
-                        "name" : "prefix",
-                        "description" : "Prefix of the row",
-                        "valueType" : "String"
-                      }, {
-                        "name" : "value",
-                        "description" : "Prefix value"
-                      } ],
-                      "version" : "1.0"
-                    }
-                  }
+                  "example" : [ {
+                    "id" : "1",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
+                    "name" : "PrefixTable",
+                    "description" : "Prefix table specification",
+                    "category" : "PrefixTable",
+                    "lastUpdate" : "2022-02-07",
+                    "lifecycleStatus" : "Active",
+                    "version" : "1.0"
+                  }, {
+                    "id" : "2",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                    "name" : "PrefixRow",
+                    "description" : "Prefix row specification",
+                    "category" : "PrefixRow",
+                    "lastUpdate" : "2022-02-07",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecCharacteristic" : [ {
+                      "name" : "prefix",
+                      "description" : "Prefix of the row",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "value",
+                      "description" : "Prefix value"
+                    } ],
+                    "version" : "1.0"
+                  } ]
                 }
               }
             }
           },
           "404" : {
-            "description" : "Not Found\n\nList of supported error codes:\n- 60: Resource not found"
+            "description" : "Not Found"
           },
           "500" : {
-            "description" : "Internal Server Error\n\nList of supported error codes:\n- 1: Internal error"
+            "description" : "Internal Server Error"
           }
         },
         "deprecated" : false
@@ -116,6 +99,20 @@
                   "$ref" : "#/components/schemas/ResourceSpecification"
                 },
                 "examples" : {
+                  "Prefix Table" : {
+                    "summary" : "Prefix Table Spec",
+                    "description" : "Prefix table specification",
+                    "value" : {
+                      "id" : "1",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
+                      "name" : "PrefixTable",
+                      "description" : "Prefix table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-02-07",
+                      "lifecycleStatus" : "Active",
+                      "version" : "1.0"
+                    }
+                  },
                   "Prefix Row" : {
                     "summary" : "Prefix Row Spec",
                     "description" : "Prefix Row Specification",

@@ -14,19 +14,13 @@
     }
   },
   "servers" : [ {
-    "url" : "{apiRoot}/resourceInventoryManagement/v4",
-    "variables" : {
-      "apiRoot" : {
-        "default" : "https://example.com",
-        "description" : "apiRoot as defined in subclause 4.4 of 3GPP TS 29.501."
-      }
-    }
+    "url" : "http://cse.example.net/resourceInventoryManagement/v4"
   } ],
   "paths" : {
     "/resource/" : {
       "get" : {
         "tags" : [ "resource" ],
-        "summary" : "This operation lists all resources available",
+        "summary" : "This operation lists all 'Resource' entities",
         "operationId" : "listresources",
         "parameters" : [ {
           "name" : "id",
@@ -70,37 +64,41 @@
                   "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/Resource"
-                  }
-                },
-                "examples" : {
-                  "Resource" : {
-                    "summary" : "Response Resource",
-                    "value" : {
-                      "id" : "example-12369",
-                      "href" : "/resourceInventoryManagement/v4/resource/example-12369",
-                      "name" : "example_row",
-                      "resourceSpecification" : {
-                        "id" : "2",
-                        "name" : "PrefixTableRow"
+                  },
+                  "example" : [ {
+                    "id" : "1643717589355194",
+                    "href" : "/resourceInventoryManagement/v4/resource/1643717589355194",
+                    "name" : "example",
+                    "resourceSpecification" : {
+                      "id" : "1",
+                      "name" : "PrefixTable"
+                    },
+                    "lastUpdate" : "2022-02-08T05:53:32.300"
+                  }, {
+                    "id" : "example-12369",
+                    "href" : "/resourceInventoryManagement/v4/resource/example-12369",
+                    "name" : "example_row",
+                    "resourceSpecification" : {
+                      "id" : "2",
+                      "name" : "PrefixTableRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1643717589355194",
+                        "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
+                        "name" : "prefix"
                       },
-                      "resourceRelationship" : [ {
-                        "resource" : {
-                          "id" : "1643717589355194",
-                          "href" : "/resourceInventoryManagement/v4/resource/1643795728329194",
-                          "name" : "prefix"
-                        },
-                        "relationshipType" : "contained"
-                      } ],
-                      "resourceCharacteristic" : [ {
-                        "name" : "prefix",
-                        "value" : "12369"
-                      }, {
-                        "name" : "value",
-                        "value" : "post request"
-                      } ],
-                      "lastUpdate" : "2022-02-08T05:54:38.300"
-                    }
-                  }
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "12369"
+                    }, {
+                      "name" : "value",
+                      "value" : "post request"
+                    } ],
+                    "lastUpdate" : "2022-02-08T05:54:38.300"
+                  } ]
                 }
               }
             }
@@ -121,7 +119,7 @@
     "/resource/{Resource}" : {
       "post" : {
         "tags" : [ "resource" ],
-        "summary" : "This operation creates a Resource entity",
+        "summary" : "This operation creates a 'Resource' entity",
         "operationId" : "createResourceEntry",
         "requestBody" : {
           "required" : true,
@@ -131,8 +129,18 @@
                 "$ref" : "#/components/schemas/Resource"
               },
               "examples" : {
-                "Resource" : {
-                  "summary" : "Post Resource",
+                "Table Resource" : {
+                  "summary" : "Table Resource",
+                  "value" : {
+                    "name" : "example",
+                    "resourceSpecification" : {
+                      "id" : "1",
+                      "name" : "PrefixTabl"
+                    }
+                  }
+                },
+                "Table Row Resource" : {
+                  "summary" : "Table Row Resource",
                   "value" : {
                     "name" : "example_row",
                     "resourceSpecification" : {
@@ -186,8 +194,21 @@
                   "$ref" : "#/components/schemas/Resource"
                 },
                 "examples" : {
-                  "Resource" : {
-                    "summary" : "Created Resource",
+                  "Table Resource" : {
+                    "summary" : "Table Resource",
+                    "value" : {
+                      "id" : "1643717589355194",
+                      "href" : "/resourceInventoryManagement/v4/resource/1643717589355194",
+                      "name" : "example",
+                      "resourceSpecification" : {
+                        "id" : "1",
+                        "name" : "PrefixTabl"
+                      },
+                      "lastUpdate" : "2022-02-08T05:53:32.300"
+                    }
+                  },
+                  "Table Row Resource" : {
+                    "summary" : "Table Row Resource",
                     "value" : {
                       "id" : "example-12369",
                       "href" : "/resourceInventoryManagement/v4/resource/example-12369",
@@ -234,7 +255,7 @@
     "/resource/{Id}" : {
       "get" : {
         "tags" : [ "resource" ],
-        "summary" : "This operation lists a individual Resource entity",
+        "summary" : "This operation lists a individual 'Resource' entity",
         "operationId" : "listResource",
         "parameters" : [ {
           "name" : "Id",
@@ -254,8 +275,21 @@
                   "$ref" : "#/components/schemas/Resource"
                 },
                 "examples" : {
-                  "Resource" : {
-                    "summary" : "Resource Response",
+                  "Table Resource" : {
+                    "summary" : "Table Resource",
+                    "value" : {
+                      "id" : "1643717589355194",
+                      "href" : "/resourceInventoryManagement/v4/resource/1643717589355194",
+                      "name" : "example",
+                      "resourceSpecification" : {
+                        "id" : "1",
+                        "name" : "PrefixTable"
+                      },
+                      "lastUpdate" : "2022-02-08T05:53:32.300"
+                    }
+                  },
+                  "Table Row Resource" : {
+                    "summary" : "Table Row Resource",
                     "value" : {
                       "id" : "example-12369",
                       "href" : "/resourceInventoryManagement/v4/resource/example-12369",
