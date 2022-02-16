@@ -379,7 +379,7 @@ prefix_table_spec() ->
 		"description" => "Prefix table specification",
 		"lifecycleStatus" => "Active",
 		"version" => "1.0",
-		"lastUpdate" => "2022-01-20",
+		"lastUpdate" => "2022-02-16",
 		"category" => "PrefixTable"
 	}.
 
@@ -391,14 +391,14 @@ prefix_row_spec() ->
 		"description" => "Prefix table row specification",
 		"lifecycleStatus" => "Active",
 		"version" => "1.0",
-		"lastUpdate" => "2022-01-20",
+		"lastUpdate" => "2022-02-16",
 		"category" => "PrefixRow",
 		"resourceSpecCharacteristic" => [
 			#{"name" => "prefix",
-				"description" => "Prefix of the row",
+				"description" => "Prefix to match",
 				"valueType" => "String"},
 			#{"name" => "value",
-				"description" => "Prefix value"}
+				"description" => "Value returned from prefix match"}
 		]
 	}.
 
