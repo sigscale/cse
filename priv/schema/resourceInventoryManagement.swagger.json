@@ -151,7 +151,7 @@
                       "resource" : {
                         "id" : "1644299612300",
                         "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                        "name" : "prefix"
+                        "name" : "example"
                       },
                       "relationshipType" : "contained"
                     } ],
@@ -211,7 +211,7 @@
                         "resource" : {
                           "id" : "1644299612300",
                           "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                          "name" : "prefix"
+                          "name" : "example"
                         },
                         "relationshipType" : "contained"
                       } ],
@@ -222,7 +222,7 @@
                         "name" : "value",
                         "value" : "Toronto, Canada"
                       } ],
-                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z"
                     }
                   }
                 }
@@ -292,7 +292,7 @@
                         "resource" : {
                           "id" : "1644299612300",
                           "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                          "name" : "prefix"
+                          "name" : "example"
                         },
                         "relationshipType" : "contained"
                       } ],
@@ -303,7 +303,7 @@
                         "name" : "value",
                         "value" : "Toronto, Canada"
                       } ],
-                      "lastUpdate" : "2022-02-08T05:54:38.300"
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z"
                     }
                   }
                 }
