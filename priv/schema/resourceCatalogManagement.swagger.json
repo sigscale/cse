@@ -1,9 +1,9 @@
 {
   "openapi" : "3.0.0",
   "info" : {
-    "description" : "TMF634 Resource Catalog Management",
-    "version" : "4.0.1",
-    "title" : "Resource Catalog Management",
+    "title" : "SigScale CSE - Resource Catalog",
+    "description" : "# TMF634 Resource Catalog Management\nSigScale uses the standard TM Forum [Open APIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF634 API is used in SigScale CSE to make available the Resource Specifications describing characteristics used to define entities in the TMF639 API for Resource Inventory.",
+    "version" : "4.0.0",
     "license" : {
       "name" : "Apache 2.0"
     },
@@ -20,9 +20,9 @@
     "/resourceSpecification" : {
       "get" : {
         "tags" : [ "resourceSpecification" ],
-        "summary" : "List 'ResourceSpecification' entities",
-        "description" : "List all 'ResourceSpecification' entities",
-        "operationId" : "listResourceSpecifications",
+        "summary" : "Retrieve Resource Specifications",
+        "description" : "Retrieve `ResourceSpecification` entities",
+        "operationId" : "getResourceSpecifications",
         "parameters" : [ ],
         "responses" : {
           "200" : {
@@ -40,7 +40,7 @@
                     "name" : "PrefixTable",
                     "description" : "Prefix table specification",
                     "category" : "PrefixTable",
-                    "lastUpdate" : "2022-02-07",
+                    "lastUpdate" : "2022-02-16",
                     "lifecycleStatus" : "Active",
                     "version" : "1.0"
                   }, {
@@ -49,15 +49,15 @@
                     "name" : "PrefixRow",
                     "description" : "Prefix row specification",
                     "category" : "PrefixRow",
-                    "lastUpdate" : "2022-02-07",
+                    "lastUpdate" : "2022-02-16",
                     "lifecycleStatus" : "Active",
                     "resourceSpecCharacteristic" : [ {
                       "name" : "prefix",
-                      "description" : "Prefix of the row",
+                      "description" : "Prefix to match",
                       "valueType" : "String"
                     }, {
                       "name" : "value",
-                      "description" : "Prefix value"
+                      "description" : "Value returned from prefix match"
                     } ],
                     "version" : "1.0"
                   } ]
@@ -78,9 +78,9 @@
     "/resourceSpecification/{id}" : {
       "get" : {
         "tags" : [ "resourceSpecification" ],
-        "summary" : "Retrieves a 'ResourceSpecification' by Id",
-        "description" : "List or find 'ResourceSpecification' entities",
-        "operationId" : "listResourceSpecification",
+        "summary" : "Retrieve a Resource Specification",
+        "description" : "Retrieve a `ResourceSpecification` entity by it's identifier",
+        "operationId" : "getResourceSpecification",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -100,7 +100,7 @@
                 },
                 "examples" : {
                   "Prefix Table" : {
-                    "summary" : "Prefix Table Spec",
+                    "summary" : "Prefix Table Specification",
                     "description" : "Prefix table specification",
                     "value" : {
                       "id" : "1",
@@ -108,13 +108,13 @@
                       "name" : "PrefixTable",
                       "description" : "Prefix table specification",
                       "category" : "PrefixTable",
-                      "lastUpdate" : "2022-02-07",
+                      "lastUpdate" : "2022-02-16",
                       "lifecycleStatus" : "Active",
                       "version" : "1.0"
                     }
                   },
                   "Prefix Row" : {
-                    "summary" : "Prefix Row Spec",
+                    "summary" : "Prefix Row Specification",
                     "description" : "Prefix Row Specification",
                     "value" : {
                       "id" : "2",
@@ -122,15 +122,15 @@
                       "name" : "PrefixRow",
                       "description" : "Prefix row specification",
                       "category" : "PrefixRow",
-                      "lastUpdate" : "2022-02-07",
+                      "lastUpdate" : "2022-02-16",
                       "lifecycleStatus" : "Active",
                       "resourceSpecCharacteristic" : [ {
                         "name" : "prefix",
-                        "description" : "Prefix of the row",
+                        "description" : "Prefix to match",
                         "valueType" : "String"
                       }, {
                         "name" : "value",
-                        "description" : "Prefix value"
+                        "description" : "Value returned from prefix match"
                       } ],
                       "version" : "1.0"
                     }
