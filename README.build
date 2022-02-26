@@ -32,5 +32,5 @@ ERL_LIBS=$PWD/shell/lib make install
 ERL_LIBS=$PWD/shell/lib make check
 
 ## Scrub it clean
-ERL_LIBS=$PWD/shell/lib make distclean; rm -rf *.boot *.rel *.script *.tar.gz Makefile config.* cse.rel doc ebin src include test stamp-h1 sys.config shell/lib/cse-*
+ERL_LIBS=$PWD/shell/lib make distclean; rm -rf *.boot *.rel *.script *.tar.gz Makefile config.* cse.rel doc ebin src include priv test stamp-h1 sys.config shell/lib/cse-*
 

@@ -98,6 +98,16 @@ start3() ->
 	end.
 %% @hidden
 start4() ->
+	Options = [set, public, named_table, {write_concurrency, true},
+			{keypos, 1}],
+	case catch ets:new(session, Options) of
+		{'EXIT', Reason} ->
+			{error, Reason};
+		TID ->
+			start5()
+	end.
+%% @hidden
+start5() ->
 	{ok, DiameterServices} = application:get_env(diameter),
 	F1 = fun({Addr, Port, Options}) ->
 		case cse:start_diameter(Addr, Port, Options) of

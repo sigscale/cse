@@ -38,7 +38,7 @@ between network functions via service independent interfaces.
 A high level overview of an IN service processing model is given
 in ITU-T Q.1201 Figure 16 as depicted below:
 
-<img alt="IN Processing Model" src="in-processing-model.png" />
+<img alt="IN Processing Model" src="in-processing-model.svg" />
 
 Basic Call Processing (BCP) is provided in network functions such as
 Mobile Switching Centers (MSC). The "hooks" are introduced into
@@ -56,7 +56,7 @@ implemented.
 The main elements in the high level IN functional architecture
 are depicted in the diagram below:
 
-<img alt="IN Functional Architecture" src="in-functional-architecture.png" />
+<img alt="IN Functional Architecture" src="in-functional-architecture.svg" />
 
 This application implements the Service Control Function (SCF)
 which provides the service logic programs (SLPs) that are used to
@@ -82,14 +82,14 @@ The CAMEL standardized Originating Basic Call State Machine (O-BCSM)
 is depicted in <a href="#figure1-1">Figure 1-1</a>.
 
 <p><img alt="diagram of camel o-bcsm"
-		name="figure1-1" src="o-bcsm-camel.png" /><br />
+		name="figure1-1" src="o-bcsm-camel.svg" /><br />
 Figure 1-1: O-BCSM</p>
 
 The CAMEL standardized Terminating Basic Call State Machine (T-BCSM)
 is depicted in <a href="#figure1-2">Figure 1-2</a>.
 
 <p><img alt="diagram of camel t-bcsm"
-		name="figure1-2" src="t-bcsm-camel.png" /><br />
+		name="figure1-2" src="t-bcsm-camel.svg" /><br />
 Figure 1-2: T-BCSM</p>
 
 ==Messaging==
@@ -105,7 +105,7 @@ process in the {@link //tcap. tcap} application's Transaction Sublayer
 (TSL).
 
 <p><img alt="diagram of interprocess communication"
-		name="figure1-2" src="messaging.png" /><br />
+		name="figure1-2" src="messaging.svg" /><br />
 Figure 1-2: Messaging</p>
 
 ==Distribution==
@@ -113,7 +113,7 @@ Process instances of the applications may be distributed across nodes
 as depicted in <a href="#figure1-3">Figure 1-3</a>.
 
 <p><img alt="diagram of process distribution"
-		name="figure1-3" src="distribution.png" /><br />
+		name="figure1-3" src="distribution.svg" /><br />
 Figure 1-3: Distribution</p>
 
 ==Installation==
@@ -186,7 +186,8 @@ application environment variables (`~/releases/<VERSION>/sys.config'):
                   mod_get,
                   mod_disk_log,
                   mod_cse_rest_post,
-                  mod_cse_rest_delete]},
+                  mod_cse_rest_delete,
+                  mod_cse_rest_patch]},
             {port, 8080},
             {socket_type, {essl,
                   [{certfile,  "/etc/ssl/certs/cse.pem"},

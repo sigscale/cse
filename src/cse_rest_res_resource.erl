@@ -231,7 +231,7 @@ query_filter(MFA, Codec, Query, Filters, Headers) ->
 	end.
 
 %% @hidden
-query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
+query_page(Codec, PageServer, Etag, Query, _Filters, Start, End) ->
 	case gen_server:call(PageServer, {Start, End}) of
 		{error, Status} ->
 			{error, Status};
@@ -247,8 +247,7 @@ query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
 				{_, Table} ->
 					Objects = [gtt(Table, {Prefix, Value})
 							|| #gtt{num = Prefix, value = Value} <- Result],
-					JsonObj = query_page1(Objects, Filters, []),
-					Body = zj:encode(JsonObj),
+					Body = zj:encode(Objects),
 					Headers = [{content_type, "application/json"},
 							{etag, Etag}, {accept_ranges, "items"},
 							{content_range, ContentRange}],
@@ -257,20 +256,13 @@ query_page(Codec, PageServer, Etag, Query, Filters, Start, End) ->
 					{error, 400}
 			end;
 		{Result, ContentRange} ->
-			JsonObj = query_page1(lists:map(Codec, Result), Filters, []),
+			JsonObj = lists:map(Codec, Result),
 			Body = zj:encode(JsonObj),
 			Headers = [{content_type, "application/json"},
 					{etag, Etag}, {accept_ranges, "items"},
 					{content_range, ContentRange}],
 			{ok, Headers, Body}
 	end.
-%% @hidden
-query_page1(Json, [], []) ->
-	Json;
-query_page1([H | T], Filters, Acc) ->
-	query_page1(T, Filters, [cse_rest:fields(Filters, H) | Acc]);
-query_page1([], _, Acc) ->
-	lists:reverse(Acc).
 
 %% @hidden
 query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
@@ -328,8 +320,7 @@ add_resource(RequestBody) ->
 			Href = "/resourceInventoryManagement/v4/resource/" ++ Id,
 			LM = {erlang:system_time(millisecond),
 					erlang:unique_integer([positive])},
-			Resource2 = Resource1#resource{id = Id, href = F("prefix"),
-					last_modified = LM},
+			Resource2 = Resource1#resource{id = Id, href = Href, last_modified = LM},
 			Headers = [{content_type, "application/json"},
 					{location, Href}, {etag, cse_rest:etag(LM)}],
 			Body = zj:encode(resource(Resource2)),
@@ -388,7 +379,7 @@ prefix_table_spec() ->
 		"description" => "Prefix table specification",
 		"lifecycleStatus" => "Active",
 		"version" => "1.0",
-		"lastUpdate" => "2022-01-20",
+		"lastUpdate" => "2022-02-16",
 		"category" => "PrefixTable"
 	}.
 
@@ -400,14 +391,14 @@ prefix_row_spec() ->
 		"description" => "Prefix table row specification",
 		"lifecycleStatus" => "Active",
 		"version" => "1.0",
-		"lastUpdate" => "2022-01-20",
+		"lastUpdate" => "2022-02-16",
 		"category" => "PrefixRow",
 		"resourceSpecCharacteristic" => [
 			#{"name" => "prefix",
-				"description" => "Prefix of the row",
+				"description" => "Prefix to match",
 				"valueType" => "String"},
 			#{"name" => "value",
-				"description" => "Prefix value"}
+				"description" => "Value returned from prefix match"}
 		]
 	}.
 
@@ -637,13 +628,7 @@ specification_ref(#specification_ref{} = ResourceSpecificationRef) ->
 			ResourceSpecificationRef, #{});
 specification_ref(#{} = ResourceSpecificationRef) ->
 	specification_ref(record_info(fields, specification_ref),
-			ResourceSpecificationRef, #specification_ref{});
-specification_ref([#specification_ref{} | _] = List) ->
-	Fields = record_info(fields, specification_ref),
-	[specification_ref(Fields, R, #{}) || R <- List];
-specification_ref([#{} | _] = List) ->
-	Fields = record_info(fields, specification_ref),
-	[specification_ref(Fields, R, #specification_ref{}) || R <- List].
+			ResourceSpecificationRef, #specification_ref{}).
 %% @hidden
 specification_ref([id | T], #specification_ref{id = Id} = R, Acc)
 		when is_list(Id) ->

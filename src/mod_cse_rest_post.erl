@@ -97,7 +97,7 @@ do(#mod{method = Method, request_uri = Uri,
 					case proplists:get_value(response, Data) of
 						undefined ->
 							{_, Resource} = lists:keyfind(resource, 1, Data),
-							Path = http_uri:decode(Uri),
+							Path = uri_string:percent_decode(Uri),
 							do_post(Resource, ModData, Body, string:tokens(Path, "/"));
 						_Response ->
 							{proceed,  Data}

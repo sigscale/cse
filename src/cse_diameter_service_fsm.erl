@@ -16,11 +16,7 @@
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
-%%% 	module implements functions to subscribe to a {@link //diameter. diameter}
-%%% 	service and to react to events sent by {@link //diameter. diameter} service.
-%%%
-%%% @reference <a href="https://tools.ietf.org/pdf/rfc4006.pdf">
-%%% 	RFC4006 - DIAMETER Credit-Control Application</a>
+%%% 	module handles {@link //diameter. diameter} service  events.
 %%%
 -module(cse_diameter_service_fsm).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
@@ -114,8 +110,8 @@ wait_for_start(info, #diameter_event{info = start} = EventContent, Data) ->
 	{next_state, started, Data, Actions};
 wait_for_start(info, {'EXIT', _Pid, noconnection}, Data) ->
 	{stop, shutdown, Data};
-wait_for_start(EventType, EventContent, Data) ->
-	handle_event(EventType, EventContent, wait_for_start, Data).
+wait_for_start(_EventType, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec started(EventType, EventContent, Data) -> Result
 	when
@@ -179,8 +175,8 @@ wait_for_stop(info, #diameter_event{info = Event, service = Service},
 	{stop, shutdown, Data};
 wait_for_stop(info, {'EXIT', _Pid, noconnection}, Data) ->
 	{stop, shutdown, Data};
-wait_for_stop(EventType, EventContent, Data) ->
-	handle_event(EventType, EventContent, wait_for_stop, Data).
+wait_for_stop(_EventType, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
@@ -326,7 +322,7 @@ split_options([{'Origin-Realm', DiameterIdentity} = H | T], Acc1, Acc2)
 	split_options(T, Acc1, [H | Acc2]);
 split_options([{application, ApplicationsOpts} = H | T], Acc1, Acc2)
 		when is_list(ApplicationsOpts) ->
-	split_options(T, Acc1, Acc2);
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Host-IP-Address', Addresses} = H | T], Acc1, Acc2)
 		when is_list(Addresses), is_tuple(hd(Addresses)) ->
 	split_options(T, Acc1, [H | Acc2]);

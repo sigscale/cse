@@ -1,54 +1,106 @@
 {
-  "swagger" : "2.0",
+  "openapi" : "3.0.0",
   "info" : {
-    "description" : "TMF639 Resource Inventory Management",
+    "title" : "SigScale CSE - Resource Inventory",
+    "description" : "# TMF639 Resource Inventory Management\nSigScale uses the standard TM Forum [Open APIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF639 API is used in SigScale CSE to represent logical resources such as tables and table rows.\n# Prefix Tables\nThe Service Logic Execution Environment (SLEE) includes a general purpose facility for prefix matching tables. Multiple key-value tables may be created, using this API, where the key is a string representing a prefix. A typical use case is matching of dialed digits.\n## Table\nA table is respresented by a `Resource` entity in the inventory. The `name` attribute will be used by Service Logic Processing Programs (SLP) to select a table. Use the `PrefixTable` `ResourceSpecification` (id=1).\n## Row\nEach row in a table is an individual `Resource` entity with a `resourceRelationship` to the containing table. Use the `PrefixTableRow` `ResourceSpecification` (id=2). The `prefix` characteristic value represents the string to match while the result of the match is provided by the value of the characteristic named `value`.", 
     "version" : "4.0.0",
-    "title" : "Resource Inventory Management"
+    "license" : {
+      "name" : "Apache 2.0"
+    },
+    "contact" : {
+      "name" : "SigScale",
+      "email" : "support@sigscale.com",
+      "url" : "http://www.sigscale.com"
+    }
   },
-  "basePath" : "/resourceInventoryManagement/v4/",
-  "tags" : [ {
-    "name" : "resource",
-    "description" : ""
+  "servers" : [ {
+    "url" : "http://cse.example.net/resourceInventoryManagement/v4"
   } ],
-  "schemes" : [ "http", "https" ],
-  "consumes" : [ "application/json" ],
-  "produces" : [ "application/json" ],
   "paths" : {
     "/resource/" : {
       "get" : {
         "tags" : [ "resource" ],
-        "summary" : "This operation lists all resources available",
-        "operationId" : "listresources",
+        "summary" : "Retrieve Resources",
+        "description" : "Retrieve `Resource` entities",
+        "operationId" : "getResources",
         "parameters" : [ {
           "name" : "id",
           "in" : "query",
           "description" : "Id of the resource",
           "required" : false,
-          "type" : "string"
+          "schema" : {
+            "type" : "string"
+          }
         }, {
           "name" : "category",
           "in" : "query",
           "description" : "Category of the resource",
           "required" : true,
-          "type" : "string"
+          "schema" : {
+            "type" : "string"
+          }
         }, {
           "name" : "resourceSpecification.id",
           "in" : "query",
           "description" : "Id of the resource specification",
           "required" : true,
-          "type" : "string"
+          "schema" : {
+            "type" : "string"
+          }
         }, {
           "name" : "resourceRelationship.name",
           "in" : "query",
           "description" : "Name of the resource relationship",
           "required" : true,
-          "type" : "string"
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
             "description" : "Success",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Resource"
+                  },
+                  "example" : [ {
+                    "id" : "1644299612300",
+                    "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                    "name" : "example",
+                    "resourceSpecification" : {
+                      "id" : "1",
+                      "name" : "PrefixTable"
+                    },
+                    "lastUpdate" : "2022-02-08T05:53:32.300Z"
+                  }, {
+                    "id" : "1644987999944",
+                    "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
+                    "resourceSpecification" : {
+                      "id" : "2",
+                      "name" : "PrefixTableRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1644299612300",
+                        "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                        "name" : "example"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "1416"
+                    }, {
+                      "name" : "value",
+                      "value" : "Toronto, Canada"
+                    } ],
+                    "lastUpdate" : "2022-02-16T05:06:39.944Z"
+                  } ]
+                }
+              }
             }
           },
           "400" : {
@@ -62,25 +114,119 @@
           }
         },
         "deprecated" : false
-      },
+      }
+    },
+    "/resource" : {
       "post" : {
         "tags" : [ "resource" ],
-        "summary" : "This operation creates a Resource entity",
-        "operationId" : "createResourceEntry",
-        "parameters" : [ {
-          "in" : "body",
-          "name" : "resource",
-          "description" : "The Resource to be created",
+        "summary" : "Create a Resource",
+        "description" : "Create a new `Resource` entity",
+        "operationId" : "createResource",
+        "requestBody" : {
           "required" : true,
-          "schema" : {
-            "$ref" : "#/definitions/Resource"
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Resource"
+              },
+              "examples" : {
+                "Table Resource" : {
+                  "summary" : "Table Resource",
+                  "value" : {
+                    "name" : "example",
+                    "resourceSpecification" : {
+                      "id" : "1",
+                      "name" : "PrefixTable"
+                    }
+                  }
+                },
+                "Table Row Resource" : {
+                  "summary" : "Table Row Resource",
+                  "value" : {
+                    "resourceSpecification" : {
+                      "id" : "2",
+                      "name" : "PrefixTableRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1644299612300",
+                        "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                        "name" : "example"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "1416"
+                    }, {
+                      "name" : "value",
+                      "value" : "Toronto, Canada"
+                    } ]
+                  }
+                }
+              }
+            }
           }
-        } ],
+        },
         "responses" : {
           "201" : {
             "description" : "Success",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
+            "headers" : {
+              "Location" : {
+                "schema" : {
+                  "description" : "ResourceRef",
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resource"
+                },
+                "examples" : {
+                  "Table Resource" : {
+                    "summary" : "Table Resource",
+                    "value" : {
+                      "id" : "1644299612300",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                      "name" : "example",
+                      "resourceSpecification" : {
+                        "id" : "1",
+                        "name" : "PrefixTable"
+                      },
+                      "lastUpdate" : "2022-02-08T05:53:32.300Z"
+                    }
+                  },
+                  "Table Row Resource" : {
+                    "summary" : "Table Row Resource",
+                    "value" : {
+                      "id" : "1644987999944",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1644299612300",
+                          "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                          "name" : "example"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "1416"
+                      }, {
+                        "name" : "value",
+                        "value" : "Toronto, Canada"
+                      } ],
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z"
+                    }
+                  }
+                }
+              }
             }
           },
           "400" : {
@@ -99,22 +245,68 @@
     "/resource/{Id}" : {
       "get" : {
         "tags" : [ "resource" ],
-        "summary" : "This operation lists a individual Resource entity",
-        "operationId" : "listResource",
+        "summary" : "Retrieve a Resource",
+        "description" : "Retrieve  a `Resource` entity by it's identifier",
+        "operationId" : "getResource",
         "parameters" : [ {
           "name" : "Id",
           "in" : "path",
           "description" : "Id of the resource",
           "required" : true,
-          "type" : "string"
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
             "description" : "Sucess",
-            "schema" : {
-              "type" : "array",
-              "items" : {
-                "$ref" : "#/definitions/Resource"
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resource"
+                },
+                "examples" : {
+                  "Table Resource" : {
+                    "summary" : "Table Resource",
+                    "value" : {
+                      "id" : "1644299612300",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                      "name" : "example",
+                      "resourceSpecification" : {
+                        "id" : "1",
+                        "name" : "PrefixTable"
+                      },
+                      "lastUpdate" : "2022-02-08T05:53:32.300Z"
+                    }
+                  },
+                  "Table Row Resource" : {
+                    "summary" : "Table Row Resource",
+                    "value" : {
+                      "id" : "1644987999944",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
+                      "resourceSpecification" : {
+                        "id" : "2",
+                        "name" : "PrefixTableRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1644299612300",
+                          "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
+                          "name" : "example"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "1416"
+                      }, {
+                        "name" : "value",
+                        "value" : "Toronto, Canada"
+                      } ],
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z"
+                    }
+                  }
+                }
               }
             }
           },
@@ -132,59 +324,21 @@
       },
       "delete" : {
         "tags" : [ "resource" ],
-        "summary" : "Deletes a 'Resource' by Id",
+        "summary" : "Delete a Resource",
+        "description" : "Delete a `Resource` entity by it's identifier",
         "operationId" : "deleteResource",
         "parameters" : [ {
           "name" : "Id",
           "in" : "path",
           "description" : "Id of the resource",
           "required" : true,
-          "type" : "string"
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "204" : {
-            "description" : "Deleted",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
-            }
-          },
-          "400" : {
-            "description" : "Bad Request"
-          },
-          "404" : {
-            "description" : "Not Found"
-          },
-          "500" : {
-            "description" : "Internal Server Error"
-          }
-        },
-        "deprecated" : false
-      },
-      "patch" : {
-        "tags" : [ "resource" ],
-        "summary" : "Patches a 'Resource' by Id",
-        "operationId" : "updateResource",
-        "parameters" : [ {
-          "name" : "Id",
-          "in" : "path",
-          "description" : "Id of the resource",
-          "required" : true,
-          "type" : "string"
-        }, {
-          "in" : "body",
-          "name" : "Resource",
-          "description" : "The Resource to be updated",
-          "required" : true,
-          "schema" : {
-            "$ref" : "#/definitions/Resource"
-          }
-        } ],
-        "responses" : {
-          "201" : {
-            "description" : "Updated",
-            "schema" : {
-              "$ref" : "#/definitions/Resource"
-            }
+            "description" : "Deleted"
           },
           "400" : {
             "description" : "Bad Request"
@@ -200,123 +354,119 @@
       }
     }
   },
-  "definitions" : {
-    "Resource" : {
-      "type" : "object",
-      "properties" : {
-        "id" : {
-          "type" : "string",
-          "description" : "Identifier of an instance of the resource."
+  "components" : {
+    "schemas" : {
+      "Resource" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Identifier of an instance of the resource."
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "The URI for the object itself."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "A string used to give a name to the resource."
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "free-text description of the resource."
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "identifies the specific version of an instance of a resource."
+          },
+          "lifecycleState" : {
+            "type" : "string",
+            "description" : "The life cycle state of the resource."
+          },
+          "lastUpdate" : {
+            "type" : "string",
+            "description" : "The last date the resource was update on."
+          },
+          "category" : {
+            "type" : "string",
+            "description" : "Category of the resource."
+          },
+          "resourceSpecCharacteristic" : {
+            "$ref" : "#/components/schemas/ResourceCharacteristic"
+          },
+          "resourceRelationship" : {
+            "$ref" : "#/components/schemas/ResourceRelationship"
+          },
+          "resourceSpecification" : {
+            "$ref" : "#/components/schemas/ResourceSpecification"
+          }
         },
-        "href" : {
-          "type" : "string",
-          "description" : "The URI for the object itself."
-        },
-        "name" : {
-          "type" : "string",
-          "description" : "A string used to give a name to the resource."
-        },
-        "description" : {
-          "type" : "string",
-          "description" : "free-text description of the resource."
-        },
-        "version" : {
-          "type" : "string",
-          "description" : "identifies the specific version of an instance of a resource."
-        },
-        "lifecycleState" : {
-          "type" : "string",
-          "description" : "The life cycle state of the resource."
-        },
-        "lastUpdate" : {
-          "type" : "string",
-          "description" : "The last date the resource was update on."
-        },
-        "category" : {
-          "type" : "string",
-          "description" : "Category of the resource."
-        },
-        "resourceSpecCharacteristic" : {
-          "$ref" : "#/definitions/ResourceCharacteristic"
-        },
-        "resourceRelationship" : {
-          "$ref" : "#/definitions/ResourceRelationship"
-        },
-        "resourceSpecification" : {
-          "$ref" : "#/definitions/ResourceSpecification"
+        "description" : "Resource is an abstract entity that describes the common set of attributes shared by all concrete resources"
+      },
+      "ResourceSpecification" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the resource specification."
+          },
+          "id" : {
+            "type" : "string",
+            "description" : "Id of the resource specification."
+          }
         }
       },
-      "description" : "Resource is an abstract entity that describes the common set of attributes shared by all concrete resources"
-    },
-    "ResourceSpecification" : {
-      "type" : "object",
-      "properties" : {
-        "name" : {
-          "type" : "string",
-          "description" : "Name of the resource specification."
-        },
-        "id" : {
-          "type" : "string",
-          "description" : "Id of the resource specification."
+      "ResourceCharacteristic" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/ResourceCharacteristicValue"
         }
-      }
-    },
-    "ResourceCharacteristic" : {
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/definitions/ResourceCharacteristicValue"
-      }
-    },
-    "ResourceCharacteristicValue" : {
-      "type" : "object",
-      "properties" : {
-        "name" : {
-          "type" : "object",
-          "description" : "Name of the characteristic.",
-          "properties" : { }
-        },
-        "value" : {
-          "type" : "string",
-          "description" : "Value of the characteristic."
+      },
+      "ResourceCharacteristicValue" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the characteristic."
+          },
+          "value" : {
+            "description" : "Value of the characteristic."
+          }
         }
-      }
-    },
-    "ResourceRelationship" : {
-      "type" : "array",
-      "items" : {
-        "$ref" : "#/definitions/ResourceRelationshipValue"
-      }
-    },
-    "ResourceRelationshipValue" : {
-      "type" : "object",
-      "properties" : {
-        "resource" : {
-          "$ref" : "#/definitions/RefResource"
-        },
-        "relationshipType" : {
-          "type" : "string",
-          "description" : "The type of resource relationship."
+      },
+      "ResourceRelationship" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/ResourceRelationshipValue"
         }
-      }
-    },
-    "RefResource" : {
-      "type" : "object",
-      "properties" : {
-        "id" : {
-          "type" : "string",
-          "description" : "Unique identifier of the parent resource"
-        },
-        "href" : {
-          "type" : "string",
-          "description" : "Reference of the parent resource"
-        },
-        "name" : {
-          "type" : "string",
-          "description" : "Name of the parent resource"
-        },
-        "@referredType" : {
-          "type" : "string",
-          "description" : "The actual type of the target instance"
+      },
+      "ResourceRelationshipValue" : {
+        "type" : "object",
+        "properties" : {
+          "resource" : {
+            "$ref" : "#/components/schemas/RefResource"
+          },
+          "relationshipType" : {
+            "type" : "string",
+            "description" : "The type of resource relationship."
+          }
+        }
+      },
+      "RefResource" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier of the parent resource"
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "Reference of the parent resource"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the parent resource"
+          }
         }
       }
     }

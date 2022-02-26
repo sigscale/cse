@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" viewBox="-92.5 563.7995 881 691.7005" width="881" height="691.7005">
+  <defs>
+    <font-face font-family="Montserrat" font-size="24" panose-1="0 0 5 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-75" underline-thickness="50" slope="0" x-height="525" cap-height="700" ascent="968.0023" descent="-251.00708" font-weight="400">
+      <font-face-src>
+        <font-face-name name="Montserrat-Regular"/>
+      </font-face-src>
+    </font-face>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.19.4\n2022-02-04 12:01:35 +0000</metadata>
+  <g id="Functional_Architecture" stroke="none" stroke-opacity="1" fill="none" fill-opacity="1" stroke-dasharray="none">
+    <title>Functional Architecture</title>
+    <g id="Functional_Architecture_Layer_1">
+      <title>Layer 1</title>
+      <g id="Group_59">
+        <g id="Graphic_32">
+          <path d="M 779 1254 L 403 1254 C 398.5817 1254 395 1250.4183 395 1246 L 395 1e3 C 395 995.5817 398.5817 992 403 992 L 779 992 C 783.4183 992 787 995.5817 787 1e3 L 787 1246 C 787 1250.4183 783.4183 1254 779 1254 C 779 1254 779 1254 779 1254 Z" fill="white"/>
+          <path d="M 779 1254 L 403 1254 C 398.5817 1254 395 1250.4183 395 1246 L 395 1e3 C 395 995.5817 398.5817 992 403 992 L 779 992 C 783.4183 992 787 995.5817 787 1e3 L 787 1246 C 787 1250.4183 783.4183 1254 779 1254 C 779 1254 779 1254 779 1254 Z" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          <text transform="translate(400 1205)" fill="black">
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="14.9" y="23">Service Switching Point (SSP)</tspan>
+          </text>
+        </g>
+        <g id="Graphic_31">
+          <ellipse cx="602" cy="1097" rx="100.00015979019" ry="75.0001198426421" fill="white"/>
+          <ellipse cx="602" cy="1097" rx="100.00015979019" ry="75.0001198426421" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          <text transform="translate(527 1039)" fill="black">
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="31.752" y="23">Service </tspan>
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="14.928" y="52">Switching </tspan>
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="20.82" y="81">Function </tspan>
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="44.844" y="110">(SSF)</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Group_58">
+        <g id="Graphic_4">
+          <path d="M 425 565.2995 L 779 565.2995 C 783.4183 565.2995 787 568.88125 787 573.2995 L 787 828.2995 C 787 832.7178 783.4183 836.2995 779 836.2995 L 425 836.2995 C 420.5817 836.2995 417 832.7178 417 828.2995 L 417 573.2995 C 417 568.88125 420.5817 565.2995 425 565.2995 Z" fill="white"/>
+          <path d="M 425 565.2995 L 779 565.2995 C 783.4183 565.2995 787 568.88125 787 573.2995 L 787 828.2995 C 787 832.7178 783.4183 836.2995 779 836.2995 L 425 836.2995 C 420.5817 836.2995 417 832.7178 417 828.2995 L 417 573.2995 C 417 568.88125 420.5817 565.2995 425 565.2995 Z" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          <text transform="translate(422 585.2995)" fill="black">
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="18.444" y="23">Service Control Point (SCP)</tspan>
+          </text>
+        </g>
+        <g id="Graphic_10">
+          <ellipse cx="602" cy="726" rx="100.00015979019" ry="75.0001198426422" fill="white"/>
+          <ellipse cx="602" cy="726" rx="100.00015979019" ry="75.0001198426422" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          <text transform="translate(527 668)" fill="black">
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="31.752" y="23">Service </tspan>
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="30.72" y="52">Control </tspan>
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="20.82" y="81">Function </tspan>
+            <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="43.596" y="110">(SCF)</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Graphic_45">
+        <path d="M -83 983 L 271 983 C 275.41828 983 279 986.5817 279 991 L 279 1246 C 279 1250.4183 275.41828 1254 271 1254 L -83 1254 C -87.41828 1254 -91 1250.4183 -91 1246 L -91 991 C -91 986.5817 -87.41828 983 -83 983 Z" fill="white"/>
+        <path d="M -83 983 L 271 983 C 275.41828 983 279 986.5817 279 991 L 279 1246 C 279 1250.4183 275.41828 1254 271 1254 L -83 1254 C -87.41828 1254 -91 1250.4183 -91 1246 L -91 991 C -91 986.5817 -87.41828 983 -83 983 Z" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(-86 1205)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="29.712" y="23">Intelligent Peripheral (IP)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_43">
+        <ellipse cx="94" cy="1097" rx="100.00015979019" ry="75.0001198426421" fill="white"/>
+        <ellipse cx="94" cy="1097" rx="100.00015979019" ry="75.0001198426421" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(19 1039)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="31.752" y="23">Service </tspan>
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="19.056" y="52">Resource </tspan>
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="20.82" y="81">Function </tspan>
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="43.548" y="110">(SRF)</tspan>
+        </text>
+      </g>
+      <g id="Line_49">
+        <line x1="165.6447" y1="1044.6768" x2="530.3553" y2="778.3232" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_50">
+        <rect x="281.2945" y="893.6575" width="128.872" height="39" fill="white"/>
+        <text transform="translate(286.2945 898.6575)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">INAP/CAP</tspan>
+        </text>
+      </g>
+      <g id="Line_52">
+        <line x1="194.00005" y1="1097" x2="501.99995" y2="1097" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_51">
+        <rect x="310.1831" y="1077.5" width="68.248" height="39" fill="white"/>
+        <text transform="translate(315.1831 1082.5)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">ISUP</tspan>
+        </text>
+      </g>
+      <g id="Line_57">
+        <line x1="602" y1="1022" x2="602" y2="801" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_56">
+        <rect x="537.564" y="894.6498" width="128.872" height="39" fill="white"/>
+        <text transform="translate(542.564 899.6498)" fill="black">
+          <tspan font-family="Montserrat" font-size="24" font-weight="400" fill="black" x="0" y="23">INAP/CAP</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

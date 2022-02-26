@@ -152,9 +152,8 @@ do(#mod{method = Method, parsed_header = _Headers,
 								false ->
 									{proceed, Data};
 								{_, Resource} ->
-									Path = http_uri:decode(Uri),
 									parse_query(Resource, ModData,
-											httpd_util:split_path(Path))
+											httpd_util:split_path(Uri))
 							end;
 						_Response ->
 							{proceed,  Data}

@@ -1,4 +1,4 @@
-%%% mod_cse_rest_delete.erl
+%%% mod_cse_rest_patch.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2022 SigScale Global Inc.
@@ -15,10 +15,10 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Handle received HTTP DELETE requests.
+%%% @doc Handle received HTTP PATCH requests.
 %%%
 %%% 	This is an {@link //inets/httpd. httpd} callback module handling
-%%% 	HTTP DELETE operations. The HTTP resources are managed in modules named
+%%% 	HTTP PATCH operations. The HTTP resources are managed in modules named
 %%% 	`cse_rest_res_*'.
 %%%
 %%% 	<h2><a name="callbacks">Resource Handler Functions</a></h2>
@@ -26,14 +26,16 @@
 %%% 	in the pattern described in the example below.
 %%%
 %%% 	<h3 class="function">
-%%% 		<a>delete_&lt;Resource&gt;/2</a>
+%%% 		<a>patch_&lt;Resource&gt;/2</a>
 %%% 	</h3>
 %%% 	<div class="spec">
 %%% 		<p>
-%%% 			<tt>delete_&lt;Resource&gt;(Id) -&gt; Result</tt>
+%%% 			<tt>patch_&lt;Resource&gt;(Id, ContentType, RequestBody, [...]) -&gt; Result</tt>
 %%% 		</p>
 %%% 		<ul class="definitions">
 %%% 			<li><tt>Id = string()</tt></li>
+%%% 			<li><tt>ContentType = string()</tt></li>
+%%% 			<li><tt>RequestBody = string()</tt></li>
 %%% 			<li><tt>Result = {ok, Headers, ResponseBody}
 %%% 					| {error, StatusCode}
 %%% 					| {error, StatusCode, Problem}</tt></li>
@@ -45,7 +47,7 @@
 %%% 					status => 200..599}</tt></li>
 %%% 		</ul>
 %%% 	</div>
-%%% 	Resource handlers for HTTP DELETE operations on REST Resources.
+%%% 	Resource handlers for HTTP PATCH operations on REST Resources.
 %%%
 %%% 	Response `Headers' must include `content_type' if `ResponseBody' is
 %%% 	not en empty list. An optional `Problem' report may be provided in
@@ -55,7 +57,7 @@
 %%%
 %%% @end
 %%%
--module(mod_cse_rest_delete).
+-module(mod_cse_rest_patch).
 -copyright('Copyright (c) 2022 SigScale Global Inc.').
 
 -export([do/1]).
@@ -85,18 +87,22 @@
 	Fun :: fun((Arg) -> sent| close | Body),
 	Arg :: [term()].
 %% @doc Erlang web server API callback function.
-do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
+do(#mod{method = Method, parsed_header = RequestHeaders, request_uri = Uri,
+		entity_body = Body, data = Data} = ModData) ->
 	case Method of
-		"DELETE" ->
+		"PATCH" ->
 			case proplists:get_value(status, Data) of
 				{_StatusCode, _PhraseArgs, _Reason} ->
 					{proceed, Data};
 				undefined ->
 					case proplists:get_value(response, Data) of
 						undefined ->
-							{_, Resource} = lists:keyfind(resource, 1, Data),
 							Path = uri_string:percent_decode(Uri),
-							do_delete(Resource, ModData, string:tokens(Path, "/"));
+							{_, Resource} = lists:keyfind(resource, 1, Data),
+							{_, ContentType} = lists:keyfind(content_type, 1, Data),
+							Etag = get_etag(RequestHeaders),
+							do_patch(ContentType, Body, Resource,
+									ModData, Etag, string:tokens(Path, "/"));
 						_Response ->
 							{proceed,  Data}
 					end
@@ -105,11 +111,17 @@ do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 			{proceed, Data}
 	end.
 
+get_etag(Headers) ->
+	case lists:keyfind("if-match", 1, Headers) of
+		{_, Etag} ->
+			Etag;
+		false ->
+			undefined
+	end.
+
 %% @hidden
-do_delete(Resource, ModData,
-		["resourceInventoryManagement", "v4", "resource", Id]) ->
-	do_response(ModData, Resource:delete_resource(Id));
-do_delete(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _) ->
+do_patch(#mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, _, _, _, _, _) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
 			title => "Not Found",
 			detail => "No resource exists at the path provided",
@@ -118,14 +130,18 @@ do_delete(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _) ->
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
 	send(ModData, 404, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 404, Size}} | Data]}.
+	{proceed, [{response,{already_sent, 404, Size}} | Data]}.
 
 %% @hidden
+do_response(#mod{data = Data} = ModData, {ok, Headers, []}) ->
+	ResponseHeaders = [{content_length, "0"} | Headers],
+	send(ModData, 204, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 204, "0"}} | Data]};
 do_response(#mod{data = Data} = ModData, {ok, Headers, ResponseBody}) ->
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size} | Headers],
-	send(ModData, 204, ResponseHeaders, ResponseBody),
-	{proceed, [{response,{already_sent, 204, Size}} | Data]};
+	send(ModData, 200, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 200, Size}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 			data = Data} = ModData, {error, 400}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
@@ -161,6 +177,18 @@ do_response(#mod{parsed_header = RequestHeaders,
 	send(ModData, 404, ResponseHeaders, ResponseBody),
 	{proceed, [{response, {already_sent, 404, Size}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, {error, 409}) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.8",
+			title => "Conflict",
+			detail => "The request could not be completed due to a conflict"
+					" with the current state of the target resource.",
+			code => "", status => 409},
+	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 409, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 409, Size}} | Data]};
+do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 412}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7232#section-4.2",
 			title => "Precondition Failed",
@@ -172,6 +200,17 @@ do_response(#mod{parsed_header = RequestHeaders,
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
 	send(ModData, 412, ResponseHeaders, ResponseBody),
 	{proceed, [{response, {already_sent, 412, Size}} | Data]};
+do_response(#mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, {error, 422}) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc4918#section-11.2",
+			title => "Unprocessable Entity",
+			detail => "Unable to process the contained instructions.",
+			code => "", status => 422},
+	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 422, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 422, Size}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 500}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
@@ -200,8 +239,8 @@ do_response(#mod{parsed_header = RequestHeaders, data = Data} = ModData,
 	{proceed, [{response, {already_sent, StatusCode, Size}} | Data]}.
 
 %% @hidden
-send(#mod{socket = Socket, socket_type = SocketType} = ModData,
+send(#mod{socket = Socket, socket_type = SocketType} = Info,
 		StatusCode, Headers, ResponseBody) ->
-	httpd_response:send_header(ModData, StatusCode, Headers),
+	httpd_response:send_header(Info, StatusCode, Headers),
 	httpd_socket:deliver(SocketType, Socket, ResponseBody).
 

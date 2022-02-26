@@ -31,6 +31,7 @@
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
 -export([announce/1]).
+-export([add_session/2, get_session/1, get_sessions/0, delete_session/1]).
 
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
@@ -752,6 +753,73 @@ announce1(1, Acc) ->
 	Acc ++ [one];
 announce1(0, Acc) ->
 	Acc.
+
+-spec add_session(SessionId, PID) -> Result
+	when
+		SessionId :: binary(),
+		PID :: pid(),
+		Result :: {ok, {SessionId, PID}} | {error, Reason},
+		Reason :: term().
+%% @doc Add a Session Table Entry
+%%
+%% 	The `SessionId' identifies a Diameter session.
+%% 	The `PID' identifies a SLIP process.
+%%
+add_session(SessionId, PID) when is_binary(SessionId),
+		is_pid(PID) ->
+	Service = {SessionId, PID},
+	case catch ets:insert(session, Service) of
+		true ->
+			{ok, Service};
+		{'EXIT', Reason} ->
+			{error, Reason}
+	end.
+
+-spec get_session(SessionId) -> Result
+	when
+		SessionId :: binary(),
+		Result :: {ok, {SessionId, PID}} | {error, Reason},
+		PID :: pid(),
+		Reason :: not_found | term().
+%% @doc Get a Session by SessionId.
+get_session(SessionId) when is_binary(SessionId) ->
+	case catch ets:lookup(session, SessionId) of
+		[] ->
+			{error, not_found};
+		{'EXIT', Reason} ->
+			{error, Reason};
+		[{SessionId, PID}] ->
+			{SessionId, PID}
+	end.
+
+-spec get_sessions() -> Result
+	when
+		Result :: Sessions | {error, Reason},
+		Sessions :: [Session],
+		Session :: {SessionId, PID},
+		SessionId :: binary(),
+		PID :: pid(),
+		Reason :: term().
+%% @doc Get all entries from the Session table.
+get_sessions() ->
+	case catch ets:tab2list(session) of
+		Sessions when length(Sessions) > 0 ->
+			Sessions;
+		{'EXIT', Reason} ->
+			{error, Reason}
+	end.
+
+-spec delete_session(SessionId) -> ok
+	when
+		SessionId :: binary().
+%% @doc Delete an entry from the session table.
+delete_session(SessionId) when is_binary(SessionId) ->
+	case catch ets:delete(session, SessionId) of
+		true ->
+			ok;
+		{'EXIT', Reason} ->
+			exit(Reason)
+	end.
 
 %%----------------------------------------------------------------------
 %%  internal functions
