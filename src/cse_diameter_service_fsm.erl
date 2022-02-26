@@ -255,11 +255,11 @@ service_options(Options) ->
 				{dictionary, ?BASE_APPLICATION_DICT},
 				{module, ?BASE_APPLICATION_CALLBACK},
 				{request_errors, callback}]}],
-	{NewApps, Options2} = case lists:keytake(applications, 1, Options) of
+	{NewApps, Options2} = case lists:keytake(application, 1, Options) of
 		false ->
 			{BaseApplications, Options};
 		{value, DiameterApplications, Options1} ->
-			{BaseApplications ++ DiameterApplications, Options1}
+			{BaseApplications ++ [DiameterApplications], Options1}
 	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
