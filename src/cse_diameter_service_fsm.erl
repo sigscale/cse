@@ -45,6 +45,7 @@
 -define(BASE_APPLICATION_CALLBACK, cse_diameter_base_application_cb).
 -define(IANA_PEN_3GPP, 10415).
 -define(IANA_PEN_SigScale, 50386).
+-define(RO_APPLICATION_ID, 4).
 
 %%----------------------------------------------------------------------
 %%  The cse_diameter_service_fsm gen_statem callbacks
@@ -269,6 +270,7 @@ service_options(Options) ->
 		{'Product-Name', "SigScale CSE"},
 		{'Firmware-Revision', Version},
 		{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
+		{'Auth-Application-Id', [?RO_APPLICATION_ID]},
 		{restrict_connections, false},
 		{string_decode, false}],
 	F = fun({K, V}, Acc) ->
@@ -301,8 +303,7 @@ transport_options(Options, Address, Port) ->
 			Opts = [{reuseaddr, true}, {ip, Address}, {port, Port}],
 			[{transport_config, Opts} | Options1]
 	end,
-	Options3 = [{capabilities_cb, fun cse_diameter:authenticate_client/2} | Options2],
-	{listen, Options3}.
+	{listen, Options2}.
 
 -spec split_options(Options) -> Result
 	when
