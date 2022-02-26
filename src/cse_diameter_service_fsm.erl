@@ -109,8 +109,11 @@ init([Address, Port, Options] = _Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>wait_for_start</em> state.
 %% @private
-wait_for_start(info, #diameter_event{info = start}, Data) ->
-	{next_state, started, Data};
+wait_for_start(info, #diameter_event{info = start} = EventContent, Data) ->
+	Actions = [{next_event, internal, EventContent}],
+	{next_state, started, Data, Actions};
+wait_for_start(info, {'EXIT', _Pid, noconnection}, Data) ->
+	{stop, shutdown, Data};
 wait_for_start(EventType, EventContent, Data) ->
 	handle_event(EventType, EventContent, wait_for_start, Data).
 
@@ -122,24 +125,31 @@ wait_for_start(EventType, EventContent, Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>started</em> state.
 %% @private
-started(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == up;
+started(internal, #diameter_event{info = Event, service = Service},
+		_Data) when element(1, Event) == up;
 		element(1, Event) == down ->
 	{_PeerRef, #diameter_caps{origin_host = {_, Peer}}} = element(3, Event),
 	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
 			{peer, binary_to_list(Peer)}]),
-	{next_state, started, Data};
-started(info, #diameter_event{info = {watchdog,
-			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
-	{next_state, started, Data};
-started(info, #diameter_event{info = Event, service = Service},
-		Data) ->
+	keep_state_and_data;
+started(internal, #diameter_event{info = Event, service = Service},
+      Data) when element(1, Event) == closed ->
+   {_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
+   error_logger:info_report(["DIAMETER peer address not found",
+         {service, Service}, {event, element(1, Event)},
+         {peer, binary_to_list(Peer)}]),
+	{stop, shutdown, Data};
+started(internal, #diameter_event{info = {watchdog,
+			_Ref, _PeerRef, {_From, _To}, _Config}}, _Data) ->
+	keep_state_and_data;
+started(internal, #diameter_event{info = Event, service = Service},
+		_Data) ->
 	error_logger:info_report(["DIAMETER event",
 			{service, Service}, {event, Event}]),
-	{next_state, started, Data};
-started(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{next_state, started, Data};
+	keep_state_and_data;
+started(internal, {'EXIT', _Pid, noconnection}, Data) ->
+	{stop, shutdown, Data};
 started(EventType, EventContent, Data) ->
 	handle_event(EventType, EventContent, started, Data).
 
@@ -245,6 +255,16 @@ service_options(Options) ->
 		_ ->
 			"cse"
 	end,
+	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
+				{dictionary, ?BASE_APPLICATION_DICT},
+				{module, ?BASE_APPLICATION_CALLBACK},
+				{request_errors, callback}]}],
+	{NewApps, Options2} = case lists:keytake(applications, 1, Options) of
+		false ->
+			{BaseApplications, Options};
+		{value, DiameterApplications, Options1} ->
+			{BaseApplications ++ DiameterApplications, Options1}
+	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
 	BaseOptions = [{'Origin-Host', OriginHost},
@@ -254,15 +274,11 @@ service_options(Options) ->
 		{'Firmware-Revision', Version},
 		{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
 		{restrict_connections, false},
-		{string_decode, false},
-		{application, [{alias, ?BASE_APPLICATION},
-				{dictionary, ?BASE_APPLICATION_DICT},
-				{module, ?BASE_APPLICATION_CALLBACK},
-				{request_errors, callback}]}],
+		{string_decode, false}],
 	F = fun({K, V}, Acc) ->
 		lists:keyreplace(K, 1, Acc, {K, V})
 	end,
-	lists:foldl(F, BaseOptions, Options).
+	lists:foldl(F, BaseOptions, Options2) ++ NewApps.
 
 -spec transport_options(Options, Address, Port) -> Result
 	when
@@ -308,6 +324,9 @@ split_options([{'Origin-Host', DiameterIdentity} = H | T], Acc1, Acc2)
 split_options([{'Origin-Realm', DiameterIdentity} = H | T], Acc1, Acc2)
 		when is_list(DiameterIdentity) ->
 	split_options(T, Acc1, [H | Acc2]);
+split_options([{application, ApplicationsOpts} = H | T], Acc1, Acc2)
+		when is_list(ApplicationsOpts) ->
+	split_options(T, Acc1, Acc2);
 split_options([{'Host-IP-Address', Addresses} = H | T], Acc1, Acc2)
 		when is_list(Addresses), is_tuple(hd(Addresses)) ->
 	split_options(T, Acc1, [H | Acc2]);
