@@ -301,8 +301,7 @@ transport_options(Options, Address, Port) ->
 			Opts = [{reuseaddr, true}, {ip, Address}, {port, Port}],
 			[{transport_config, Opts} | Options1]
 	end,
-	Options3 = [{capabilities_cb, fun cse_diameter:authenticate_client/2} | Options2],
-	{listen, Options3}.
+	{listen, Options2}.
 
 -spec split_options(Options) -> Result
 	when
