@@ -239,7 +239,6 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %% @doc Returns options for a DIAMETER service
 %% @hidden
 service_options(Options) ->
-erlang:display({?MODULE, ?LINE, Options}),
 	{ok, Hostname} = inet:gethostname(),
 	Options1 = case lists:keymember('Origin-Host', 1, Options) of
 		true ->
@@ -279,7 +278,6 @@ erlang:display({?MODULE, ?LINE, Options}),
 		{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
 		{restrict_connections, false},
 		{string_decode, false}],
-erlang:display({?MODULE, ?LINE, BaseOptions ++ Options3 ++ NewApps}),
 	BaseOptions ++ Options3 ++ NewApps.
 
 -spec transport_options(Options, Address, Port) -> Result
