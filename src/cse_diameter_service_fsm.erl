@@ -334,9 +334,11 @@ split_options([{'Origin-State-Id', _} | T], Acc1, Acc2) ->
 split_options([{'Supported-Vendor-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{'Auth-Application-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
+		when is_list(Addresses), is_tuple(hd(Addresses)) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Acct-Application-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
+		when is_list(Addresses), is_tuple(hd(Addresses)) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Inband-Security-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{'Vendor-Specific-Application-Id', _} | T], Acc1, Acc2) ->
