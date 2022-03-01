@@ -239,42 +239,48 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %% @doc Returns options for a DIAMETER service
 %% @hidden
 service_options(Options) ->
-	OriginRealm = case inet_db:res_option(domain) of
-		S when length(S) > 0 ->
-			S;
-		_ ->
-			"example.net"
-	end,
-	OriginHost = case inet:gethostname() of
-		{ok, Hostname} ->
-			Hostname;
-		_ ->
-			"cse"
+erlang:display({?MODULE, ?LINE, Options}),
+	{ok, Hostname} = inet:gethostname(),
+	Options1 = case lists:keymember('Origin-Host', 1, Options) of
+		true ->
+			Options;
+		false when length(Hostname) > 0 ->
+			[{'Origin-Host', Hostname} | Options];
+		false ->
+			[{'Origin-Host', "cse"} | Options]
+   end,
+	Options2 = case lists:keymember('Origin-Realm', 1, Options1) of
+		true ->
+			Options1;
+		false ->
+			OriginRealm = case inet_db:res_option(domain) of
+				S when length(S) > 0 ->
+					S;
+				_ ->
+					"example.net"
+			end,
+			[{'Origin-Realm', OriginRealm} | Options1]
 	end,
 	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
 				{dictionary, ?BASE_APPLICATION_DICT},
 				{module, ?BASE_APPLICATION_CALLBACK},
 				{request_errors, callback}]}],
-	{NewApps, Options2} = case lists:keytake(application, 1, Options) of
+	{NewApps, Options3} = case lists:keytake(application, 1, Options2) of
 		false ->
-			{BaseApplications, Options};
-		{value, DiameterApplications, Options1} ->
-			{BaseApplications ++ [DiameterApplications], Options1}
+			{BaseApplications, Options2};
+		{value, DiameterApplications, Opts} ->
+			{BaseApplications ++ [DiameterApplications], Opts}
 	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
-	BaseOptions = [{'Origin-Host', OriginHost},
-		{'Origin-Realm', OriginRealm},
-		{'Vendor-Id', ?IANA_PEN_SigScale},
+	BaseOptions = [{'Vendor-Id', ?IANA_PEN_SigScale},
 		{'Product-Name', "SigScale CSE"},
 		{'Firmware-Revision', Version},
 		{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
 		{restrict_connections, false},
 		{string_decode, false}],
-	F = fun({K, V}, Acc) ->
-		lists:keyreplace(K, 1, Acc, {K, V})
-	end,
-	lists:foldl(F, BaseOptions, Options2) ++ NewApps.
+erlang:display({?MODULE, ?LINE, BaseOptions ++ Options3 ++ NewApps}),
+	BaseOptions ++ Options3 ++ NewApps.
 
 -spec transport_options(Options, Address, Port) -> Result
 	when
@@ -333,11 +339,11 @@ split_options([{'Origin-State-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{'Supported-Vendor-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
-split_options([{'Auth-Application-Id', _} | T], Acc1, Acc2) ->
-		when is_list(Addresses), is_tuple(hd(Addresses)) ->
+split_options([{'Auth-Application-Id', Id} = H | T], Acc1, Acc2)
+		when is_list(Id) ->
 	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Acct-Application-Id', _} | T], Acc1, Acc2) ->
-		when is_list(Addresses), is_tuple(hd(Addresses)) ->
+split_options([{'Acct-Application-Id', Id} = H | T], Acc1, Acc2)
+		when is_list(Id) ->
 	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Inband-Security-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
