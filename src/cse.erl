@@ -789,7 +789,7 @@ get_session(SessionId) when is_binary(SessionId) ->
 		{'EXIT', Reason} ->
 			{error, Reason};
 		[{SessionId, PID}] ->
-			{SessionId, PID}
+			{ok, {SessionId, PID}}
 	end.
 
 -spec get_sessions() -> Result
