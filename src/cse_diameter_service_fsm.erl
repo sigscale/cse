@@ -44,6 +44,7 @@
 -define(BASE_APPLICATION_DICT, diameter_gen_base_rfc6733).
 -define(BASE_APPLICATION_CALLBACK, cse_diameter_base_application_cb).
 -define(IANA_PEN_3GPP, 10415).
+-define(IANA_PEN_Ericsson, 193).
 -define(IANA_PEN_SigScale, 50386).
 
 %%----------------------------------------------------------------------
@@ -276,7 +277,7 @@ service_options(Options) ->
 	BaseOptions = [{'Vendor-Id', ?IANA_PEN_SigScale},
 		{'Product-Name', "SigScale CSE"},
 		{'Firmware-Revision', Version},
-		{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
+		{'Supported-Vendor-Id', [?IANA_PEN_3GPP, ?IANA_PEN_Ericsson]},
 		{restrict_connections, false},
 		{string_decode, false}],
 	BaseOptions ++ Options3 ++ NewApps.
