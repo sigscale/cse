@@ -239,18 +239,9 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %% @doc Returns options for a DIAMETER service
 %% @hidden
 service_options(Options) ->
-	{ok, Hostname} = inet:gethostname(),
-	Options1 = case lists:keymember('Origin-Host', 1, Options) of
-		true ->
-			Options;
-		false when length(Hostname) > 0 ->
-			[{'Origin-Host', Hostname} | Options];
-		false ->
-			[{'Origin-Host', "cse"} | Options]
-   end,
-	Options2 = case lists:keymember('Origin-Realm', 1, Options1) of
-		true ->
-			Options1;
+	{Options1, Realm} = case lists:keyfind('Origin-Realm', 1, Options) of
+		{'Origin-Realm', R} ->
+			{Options, R};
 		false ->
 			OriginRealm = case inet_db:res_option(domain) of
 				S when length(S) > 0 ->
@@ -258,8 +249,18 @@ service_options(Options) ->
 				_ ->
 					"example.net"
 			end,
-			[{'Origin-Realm', OriginRealm} | Options1]
+			{[{'Origin-Realm', OriginRealm} | Options], OriginRealm}
 	end,
+	{ok, Hostname} = inet:gethostname(),
+	Options2 = case lists:keyfind('Origin-Host', 1, Options1) of
+		{_, Host} ->
+			HostName = {'Origin-Host', Host ++ Realm},
+			lists:keyreplace('Origin-Host', 1, Options1, HostName);
+		false when length(Hostname) > 0 ->
+			[{'Origin-Host', Hostname ++ Realm} | Options1];
+		false ->
+			[{'Origin-Host', "cse" ++ Realm} | Options1]
+   end,
 	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
 				{dictionary, ?BASE_APPLICATION_DICT},
 				{module, ?BASE_APPLICATION_CALLBACK},
