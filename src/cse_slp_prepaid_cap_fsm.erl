@@ -519,7 +519,7 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, analyse_information}, {ssf, SSF}]),
+			{state, analyse_information}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 analyse_information(info, {'EXIT', DHA, Reason},
 		 #{dha := DHA} = _Data) ->
@@ -803,7 +803,7 @@ terminating_call_handling(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, terminating_call_handling}, {ssf, SSF}]),
+			{state, terminating_call_handling}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 terminating_call_handling(info, {'EXIT', DHA, Reason},
 		 #{dha := DHA} = _Data) ->
@@ -924,7 +924,7 @@ routing(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, routing}, {ssf, SSF}]),
+			{state, routing}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 routing(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -1064,7 +1064,7 @@ o_alerting(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, o_alerting}, {ssf, SSF}]),
+			{state, o_alerting}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 o_alerting(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
@@ -1183,7 +1183,7 @@ t_alerting(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, t_alerting}, {ssf, SSF}]),
+			{state, t_alerting}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 t_alerting(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
@@ -1383,7 +1383,7 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, o_active}, {ssf, SSF}]),
+			{state, o_active}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 o_active(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
@@ -1583,7 +1583,7 @@ t_active(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, t_active}, {ssf, SSF}]),
+			{state, t_active}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
 t_active(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
@@ -1687,7 +1687,7 @@ abandon(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, abandon}, {ssf, SSF}]),
+			{state, abandon}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, null, Data};
 abandon(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
@@ -1792,7 +1792,7 @@ disconnect(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, disconnect}, {ssf, SSF}]),
+			{state, disconnect}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, null, Data};
 disconnect(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
@@ -1915,7 +1915,7 @@ exception(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, exception}, {ssf, SSF}]),
+			{state, exception}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, null, Data};
 exception(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
