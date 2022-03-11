@@ -14,4 +14,5 @@
 	{inap, "@ERLANG_LIB_VER_inap@", load},
 	{cap, "@ERLANG_LIB_VER_cap@", load},
 	{gtt, "@ERLANG_LIB_VER_gtt@"},
+	{diameter, "@ERLANG_LIB_VER_diameter@"},
 	{@PACKAGE@, "@VERSION@"}]}.
