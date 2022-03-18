@@ -1,4 +1,4 @@
-%% cse_rest_res_resource.erl
+%%% cse_rest_res_resource.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2022 SigScale Global Inc.
@@ -50,12 +50,12 @@ content_types_provided() ->
 		Result :: {struct, [tuple()]} | {error, 404}.
 %% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification/{id}'.
 %%		Retrieve a resource specification.
-get_resource_spec("1") ->
+get_resource_spec("1647577955926-50") ->
 	ResourceSpec = prefix_table_spec(),
 	Body = zj:encode(ResourceSpec),
 	Headers = [{content_type, "application/json"}],
 	{ok, Headers, Body};
-get_resource_spec("2") ->
+get_resource_spec("1647577957914-66") ->
 	ResourceSpec = prefix_row_spec(),
 	Body = zj:encode(ResourceSpec),
 	Headers = [{content_type, "application/json"}],
@@ -149,7 +149,7 @@ get_resource(Query, Headers) ->
 					{Query, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
 		end
 	of
-		{Query2, [_, _, {exact, "2"}, {exact, Table}]} ->
+		{Query2, [_, _, {exact, "1647577957914-66"}, {exact, Table}]} ->
 			Codec = fun gtt/2,
 			query_filter({cse_gtt, list, [list_to_existing_atom(Table)]},
 					Codec, Query2, Headers);
@@ -289,12 +289,12 @@ add_resource(RequestBody) ->
 		resource(ResMap)
 	of
 		#resource{name = Name,
-				specification = #specification_ref{id = "1"}} = Resource ->
+				specification = #specification_ref{id = "1647577955926-50"}} = Resource ->
 			F = fun F(eof, Acc) ->
 						lists:flatten(Acc);
 					F(Cont1, Acc) ->
 						{Cont2, L} = cse:query_resource(Cont1, '_', {exact, Name},
-								{exact, "1"}, '_'),
+								{exact, "1647577955926-50"}, '_'),
 						F(Cont2, [L | Acc])
 			end,
 			case F(start, []) of
@@ -303,7 +303,7 @@ add_resource(RequestBody) ->
 				[#resource{} | _] ->
 					{error, 400}
 			end;
-		#resource{specification = #specification_ref{id = "2"},
+		#resource{specification = #specification_ref{id = "1647577957914-66"},
 				related = [#resource_rel{name = Table}],
 				characteristic = Chars} = Resource1 ->
 			F = fun(CharName) ->
@@ -373,8 +373,8 @@ delete_resource1({error, _Reason}) ->
 
 %% @hidden
 prefix_table_spec() ->
-	#{"id" => "1",
-		"href" => ?specPath "1",
+	#{"id" => "1647577955926-50",
+		"href" => ?specPath "1647577955926-50",
 		"name" => "PrefixTable",
 		"description" => "Prefix table specification",
 		"lifecycleStatus" => "Active",
@@ -385,8 +385,8 @@ prefix_table_spec() ->
 
 %% @hidden
 prefix_row_spec() ->
-	#{"id" => "2",
-		"href" => ?specPath "2",
+	#{"id" => "1647577957914-66",
+		"href" => ?specPath "1647577957914-66",
 		"name" => "PrefixRow",
 		"description" => "Prefix table row specification",
 		"lifecycleStatus" => "Active",
@@ -413,7 +413,8 @@ prefix_row_spec() ->
 gtt(Table, {Prefix, Value} = _Gtt) ->
 	Id = Table ++ "-" ++ Prefix,
 	#{"id" => Id, "href" => ?inventoryPath ++ Id,
-			"resourceSpecification" => #{"id" => "2", "href" => ?specPath "2",
+			"resourceSpecification" => #{"id" => "1647577957914-66",
+					"href" => ?specPath "1647577957914-66",
 					"name" => "PrefixTableRow"},
 			"resourceCharacteristic" => [
 					#{"name" => "prefix", "value" => Prefix},
