@@ -41,6 +41,7 @@
 
 -define(PathInventory, "/resourceInventoryManagement/v4/").
 -define(CHUNKSIZE, 100).
+-define(PREFIX_TABLE_SPEC, "1647577955926-50").
 
 %%----------------------------------------------------------------------
 %%  The cse public API
@@ -337,7 +338,7 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 		Reason :: term().
 %% @doc Add an entry in the Resource table.
 add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
-		specification = #resource_spec_ref{id = "1"}} = Resource)
+		specification = #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}} = Resource)
 		when is_list(Name) ->
 	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
 		[num, value] ->
@@ -347,7 +348,7 @@ add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
 	end;
 add_resource(#resource{id = undefined, last_modified = undefined,
 		specification = #resource_spec_ref{id = SpecId}} = Resource)
-		when SpecId /= "1" ->
+		when SpecId /= ?PREFIX_TABLE_SPEC ->
 	add_resource1(Resource).
 %% @hidden
 add_resource1(#resource{} = Resource) ->
@@ -431,7 +432,7 @@ delete_resource(ResourceID) when is_list(ResourceID) ->
 		{aborted, Reason} ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
-				specification = #resource_spec_ref{id = "1"}}}} ->
+				specification = #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}} ->
 			cse_gtt:clear_table(Name);
 		{atomic, {ok, _R}} ->
 			ok
