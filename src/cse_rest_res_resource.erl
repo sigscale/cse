@@ -289,7 +289,7 @@ add_resource(RequestBody) ->
 		resource(ResMap)
 	of
 		#resource{name = Name,
-				specification = #specification_ref{id = "1647577955926-50"}} = Resource ->
+				specification = #resource_spec_ref{id = "1647577955926-50"}} = Resource ->
 			F = fun F(eof, Acc) ->
 						lists:flatten(Acc);
 					F(Cont1, Acc) ->
@@ -303,7 +303,7 @@ add_resource(RequestBody) ->
 				[#resource{} | _] ->
 					{error, 400}
 			end;
-		#resource{specification = #specification_ref{id = "1647577957914-66"},
+		#resource{specification = #resource_spec_ref{id = "1647577957914-66"},
 				related = [#resource_rel{name = Table}],
 				characteristic = Chars} = Resource1 ->
 			F = fun(CharName) ->
@@ -530,11 +530,11 @@ resource([related | T], #{"resourceRelationship" := ResRel} = M, Acc)
 		when is_list(ResRel) ->
 	resource(T, M, Acc#resource{related = resource_rel(ResRel)});
 resource([specification | T], #resource{specification = SpecRef} = R, Acc)
-		when is_record(SpecRef, specification_ref) ->
-	resource(T, R, Acc#{"resourceSpecification" => specification_ref(SpecRef)});
+		when is_record(SpecRef, resource_spec_ref) ->
+	resource(T, R, Acc#{"resourceSpecification" => resource_spec_ref(SpecRef)});
 resource([specification | T], #{"resourceSpecification" := SpecRef} = M, Acc)
 		when is_map(SpecRef) ->
-	resource(T, M, Acc#resource{specification = specification_ref(SpecRef)});
+	resource(T, M, Acc#resource{specification = resource_spec_ref(SpecRef)});
 resource([characteristic | T], #resource{characteristic = ResChar} = R, Acc)
 		when is_list(ResChar), length(ResChar) > 0 ->
 	resource(T, R, Acc#{"resourceCharacteristic" => characteristic(ResChar)});
@@ -619,45 +619,45 @@ characteristic([_ | T], R, Acc) ->
 characteristic([], _, Acc) ->
 	Acc.
 
--spec specification_ref(ResourceSpecificationRef) -> ResourceSpecificationRef
+-spec resource_spec_ref(ResourceSpecificationRef) -> ResourceSpecificationRef
 	when
-		ResourceSpecificationRef :: [specification_ref()] | [map()]
-				| specification_ref() | map().
+		ResourceSpecificationRef :: [resource_spec_ref()] | [map()]
+				| resource_spec_ref() | map().
 %% @doc CODEC for `ResourceSpecificationRef'.
-specification_ref(#specification_ref{} = ResourceSpecificationRef) ->
-	specification_ref(record_info(fields, specification_ref),
+resource_spec_ref(#resource_spec_ref{} = ResourceSpecificationRef) ->
+	resource_spec_ref(record_info(fields, resource_spec_ref),
 			ResourceSpecificationRef, #{});
-specification_ref(#{} = ResourceSpecificationRef) ->
-	specification_ref(record_info(fields, specification_ref),
-			ResourceSpecificationRef, #specification_ref{}).
+resource_spec_ref(#{} = ResourceSpecificationRef) ->
+	resource_spec_ref(record_info(fields, resource_spec_ref),
+			ResourceSpecificationRef, #resource_spec_ref{}).
 %% @hidden
-specification_ref([id | T], #specification_ref{id = Id} = R, Acc)
+resource_spec_ref([id | T], #resource_spec_ref{id = Id} = R, Acc)
 		when is_list(Id) ->
-	specification_ref(T, R, Acc#{"id" => Id});
-specification_ref([id | T], #{"id" := Id} = M, Acc)
+	resource_spec_ref(T, R, Acc#{"id" => Id});
+resource_spec_ref([id | T], #{"id" := Id} = M, Acc)
 		when is_list(Id) ->
-	specification_ref(T, M, Acc#specification_ref{id = Id});
-specification_ref([href | T], #specification_ref{href = Href} = R, Acc)
+	resource_spec_ref(T, M, Acc#resource_spec_ref{id = Id});
+resource_spec_ref([href | T], #resource_spec_ref{href = Href} = R, Acc)
 		when is_list(Href) ->
-	specification_ref(T, R, Acc#{"href" => Href});
-specification_ref([href | T], #{"href" := Href} = M, Acc)
+	resource_spec_ref(T, R, Acc#{"href" => Href});
+resource_spec_ref([href | T], #{"href" := Href} = M, Acc)
 		when is_list(Href) ->
-	specification_ref(T, M, Acc#specification_ref{href = Href});
-specification_ref([name | T], #specification_ref{name = Name} = R, Acc)
+	resource_spec_ref(T, M, Acc#resource_spec_ref{href = Href});
+resource_spec_ref([name | T], #resource_spec_ref{name = Name} = R, Acc)
 		when is_list(Name) ->
-	specification_ref(T, R, Acc#{"name" => Name});
-specification_ref([name | T], #{"name" := Name} = M, Acc)
+	resource_spec_ref(T, R, Acc#{"name" => Name});
+resource_spec_ref([name | T], #{"name" := Name} = M, Acc)
 		when is_list(Name) ->
-	specification_ref(T, M, Acc#specification_ref{name = Name});
-specification_ref([version | T], #specification_ref{version = Version} = R, Acc)
+	resource_spec_ref(T, M, Acc#resource_spec_ref{name = Name});
+resource_spec_ref([version | T], #resource_spec_ref{version = Version} = R, Acc)
 		when is_list(Version) ->
-	specification_ref(T, R, Acc#{"version" => Version});
-specification_ref([version | T], #{"version" := Version} = M, Acc)
+	resource_spec_ref(T, R, Acc#{"version" => Version});
+resource_spec_ref([version | T], #{"version" := Version} = M, Acc)
 		when is_list(Version) ->
-	specification_ref(T, M, Acc#specification_ref{version = Version});
-specification_ref([_ | T], R, Acc) ->
-	specification_ref(T, R, Acc);
-specification_ref([], _, Acc) ->
+	resource_spec_ref(T, M, Acc#resource_spec_ref{version = Version});
+resource_spec_ref([_ | T], R, Acc) ->
+	resource_spec_ref(T, R, Acc);
+resource_spec_ref([], _, Acc) ->
 	Acc.
 
 %% @hidden

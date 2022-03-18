@@ -37,7 +37,7 @@
 		last_modified :: {TS :: pos_integer(), N :: pos_integer()}
 				| undefined | '_',
 		related = [] :: [resource_rel()] | '_',
-		specification :: specification_ref() | undefined | '_',
+		specification :: resource_spec_ref() | undefined | '_',
 		characteristic = [] :: [resource_char()] | '_'}).
 -type resource() :: #resource{}.
 
@@ -48,12 +48,12 @@
 		rel_type :: string() | undefined | '_'}).
 -type resource_rel() :: #resource_rel{}.
 
--record(specification_ref,
+-record(resource_spec_ref,
 		{id :: string() | undefined | '_',
 		href :: string() | undefined | '_',
 		name :: string() | undefined | '_',
 		version :: string() | undefined | '_'}).
--type specification_ref() :: #specification_ref{}.
+-type resource_spec_ref() :: #resource_spec_ref{}.
 
 -record(resource_char,
 		{name :: string() | undefined | '_',

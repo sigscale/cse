@@ -374,7 +374,7 @@ add_resource(Table) when is_atom(Table) ->
 add_resource(Table) when is_list(Table) ->
 	Resource = #resource{name = Table, state = "created",
 			description = Table ++ " prefix table",
-			specification = #specification_ref{id = "1",
+			specification = #resource_spec_ref{id = "1",
 			href = "/resourceCatalogManagement/v4/resourceSpecification/1",
 			name = "PrefixTable"}},
 	case cse:add_resource(Resource) of

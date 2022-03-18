@@ -336,7 +336,7 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 		Reason :: term().
 %% @doc Create a new Resource.
 add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
-		specification = #specification_ref{id = "1"}} = Resource)
+		specification = #resource_spec_ref{id = "1"}} = Resource)
 		when is_list(Name) ->
 	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
 		[num, value] ->
@@ -345,7 +345,7 @@ add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
 			exit(table_not_found)
 	end;
 add_resource(#resource{id = undefined, last_modified = undefined,
-		specification = #specification_ref{id = SpecId}} = Resource)
+		specification = #resource_spec_ref{id = SpecId}} = Resource)
 		when SpecId /= "1" ->
 	add_resource1(Resource).
 %% @hidden
@@ -430,7 +430,7 @@ delete_resource(ResourceID) when is_list(ResourceID) ->
 		{aborted, Reason} ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
-				specification = #specification_ref{id = "1"}}}} ->
+				specification = #resource_spec_ref{id = "1"}}}} ->
 			cse_gtt:clear_table(Name);
 		{atomic, {ok, _R}} ->
 			ok
@@ -482,11 +482,11 @@ query_resource2(Cont, MatchHead1, {Op, String}, MatchRelName)
 		when is_list(String), ((Op == exact) orelse (Op == like)) ->
 	MatchHead2 = case lists:last(String) of
 		$% when Op == like ->
-			MatchHead1#resource{specification = #specification_ref{id
+			MatchHead1#resource{specification = #resource_spec_ref{id
 					= lists:droplast(String) ++ '_', _ = '_'}};
 		_ ->
 			MatchHead1#resource{specification
-					= #specification_ref{id = String, _ = '_'}}
+					= #resource_spec_ref{id = String, _ = '_'}}
 	end,
 	query_resource3(Cont, MatchHead2, MatchRelName).
 %% @hidden
