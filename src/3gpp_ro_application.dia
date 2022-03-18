@@ -1,0 +1,239 @@
+
+@id 4
+@name   diameter_gen_3gpp_ro_application
+@vendor 10415 3GPP
+@prefix 3gpp_ro
+@inherits diameter_gen_base_rfc6733
+@inherits diameter_gen_3gpp
+@inherits diameter_gen_ietf
+   Called-Station-Id
+   CC-Correlation-Id
+   CC-Input-Octets
+   CC-Money
+   CC-Output-Octets
+   CC-Request-Number
+   CC-Request-Type
+   CC-Service-Specific-Units
+   CC-Session-Failover
+   CC-Time
+   CC-Total-Octets
+   CC-Unit-Type
+   Cost-Information
+   Cost-Unit
+   Credit-Control-Failure-Handling
+   Currency-Code
+   Direct-Debiting-Failure-Handling
+   Exponent
+   Filter-Id
+   Final-Unit-Action
+   Final-Unit-Indication
+   G-S-U-Pool-Identifier
+   G-S-U-Pool-Reference
+   Multiple-Services-Indicator
+   Rating-Group
+   Redirect-Address-Type
+   Redirect-Server
+   Redirect-Server-Address
+   Requested-Action
+   Restriction-Filter-Rule
+   Service-Context-Id
+   Service-Identifier
+   Subscription-Id
+   Subscription-Id-Data
+   Subscription-Id-Type
+   Tariff-Change-Usage
+   Tariff-Time-Change
+   Unit-Value
+   User-Equipment-Info
+   User-Equipment-Info-Type
+   User-Equipment-Info-Value
+   Value-Digits
+   Validity-Time
+
+@messages
+
+   CCR ::= < Diameter Header: 272, REQ, PXY >
+         < Session-Id >
+         { Origin-Host }
+         { Origin-Realm }
+         { Destination-Realm }
+         { Auth-Application-Id }
+         { Service-Context-Id }
+         { CC-Request-Type }
+         { CC-Request-Number }
+         [ Destination-Host ]
+         [ User-Name ]
+         [ Origin-State-Id ]
+         [ Event-Timestamp ]
+        *[ Subscription-Id ]
+         [ Termination-Cause ]
+         [ Requested-Action ]
+         [ AoC-Request-Type ]
+         [ Multiple-Services-Indicator ]
+        *[ Multiple-Services-Credit-Control ]
+         [ CC-Correlation-Id ]
+         [ User-Equipment-Info ]
+         [ Service-Information ]
+        *[ Proxy-Info ]
+        *[ Route-Record ]
+        *[ AVP ]
+
+   CCA ::= < Diameter Header: 272, PXY >
+         < Session-Id >
+         { Result-Code }
+         { Origin-Host }
+         { Origin-Realm }
+         { Auth-Application-Id }
+         { CC-Request-Type }
+         { CC-Request-Number }
+         [ CC-Session-Failover ]
+        *[ Multiple-Services-Credit-Control ]
+         [ Cost-Information]
+         [ Low-Balance-Indication ]
+         [ Remaining-Balance ]
+         [ Credit-Control-Failure-Handling ]
+         [ Direct-Debiting-Failure-Handling ]
+        *[ Redirect-Host]
+         [ Redirect-Host-Usage ]
+         [ Redirect-Max-Cache-Time ]
+         [ Origin-State-Id ]
+         [ Failed-AVP ]
+         [ Service-Information ]
+        *[ Proxy-Info ]
+        *[ Route-Record ]
+        *[ AVP ]
+
+   RAR ::= < Diameter Header: 258, REQ, PXY >
+         < Session-Id >
+         { Origin-Host }
+         { Origin-Realm }
+         { Destination-Realm }
+         { Destination-Host }
+         { Auth-Application-Id }
+         { Re-Auth-Request-Type }
+         [ User-Name ]
+         [ Origin-State-Id ]
+         [ G-S-U-Pool-Identifier ]
+         [ Service-Identifier ]
+         [ Rating-Group ]
+        *[ Proxy-Info ]
+        *[ Route-Record ]
+        *[ AVP ]
+
+   RAA ::= < Diameter Header: 258, PXY >
+         < Session-Id >
+         { Result-Code }
+         { Origin-Host }
+         { Origin-Realm }
+         [ User-Name ]
+         [ Origin-State-Id ]
+         [ Error-Message ]
+         [ Error-Reporting-Host ]
+         [ Failed-AVP ]
+        *[ Redirect-Host ]
+         [ Redirect-Host-Usage ]
+         [ Redirect-Max-Cache-Time ]
+        *[ Proxy-Info ]
+        *[ Route-Record ]
+        *[ AVP ]
+
+
+;; overide IETF AVPs
+@avp_types
+   Multiple-Services-Credit-Control  456  Grouped          M
+   Granted-Service-Unit              431  Grouped          M
+   Requested-Service-Unit            437  Grouped          M
+   Used-Service-Unit                 446  Grouped          M
+
+@grouped
+
+   Multiple-Services-Credit-Control ::= < AVP Header: 456 >
+      [ Granted-Service-Unit ]
+      [ Requested-Service-Unit ]
+     *[ Used-Service-Unit ]
+     *[ Service-Identifier ]
+      [ Rating-Group ]
+     *[ G-S-U-Pool-Reference ]
+      [ Validity-Time ]
+      [ Result-Code ]
+      [ Final-Unit-Indication ]
+      [ Time-Quota-Threshold ]
+      [ Volume-Quota-Threshold ]
+      [ Unit-Quota-Threshold ]
+      [ Quota-Holding-Time ]
+      [ Quota-Consumption-Time ]
+     *[ Reporting-Reason ]
+      [ Trigger ]
+      [ PS-Furnish-Charging-Information ]
+      [ Refund-Information ]
+     *[ AF-Correlation-Information]
+     *[ Envelope ]
+      [ Envelope-Reporting ]
+      [ Time-Quota-Mechanism ]
+     *[ Service-Specific-Info ]
+      [ QoS-Information ]
+     *[ Announcement-Information ]
+      [ 3GPP-RAT-Type ]
+      [ Related-Trigger ]
+     *[ AVP ]
+
+   Granted-Service-Unit ::= < AVP Header: 431 >
+      [ Tariff-Time-Change ]
+      [ CC-Time ]
+      [ CC-Total-Octets ]
+      [ CC-Input-Octets ]
+      [ CC-Output-Octets ]
+      [ CC-Service-Specific-Units ]
+
+   Requested-Service-Unit ::= < AVP Header: 437 >
+      [ CC-Time ]
+      [ CC-Total-Octets ]
+      [ CC-Input-Octets ]
+      [ CC-Output-Octets ]
+      [ CC-Service-Specific-Units ]
+     *[ AVP ]
+
+   Used-Service-Unit ::= < AVP Header: 446 >
+      [ Reporting-Reason ]
+      [ Tariff-Change-Usage ]
+      [ CC-Time ]
+      [ CC-Total-Octets ]
+      [ CC-Input-Octets ]
+      [ CC-Output-Octets ]
+      [ CC-Service-Specific-Units ]
+     *[ Event-Charging-TimeStamp ]
+     *[ AVP ]
+
+@enum Termination-Cause
+
+   DIAMETER_LOGOUT                   1
+   DIAMETER_SERVICE_NOT_PROVIDED     2
+   DIAMETER_BAD_ANSWER               3
+   DIAMETER_ADMINISTRATIVE           4
+   DIAMETER_LINK_BROKEN              5
+   DIAMETER_AUTH_EXPIRED             6
+   DIAMETER_USER_MOVED               7
+   DIAMETER_SESSION_TIMEOUT          8
+   USER_REQUEST                     11
+   LOST_CARRIER                     12
+   LOST_SERVICE                     13
+   IDLE_TIMEOUT                     14
+   SESSION_TIMEOUT                  15
+   ADMIN_RESET                      16
+   ADMIN_REBOOT                     17
+   PORT_ERROR                       18
+   NAS_ERROR                        19
+   NAS_REQUEST                      20
+   NAS_REBOOT                       21
+   PORT_UNNEEDED                    22
+   PORT_PREEMPTED                   23
+   PORT_SUSPENDED                   24
+   SERVICE_UNAVAILABLE              25
+   CALLBACK                         26
+   USER_ERROR                       27
+   HOST_REQUEST                     28
+   SUPPLICANT_RESTART               29
+   REAUTHENTICATION_FAILURE         30
+   PORT_REINITIALIZED               31
+   PORT_ADMINISTRATIVELY_DISABLED   32
+
