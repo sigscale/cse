@@ -332,9 +332,10 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 
 -spec add_resource(Resource) -> Result
 	when
+		Resource :: #resource(),
 		Result :: {ok, Resource} | {error, Reason},
 		Reason :: term().
-%% @doc Create a new Resource.
+%% @doc Add an entry in the Resource table.
 add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
 		specification = #resource_spec_ref{id = "1"}} = Resource)
 		when is_list(Name) ->
