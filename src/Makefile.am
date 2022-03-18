@@ -7,8 +7,7 @@ noinst_DATA = cse_rest_query_scanner.erl \
 		cse_rest_query_parser.erl \
 		diameter_gen_ietf.erl \
 		diameter_gen_etsi.erl \
-		diameter_gen_3gpp.erl \
-		diameter_gen_3gpp_ro_application.erl
+		diameter_gen_3gpp.erl
 
 %.erl:%.xrl
 	$(ERLC) $<
@@ -38,12 +37,6 @@ diameter_gen_3gpp.erl:	3gpp.dia \
 diameter_gen_3gpp.hrl:	3gpp.dia \
 		$(top_builddir)/ebin/diameter_gen_ietf.beam \
 		$(top_builddir)/ebin/diameter_gen_etsi.beam
-	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
-
-diameter_gen_3gpp_ro_application.erl:  3gpp_ro_application.dia $(top_builddir)/ebin/diameter_gen_3gpp.beam
-	$(DIAMETERC) -i $(top_builddir)/ebin -H $<
-
-diameter_gen_3gpp_ro_application.hrl:  3gpp_ro_application.dia $(top_builddir)/ebin/diameter_gen_3gpp.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
 
 CLEANFILES = $(noinst_DATA)
