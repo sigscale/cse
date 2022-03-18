@@ -23,7 +23,7 @@
 
 -export([parse_query/1, range/1, fields/2]).
 -export([format_problem/2]).
--export([etag/1, date/1, iso8601/1]).
+-export([id/0, etag/1, date/1, iso8601/1]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(EPOCH, 62167219200).
@@ -265,6 +265,15 @@ etag({TS, N} = _Etag) when is_integer(TS), is_integer(N)->
 etag(Etag) when is_list(Etag) ->
 	[TS, N] = string:tokens(Etag, "-"),
 	{list_to_integer(TS), list_to_integer(N)}.
+
+-spec id() -> ID
+	when
+		ID :: string().
+%% @doc Create uniform unique resource identifier.
+id() ->
+	TS = erlang:system_time(millisecond),
+	N = erlang:unique_integer([positive]),
+	integer_to_list(TS) ++ "-" ++ integer_to_list(N).
 
 -spec date(DateTimeFormat) -> Result
 	when
