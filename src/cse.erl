@@ -475,6 +475,7 @@ query_resource1(Cont, MatchHead1, {Op, String}, MatchResSpecId, MatchRelName)
 			MatchHead1#resource{name = String}
 	end,
 	query_resource2(Cont, MatchHead2, MatchResSpecId, MatchRelName).
+%% @hidden
 query_resource2(Cont, MatchHead, '_', MatchRelName) ->
 	query_resource3(Cont, MatchHead, MatchRelName);
 query_resource2(Cont, MatchHead1, {Op, String}, MatchRelName)
@@ -488,6 +489,7 @@ query_resource2(Cont, MatchHead1, {Op, String}, MatchRelName)
 					= #specification_ref{id = String, _ = '_'}}
 	end,
 	query_resource3(Cont, MatchHead2, MatchRelName).
+%% @hidden
 query_resource3(Cont, MatchHead, '_') ->
 	MatchSpec = [{MatchHead, [], ['$_']}],
 	query_resource4(Cont, MatchSpec);
@@ -503,6 +505,7 @@ query_resource3(Cont, MatchHead1, {Op, String})
 	end,
 	MatchSpec = [{MatchHead2, [], ['$_']}],
 	query_resource4(Cont, MatchSpec).
+%% @hidden
 query_resource4(start, MatchSpec) ->
 	F = fun() ->
 			mnesia:select(resource, MatchSpec, ?CHUNKSIZE, read)
