@@ -372,7 +372,7 @@ clear_table(Table) when is_atom(Table) ->
 add_resource(Table) when is_atom(Table) ->
 	add_resource(atom_to_list(Table));
 add_resource(Table) when is_list(Table) ->
-	Resource = #resource{name = Table, state = "created",
+	Resource = #resource{name = Table,
 			description = Table ++ " prefix table",
 			specification = #resource_spec_ref{id = "1",
 			href = "/resourceCatalogManagement/v4/resourceSpecification/1",
