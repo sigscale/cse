@@ -29,6 +29,8 @@
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
 -define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
+-define(PREFIX_TABLE_SPEC, "1647577955926-50").
+-define(PREFIX_ROW_SPEC,   "1647577957914-66").
 
 -spec content_types_accepted() -> ContentTypes
 	when
@@ -50,12 +52,12 @@ content_types_provided() ->
 		Result :: {struct, [tuple()]} | {error, 404}.
 %% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification/{id}'.
 %%		Retrieve a resource specification.
-get_resource_spec("1647577955926-50") ->
+get_resource_spec(?PREFIX_TABLE_SPEC) ->
 	ResourceSpec = prefix_table_spec(),
 	Body = zj:encode(ResourceSpec),
 	Headers = [{content_type, "application/json"}],
 	{ok, Headers, Body};
-get_resource_spec("1647577957914-66") ->
+get_resource_spec(?PREFIX_ROW_SPEC) ->
 	ResourceSpec = prefix_row_spec(),
 	Body = zj:encode(ResourceSpec),
 	Headers = [{content_type, "application/json"}],
@@ -149,7 +151,7 @@ get_resource(Query, Headers) ->
 					{Query, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
 		end
 	of
-		{Query2, [_, _, {exact, "1647577957914-66"}, {exact, Table}]} ->
+		{Query2, [_, _, {exact, ?PREFIX_ROW_SPEC}, {exact, Table}]} ->
 			Codec = fun gtt/2,
 			query_filter({cse_gtt, list, [list_to_existing_atom(Table)]},
 					Codec, Query2, Headers);
@@ -288,54 +290,94 @@ add_resource(RequestBody) ->
 		{ok, ResMap} = zj:decode(RequestBody),
 		resource(ResMap)
 	of
-		#resource{name = Name,
-				specification = #resource_spec_ref{id = "1647577955926-50"}} = Resource ->
-			F = fun F(eof, Acc) ->
-						lists:flatten(Acc);
-					F(Cont1, Acc) ->
-						{Cont2, L} = cse:query_resource(Cont1, '_', {exact, Name},
-								{exact, "1647577955926-50"}, '_'),
-						F(Cont2, [L | Acc])
-			end,
-			case F(start, []) of
-				[] ->
-					add_resource1(cse:add_resource(Resource));
-				[#resource{} | _] ->
-					{error, 400}
-			end;
-		#resource{specification = #resource_spec_ref{id = "1647577957914-66"},
-				related = [#resource_rel{name = Table}],
-				characteristic = Chars} = Resource1 ->
-			F = fun(CharName) ->
-						case lists:keyfind(CharName, #resource_char.name, Chars) of
-							#resource_char{value = Value} ->
-								Value;
-							false ->
-								{error, 400}
-						end
-			end,
-			Prefix = F("prefix"),
-			{ok, #gtt{}} = cse_gtt:insert(Table, Prefix, F("value")),
-			Id = Table ++ "-" ++ Prefix,
-			Href = "/resourceInventoryManagement/v4/resource/" ++ Id,
-			LM = {erlang:system_time(millisecond),
-					erlang:unique_integer([positive])},
-			Resource2 = Resource1#resource{id = Id, href = Href, last_modified = LM},
-			Headers = [{content_type, "application/json"},
-					{location, Href}, {etag, cse_rest:etag(LM)}],
-			Body = zj:encode(resource(Resource2)),
-			{ok, Headers, Body}
+		#resource{} = Resource ->
+			add_resource1(Resource)
 	catch
 		_:_Reason ->
 			{error, 400}
 	end.
 %% @hidden
-add_resource1({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
+add_resource1(#resource{specification
+		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}} = Resource) ->
+	add_resource_result(add_resource_prefix_table(Resource));
+add_resource1(#resource{specification
+		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource) ->
+	add_resource_prefix_row(Resource);
+add_resource1(#resource{specification
+		= #resource_spec_ref{id = SpecId}} = Resource) ->
+	add_resource2(Resource, cse:find_resource_spec(SpecId)).
+%% @hidden
+add_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
+	add_resource3(Resource, Related);
+add_resource2(_Resource, {error, _Reason}) ->
+% @todo problem report
+	{error, 400}.
+%% @hidden
+add_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
+	add_resource_prefix_row(Resource);
+add_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
+	add_resource_result(add_resource_prefix_table(Resource));
+add_resource3(Resource, [_ | T]) ->
+	add_resource3(Resource, T);
+add_resource3(Resource, []) ->
+	add_resource_result(cse:add_resource(Resource)).
+
+%% @hidden
+add_resource_prefix_table(#resource{name = Name} = Resource) ->
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource(Cont1, '_', {exact, Name},
+						{exact, ?PREFIX_TABLE_SPEC}, '_'),
+				F(Cont2, [L | Acc])
+	end,
+	case F(start, []) of
+		[] ->
+			add_resource_result(cse:add_resource(Resource));
+		[#resource{} | _] ->
+			{error, 400}
+	end.
+
+%% @hidden
+add_resource_prefix_row(#resource{related = Related} = Resource) ->
+	case lists:keyfind("contained", #resource_rel.rel_type, Related) of
+		#resource_rel{name = Table} ->
+			add_resource_prefix_row(Table, Resource);
+		false ->
+			{error, 400}
+	end.
+%% @hidden
+add_resource_prefix_row(Table,
+		#resource{characteristic = Chars} = Resource) ->
+	F = fun(CharName) ->
+				case lists:keyfind(CharName, #resource_char.name, Chars) of
+					#resource_char{value = Value} ->
+						Value;
+					false ->
+						{error, 400}
+				end
+	end,
+	Prefix = F("prefix"),
+	{ok, #gtt{}} = cse_gtt:insert(Table, Prefix, F("value")),
+	Id = Table ++ "-" ++ Prefix,
+	Href = "/resourceInventoryManagement/v4/resource/" ++ Id,
+	LM = {erlang:system_time(millisecond), erlang:unique_integer([positive])},
+	Resource1 = Resource#resource{id = Id, href = Href, last_modified = LM},
+	Headers = [{content_type, "application/json"},
+			{location, Href}, {etag, cse_rest:etag(LM)}],
+	Body = zj:encode(resource(Resource1)),
+	{ok, Headers, Body}.
+
+%% @hidden
+add_resource_result({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
 	Headers = [{content_type, "application/json"},
 			{location, Href}, {etag, cse_rest:etag(LM)}],
 	Body = zj:encode(resource(Resource)),
 	{ok, Headers, Body};
-add_resource1({error, _Reason}) ->
+add_resource_result({error, _Reason}) ->
+% @todo problem report
 	{error, 400}.
 
 -spec delete_resource(Id) -> Result
@@ -373,8 +415,9 @@ delete_resource1({error, _Reason}) ->
 
 %% @hidden
 prefix_table_spec() ->
-	#{"id" => "1647577955926-50",
-		"href" => ?specPath "1647577955926-50",
+	Specification = ?PREFIX_TABLE_SPEC,
+	#{"id" => Specification,
+		"href" => ?specPath ++ Specification,
 		"name" => "PrefixTable",
 		"description" => "Prefix table specification",
 		"lifecycleStatus" => "Active",
@@ -385,8 +428,9 @@ prefix_table_spec() ->
 
 %% @hidden
 prefix_row_spec() ->
-	#{"id" => "1647577957914-66",
-		"href" => ?specPath "1647577957914-66",
+	Specification = ?PREFIX_ROW_SPEC,
+	#{"id" => Specification,
+		"href" => ?specPath ++ Specification,
 		"name" => "PrefixRow",
 		"description" => "Prefix table row specification",
 		"lifecycleStatus" => "Active",
@@ -412,9 +456,10 @@ prefix_row_spec() ->
 %% @private
 gtt(Table, {Prefix, Value} = _Gtt) ->
 	Id = Table ++ "-" ++ Prefix,
+	Specification = ?PREFIX_ROW_SPEC,
 	#{"id" => Id, "href" => ?inventoryPath ++ Id,
-			"resourceSpecification" => #{"id" => "1647577957914-66",
-					"href" => ?specPath "1647577957914-66",
+			"resourceSpecification" => #{"id" => Specification,
+					"href" => ?specPath ++ Specification,
 					"name" => "PrefixTableRow"},
 			"resourceCharacteristic" => [
 					#{"name" => "prefix", "value" => Prefix},
@@ -511,18 +556,24 @@ resource([last_modified | T], #{"lastUpdate" := DateTime} = M, Acc)
 		when is_list(DateTime) ->
 	LM = {cse_rest:iso8601(DateTime), erlang:unique_integer([positive])},
 	resource(T, M, Acc#resource{last_modified = LM});
-resource([state | T], #resource{state = State} = R, Acc)
+resource([admin_state | T], #resource{admin_state = State} = R, Acc)
 		when State /= undefined ->
-	resource(T, R, Acc#{"lifecycleState" => State});
-resource([state | T], #{"lifecycleState" := State} = M, Acc)
+	resource(T, R, Acc#{"administrativeState" => State});
+resource([admin_state | T], #{"administrativeState" := State} = M, Acc)
 		when is_list(State) ->
-	resource(T, M, Acc#resource{state = State});
-resource([substate | T], #resource{substate = SubState} = R, Acc)
-		when SubState /= undefined ->
-	resource(T, R, Acc#{"lifecycleSubState" => SubState});
-resource([substate | T], #{"lifecycleSubState" := SubState} = M, Acc)
-		when is_list(SubState) ->
-	resource(T, M, Acc#resource{substate = SubState});
+	resource(T, M, Acc#resource{admin_state = State});
+resource([oper_state | T], #resource{oper_state = State} = R, Acc)
+		when State /= undefined ->
+	resource(T, R, Acc#{"operationalState" => State});
+resource([oper_state | T], #{"operationalState" := State} = M, Acc)
+		when is_list(State) ->
+	resource(T, M, Acc#resource{oper_state = State});
+resource([usage_state | T], #resource{usage_state = State} = R, Acc)
+		when State /= undefined ->
+	resource(T, R, Acc#{"usageState" => State});
+resource([usage_state | T], #{"usageState" := State} = M, Acc)
+		when is_list(State) ->
+	resource(T, M, Acc#resource{usage_state = State});
 resource([related | T], #resource{related = ResRel} = R, Acc)
 		when is_list(ResRel), length(ResRel) > 0 ->
 	resource(T, R, Acc#{"resourceRelationship" => resource_rel(ResRel)});
