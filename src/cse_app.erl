@@ -53,61 +53,111 @@
 		Reason :: term().
 %% @doc Starts the application processes.
 start(normal = _StartType, _Args) ->
-	case inets:services_info() of
-		ServicesInfo when is_list(ServicesInfo) ->
-			{ok, Profile} = application:get_env(nrf_profile),
-			start1(Profile, ServicesInfo);
+	HttpdTables = case is_mod_auth_mnesia() of
+		true ->
+			[httpd_user, httpd_group];
+		false ->
+			[]
+	end,
+	Tables = [resource_spec, resource, service] ++ HttpdTables,
+	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
+		ok ->
+			start1();
+		{timeout, BadTables} ->
+			case force(BadTables) of
+				ok ->
+					error_logger:warning_report(["Force loaded mnesia tables",
+							{tables, BadTables}, {module, ?MODULE}]),
+					start1();
+				{error, Reason} ->
+					error_logger:error_report(["Failed to force load mnesia tables",
+							{tables, BadTables}, {reason, Reason}, {module, ?MODULE}]),
+					{error, Reason}
+			end;
 		{error, Reason} ->
+			error_logger:error_report(["Failed to load mnesia tables",
+					{tables, Tables}, {reason, Reason}, {module, ?MODULE}]),
 			{error, Reason}
 	end.
 %% @hidden
-start1(Profile, [{httpc, _Pid, Info} | T]) ->
-	case proplists:lookup(profile, Info) of
-		{profile, Profile} ->
-			start2(Profile);
-		_ ->
-			start1(Profile, T)
+start1() ->
+	start2([?PREFIX_TABLE_SPEC, ?PREFIX_ROW_SPEC], []).
+%% @hidden
+start2([H | T], Acc) ->
+	case cse:find_resource_spec(H) of
+		{ok, _} ->
+			start2(T, Acc);
+		{error, not_found} ->
+			start2(T, [H | Acc]);
+		{error, Reason} ->
+			{error, Reason}
 	end;
-start1(Profile, [_ | T]) ->
-	start1(Profile, T);
-start1(Profile, []) ->
-	case inets:start(httpc, [{profile, Profile}]) of
-		{ok, _Pid} ->
-			start2(Profile);
-		{error, Reason} ->
-			{error, Reason}
-	end.
-%% @hidden
-start2(Profile) ->
-	{ok, Options} = application:get_env(nrf_options),
-	case httpc:set_options(Options, Profile) of
+start2([], Acc) when length(Acc) > 0 ->
+	case install_resource_specs(Acc) of
 		ok ->
 			start3();
 		{error, Reason} ->
 			{error, Reason}
-	end.
+	end;
+start2([], []) ->
+	start3().
 %% @hidden
 start3() ->
+	case inets:services_info() of
+		ServicesInfo when is_list(ServicesInfo) ->
+			{ok, Profile} = application:get_env(nrf_profile),
+			start4(Profile, ServicesInfo);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start4(Profile, [{httpc, _Pid, Info} | T]) ->
+	case proplists:lookup(profile, Info) of
+		{profile, Profile} ->
+			start5(Profile);
+		_ ->
+			start4(Profile, T)
+	end;
+start4(Profile, [_ | T]) ->
+	start4(Profile, T);
+start4(Profile, []) ->
+	case inets:start(httpc, [{profile, Profile}]) of
+		{ok, _Pid} ->
+			start5(Profile);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start5(Profile) ->
+	{ok, Options} = application:get_env(nrf_options),
+	case httpc:set_options(Options, Profile) of
+		ok ->
+			start6();
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start6() ->
 	Options = [set, public, named_table, {write_concurrency, true}],
 	ets:new(cse_counters, Options),
 	case catch ets:insert(cse_counters, {nrf_seq, 0}) of
 		true ->
-			start4();
+			start7();
 		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start4() ->
+start7() ->
 	Options = [set, public, named_table, {write_concurrency, true},
 			{keypos, 1}],
 	case catch ets:new(session, Options) of
 		{'EXIT', Reason} ->
 			{error, Reason};
 		TID ->
-			start5()
+			start8()
 	end.
 %% @hidden
-start5() ->
+start8() ->
 	{ok, DiameterServices} = application:get_env(diameter),
 	F1 = fun({Addr, Port, Options}) ->
 		case cse:start_diameter(Addr, Port, Options) of
@@ -268,7 +318,12 @@ install2(Nodes) ->
 install3(Nodes, Acc) ->
 	case create_table(resource_spec, Nodes) of
 		ok ->
-			install4(Nodes, [resource_spec | Acc]);
+			case install_resource_specs() of
+				ok ->
+					install4(Nodes, [resource_spec | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -382,6 +437,24 @@ install12(Tables) ->
 %%  Internal functions
 %%----------------------------------------------------------------------
 
+-spec force(Tables) -> Result
+	when
+		Tables :: [TableName],
+		Result :: ok | {error, Reason},
+		TableName :: atom(),
+		Reason :: term().
+%% @doc Try to force load bad tables.
+%% @private
+force([H | T]) ->
+	case mnesia:force_load_table(H) of
+		yes ->
+			force(T);
+		ErrorDescription ->
+			{error, ErrorDescription}
+	end;
+force([]) ->
+	ok.
+
 -spec create_table(Table, Nodes) -> Result
 	when
 		Table :: atom(),
@@ -424,6 +497,34 @@ create_table1(_Table, {aborted, {not_active, _, Node} = Reason}) ->
 	{error, Reason};
 create_table1(_Table, {aborted, Reason}) ->
 	error_logger:error_report([mnesia:error_description(Reason), {error, Reason}]),
+	{error, Reason}.
+
+-spec install_resource_specs() -> Result
+	when
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Install all static Resource Specifications.
+%% @@equiv install_resource_specs([?PREFIX_TABLE_SPEC, ?PREFIX_ROW_SPEC])
+%% @private
+install_resource_specs() ->
+	SpecIds = [?PREFIX_TABLE_SPEC, ?PREFIX_ROW_SPEC],
+	install_resource_specs(SpecIds).
+
+-spec install_resource_specs(SpecIds) -> Result
+	when
+		SpecIds :: string(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Install static Resource Specifications.
+%% @private
+install_resource_specs(SpecIds) ->
+	install_resource_specs(SpecIds, ok).
+%% @hidden
+install_resource_specs([H | T], ok) ->
+	install_resource_specs(T, cse_rest_res_resource:static_spec(H));
+install_resource_specs([], ok) ->
+	ok;
+install_resource_specs(_, {error, Reason}) ->
 	{error, Reason}.
 
 -spec is_mod_auth_mnesia() -> boolean().

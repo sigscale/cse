@@ -44,7 +44,6 @@
 -define(PathCatalog, "/resourceCatalogManagement/v4/").
 -define(PathInventory, "/resourceInventoryManagement/v4/").
 -define(CHUNKSIZE, 100).
--define(PREFIX_TABLE_SPEC, "1647577955926-50").
 
 %%----------------------------------------------------------------------
 %%  The cse public API

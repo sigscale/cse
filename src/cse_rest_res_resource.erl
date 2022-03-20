@@ -21,16 +21,17 @@
 -module(cse_rest_res_resource).
 -copyright('Copyright (c) 2022 SigScale Global Inc.').
 
+% export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/1]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
+% export cse_rest_res_resource private API
+-export([static_spec/1]).
 
 -include("cse.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
 -define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
--define(PREFIX_TABLE_SPEC, "1647577955926-50").
--define(PREFIX_ROW_SPEC,   "1647577957914-66").
 
 -spec content_types_accepted() -> ContentTypes
 	when
@@ -51,19 +52,18 @@ content_types_provided() ->
 		ID :: string(),
 		Result :: {struct, [tuple()]} | {error, 404}.
 %% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification/{id}'.
-%%		Retrieve a resource specification.
-get_resource_spec(?PREFIX_TABLE_SPEC) ->
-	ResourceSpec = prefix_table_spec(),
-	Body = zj:encode(ResourceSpec),
-	Headers = [{content_type, "application/json"}],
-	{ok, Headers, Body};
-get_resource_spec(?PREFIX_ROW_SPEC) ->
-	ResourceSpec = prefix_row_spec(),
-	Body = zj:encode(ResourceSpec),
-	Headers = [{content_type, "application/json"}],
-	{ok, Headers, Body};
-get_resource_spec(_) ->
-	{error, 404}.
+%%		Retrieve a Resource Specification.
+get_resource_spec(ID) ->
+	case cse:find_resource_spec(ID) of
+		{ok, #resource_spec{} = Specification} ->
+			Body = zj:encode(Specification),
+			Headers = [{content_type, "application/json"}],
+			{ok, Headers, Body};
+		{ok, not_found} ->
+			{error, 404};
+		{ok, _Reason} ->
+			{error, 500}
+	end.
 
 -spec get_resource_specs(Query) -> Result
 	when
@@ -73,12 +73,9 @@ get_resource_spec(_) ->
 		Body		:: iolist(),
 		Status	:: 400 | 404 | 500.
 %% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification'.
-%% 	Retrieve all resource specifications.
+%% 	Retrieve all Resource Specifications.
 get_resource_specs([] = _Query) ->
-	Headers = [{content_type, "application/json"}],
-	Object = [prefix_table_spec(), prefix_row_spec()],
-	Body = zj:encode(Object),
-	{ok, Headers, Body};
+	{error, 500};
 get_resource_specs(_Query) ->
 	{error, 400}.
 
@@ -414,36 +411,32 @@ delete_resource1({error, _Reason}) ->
 %%----------------------------------------------------------------------
 
 %% @hidden
-prefix_table_spec() ->
-	Specification = ?PREFIX_TABLE_SPEC,
-	#{"id" => Specification,
-		"href" => ?specPath ++ Specification,
-		"name" => "PrefixTable",
-		"description" => "Prefix table specification",
-		"lifecycleStatus" => "Active",
-		"version" => "1.0",
-		"lastUpdate" => "2022-02-16",
-		"category" => "PrefixTable"
-	}.
-
-%% @hidden
-prefix_row_spec() ->
-	Specification = ?PREFIX_ROW_SPEC,
-	#{"id" => Specification,
-		"href" => ?specPath ++ Specification,
-		"name" => "PrefixRow",
-		"description" => "Prefix table row specification",
-		"lifecycleStatus" => "Active",
-		"version" => "1.0",
-		"lastUpdate" => "2022-02-16",
-		"category" => "PrefixRow",
-		"resourceSpecCharacteristic" => [
-			#{"name" => "prefix",
-				"description" => "Prefix to match",
-				"valueType" => "String"},
-			#{"name" => "value",
-				"description" => "Value returned from prefix match"}
-		]
+static_spec(?PREFIX_TABLE_SPEC) ->
+	#resource_spec{id = ?PREFIX_TABLE_SPEC,
+		href = ?specPath ++ ?PREFIX_TABLE_SPEC,
+		name = "PrefixTable",
+		description = "Prefix table specification",
+		version = "1.r",
+		last_modified = 1647577955926,
+		category = "PrefixTable"
+	};
+static_spec(?PREFIX_ROW_SPEC) ->
+	#resource_spec{id = ?PREFIX_ROW_SPEC,
+		href = ?specPath ++ ?PREFIX_ROW_SPEC,
+		name = "PrefixRow",
+		description = "Prefix table row specification",
+		version = "1.1",
+		last_modified = 1647577957914,
+		category = "PrefixRow",
+		related = [#resource_spec_rel{id = ?PREFIX_TABLE_SPEC,
+				href = ?specPath ++ ?PREFIX_TABLE_SPEC,
+				name = "PrefixTable",
+				rel_type = "contained"}],
+		characteristic = [#resource_spec_char{name = "prefix",
+				description = "Prefix to match",
+				value_type = "String"},
+			#resource_spec_char{name = "value",
+				description = "Value returned from prefix match"}]
 	}.
 
 -spec gtt(Table, Gtt) -> Gtt
