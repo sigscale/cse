@@ -268,7 +268,7 @@ install2(Nodes) ->
 install3(Nodes, Acc) ->
 	case create_table(resource_spec, Nodes) of
 		ok ->
-			install4(Nodes, [resource | Acc]);
+			install4(Nodes, [resource_spec | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.

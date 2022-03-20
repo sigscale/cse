@@ -349,7 +349,7 @@ add_resource_spec(#resource_spec{name = Name,
 	Id = integer_to_list(TS) ++ integer_to_list(N),
 	LM = {TS, N},
 	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
-	NewSpecification = ResourceSpecification#resource{id = Id,
+	NewSpecification = ResourceSpecification#resource_spec{id = Id,
 			href = Href, last_modified = LM},
 	F = fun() ->
 			mnesia:write(NewSpecification)
