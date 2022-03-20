@@ -158,18 +158,23 @@ start7() ->
 	end.
 %% @hidden
 start8() ->
-	{ok, DiameterServices} = application:get_env(diameter),
-	F1 = fun({Addr, Port, Options}) ->
-		case cse:start_diameter(Addr, Port, Options) of
-			{ok, _Sup} ->
-				ok;
-			{error, Reason} ->
-				throw(Reason)
-		end
-	end,
-	TopSup = supervisor:start_link({local, cse_sup}, cse_sup, []),
-	lists:foreach(F1, DiameterServices),
-	TopSup.
+	case supervisor:start_link({local, cse_sup}, cse_sup, []) of
+		{ok, TopSup} ->
+			{ok, DiameterServices} = application:get_env(diameter),
+			start9(TopSup, DiameterServices);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start9(TopSup, [{Addr, Port, Options} | T]) ->
+	case cse:start_diameter(Addr, Port, Options) of
+		{ok, _Sup} ->
+			start9(TopSup, T);
+		{error, Reason} ->
+			{error, Reason}
+	end;
+start9(TopSup, []) ->
+	{ok, TopSup}.
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
 	when
