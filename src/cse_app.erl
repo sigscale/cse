@@ -81,7 +81,8 @@ start(normal = _StartType, _Args) ->
 	end.
 %% @hidden
 start1() ->
-	start2([?PREFIX_TABLE_SPEC, ?PREFIX_ROW_SPEC], []).
+	start2([cse_rest_res_resources:prefix_table_spec_id(),
+			cse_rest_res_resources:prefix_row_spec_id()], []).
 %% @hidden
 start2([H | T], Acc) ->
 	case cse:find_resource_spec(H) of
@@ -508,29 +509,34 @@ create_table1(_Table, {aborted, Reason}) ->
 	when
 		Result :: ok | {error, Reason},
 		Reason :: term().
-%% @doc Install all static Resource Specifications.
-%% @@equiv install_resource_specs([?PREFIX_TABLE_SPEC, ?PREFIX_ROW_SPEC])
+%% @equiv install_resource_specs([cse_rest_res_resources:prefix_table_spec_id(),
+%% 		cse_rest_res_resources:prefix_row_spec_id()])
 %% @private
 install_resource_specs() ->
-	SpecIds = [?PREFIX_TABLE_SPEC, ?PREFIX_ROW_SPEC],
+	SpecIds = [cse_rest_res_resources:prefix_table_spec_id(),
+			cse_rest_res_resources:prefix_row_spec_id()],
 	install_resource_specs(SpecIds).
 
 -spec install_resource_specs(SpecIds) -> Result
 	when
-		SpecIds :: string(),
+		SpecIds :: [string()],
 		Result :: ok | {error, Reason},
 		Reason :: term().
 %% @doc Install static Resource Specifications.
 %% @private
-install_resource_specs(SpecIds) ->
-	install_resource_specs(SpecIds, ok).
-%% @hidden
-install_resource_specs([H | T], ok) ->
-	install_resource_specs(T, cse_rest_res_resource:static_spec(H));
-install_resource_specs([], ok) ->
-	ok;
-install_resource_specs(_, {error, Reason}) ->
-	{error, Reason}.
+install_resource_specs([H | T]) ->
+	Spec = cse_rest_res_resource:static_spec(H),
+	F = fun() ->
+				mnesia:write(resource_spec, Spec, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			install_resource_specs(T);
+		{aborted, Reason} ->
+			{error, Reason}
+	end;
+install_resource_specs([]) ->
+	ok.
 
 -spec is_mod_auth_mnesia() -> boolean().
 %% @doc Check if inets mod_auth uses mmnesia tables.

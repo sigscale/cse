@@ -366,21 +366,37 @@ add_resource_spec1({aborted, Reason}, _NewSpecification) ->
 		Result :: {ok, Resource} | {error, Reason},
 		Reason :: term().
 %% @doc Add an entry in the Resource table.
-add_resource(#resource{id = undefined, last_modified = undefined, name = Name,
-		specification = #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}} = Resource)
+add_resource(#resource{id = undefined,
+		name = Name, last_modified = undefined,
+		specification = #resource_spec_ref{id = SpecId}} = Resource)
 		when is_list(Name) ->
+	TableSpecId = cse_rest_res_resources:prefix_table_spec_id(),
+	case SpecId of
+		TableSpecId ->
+			add_resource1(Resource);
+		Other ->
+			case cse:find_resource_spec(Other) of
+				{ok, #resource_spec{related = Related}} ->
+					case lists:keyfind(TableSpecId, #resource_spec_rel.id, Related) of
+						#resource_spec_rel{rel_type = "based"} ->
+							add_resource1(Resource);
+						_ ->
+							add_resource2(Resource)
+					end;
+				{error, Reason} ->
+					{error, Reason}
+			end
+	end.
+%% @hidden
+add_resource1(#resource{name = Name} = Resource) ->
 	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
 		[num, value] ->
-			add_resource1(Resource);
+			add_resource2(Resource);
 		_ ->
-			exit(table_not_found)
-	end;
-add_resource(#resource{id = undefined, last_modified = undefined,
-		specification = #resource_spec_ref{id = SpecId}} = Resource)
-		when SpecId /= ?PREFIX_TABLE_SPEC ->
-	add_resource1(Resource).
+			{error, table_not_found}
+	end.
 %% @hidden
-add_resource1(#resource{} = Resource) ->
+add_resource2(#resource{} = Resource) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	Id = integer_to_list(TS) ++ integer_to_list(N),
@@ -391,11 +407,11 @@ add_resource1(#resource{} = Resource) ->
 	F = fun() ->
 			mnesia:write(NewResource)
 	end,
-	add_resource2(mnesia:transaction(F), NewResource).
+	add_resource3(mnesia:transaction(F), NewResource).
 %% @hidden
-add_resource2({atomic, ok}, #resource{} = NewResource) ->
+add_resource3({atomic, ok}, #resource{} = NewResource) ->
 	{ok, NewResource};
-add_resource2({aborted, Reason}, _NewResource) ->
+add_resource3({aborted, Reason}, _NewResource) ->
 	{error, Reason}.
 
 -spec get_resource_specs() -> Result
@@ -521,11 +537,12 @@ delete_resource(ID) when is_list(ID) ->
 					mnesia:abort(not_found)
 			end
 	end,
+	TableSpecId = cse_rest_res_resources:prefix_table_spec_id(),
 	case mnesia:transaction(F) of
 		{aborted, Reason} ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
-				specification = #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}} ->
+				specification = #resource_spec_ref{id = TableSpecId}}}} ->
 			cse_gtt:clear_table(Name);
 		{atomic, {ok, _R}} ->
 			ok

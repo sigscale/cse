@@ -26,12 +26,19 @@
 -export([get_resource_spec/1, get_resource_specs/1]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
 % export cse_rest_res_resource private API
--export([static_spec/1]).
+-export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1]).
 
 -include("cse.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
 -define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
+
+-define(PREFIX_TABLE_SPEC, "1647577955926-50").
+-define(PREFIX_ROW_SPEC,   "1647577957914-66").
+
+%%----------------------------------------------------------------------
+%%  cse_rest_res_resource public API functions
+%%----------------------------------------------------------------------
 
 -spec content_types_accepted() -> ContentTypes
 	when
@@ -59,9 +66,9 @@ get_resource_spec(ID) ->
 			Body = zj:encode(Specification),
 			Headers = [{content_type, "application/json"}],
 			{ok, Headers, Body};
-		{ok, not_found} ->
+		{error, not_found} ->
 			{error, 404};
-		{ok, _Reason} ->
+		{error, _Reason} ->
 			{error, 500}
 	end.
 
@@ -407,26 +414,51 @@ delete_resource1({error, _Reason}) ->
 	{error, 400}.
 
 %%----------------------------------------------------------------------
-%%  internal functions
+%%  cse_rest_res_resource private API functions
 %%----------------------------------------------------------------------
 
-%% @hidden
-static_spec(?PREFIX_TABLE_SPEC) ->
-	#resource_spec{id = ?PREFIX_TABLE_SPEC,
-		href = ?specPath ++ ?PREFIX_TABLE_SPEC,
+-spec prefix_table_spec_id() -> SpecId
+	when
+		SpecId :: string().
+%% @doc Get the identifier of the prefix table Resource Specification.
+%% @private
+prefix_table_spec_id() ->
+	?PREFIX_TABLE_SPEC.
+
+-spec prefix_row_spec_id() -> SpecId
+	when
+		SpecId :: string().
+%% @doc Get the identifier of the prefix row Resource Specification.
+%% @private
+prefix_row_spec_id() ->
+	?PREFIX_ROW_SPEC.
+
+-spec static_spec(SpecId) -> Specification
+	when
+		SpecId :: string(),
+		Specification :: #resource_spec{}.
+%% @doc Get a statically defined Resource Specification.
+%% @private
+static_spec(?PREFIX_TABLE_SPEC = SpecId) ->
+	[TS, N] = string:split(SpecId, "-"),
+	LM = {list_to_integer(TS), list_to_integer(N)},
+	#resource_spec{id = SpecId,
+		href = ?specPath ++ SpecId,
 		name = "PrefixTable",
 		description = "Prefix table specification",
 		version = "1.r",
-		last_modified = 1647577955926,
+		last_modified = LM,
 		category = "PrefixTable"
 	};
-static_spec(?PREFIX_ROW_SPEC) ->
-	#resource_spec{id = ?PREFIX_ROW_SPEC,
-		href = ?specPath ++ ?PREFIX_ROW_SPEC,
+static_spec(?PREFIX_ROW_SPEC = SpecId) ->
+	[TS, N] = string:split(SpecId, "-"),
+	LM = {list_to_integer(TS), list_to_integer(N)},
+	#resource_spec{id = SpecId,
+		href = ?specPath ++ SpecId,
 		name = "PrefixRow",
 		description = "Prefix table row specification",
 		version = "1.1",
-		last_modified = 1647577957914,
+		last_modified = LM,
 		category = "PrefixRow",
 		related = [#resource_spec_rel{id = ?PREFIX_TABLE_SPEC,
 				href = ?specPath ++ ?PREFIX_TABLE_SPEC,
@@ -438,6 +470,10 @@ static_spec(?PREFIX_ROW_SPEC) ->
 			#resource_spec_char{name = "value",
 				description = "Value returned from prefix match"}]
 	}.
+
+%%----------------------------------------------------------------------
+%%  internal functions
+%%----------------------------------------------------------------------
 
 -spec gtt(Table, Gtt) -> Gtt
 	when
