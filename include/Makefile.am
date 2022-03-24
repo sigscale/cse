@@ -6,7 +6,8 @@ einclude_DATA = cse.hrl \
 		cse_codec.hrl \
 		diameter_gen_ietf.hrl \
 		diameter_gen_etsi.hrl \
-		diameter_gen_3gpp.hrl
+		diameter_gen_3gpp.hrl \
+		diameter_gen_cc_application_rfc4006.hrl
 
 DIAMETERC=$(ERLANG_LIB_DIR_diameter)/bin/diameterc
 
@@ -25,6 +26,9 @@ $(top_builddir)/src/diameter_gen_3gpp.erl:	$(top_srcdir)/src/3gpp.dia \
 		$(top_builddir)/ebin/diameter_gen_etsi.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -H -o $(top_builddir)/src $<
 
+$(top_builddir)/src/diameter_gen_cc_application_rfc4006.erl:	$(top_srcdir)/src/cc_application_rfc4006.dia
+	$(DIAMETERC) -H -o $(top_builddir)/src $<
+
 diameter_gen_ietf.hrl:	$(top_srcdir)/src/ietf.dia
 	$(DIAMETERC) -E $<
 
@@ -37,7 +41,11 @@ diameter_gen_3gpp.hrl:	$(top_srcdir)/src/3gpp.dia \
 		$(top_builddir)/ebin/diameter_gen_etsi.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
 
+diameter_gen_cc_application_rfc4006.hrl:  $(top_srcdir)/src/cc_application_rfc4006.dia $(top_builddir)/ebin/diameter_gen_nas_application_rfc7155.beam
+	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
+
 CLEANFILES = diameter_gen_ietf.hrl \
 		diameter_gen_etsi.hrl \
-		diameter_gen_3gpp.hrl
+		diameter_gen_3gpp.hrl \
+		diameter_gen_cc_application_rfc4006.hrl
 
