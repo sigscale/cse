@@ -85,7 +85,7 @@ init_per_suite(Config) ->
 	ok = application:set_env(cse, tsl_callback, Callback),
 	{ok, TslArgs} = application:get_env(cse, tsl_args),
 	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
-	ok = cse_test_lib:start(inets),
+	ok = cse_test_lib:start([inets]),
 	HttpdPort = case inets:start(httpd,
 			[{port, 0},
 			{server_name, atom_to_list(?MODULE)},
