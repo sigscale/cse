@@ -4,6 +4,7 @@
 ## Process this file with automake to produce Makefile.in
 
 testmods = cse_api_SUITE \
+		cse_rest_api_SUITE \
 		cse_cap_SUITE \
 		cse_inap_SUITE \
 		cse_codec_SUITE \
@@ -22,6 +23,8 @@ check_DATA = .dialyzer_ok .common_test_ok
 	@if [ ! -d log ]; then mkdir log; fi
 	@if [ ! -f ct.cfg ]; then cp $(top_srcdir)/test/ct.cfg .; fi
 	@if [ ! -f test.spec ]; then cp $(top_srcdir)/test/test.spec .; fi
+	@if [ ! -d cse_api_SUITE_data ]; then mkdir cse_api_SUITE_data; fi
+	@if [ ! -d cse_rest_api_SUITE_data ]; then mkdir cse_rest_api_SUITE_data; fi
 	@if [ ! -d cse_cap_SUITE_data ]; then mkdir cse_cap_SUITE_data; fi
 	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
 	ct_run -no_auto_compile \
