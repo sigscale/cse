@@ -56,7 +56,7 @@ init_per_suite(Config) ->
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, PrivDir),
 	ok = cse_test_lib:init_tables(),
-	ok = cse_test_lib:start([inets, snmp, sigscale_mibs, m3ua, tcap, gtt]),
+	ok = cse_test_lib:start([diameter, inets, snmp, sigscale_mibs, m3ua, tcap, gtt]),
 	Config.
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
