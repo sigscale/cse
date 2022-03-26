@@ -81,8 +81,8 @@ start(normal = _StartType, _Args) ->
 	end.
 %% @hidden
 start1() ->
-	start2([cse_rest_res_resources:prefix_table_spec_id(),
-			cse_rest_res_resources:prefix_row_spec_id()], []).
+	start2([cse_rest_res_resource:prefix_table_spec_id(),
+			cse_rest_res_resource:prefix_row_spec_id()], []).
 %% @hidden
 start2([H | T], Acc) ->
 	case cse:find_resource_spec(H) of
@@ -509,12 +509,12 @@ create_table1(_Table, {aborted, Reason}) ->
 	when
 		Result :: ok | {error, Reason},
 		Reason :: term().
-%% @equiv install_resource_specs([cse_rest_res_resources:prefix_table_spec_id(),
-%% 		cse_rest_res_resources:prefix_row_spec_id()])
+%% @equiv install_resource_specs([cse_rest_res_resource:prefix_table_spec_id(),
+%% 		cse_rest_res_resource:prefix_row_spec_id()])
 %% @private
 install_resource_specs() ->
-	SpecIds = [cse_rest_res_resources:prefix_table_spec_id(),
-			cse_rest_res_resources:prefix_row_spec_id()],
+	SpecIds = [cse_rest_res_resource:prefix_table_spec_id(),
+			cse_rest_res_resource:prefix_row_spec_id()],
 	install_resource_specs(SpecIds).
 
 -spec install_resource_specs(SpecIds) -> Result

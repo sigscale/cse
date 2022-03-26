@@ -370,7 +370,7 @@ add_resource(#resource{id = undefined,
 		name = Name, last_modified = undefined,
 		specification = #resource_spec_ref{id = SpecId}} = Resource)
 		when is_list(Name) ->
-	TableSpecId = cse_rest_res_resources:prefix_table_spec_id(),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	case SpecId of
 		TableSpecId ->
 			add_resource1(Resource);
@@ -537,7 +537,7 @@ delete_resource(ID) when is_list(ID) ->
 					mnesia:abort(not_found)
 			end
 	end,
-	TableSpecId = cse_rest_res_resources:prefix_table_spec_id(),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	case mnesia:transaction(F) of
 		{aborted, Reason} ->
 			{error, Reason};
