@@ -340,20 +340,20 @@ split_options([{'Vendor-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{'Product-Name', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
-split_options([{'Origin-State-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{'Supported-Vendor-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
+split_options([{'Origin-State-Id', _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{'Supported-Vendor-Id', _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Auth-Application-Id', Id} = H | T], Acc1, Acc2)
 		when is_list(Id) ->
 	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Acct-Application-Id', Id} = H | T], Acc1, Acc2)
 		when is_list(Id) ->
 	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Inband-Security-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{'Vendor-Specific-Application-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
+split_options([{'Inband-Security-Id', _} = H| T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{'Vendor-Specific-Application-Id', _} = H| T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Firmware-Revision', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{capx_timeout, Timeout} = H | T], Acc1, Acc2)
@@ -374,6 +374,22 @@ split_options([{transport_module, diameter_sctp} = H | T], Acc1, Acc2) ->
 	split_options(T, [H | Acc1], Acc2);
 split_options([{transport_config, _} = H | T], Acc1, Acc2) ->
 	split_options(T, [H | Acc1], Acc2);
+split_options([{decode_format, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{restrict_connections, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{sequence, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{share_peers, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{strict_arities, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{string_decode, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{traffic_counters, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{use_shared_peers, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([_H | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([], Acc1, Acc2) ->
