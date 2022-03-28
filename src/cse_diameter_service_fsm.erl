@@ -44,7 +44,6 @@
 -define(BASE_APPLICATION_DICT, diameter_gen_base_rfc6733).
 -define(BASE_APPLICATION_CALLBACK, cse_diameter_base_application_cb).
 -define(IANA_PEN_3GPP, 10415).
--define(IANA_PEN_Ericsson, 193).
 -define(IANA_PEN_SigScale, 50386).
 
 %%----------------------------------------------------------------------
@@ -272,15 +271,21 @@ service_options(Options) ->
 		{value, DiameterApplications, Opts} ->
 			{BaseApplications ++ [DiameterApplications], Opts}
 	end,
+	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
+		false ->
+			{[?IANA_PEN_3GPP], Options3};
+		{value, SVI, Opts1} ->
+			{[?IANA_PEN_3GPP] ++ SVI, Opts1}
+	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
 	BaseOptions = [{'Vendor-Id', ?IANA_PEN_SigScale},
 		{'Product-Name', "SigScale CSE"},
 		{'Firmware-Revision', Version},
-		{'Supported-Vendor-Id', [?IANA_PEN_3GPP, ?IANA_PEN_Ericsson]},
+		{'Supported-Vendor-Id', SVendorIds},
 		{restrict_connections, false},
 		{string_decode, false}],
-	BaseOptions ++ Options3 ++ NewApps.
+	BaseOptions ++ Options4 ++ NewApps.
 
 -spec transport_options(Options, Address, Port) -> Result
 	when
