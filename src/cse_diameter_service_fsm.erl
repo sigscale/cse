@@ -253,13 +253,12 @@ service_options(Options) ->
 	end,
 	{ok, Hostname} = inet:gethostname(),
 	Options2 = case lists:keyfind('Origin-Host', 1, Options1) of
-		{_, Host} ->
-			HostName = {'Origin-Host', Host ++ Realm},
-			lists:keyreplace('Origin-Host', 1, Options1, HostName);
+		{_, _OriginHost} ->
+			Options1;
 		false when length(Hostname) > 0 ->
-			[{'Origin-Host', Hostname ++ Realm} | Options1];
+			[{'Origin-Host', Hostname ++ "." ++ Realm} | Options1];
 		false ->
-			[{'Origin-Host', "cse" ++ Realm} | Options1]
+			[{'Origin-Host', "cse." ++ Realm} | Options1]
    end,
 	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
 				{dictionary, ?BASE_APPLICATION_DICT},
