@@ -416,13 +416,13 @@ add_resource3({aborted, Reason}, _NewResource) ->
 
 -spec get_resource_specs() -> Result
 	when
-		Result :: {ok, [#resource_spec{}]} | {error, Reason},
+		Result :: [#resource_spec{}] | {error, Reason},
 		Reason :: term().
 %% @doc List all entries in the Resource Specification table.
 get_resource_specs() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-				F(mnesia:select(resource_spec, MatchSpec, ?CHUNKSIZE, read), Acc);
+				F(mnesia:select(resource_spec, MatchSpec, 100, read), Acc);
 			F('$end_of_table', Acc) ->
 				Acc;
 			F({error, Reason}, _Acc) ->
@@ -430,10 +430,12 @@ get_resource_specs() ->
 			F({L, Cont}, Acc) ->
 				F(mnesia:select(Cont), [L | Acc])
 	end,
-	case mnesia:ets(F, [F, start, []]) of
-		{ok, Acc} when is_list(Acc) ->
-			{ok, lists:flatten(lists:reverse(Acc))};
-		{error, Reason} ->
+	case catch mnesia:ets(F, [start, []]) of
+		[] ->
+			{error, not_found};
+		Acc when is_list(Acc) ->
+			lists:flatten(lists:reverse(Acc));
+		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
 
