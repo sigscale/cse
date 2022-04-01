@@ -86,6 +86,29 @@ unload(Agent) ->
 %% The cse_mib snmp agent callbacks
 %----------------------------------------------------------------------
 
+-spec dbp_local_config(Operation, Item) -> Result
+	when
+		Operation :: get,
+		Item :: 'Origin-Host' | 'Origin-Realm' | 'Product-Name',
+		Result :: {value, Value} | genErr,
+		Value :: atom() | integer() | string() | [integer()].
+% @doc Get local DIAMETER configuration.
+% @private
+dbp_local_config(get, Item) ->
+	case lists:keyfind(cse_diameter_service, 1, diameter:services()) of
+		Service when is_tuple(Service) ->
+			case diameter:service_info(Service, Item) of
+				Info when is_binary(Info) ->
+					{value, binary_to_list(Info)};
+				Info when is_list(Info) ->
+					{value, Info};
+				_ ->
+					genErr
+			end;
+		false ->
+			{noValue, noSuchInstance}
+	end.
+
 %%----------------------------------------------------------------------
 %% internal functions
 %----------------------------------------------------------------------
