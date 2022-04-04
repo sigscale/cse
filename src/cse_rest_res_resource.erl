@@ -63,7 +63,7 @@ content_types_provided() ->
 get_resource_spec(ID) ->
 	case cse:find_resource_spec(ID) of
 		{ok, #resource_spec{} = Specification} ->
-			Body = zj:encode(Specification),
+			Body = zj:encode(resource_spec(Specification)),
 			Headers = [{content_type, "application/json"}],
 			{ok, Headers, Body};
 		{error, not_found} ->
