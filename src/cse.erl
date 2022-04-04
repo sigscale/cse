@@ -26,7 +26,7 @@
 -export([start/0, stop/0]).
 -export([start_diameter/3]).
 -export([add_resource_spec/1, get_resource_specs/0, find_resource_spec/1,
-		delete_resource_spec/1]).
+		delete_resource_spec/1, query_resource_spec/5]).
 -export([add_resource/1, get_resources/0, find_resource/1, delete_resource/1,
 		query_resource/5]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
@@ -549,6 +549,90 @@ delete_resource(ID) when is_list(ID) ->
 		{atomic, {ok, _R}} ->
 			ok
 	end.
+
+-spec query_resource_spec(Cont, MatchId,
+		MatchName, MatchRelId, MatchRelName) -> Result
+	when
+		Cont :: start | any(),
+		MatchId :: Match,
+		MatchName :: Match,
+		MatchRelId :: Match,
+		MatchRelName :: Match,
+		Match :: {exact, string()} | {like, string()} | '_',
+		Result :: {Cont1, [#resource_spec{}]} | {error, Reason},
+		Cont1 :: eof | any(),
+		Reason :: term().
+%% @doc Query the Resource Specification table.
+query_resource_spec(Cont, '_', MatchName, MatchRelId, MatchRelName) ->
+	MatchHead = #resource_spec{_ = '_'},
+	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelName);
+query_resource_spec(Cont, {Op, String}, MatchName, MatchRelId, MatchRelName)
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead = case lists:last(String) of
+		$% when Op == like ->
+			#resource_spec{id = lists:droplast(String) ++ '_', _ = '_'};
+		_ ->
+			#resource_spec{id = String, _ = '_'}
+	end,
+	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelName).
+%% @hidden
+query_resource_spec1(Cont, MatchHead, '_', MatchRelId, MatchRelName) ->
+	query_resource_spec2(Cont, MatchHead, MatchRelId, MatchRelName);
+query_resource_spec1(Cont, MatchHead1, {Op, String}, MatchRelId, MatchRelName)
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead2 = case lists:last(String) of
+		$% when Op == like ->
+			MatchHead1#resource_spec{name = lists:droplast(String) ++ '_'};
+		_ ->
+			MatchHead1#resource_spec{name = String}
+	end,
+	query_resource_spec2(Cont, MatchHead2, MatchRelId, MatchRelName).
+%% @hidden
+query_resource_spec2(Cont, MatchHead, '_', MatchRelName) ->
+	query_resource_spec3(Cont, MatchHead, MatchRelName);
+query_resource_spec2(Cont, MatchHead1, {Op, String}, MatchRelName)
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead2 = case lists:last(String) of
+		$% when Op == like ->
+			MatchHead1#resource_spec{related = [#resource_spec_rel{id
+					= lists:droplast(String) ++ '_', _ = '_'}]};
+		_ ->
+			MatchHead1#resource_spec{related
+					= [#resource_spec_rel{id = String, _ = '_'}]}
+	end,
+	query_resource_spec3(Cont, MatchHead2, MatchRelName).
+%% @hidden
+query_resource_spec3(Cont, MatchHead, '_') ->
+	MatchSpec = [{MatchHead, [], ['$_']}],
+	query_resource_spec4(Cont, MatchSpec);
+query_resource_spec3(Cont, MatchHead1, {Op, String})
+		when is_list(String), ((Op == exact) orelse (Op == like)) ->
+	MatchHead2 = case lists:last(String) of
+		$% when Op == like ->
+			MatchHead1#resource_spec{related = [#resource_spec_rel{name
+					= lists:droplast(String) ++ '_', _ = '_'}]};
+		_ ->
+			MatchHead1#resource_spec{related
+					= [#resource_spec_rel{name = String, _ = '_'}]}
+	end,
+	MatchSpec = [{MatchHead2, [], ['$_']}],
+	query_resource_spec4(Cont, MatchSpec).
+%% @hidden
+query_resource_spec4(start, MatchSpec) ->
+	F = fun() ->
+			mnesia:select(resource_spec, MatchSpec, ?CHUNKSIZE, read)
+	end,
+	query_resource_spec5(mnesia:ets(F));
+query_resource_spec4(Cont, _MatchSpec) ->
+	F = fun() ->
+			mnesia:select(Cont)
+	end,
+	query_resource_spec5(mnesia:ets(F)).
+%% @hidden
+query_resource_spec5({Resources, Cont}) ->
+	{Cont, Resources};
+query_resource_spec5('$end_of_table') ->
+	{eof, []}.
 
 -spec query_resource(Cont, MatchId, MatchName,
 		MatchResSpecId, MatchRelName) -> Result
