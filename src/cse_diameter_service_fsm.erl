@@ -273,7 +273,7 @@ service_options(Options) ->
 	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
 		false ->
 			{[?IANA_PEN_3GPP], Options3};
-		{value, {_,_,  SVI}, Opts1} ->
+		{_ ,{_, SVI}, Opts1} ->
 			{[?IANA_PEN_3GPP] ++ SVI, Opts1}
 	end,
 	{ok, Vsn} = application:get_key(vsn),
