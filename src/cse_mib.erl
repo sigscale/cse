@@ -25,7 +25,7 @@
 -export([load/0, load/1, unload/0, unload/1]).
 
 %% export the cse_mib snmp agent callbacks
--export([]).
+-export([dbp_local_config/2, dbp_local_stats/2, dcca_peer_info/3]).
 		
 
 -include("cse.hrl").
@@ -145,6 +145,110 @@ dbp_local_stats(get, Item) ->
 			genErr
 	end.
 
+-spec dcca_peer_info(Operation, RowIndex, Columns) -> Result
+	when
+		Operation :: get | get_next,
+		RowIndex :: ObjectId,
+		ObjectId :: [integer()],
+		Columns :: [Column],
+		Column :: integer(),
+		Result :: [Element] | {genErr, Column},
+		Element :: {value, Value} | {ObjectId, Value},
+		Value :: atom() | integer() | string() | [integer()].
+%% @doc Handle SNMP requests for the peer info table.
+dcca_peer_info(get_next = _Operation, [] = _RowIndex, Columns) ->
+	dcca_peer_info_get_next(1, Columns, true);
+dcca_peer_info(get_next, [N], Columns) ->
+	dcca_peer_info_get_next(N + 1, Columns, true);
+dcca_peer_info(get, [N], Columns) ->
+	dcca_peer_info_get(N, Columns).
+%% @hidden
+dcca_peer_info_get_next(Index, Columns, First) ->
+	case lists:keyfind(cse_diameter_service, 1, diameter:services()) of
+		Service when is_tuple(Service) ->
+			case catch diameter:service_info(Service, connections) of
+				Info when is_list(Info) ->
+					case peer_info(Index, Info) of
+						{ok, {PeerId, Rev}} ->
+							F1 = fun(0, Acc) ->
+										[{[1, Index], Index} | Acc];
+									(1, Acc) ->
+										[{[1, Index], Index} | Acc];
+									(2, Acc) ->
+										[{[2, Index], PeerId} | Acc];
+									(3, Acc) when Rev == undefined ->
+										case dcca_peer_info_get_next(Index + 1, [3], true) of
+											[NextResult] ->
+												[NextResult | Acc];
+											{genError, N} ->
+												 throw({genError, N})
+										end;
+									(3, Acc) ->
+										[{[3, Index], Rev} | Acc];
+									(4, Acc) ->
+										[{[4, Index], volatile} | Acc];
+									(5, Acc) ->
+										[{[5, Index], active} | Acc];
+									(_, Acc) ->
+										[endOfTable | Acc]
+							end,
+							try
+								 lists:reverse(lists:foldl(F1, [], Columns))
+							catch	
+								{genError, N} ->
+									{genError, N}
+							end;
+						{error, not_found} when First == true ->
+							F2 = fun(N) ->
+									N + 1
+							end,
+							NextColumns = lists:map(F2, Columns),
+							dcca_peer_info_get_next(1, NextColumns, false);
+						{error, not_found} ->
+							[endOfTable || _ <- Columns]
+					end;
+				_Info ->
+					[endOfTable || _ <- Columns]
+			end;
+		false ->
+			{genErr, 0}
+	end.
+%% @hidden
+dcca_peer_info_get(Index, Columns) ->
+	case lists:keyfind(cse_diameter_service, 1, diameter:services()) of
+		Service when is_tuple(Service) ->
+			case catch diameter:service_info(Service, connections) of
+				Info when is_list(Info) ->
+					case peer_info(Index, Info) of
+						{ok, {PeerId, Rev}} ->
+							F1 = fun(0, Acc) ->
+										[{value, Index} | Acc];
+									(1, Acc) ->
+										[{value, Index} | Acc];
+									(2, Acc) ->
+										[{value, PeerId} | Acc];
+									(3, _Acc) when Rev == undefined ->
+										[{noValue, noSuchInstance}];
+									(3, Acc) ->
+										[{value, Rev} | Acc];
+									(4, Acc) ->
+										[{value, volatile} | Acc];
+									(5, Acc) ->
+										[{value, active} | Acc];
+									(_, _Acc) ->
+										{noValue, noSuchInstance}
+							end,
+							lists:reverse(lists:foldl(F1, [], Columns));
+						{error, not_found} ->
+							{noValue, noSuchInstance}
+					end;
+				_Info ->
+						{noValue, noSuchInstance}
+			end;
+		false ->
+			{genErr, 0}
+	end.
+
 %%----------------------------------------------------------------------
 %% internal functions
 %----------------------------------------------------------------------
@@ -217,4 +321,51 @@ total_packets4(L, {PacketsIn, PacketsOut}) ->
 		false ->
 			{error, not_found}
 	end.
+
+-spec peer_info(Index, Info) -> Result
+   when
+      Index :: integer(),
+      Info :: [tuple()],
+      Result :: {ok, {PeerId, Rev}} | {error, Reason},
+      PeerId :: string(),
+      Rev :: integer() | undefined,
+      Reason :: term().
+%% @doc Get peer entry table.
+%% @hidden
+peer_info(Index, Info) ->
+	case catch lists:nth(Index, Info) of
+		Connection when is_list(Connection) ->
+			peer_info(Connection);
+		_ ->
+			{error, not_found}
+	end.
+%% @hidden
+peer_info(Info) ->
+	case lists:keyfind(caps, 1, Info) of
+		{_, Caps} ->
+			peer_info1(Caps);
+		false ->
+         {error, not_found}
+	end.
+%% @hidden
+peer_info1(Caps) ->
+	case lists:keyfind(origin_host, 1, Caps) of
+		{_, {_,PeerId}} ->
+			peer_info2(Caps, binary_to_list(PeerId));
+		false ->
+         {error, not_found}
+	end.
+%% @hidden
+peer_info2(Caps, PeerId) ->
+	case lists:keyfind(firmware_revision, 1, Caps) of
+		{_, {_, []}} ->
+			peer_info3(PeerId, undefined);
+		{_, {_, [Rev]}} ->
+			peer_info3(PeerId, Rev);
+		false ->
+         {error, not_found}
+	end.
+%% @hidden
+peer_info3(PeerId, Rev) ->
+	{ok, {PeerId, Rev}}.
 
