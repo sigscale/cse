@@ -255,7 +255,8 @@ dcca_peer_info_get(Index, Columns) ->
 
 %% @hidden
 mibs() ->
-	["SIGSCALE-DIAMETER-BASE-PROTOCOL-MIB"].
+	["SIGSCALE-DIAMETER-BASE-PROTOCOL-MIB",
+			"SIGSCALE-DIAMETER-CC-APPLICATION-MIB"].
 
 -spec total_packets(Info) -> Result
 	when
