@@ -856,19 +856,17 @@ resource_spec([is_bundle | T], #{"isBundle" := Bundle} = M, Acc)
 	resource_spec(T, M, Acc#resource_spec{is_bundle = Bundle});
 resource_spec([party | T], #resource_spec{party = PartyRefs} = R, Acc)
 		when is_list(PartyRefs), length(PartyRefs) > 0 ->
-	resource_spec(T, R, Acc#{"relatedParty" => cse_rest:party_ref(PartyRefs)});
+	resource_spec(T, R, Acc#{"relatedParty" => party_rel(PartyRefs)});
 resource_spec([party | T], #{"relatedParty" := PartyRefs} = M, Acc)
 		when is_list(PartyRefs) ->
 	resource_spec(T, M,
-			Acc#resource_spec{party = cse_rest:party_ref(PartyRefs)});
+			Acc#resource_spec{party = party_rel(PartyRefs)});
 resource_spec([status | T], #resource_spec{status = Status} = R, Acc)
-		when Status /= undefined ->
-	resource_spec(T, R,
-			Acc#{"lifecycleStatus" => cse_rest:lifecycle_status(Status)});
+		when is_list(Status) ->
+	resource_spec(T, R, Acc#{"lifecycleStatus" => Status});
 resource_spec([status | T], #{"lifecycleStatus" := Status} = M, Acc)
 		when is_list(Status) ->
-	resource_spec(T, M,
-			Acc#resource_spec{status = cse_rest:lifecycle_status(Status)});
+	resource_spec(T, M, Acc#resource_spec{status = Status});
 resource_spec([related | T], #resource_spec{related = SpecRels} = R, Acc)
 		when is_list(SpecRels), length(SpecRels) > 0->
 	resource_spec(T, R,
@@ -1092,13 +1090,12 @@ resource_spec_char([max | T], #resource_spec_char{max = Max} = R, Acc)
 resource_spec_char([max | T], #{"maxCardinality" := Max} = M, Acc)
 		when is_integer(Max) ->
 	resource_spec_char(T, M, Acc#resource_spec_char{max = Max});
-resource_spec_char([regex | T], #resource_spec_char{regex = {_, RegEx}} = R,
+resource_spec_char([regex | T], #resource_spec_char{regex = RegEx} = R,
 		Acc) when is_list(RegEx) ->
 	resource_spec_char(T, R, Acc#{"regex" => RegEx});
 resource_spec_char([regex | T], #{"regex" := RegEx} = M, Acc)
 		when is_list(RegEx) ->
-	{ok, MP} = re:compile(RegEx),
-	resource_spec_char(T, M, Acc#resource_spec_char{regex = {MP, RegEx}});
+	resource_spec_char(T, M, Acc#resource_spec_char{regex = RegEx});
 resource_spec_char([related | T],
 		#resource_spec_char{related = CharRels} = R, Acc)
 		when is_list(CharRels), length(CharRels) > 0 ->
@@ -1226,7 +1223,7 @@ resource_spec_char_val([is_default | T],
 		when is_boolean(Default) ->
 	resource_spec_char_val(T, R, Acc#{"isDefault" => Default});
 resource_spec_char_val([is_default | T], #{"isDefault" := Default} = M, Acc)
-		when is_list(Default) ->
+		when is_boolean(Default) ->
 	resource_spec_char_val(T, M,
 			Acc#resource_spec_char_val{is_default = Default});
 resource_spec_char_val([range_interval | T],
@@ -1250,14 +1247,11 @@ resource_spec_char_val([range_interval | T],
 	resource_spec_char_val(T, M,
 			Acc#resource_spec_char_val{range_interval = open});
 resource_spec_char_val([regex | T],
-		#resource_spec_char_val{regex = {_, RegEx}} = R, Acc)
-		when is_list(RegEx) ->
+		#resource_spec_char_val{regex = RegEx} = R, Acc) when is_list(RegEx) ->
 	resource_spec_char_val(T, R, Acc#{"regex" => RegEx});
 resource_spec_char_val([regex | T], #{"regex" := RegEx} = M, Acc)
 		when is_list(RegEx) ->
-	{ok, MP} = re:compile(RegEx),
-	resource_spec_char_val(T, M,
-			Acc#resource_spec_char_val{regex = {MP, RegEx}});
+	resource_spec_char_val(T, M, Acc#resource_spec_char_val{regex = RegEx});
 resource_spec_char_val([unit | T], #resource_spec_char_val{unit = Unit} = R,
 		Acc) when is_list(Unit) ->
 	resource_spec_char_val(T, R, Acc#{"unitOfMeasure" => Unit});
@@ -1345,5 +1339,52 @@ target_res_schema([type | T], #{"@type" := ClassType} = M, Acc)
 target_res_schema([_ | T], R, Acc) ->
 	target_res_schema(T, R, Acc);
 target_res_schema([], _, Acc) ->
+	Acc.
+
+-spec party_rel(RelatedPartyRef) -> RelatedPartyRef
+	when
+		RelatedPartyRef :: [party_rel()] | [map()]
+				| party_rel() | map().
+%% @doc CODEC for `RelatedPartyRef'.
+party_rel([#party_rel{} | _] = List) ->
+	Fields = record_info(fields, party_rel),
+	[party_rel(Fields, RP, #{}) || RP <- List];
+party_rel([#{} | _] = List) ->
+	Fields = record_info(fields, party_rel),
+	[party_rel(Fields, RP, #party_rel{}) || RP <- List].
+%% @hidden
+party_rel([id | T], #party_rel{id = Id} = R, Acc)
+		when is_list(Id) ->
+	party_rel(T, R, Acc#{"id" => Id});
+party_rel([id | T], #{"id" := Id} = M, Acc)
+		when is_list(Id) ->
+	party_rel(T, M, Acc#party_rel{id = Id});
+party_rel([href | T], #party_rel{href = Href} = R, Acc)
+		when is_list(Href) ->
+	party_rel(T, R, Acc#{"href" => Href});
+party_rel([href | T], #{"href" := Href} = M, Acc)
+		when is_list(Href) ->
+	party_rel(T, M, Acc#party_rel{href = Href});
+party_rel([name | T], #party_rel{name = Name} = R, Acc)
+		when is_list(Name) ->
+	party_rel(T, R, Acc#{"name" => Name});
+party_rel([name | T], #{"name" := Name} = M, Acc)
+		when is_list(Name) ->
+	party_rel(T, M, Acc#party_rel{name = Name});
+party_rel([role | T], #party_rel{role = Role} = R, Acc)
+		when is_list(Role) ->
+	party_rel(T, R, Acc#{"role" => Role});
+party_rel([role | T], #{"role" := Role} = M, Acc)
+		when is_list(Role) ->
+	party_rel(T, M, Acc#party_rel{role = Role});
+party_rel([ref_type | T], #party_rel{ref_type = Type} = R, Acc)
+		when is_list(Type) ->
+	party_rel(T, R, Acc#{"@referredType" => Type});
+party_rel([ref_type | T], #{"@referredType" := Type} = M, Acc)
+		when is_list(Type) ->
+	party_rel(T, M, Acc#party_rel{ref_type = Type});
+party_rel([_ | T], R, Acc) ->
+	party_rel(T, R, Acc);
+party_rel([], _, Acc) ->
 	Acc.
 
