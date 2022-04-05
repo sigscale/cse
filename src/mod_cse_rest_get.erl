@@ -190,9 +190,9 @@ parse_query(_, #mod{parsed_header = RequestHeaders,
 	{proceed, [{response, {already_sent, 404, Size}} | Data]}.
 
 %% @hidden
-do_get(Resource, ModData, ["resourceCatalogManagement",
-		"v4", "resourceSpecification"], Query) ->
-	do_response(ModData, Resource:get_resource_specs(Query));
+do_get(Resource, #mod{parsed_header = Headers} = ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification"], Query) ->
+	do_response(ModData, Resource:get_resource_specs(Query, Headers));
 do_get(Resource, ModData, ["resourceCatalogManagement",
 		"v4", "resourceSpecification", Id], []) ->
 	do_response(ModData, Resource:get_resource_spec(Id));

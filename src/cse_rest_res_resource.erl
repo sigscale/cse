@@ -23,7 +23,7 @@
 
 % export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
--export([get_resource_spec/1, get_resource_specs/1]).
+-export([get_resource_spec/1, get_resource_specs/2]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
 % export cse_rest_res_resource private API
 -export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1]).
@@ -72,19 +72,44 @@ get_resource_spec(ID) ->
 			{error, 500}
 	end.
 
--spec get_resource_specs(Query) -> Result
+-spec get_resource_specs(Query, Headers) -> Result
 	when
 		Query :: [{Key :: string(), Value :: string()}],
-		Result	:: {ok, Headers, Body} | {error, Status},
-		Headers	:: [tuple()],
-		Body		:: iolist(),
-		Status	:: 400 | 404 | 500.
+		Headers :: [tuple()],
+		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
+				| {error, ErrorCode},
+		ErrorCode :: 400 | 404 | 500.
 %% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification'.
 %% 	Retrieve all Resource Specifications.
-get_resource_specs([] = _Query) ->
-	{error, 500};
-get_resource_specs(_Query) ->
-	{error, 400}.
+get_resource_specs(Query, Headers) ->
+	try
+		case lists:keytake("filter", 1, Query) of
+			{value, {_, String}, Query1} ->
+				{ok, Tokens, _} = cse_rest_query_scanner:string(String),
+				{ok, [{array, [{complex, Complex}]}]}
+						= cse_rest_query_parser:parse(Tokens),
+				MatchId = match("id", Complex, Query),
+				MatchName = match("name", Complex, Query),
+				MatchRelId = match("resourceSpecRelationship.id", Complex, Query),
+				MatchRelType = match("resourceSpecRelationship.relationshipType",
+						Complex, Query),
+				{Query1, [MatchId, MatchName, MatchRelId, MatchRelType]};
+			false ->
+					MatchId = match("id", [], Query),
+					MatchName = match("name", [], Query),
+					MatchRelId = match("resourceSpecRelationship.id", [], Query),
+					MatchRelType = match("resourceSpecRelationship.relationshipType",
+						[], Query),
+					{Query, [MatchId, MatchName, MatchRelId, MatchRelType]}
+		end
+	of
+		{Query2, Args} ->
+			Codec = fun resource_spec/1,
+			query_filter({cse, query_resource_spec, Args}, Codec, Query2, Headers)
+	catch
+		_ ->
+			{error, 400}
+	end.
 
 -spec get_resource(Id) -> Result
 	when
@@ -274,7 +299,8 @@ query_page(Codec, PageServer, Etag, Query, _Filters, Start, End) ->
 query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
 	case supervisor:start_child(cse_rest_pagination_sup, [[M, F, A]]) of
 		{ok, PageServer, Etag} ->
-			query_page(Codec, PageServer, Etag, Query, Filters, RangeStart, RangeEnd);
+			query_page(Codec, PageServer, Etag,
+					Query, Filters, RangeStart, RangeEnd);
 		{error, _Reason} ->
 			{error, 500}
 	end.
