@@ -119,7 +119,12 @@ start5() ->
 	end,
 	TopSup = supervisor:start_link({local, cse_sup}, cse_sup, []),
 	lists:foreach(F1, DiameterServices),
-	TopSup.
+	case cse_mib:load() of
+		ok ->
+			TopSup;
+		{error, Reason} ->
+			throw(Reason)
+	end.
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
 	when
