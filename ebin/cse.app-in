@@ -63,6 +63,6 @@
 				{rest_page_size, 1000},
 				{rest_page_timeout, 60000},
 				{snmp_alarms,[
-						{Notification :: atom(), Options :: list()}
+						%% {Notification :: atom(), Options :: list()},
 						]}]},
 		{mod, {cse_app,[]}}]}.
