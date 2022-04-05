@@ -105,13 +105,15 @@ init([Address, Port, Options] = _Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>wait_for_start</em> state.
 %% @private
-wait_for_start(info, #diameter_event{info = start} = EventContent, Data) ->
-	Actions = [{next_event, internal, EventContent}],
-	{next_state, started, Data, Actions};
+wait_for_start(_EventType, null = _EventContent, _Data) ->
+	keep_state_and_data;
+wait_for_start(info, #diameter_event{info = start} = _EventContent, Data) ->
+	{next_state, started, Data};
 wait_for_start(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{stop, shutdown, Data};
-wait_for_start(_EventType, _EventContent, _Data) ->
-	keep_state_and_data.
+	{stop, noconnection, Data};
+wait_for_start(info, #diameter_event{info = stop, service = Service},
+		#{service := Service} = Data) ->
+   {stop, stop, Data}.
 
 -spec started(EventType, EventContent, Data) -> Result
 	when
@@ -121,33 +123,36 @@ wait_for_start(_EventType, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>started</em> state.
 %% @private
-started(internal, #diameter_event{info = Event, service = Service},
-		_Data) when element(1, Event) == up;
+started(_EventType, null = _EventContent, _Data) ->
+	keep_state_and_data;
+started(info, #diameter_event{info = Event, service = Service},
+		Data) when element(1, Event) == up;
 		element(1, Event) == down ->
 	{_PeerRef, #diameter_caps{origin_host = {_, Peer}}} = element(3, Event),
 	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
 			{peer, binary_to_list(Peer)}]),
-	keep_state_and_data;
-started(internal, #diameter_event{info = Event, service = Service},
+	{next_state, started, Data};
+started(info, #diameter_event{info = Event, service = Service},
       Data) when element(1, Event) == closed ->
    {_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
    error_logger:info_report(["DIAMETER peer address not found",
          {service, Service}, {event, element(1, Event)},
          {peer, binary_to_list(Peer)}]),
-	{stop, shutdown, Data};
-started(internal, #diameter_event{info = {watchdog,
-			_Ref, _PeerRef, {_From, _To}, _Config}}, _Data) ->
-	keep_state_and_data;
-started(internal, #diameter_event{info = Event, service = Service},
-		_Data) ->
+	{stop, stop, Data};
+started(info, #diameter_event{info = {watchdog,
+			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
+	{next_state, started, Data};
+started(info, {'EXIT', _Pid, noconnection}, Data) ->
+	{stop, noconnection, Data};
+started(info, #diameter_event{info = stop, service = Service},
+		#{service := Service} = Data) ->
+   {stop, stop, Data};
+started(info, #diameter_event{info = Event, service = Service},
+		Data) ->
 	error_logger:info_report(["DIAMETER event",
 			{service, Service}, {event, Event}]),
-	keep_state_and_data;
-started(internal, {'EXIT', _Pid, noconnection}, Data) ->
-	{stop, shutdown, Data};
-started(EventType, EventContent, Data) ->
-	handle_event(EventType, EventContent, started, Data).
+	{next_state, started, Data}.
 
 -spec wait_for_stop(EventType, EventContent, Data) -> Result
 	when
@@ -157,6 +162,8 @@ started(EventType, EventContent, Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>wait_for_stop</em> state.
 %% @private
+wait_for_stop(_EventType, null = _EventContent, _Data) ->
+	keep_state_and_data;
 wait_for_stop(info, #diameter_event{info = Event, service = Service},
 		Data) when element(1, Event) == up;
 		element(1, Event) == down ->
@@ -164,19 +171,20 @@ wait_for_stop(info, #diameter_event{info = Event, service = Service},
 	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
 			started, {peer, binary_to_list(Peer)}]),
-	{stop, shutdown, Data};
+	{next_state, wait_for_stop, Data};
 wait_for_stop(info, #diameter_event{info = {watchdog,
 			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
-	{stop, shutdown, Data};
+	{next_state, shutdown, Data};
 wait_for_stop(info, #diameter_event{info = Event, service = Service},
-		Data) ->
+      #{service := Service} = Data) ->
 	error_logger:info_report(["DIAMETER event",
 			{service, Service}, {event, Event}]),
-	{stop, shutdown, Data};
+	{next_state, shutdown, Data};
 wait_for_stop(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{stop, shutdown, Data};
-wait_for_stop(_EventType, _EventContent, _Data) ->
-	keep_state_and_data.
+	{stop, noconnection, Data};
+wait_for_stop(info, #diameter_event{info = stop, service = Service},
+		#{service := Service} = Data) ->
+	{stop, stop, Data}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
