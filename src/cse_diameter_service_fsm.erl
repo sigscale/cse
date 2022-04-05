@@ -113,7 +113,7 @@ wait_for_start(info, {'EXIT', _Pid, noconnection}, Data) ->
 	{stop, noconnection, Data};
 wait_for_start(info, #diameter_event{info = stop, service = Service},
 		#{service := Service} = Data) ->
-   {stop, stop, Data}.
+	{stop, stop, Data}.
 
 -spec started(EventType, EventContent, Data) -> Result
 	when
@@ -134,11 +134,11 @@ started(info, #diameter_event{info = Event, service = Service},
 			{peer, binary_to_list(Peer)}]),
 	{next_state, started, Data};
 started(info, #diameter_event{info = Event, service = Service},
-      Data) when element(1, Event) == closed ->
-   {_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
-   error_logger:info_report(["DIAMETER peer address not found",
-         {service, Service}, {event, element(1, Event)},
-         {peer, binary_to_list(Peer)}]),
+		Data) when element(1, Event) == closed ->
+	{_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
+	error_logger:info_report(["DIAMETER peer address not found",
+			{service, Service}, {event, element(1, Event)},
+			{peer, binary_to_list(Peer)}]),
 	{stop, stop, Data};
 started(info, #diameter_event{info = {watchdog,
 			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
@@ -147,7 +147,7 @@ started(info, {'EXIT', _Pid, noconnection}, Data) ->
 	{stop, noconnection, Data};
 started(info, #diameter_event{info = stop, service = Service},
 		#{service := Service} = Data) ->
-   {stop, stop, Data};
+	{stop, stop, Data};
 started(info, #diameter_event{info = Event, service = Service},
 		Data) ->
 	error_logger:info_report(["DIAMETER event",
@@ -176,7 +176,7 @@ wait_for_stop(info, #diameter_event{info = {watchdog,
 			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
 	{next_state, shutdown, Data};
 wait_for_stop(info, #diameter_event{info = Event, service = Service},
-      #{service := Service} = Data) ->
+		#{service := Service} = Data) ->
 	error_logger:info_report(["DIAMETER event",
 			{service, Service}, {event, Event}]),
 	{next_state, shutdown, Data};
@@ -267,7 +267,7 @@ service_options(Options) ->
 			[{'Origin-Host', Hostname ++ "." ++ Realm} | Options1];
 		false ->
 			[{'Origin-Host', "cse." ++ Realm} | Options1]
-   end,
+	end,
 	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
 				{dictionary, ?BASE_APPLICATION_DICT},
 				{module, ?BASE_APPLICATION_CALLBACK},
