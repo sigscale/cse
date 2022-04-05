@@ -551,22 +551,22 @@ delete_resource(ID) when is_list(ID) ->
 	end.
 
 -spec query_resource_spec(Cont, MatchId,
-		MatchName, MatchRelId, MatchRelName) -> Result
+		MatchName, MatchRelId, MatchRelType) -> Result
 	when
 		Cont :: start | any(),
 		MatchId :: Match,
 		MatchName :: Match,
 		MatchRelId :: Match,
-		MatchRelName :: Match,
+		MatchRelType :: Match,
 		Match :: {exact, string()} | {like, string()} | '_',
 		Result :: {Cont1, [#resource_spec{}]} | {error, Reason},
 		Cont1 :: eof | any(),
 		Reason :: term().
 %% @doc Query the Resource Specification table.
-query_resource_spec(Cont, '_', MatchName, MatchRelId, MatchRelName) ->
+query_resource_spec(Cont, '_', MatchName, MatchRelId, MatchRelType) ->
 	MatchHead = #resource_spec{_ = '_'},
-	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelName);
-query_resource_spec(Cont, {Op, String}, MatchName, MatchRelId, MatchRelName)
+	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelType);
+query_resource_spec(Cont, {Op, String}, MatchName, MatchRelId, MatchRelType)
 		when is_list(String), ((Op == exact) orelse (Op == like)) ->
 	MatchHead = case lists:last(String) of
 		$% when Op == like ->
@@ -574,11 +574,11 @@ query_resource_spec(Cont, {Op, String}, MatchName, MatchRelId, MatchRelName)
 		_ ->
 			#resource_spec{id = String, _ = '_'}
 	end,
-	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelName).
+	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelType).
 %% @hidden
-query_resource_spec1(Cont, MatchHead, '_', MatchRelId, MatchRelName) ->
-	query_resource_spec2(Cont, MatchHead, MatchRelId, MatchRelName);
-query_resource_spec1(Cont, MatchHead1, {Op, String}, MatchRelId, MatchRelName)
+query_resource_spec1(Cont, MatchHead, '_', MatchRelId, MatchRelType) ->
+	query_resource_spec2(Cont, MatchHead, MatchRelId, MatchRelType);
+query_resource_spec1(Cont, MatchHead1, {Op, String}, MatchRelId, MatchRelType)
 		when is_list(String), ((Op == exact) orelse (Op == like)) ->
 	MatchHead2 = case lists:last(String) of
 		$% when Op == like ->
@@ -586,11 +586,11 @@ query_resource_spec1(Cont, MatchHead1, {Op, String}, MatchRelId, MatchRelName)
 		_ ->
 			MatchHead1#resource_spec{name = String}
 	end,
-	query_resource_spec2(Cont, MatchHead2, MatchRelId, MatchRelName).
+	query_resource_spec2(Cont, MatchHead2, MatchRelId, MatchRelType).
 %% @hidden
-query_resource_spec2(Cont, MatchHead, '_', MatchRelName) ->
-	query_resource_spec3(Cont, MatchHead, MatchRelName);
-query_resource_spec2(Cont, MatchHead1, {Op, String}, MatchRelName)
+query_resource_spec2(Cont, MatchHead, '_', MatchRelType) ->
+	query_resource_spec3(Cont, MatchHead, MatchRelType);
+query_resource_spec2(Cont, MatchHead1, {Op, String}, MatchRelType)
 		when is_list(String), ((Op == exact) orelse (Op == like)) ->
 	MatchHead2 = case lists:last(String) of
 		$% when Op == like ->
@@ -600,7 +600,7 @@ query_resource_spec2(Cont, MatchHead1, {Op, String}, MatchRelName)
 			MatchHead1#resource_spec{related
 					= [#resource_spec_rel{id = String, _ = '_'}]}
 	end,
-	query_resource_spec3(Cont, MatchHead2, MatchRelName).
+	query_resource_spec3(Cont, MatchHead2, MatchRelType).
 %% @hidden
 query_resource_spec3(Cont, MatchHead, '_') ->
 	MatchSpec = [{MatchHead, [], ['$_']}],
@@ -609,11 +609,11 @@ query_resource_spec3(Cont, MatchHead1, {Op, String})
 		when is_list(String), ((Op == exact) orelse (Op == like)) ->
 	MatchHead2 = case lists:last(String) of
 		$% when Op == like ->
-			MatchHead1#resource_spec{related = [#resource_spec_rel{name
+			MatchHead1#resource_spec{related = [#resource_spec_rel{rel_type
 					= lists:droplast(String) ++ '_', _ = '_'}]};
 		_ ->
 			MatchHead1#resource_spec{related
-					= [#resource_spec_rel{name = String, _ = '_'}]}
+					= [#resource_spec_rel{rel_type = String, _ = '_'}]}
 	end,
 	MatchSpec = [{MatchHead2, [], ['$_']}],
 	query_resource_spec4(Cont, MatchSpec).
