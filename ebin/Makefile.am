@@ -36,7 +36,8 @@ beam_DATA = cse.beam \
 		cse_rest_query_parser.beam \
 		diameter_gen_ietf.beam \
 		diameter_gen_etsi.beam \
-		diameter_gen_3gpp.beam
+		diameter_gen_3gpp.beam \
+		cse_mib.beam
 
 %.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<

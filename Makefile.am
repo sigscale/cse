@@ -2,7 +2,7 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = include src ebin doc test priv
+SUBDIRS = include src ebin doc test priv mibs
 
 .PHONY: release
 release: $(PACKAGE_VERSION).tar.gz
@@ -11,7 +11,7 @@ $(PACKAGE_VERSION).tar.gz: $(PACKAGE_NAME).rel sys.config
 	cp $(PACKAGE_NAME).rel $(PACKAGE_VERSION).rel
 	$(ERL) -noinput \
 		-eval "systools:make_script(\"$(PACKAGE_VERSION)\")" \
-		-eval "systools:make_tar(\"$(PACKAGE_VERSION)\", [{dirs, [include,doc]}])" \
+		-eval "systools:make_tar(\"$(PACKAGE_VERSION)\", [{dirs, [include,doc,mibs]}])" \
 		-s init stop
 
 install-data-hook: $(PACKAGE_VERSION).tar.gz

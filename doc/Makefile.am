@@ -34,7 +34,8 @@ modhtml = cse.html \
 		cse_rest_query_parser.html \
 		diameter_gen_ietf.html \
 		diameter_gen_etsi.html \
-		diameter_gen_3gpp.html
+		diameter_gen_3gpp.html \
+		cse_mib.html
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \

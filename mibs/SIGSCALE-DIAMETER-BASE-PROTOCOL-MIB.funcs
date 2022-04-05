@@ -1,0 +1,6 @@
+{dbpLocalOriginHost, {cse_mib, dbp_local_config, ['Origin-Host']}}.
+{dbpLocalRealm, {cse_mib, dbp_local_config, ['Origin-Realm']}}.
+{dbpLocalId, {cse_mib, dbp_local_config, ['Product-Name']}}.
+{dbpLocalStatsTotalPacketsIn, {cse_mib, dbp_local_stats, [in]}}.
+{dbpLocalStatsTotalPacketsOut, {cse_mib, dbp_local_stats, [out]}}.
+{dbpLocalStatsTotalUpTime, {cse_mib, dbp_local_stats, [uptime]}}.

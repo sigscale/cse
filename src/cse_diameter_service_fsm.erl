@@ -44,7 +44,6 @@
 -define(BASE_APPLICATION_DICT, diameter_gen_base_rfc6733).
 -define(BASE_APPLICATION_CALLBACK, cse_diameter_base_application_cb).
 -define(IANA_PEN_3GPP, 10415).
--define(IANA_PEN_Ericsson, 193).
 -define(IANA_PEN_SigScale, 50386).
 
 %%----------------------------------------------------------------------
@@ -254,13 +253,12 @@ service_options(Options) ->
 	end,
 	{ok, Hostname} = inet:gethostname(),
 	Options2 = case lists:keyfind('Origin-Host', 1, Options1) of
-		{_, Host} ->
-			HostName = {'Origin-Host', Host ++ Realm},
-			lists:keyreplace('Origin-Host', 1, Options1, HostName);
+		{_, _OriginHost} ->
+			Options1;
 		false when length(Hostname) > 0 ->
-			[{'Origin-Host', Hostname ++ Realm} | Options1];
+			[{'Origin-Host', Hostname ++ "." ++ Realm} | Options1];
 		false ->
-			[{'Origin-Host', "cse" ++ Realm} | Options1]
+			[{'Origin-Host', "cse." ++ Realm} | Options1]
    end,
 	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
 				{dictionary, ?BASE_APPLICATION_DICT},
@@ -272,15 +270,21 @@ service_options(Options) ->
 		{value, DiameterApplications, Opts} ->
 			{BaseApplications ++ [DiameterApplications], Opts}
 	end,
+	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
+		false ->
+			{[?IANA_PEN_3GPP], Options3};
+		{_ ,{_, SVI}, Opts1} ->
+			{[?IANA_PEN_3GPP] ++ SVI, Opts1}
+	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
 	BaseOptions = [{'Vendor-Id', ?IANA_PEN_SigScale},
 		{'Product-Name', "SigScale CSE"},
 		{'Firmware-Revision', Version},
-		{'Supported-Vendor-Id', [?IANA_PEN_3GPP, ?IANA_PEN_Ericsson]},
+		{'Supported-Vendor-Id', SVendorIds},
 		{restrict_connections, false},
 		{string_decode, false}],
-	BaseOptions ++ Options3 ++ NewApps.
+	BaseOptions ++ Options4 ++ NewApps.
 
 -spec transport_options(Options, Address, Port) -> Result
 	when
@@ -335,20 +339,20 @@ split_options([{'Vendor-Id', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{'Product-Name', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
-split_options([{'Origin-State-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{'Supported-Vendor-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
+split_options([{'Origin-State-Id', _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{'Supported-Vendor-Id', _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Auth-Application-Id', Id} = H | T], Acc1, Acc2)
 		when is_list(Id) ->
 	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Acct-Application-Id', Id} = H | T], Acc1, Acc2)
 		when is_list(Id) ->
 	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Inband-Security-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{'Vendor-Specific-Application-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
+split_options([{'Inband-Security-Id', _} = H| T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{'Vendor-Specific-Application-Id', _} = H| T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([{'Firmware-Revision', _} | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([{capx_timeout, Timeout} = H | T], Acc1, Acc2)
@@ -369,6 +373,22 @@ split_options([{transport_module, diameter_sctp} = H | T], Acc1, Acc2) ->
 	split_options(T, [H | Acc1], Acc2);
 split_options([{transport_config, _} = H | T], Acc1, Acc2) ->
 	split_options(T, [H | Acc1], Acc2);
+split_options([{decode_format, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{restrict_connections, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{sequence, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{share_peers, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{strict_arities, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{string_decode, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{traffic_counters, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
+split_options([{use_shared_peers, _} = H | T], Acc1, Acc2) ->
+	split_options(T, Acc1, [H | Acc2]);
 split_options([_H | T], Acc1, Acc2) ->
 	split_options(T, Acc1, Acc2);
 split_options([], Acc1, Acc2) ->
