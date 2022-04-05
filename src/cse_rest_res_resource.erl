@@ -23,7 +23,7 @@
 
 % export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
--export([get_resource_spec/1, get_resource_specs/2]).
+-export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
 % export cse_rest_res_resource private API
 -export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1]).
@@ -110,6 +110,53 @@ get_resource_specs(Query, Headers) ->
 		_ ->
 			{error, 400}
 	end.
+
+-spec add_resource_spec(RequestBody) -> Result
+	when
+		RequestBody :: list(),
+		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
+			| {error, ErrorCode :: integer()}.
+%% @doc Respond to `POST /resourceCatalogManagement/v4/resourceSpecification'.
+%% 	Handle `POST' request on `ResourceSpecification' collection.
+add_resource_spec(RequestBody) ->
+	try
+		{ok, ResSpecMap} = zj:decode(RequestBody),
+		resource_spec(ResSpecMap)
+	of
+		#resource_spec{} = ResourceSpec ->
+			add_resource_spec1(ResourceSpec)
+	catch
+		_:_Reason ->
+			{error, 400}
+	end.
+%% @hidden
+add_resource_spec1(#resource_spec{name = Name,
+		related = [#resource_spec_rel{id = ?PREFIX_TABLE_SPEC,
+		rel_type = "based"} | _]} = ResourceSpec) ->
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource_spec(Cont1,
+						'_', {exact, Name}, '_', '_'),
+				F(Cont2, [L | Acc])
+	end,
+	case F(start, []) of
+		[] ->
+			add_resource_spec2(cse:add_resource_spec(ResourceSpec));
+		[#resource_spec{} | _] ->
+			{error, 400}
+	end;
+add_resource_spec1(#resource_spec{} = ResourceSpec) ->
+	add_resource_spec2(cse:add_resource_spec(ResourceSpec)).
+%% @hidden
+add_resource_spec2({ok, #resource_spec{href = Href,
+		last_modified = LM} = NewResSpec}) ->
+	Body = zj:encode(resource_spec(NewResSpec)),
+	Headers = [{location, Href}, {etag, cse_rest:etag(LM)},
+			{content_type, "application/json"}],
+	{ok, Headers, Body};
+add_resource_spec2({error, _Reason}) ->
+	{error, 400}.
 
 -spec get_resource(Id) -> Result
 	when
