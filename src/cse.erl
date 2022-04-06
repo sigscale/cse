@@ -510,7 +510,7 @@ find_resource(ID) when is_list(ID) ->
 %% @doc Delete an entry from the Resource Specification table.
 delete_resource_spec(ID) when is_list(ID) ->
 	F = fun() ->
-			case mnesia:read(resource, ID, write) of
+			case mnesia:read(resource_spec, ID, write) of
 				[#resource_spec{id = ID}] ->
 					mnesia:delete(resource_spec, ID, write);
 				[] ->
