@@ -109,6 +109,9 @@ do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 do_delete(Resource, ModData,
 		["resourceInventoryManagement", "v4", "resource", Id]) ->
 	do_response(ModData, Resource:delete_resource(Id));
+do_delete(Resource, ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification", Id]) ->
+	do_response(ModData, Resource:delete_resource_spec(Id));
 do_delete(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
 			title => "Not Found",

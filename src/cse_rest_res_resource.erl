@@ -23,7 +23,8 @@
 
 % export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
--export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1]).
+-export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1,
+		delete_resource_spec/1]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
 % export cse_rest_res_resource private API
 -export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1]).
@@ -157,6 +158,21 @@ add_resource_spec2({ok, #resource_spec{href = Href,
 	{ok, Headers, Body};
 add_resource_spec2({error, _Reason}) ->
 	{error, 400}.
+
+-spec delete_resource_spec(Id) -> Result
+	when
+		Id :: string(),
+		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
+				| {error, ErrorCode :: integer()} .
+%% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
+%%    request to remove a table entry.
+delete_resource_spec(Id) ->
+	case cse:delete_resource_spec(Id) of
+		ok ->
+			{ok, [], []};
+		{error, _Reason} ->
+			{error, 400}
+	end.
 
 -spec get_resource(Id) -> Result
 	when
