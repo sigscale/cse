@@ -26,7 +26,7 @@
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 %% export test cases
--export([get_specs/0, get_specs/1]).
+-export([resource_spec_add/0, resource_spec_add/1, get_specs/0, get_specs/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -96,11 +96,31 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[get_specs].
+	[resource_spec_add, get_specs].
 
 %%---------------------------------------------------------------------
 %%  Test cases
 %%---------------------------------------------------------------------
+
+resource_spec_add() ->
+	[{userdata, [{doc, "POST to Resource Specification collection"}]}].
+
+resource_spec_add(Config) ->
+	HostUrl = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	Name = "DynamicRowSpec",
+	ResourceSpec = row_resource_spec(Name),
+	RequestBody = zj:encode(cse_rest_res_resource:resource_spec(ResourceSpec)),
+	Request = {HostUrl ++ ?specPath,
+			[Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(ResponseBody)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, #{} = ResourceSpecMap} = zj:decode(ResponseBody),
+	is_resource_spec(ResourceSpecMap).
 
 get_specs() ->
 	[{userdata, [{doc, "Retrieve Resource Specification collection"}]}].
@@ -126,4 +146,54 @@ get_specs(Config) ->
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
+
+row_resource_spec(Name) ->
+	TS = erlang:system_time(millisecond),
+	N = erlang:unique_integer([positive]),
+	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
+	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	#resource_spec{name = Name,
+			description = "Dynamic table row specification",
+			version = "1.1",
+			status = active,
+			category = "DynamicPrefixRow",
+			related = [#resource_spec_rel{id = Id,
+					href = ?specPath ++ Id, name = "DynamicPrefixTable",
+					rel_type = "contained"},
+				#resource_spec_rel{id = TableId,
+					href = ?specPath ++ TableId,
+					name = "PrefixTable", rel_type = "based"}],
+			characteristic = [#resource_spec_char{name = "prefix",
+					description = "Prefix to match",
+					value_type = "String"},
+				#resource_spec_char{name = "value",
+					description = "Value returned from prefix match",
+					value_type = "Integer"}]}.
+
+is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
+		"description" := Description, "version" := Version,
+		"lifecycleStatus" := Status, "category" := Category,
+		"resourceSpecRelationship" := Rels,
+		"resourceSpecCharacteristic" := Chars})
+		when is_list(Id), is_list(Href), is_list(Name), is_list(Description),
+		is_list(Version), is_list(Status), is_list(Category),
+		is_list(Rels), is_list(Chars) ->
+	true = lists:all(fun is_resource_spec_rel/1, Rels),
+	lists:all(fun is_resource_spec_char/1, Chars);
+is_resource_spec(_S) ->
+	false.
+
+is_resource_spec_rel(#{"id" := Id, href := Href, "name" := Name,
+		"relationshipType" := RelType}) when is_list(Id), is_list(Href),
+		is_list(Name), is_list(RelType) ->
+	true;
+is_resource_spec_rel(_R) ->
+	false.
+
+is_resource_spec_char(#{"name" := Name, "description" := Des,
+		"valueType" := ValType}) when is_list(Name),
+		is_list(Des), is_list(ValType) ->
+	true;
+is_resource_spec_char(_C) ->
+	false.
 
