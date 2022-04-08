@@ -166,6 +166,9 @@ add_resource_spec2({error, _Reason}) ->
 				| {error, ErrorCode :: integer()} .
 %% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
 %%    request to remove a table entry.
+delete_resource_spec(Id) when Id == ?PREFIX_TABLE_SPEC;
+		Id == ?PREFIX_ROW_SPEC ->
+	{error, 400};
 delete_resource_spec(Id) ->
 	case cse:delete_resource_spec(Id) of
 		ok ->

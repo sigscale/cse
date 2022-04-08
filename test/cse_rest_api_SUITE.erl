@@ -28,7 +28,8 @@
 %% export test cases
 -export([resource_spec_add/0, resource_spec_add/1,
 		resource_spec_retrieve_static/0, resource_spec_retrieve_static/1,
-		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1]).
+		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1,
+		resource_spec_delete_static/0, resource_spec_delete_static/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -99,7 +100,7 @@ sequences() ->
 %%
 all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
-			resource_spec_retrieve_dynamic].
+			resource_spec_retrieve_dynamic, resource_spec_delete_static].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -166,6 +167,17 @@ resource_spec_retrieve_dynamic(Config) ->
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers2),
 	{ok, RowSpec} = zj:decode(Body2),
 	true = is_resource_spec(RowSpec).
+
+resource_spec_delete_static() ->
+	[{userdata, [{doc,"Delete Static Resource Specification"}]}].
+
+resource_spec_delete_static(Config) ->
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	Request = {Host ++ ?specPath ++ TableId, [Accept]},
+	{ok, Result} = httpc:request(delete, Request, [], []),
+	{{"HTTP/1.1", 400, _BadRequest}, _Headers, _Body} = Result.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
