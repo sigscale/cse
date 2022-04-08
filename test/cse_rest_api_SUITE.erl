@@ -29,7 +29,8 @@
 -export([resource_spec_add/0, resource_spec_add/1,
 		resource_spec_retrieve_static/0, resource_spec_retrieve_static/1,
 		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1,
-		resource_spec_delete_static/0, resource_spec_delete_static/1]).
+		resource_spec_delete_static/0, resource_spec_delete_static/1,
+		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -100,7 +101,8 @@ sequences() ->
 %%
 all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
-			resource_spec_retrieve_dynamic, resource_spec_delete_static].
+			resource_spec_retrieve_dynamic, resource_spec_delete_static,
+			resource_spec_delete_dynamic].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -179,6 +181,20 @@ resource_spec_delete_static(Config) ->
 	{ok, Result} = httpc:request(delete, Request, [], []),
 	{{"HTTP/1.1", 400, _BadRequest}, _Headers, _Body} = Result.
 
+resource_spec_delete_dynamic() ->
+	[{userdata, [{doc,"Delete Dynamic Resource Specification"}]}].
+
+resource_spec_delete_dynamic(Config) ->
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	ResourceSpec = table_resource_spec("DynamicTableSpec1"),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(ResourceSpec),
+	Request = {Host ++ ?specPath ++ Id, [Accept]},
+	{ok, Result1} = httpc:request(delete, Request, [], []),
+	{{"HTTP/1.1", 204, _NoContent}, _Headers1, []} = Result1,
+	{ok, Result2} = httpc:request(get, Request, [], []),
+	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -205,6 +221,17 @@ row_resource_spec(Name) ->
 				#resource_spec_char{name = "value",
 					description = "Value returned from prefix match",
 					value_type = "Integer"}]}.
+
+table_resource_spec(Name) ->
+	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	#resource_spec{name = Name,
+			description = "Dynamic table specification",
+			version = "1.1",
+			status = "active",
+			category = "DynamicPrefixTable",
+			related = [#resource_spec_rel{id = TableId,
+					href = ?specPath ++ TableId,
+					name = "PrefixTable", rel_type = "based"}]}.
 
 is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
 		"description" := Description, "version" := Version,
