@@ -27,6 +27,7 @@
 
 %% export test cases
 -export([resource_spec_add/0, resource_spec_add/1,
+		resource_spec_retrieve_static/0, resource_spec_retrieve_static/1,
 		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1]).
 
 -include("cse.hrl").
@@ -97,7 +98,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[resource_spec_add,
+	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic].
 
 %%---------------------------------------------------------------------
@@ -123,6 +124,26 @@ resource_spec_add(Config) ->
 	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
 	{ok, #{} = ResourceSpecMap} = zj:decode(ResponseBody),
 	is_resource_spec(ResourceSpecMap).
+
+resource_spec_retrieve_static() ->
+	[{userdata, [{doc, "Retrieve Static Resource Specifications"}]}].
+
+resource_spec_retrieve_static(Config) ->
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	Request1 = {Host ++ ?specPath ++ TableId, [Accept]},
+	{ok, Result1} = httpc:request(get, Request1, [], []),
+	{{"HTTP/1.1", 200, _}, Headers1, Body1} = Result1,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers1),
+	{ok, TableSpec} = zj:decode(Body1),
+	RowId = cse_rest_res_resource:prefix_row_spec_id(),
+	Request2 = {Host ++ ?specPath ++ RowId, [Accept]},
+	{ok, Result2} = httpc:request(get, Request2, [], []),
+	{{"HTTP/1.1", 200, _}, Headers2, Body2} = Result2,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers2),
+	{ok, RowSpec} = zj:decode(Body2),
+	true = lists:all(fun is_resource_spec/1, [TableSpec, RowSpec]).
 
 resource_spec_retrieve_dynamic() ->
 	[{userdata, [{doc, "Retrieve  Resource Specification collection"}]}].
@@ -183,6 +204,12 @@ is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
 		is_list(Rels), is_list(Chars) ->
 	true = lists:all(fun is_resource_spec_rel/1, Rels),
 	lists:all(fun is_resource_spec_char/1, Chars);
+is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
+		"description" := Description, "version" := Version,
+		"lastUpdate" := LastUpdate, "category" := Category})
+		when is_list(Id), is_list(Href), is_list(Name), is_list(Description),
+		is_list(Version), is_list(LastUpdate), is_list(Category) ->
+	true;
 is_resource_spec(_S) ->
 	false.
 
@@ -193,9 +220,8 @@ is_resource_spec_rel(#{"id" := Id, "href" := Href, "name" := Name,
 is_resource_spec_rel(_R) ->
 	false.
 
-is_resource_spec_char(#{"name" := Name, "description" := Des,
-		"valueType" := ValType}) when is_list(Name),
-		is_list(Des), is_list(ValType) ->
+is_resource_spec_char(#{"name" := Name, "description" := Des})
+		when is_list(Name), is_list(Des) ->
 	true;
 is_resource_spec_char(_C) ->
 	false.
