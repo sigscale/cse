@@ -26,7 +26,8 @@
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 %% export test cases
--export([resource_spec_add/0, resource_spec_add/1, get_specs/0, get_specs/1]).
+-export([resource_spec_add/0, resource_spec_add/1,
+		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -96,7 +97,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[resource_spec_add, get_specs].
+	[resource_spec_add,
+			resource_spec_retrieve_dynamic].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -122,26 +124,27 @@ resource_spec_add(Config) ->
 	{ok, #{} = ResourceSpecMap} = zj:decode(ResponseBody),
 	is_resource_spec(ResourceSpecMap).
 
-get_specs() ->
-	[{userdata, [{doc, "Retrieve Resource Specification collection"}]}].
+resource_spec_retrieve_dynamic() ->
+	[{userdata, [{doc, "Retrieve  Resource Specification collection"}]}].
 
-get_specs(Config) ->
-	Host = ?config(host, Config),
+resource_spec_retrieve_dynamic(Config) ->
+	HostUrl = ?config(host, Config),
+	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
-	Request = {Host ++ ?specPath, [Accept]},
-	{ok, Result} = httpc:request(get, Request, [], []),
-	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
-	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
-	{ok, L} = zj:decode(Body),
-	true = length(L) >= 2,
-	F = fun(#{"id" := Id, "href" := Href,
-					"resourceSpecCharacteristic" := Chars})
-					when is_list(Id), is_list(Href), is_list(Chars) ->
-				true;
-			(#{}) ->
-				false
-	end,
-	lists:all(F, L).
+	Name = "DynamicRowSpec2",
+	ResourceSpec = row_resource_spec(Name),
+	RequestBody = zj:encode(cse_rest_res_resource:resource_spec(ResourceSpec)),
+	Request1 = {HostUrl ++ ?specPath, [Accept], ContentType, RequestBody},
+	{ok, Result1} = httpc:request(post, Request1, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers1, _ResponseBody1} = Result1,
+	{_, URI} = lists:keyfind("location", 1, Headers1),
+	{?specPath ++ ID, _} = httpd_util:split_path(URI),
+	Request2 = {HostUrl ++ ?specPath ++ ID, [Accept]},
+	{ok, Result2} = httpc:request(get, Request2, [], []),
+	{{"HTTP/1.1", 200, _OK}, Headers2, Body2} = Result2,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers2),
+	{ok, RowSpec} = zj:decode(Body2),
+	true = is_resource_spec(RowSpec).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
@@ -155,7 +158,7 @@ row_resource_spec(Name) ->
 	#resource_spec{name = Name,
 			description = "Dynamic table row specification",
 			version = "1.1",
-			status = active,
+			status = "active",
 			category = "DynamicPrefixRow",
 			related = [#resource_spec_rel{id = Id,
 					href = ?specPath ++ Id, name = "DynamicPrefixTable",
@@ -172,18 +175,18 @@ row_resource_spec(Name) ->
 
 is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
 		"description" := Description, "version" := Version,
-		"lifecycleStatus" := Status, "category" := Category,
+		"lastUpdate" := LastUpdate, "category" := Category,
 		"resourceSpecRelationship" := Rels,
 		"resourceSpecCharacteristic" := Chars})
 		when is_list(Id), is_list(Href), is_list(Name), is_list(Description),
-		is_list(Version), is_list(Status), is_list(Category),
+		is_list(Version), is_list(LastUpdate), is_list(Category),
 		is_list(Rels), is_list(Chars) ->
 	true = lists:all(fun is_resource_spec_rel/1, Rels),
 	lists:all(fun is_resource_spec_char/1, Chars);
 is_resource_spec(_S) ->
 	false.
 
-is_resource_spec_rel(#{"id" := Id, href := Href, "name" := Name,
+is_resource_spec_rel(#{"id" := Id, "href" := Href, "name" := Name,
 		"relationshipType" := RelType}) when is_list(Id), is_list(Href),
 		is_list(Name), is_list(RelType) ->
 	true;
