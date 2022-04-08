@@ -345,7 +345,7 @@ add_resource_spec(#resource_spec{name = Name,
 		when is_list(Name) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
-	Id = integer_to_list(TS) ++ integer_to_list(N),
+	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
 	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
 	NewSpecification = ResourceSpecification#resource_spec{id = Id,
