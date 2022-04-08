@@ -123,7 +123,7 @@ resource_spec_add(Config) ->
 	ContentLength = integer_to_list(length(ResponseBody)),
 	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
 	{ok, #{} = ResourceSpecMap} = zj:decode(ResponseBody),
-	is_resource_spec(ResourceSpecMap).
+	true = is_resource_spec(ResourceSpecMap).
 
 resource_spec_retrieve_static() ->
 	[{userdata, [{doc, "Retrieve Static Resource Specifications"}]}].
