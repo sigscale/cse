@@ -339,21 +339,26 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 		Result :: {ok, Specification} | {error, Reason},
 		Reason :: term().
 %% @doc Add an entry in the Resource Specification table.
-add_resource_spec(#resource_spec{name = Name,
-		id = undefined, href = undefined,
-		last_modified = undefined} = ResourceSpecification)
-		when is_list(Name) ->
+add_resource_spec(#resource_spec{name = Name, id = undefined,
+		href = undefined, last_modified = undefined, related = Rels}
+		= ResourceSpecification) when is_list(Name) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
 	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
-	NewSpecification = ResourceSpecification#resource_spec{id = Id,
-			href = Href, last_modified = LM},
-	F = fun() ->
-			mnesia:write(NewSpecification)
+	NewSpec = case lists:keytake("based", #resource_spec_rel.rel_type, Rels) of
+		{value, BasedRel, Rest} ->
+			ResourceSpecification#resource_spec{id = Id,
+					href = Href, last_modified = LM, related = [BasedRel | Rest]};
+		false ->
+			ResourceSpecification#resource_spec{id = Id,
+					href = Href, last_modified = LM}
 	end,
-	add_resource_spec1(mnesia:transaction(F), NewSpecification).
+	F = fun() ->
+			mnesia:write(NewSpec)
+	end,
+	add_resource_spec1(mnesia:transaction(F), NewSpec).
 %% @hidden
 add_resource_spec1({atomic, ok}, #resource_spec{} = NewSpecification) ->
 	{ok, NewSpecification};
