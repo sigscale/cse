@@ -30,7 +30,8 @@
 		resource_spec_retrieve_static/0, resource_spec_retrieve_static/1,
 		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1,
 		resource_spec_delete_static/0, resource_spec_delete_static/1,
-		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1]).
+		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
+		resource_spec_query_based/0, resource_spec_query_based/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -102,7 +103,7 @@ sequences() ->
 all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
-			resource_spec_delete_dynamic].
+			resource_spec_delete_dynamic, resource_spec_query_based].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -200,6 +201,39 @@ resource_spec_delete_dynamic(Config) ->
 	{{"HTTP/1.1", 204, _NoContent}, _Headers1, []} = Result1,
 	{ok, Result2} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
+
+resource_spec_query_based() ->
+	[{userdata, [{doc,"Query Resource Specifications based on"
+			"resource specification relathioship type"}]}].
+
+resource_spec_query_based(Config) ->
+	Host = ?config(host, Config),
+	TableName = "DynamicTableSpec2",
+	ResTableSpec = table_resource_spec(TableName),
+	{ok, #resource_spec{id = TableId}} = cse:add_resource_spec(ResTableSpec),
+	ResRowSpec = row_resource_spec("DynamicRowSpec3", TableId, TableName),
+	{ok, #resource_spec{}} = cse:add_resource_spec(ResRowSpec),
+	Accept = {"accept", "application/json"},
+	Query = "?resourceSpecRelationship.relationshipType=based",
+	Request = {Host ++ lists:droplast(?specPath) ++ Query, [Accept]},
+	{ok, Result} = httpc:request(get, Request, [], []),
+	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(Body)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, ResSpecs} = zj:decode(Body),
+	true = length(ResSpecs) >= 2,
+	F1 = fun(#{"resourceSpecRelationship" := Rels}) ->
+		F2 = fun F2([#{"relationshipType" := "based"} | _]) ->
+					true;
+				F2([_ | T]) ->
+					F2(T);
+				F2([]) ->
+					false
+		end,
+		F2(Rels)
+	end,
+	true = lists:all(F1, ResSpecs).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

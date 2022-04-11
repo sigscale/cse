@@ -600,10 +600,10 @@ query_resource_spec2(Cont, MatchHead1, {Op, String}, MatchRelType)
 	MatchHead2 = case lists:last(String) of
 		$% when Op == like ->
 			MatchHead1#resource_spec{related = [#resource_spec_rel{id
-					= lists:droplast(String) ++ '_', _ = '_'}]};
+					= lists:droplast(String) ++ '_', _ = '_'} | _ = '_']};
 		_ ->
 			MatchHead1#resource_spec{related
-					= [#resource_spec_rel{id = String, _ = '_'}]}
+					= [#resource_spec_rel{id = String, _ = '_'} | _ = '_']}
 	end,
 	query_resource_spec3(Cont, MatchHead2, MatchRelType).
 %% @hidden
@@ -615,10 +615,10 @@ query_resource_spec3(Cont, MatchHead1, {Op, String})
 	MatchHead2 = case lists:last(String) of
 		$% when Op == like ->
 			MatchHead1#resource_spec{related = [#resource_spec_rel{rel_type
-					= lists:droplast(String) ++ '_', _ = '_'}]};
+					= lists:droplast(String) ++ '_', _ = '_'} | _ = '_']};
 		_ ->
 			MatchHead1#resource_spec{related
-					= [#resource_spec_rel{rel_type = String, _ = '_'}]}
+					= [#resource_spec_rel{rel_type = String, _ = '_'} | _ = '_']}
 	end,
 	MatchSpec = [{MatchHead2, [], ['$_']}],
 	query_resource_spec4(Cont, MatchSpec).
