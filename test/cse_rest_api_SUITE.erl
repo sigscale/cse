@@ -57,7 +57,7 @@ init_per_suite(Config) ->
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, PrivDir),
 	ok = cse_test_lib:init_tables(),
-	ok = cse_test_lib:start([inets]),
+	ok = cse_test_lib:start(),
 	Modules = [mod_responsecontrol,
 			mod_cse_rest_accepted_content, mod_cse_rest_get,
 			mod_get, mod_cse_rest_post, mod_cse_rest_delete,
