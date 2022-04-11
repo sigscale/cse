@@ -77,7 +77,6 @@ callback_mode() ->
 %% @see //stdlib/gen_statem:init/1
 %% @private
 init([Address, Port, Options] = _Args) ->
-	process_flag(trap_exit, true),
 	{TOptions1, SOptions1} = split_options(Options),
 	TOptions2 = transport_options(TOptions1, Address, Port),
 	SOptions2 = service_options(SOptions1),
@@ -85,6 +84,7 @@ init([Address, Port, Options] = _Args) ->
 	diameter:subscribe(SvcName),
 	case diameter:start_service(SvcName, SOptions2) of
 		ok ->
+		process_flag(trap_exit, true),
 			case diameter:add_transport(SvcName, TOptions2) of
 				{ok, Ref} ->
 					Data = #{transport_ref => Ref, address => Address,
