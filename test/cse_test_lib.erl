@@ -7,7 +7,7 @@
 -export([start/0, start/1, stop/0, stop/1]).
 -export([load/1, unload/1]).
 
--define(Applications, [mnesia, inets, asn1, snmp, sigscale_mibs, m3ua, tcap, gtt, cse]).
+-define(Applications, [mnesia, inets, asn1, snmp, sigscale_mibs, m3ua, tcap, gtt, diameter, cse]).
 -define(TIMEOUT, 1000).
 
 -spec init_tables() -> Result
