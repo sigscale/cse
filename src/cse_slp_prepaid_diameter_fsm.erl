@@ -40,14 +40,20 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([]).
+-export([null/3]).
 %% export the private api
 -export([]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("cse/include/cse_codec.hrl").
+-include_lib("diameter/include/diameter.hrl").
+-include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
+-include("diameter_gen_ietf.hrl").
+-include("diameter_gen_3gpp.hrl").
+-include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_cc_application_rfc4006.hrl").
 
--type state() :: init.
+-type state() :: null.
 
 -type statedata() :: #{nrf_profile => atom(),
 		nrf_uri => string(),
@@ -66,7 +72,7 @@
 %% @private
 %%
 callback_mode() ->
-	[].
+	[state_functions, state_enter].
 
 -spec init(Args) -> Result
 	when
@@ -85,7 +91,26 @@ callback_mode() ->
 %% @see //stdlib/gen_statem:init/1
 %% @private
 init(_Args) ->
-	ignore.
+	{ok, null, #{}}.
+
+-spec null(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>null</em> state.
+%% @private
+null(enter, null = _EventContent, _Data) ->
+	keep_state_and_data;
+null({call, From}, #'3gpp_ro_CCR'{} = EventContent, Data) ->
+	{ok, Profile} = application:get_env(cse, nrf_profile),
+	{ok, URI} = application:get_env(cse, nrf_uri),
+	NewData = Data#{from => From, bill_profile => Profile, bill_uri => URI},
+	Actions = [{next_event, internal, EventContent}],
+	{next_state, collect_information, NewData, Actions};
+null(enter, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
