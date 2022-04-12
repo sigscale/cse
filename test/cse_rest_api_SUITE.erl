@@ -32,7 +32,8 @@
 		resource_spec_delete_static/0, resource_spec_delete_static/1,
 		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
 		resource_spec_query_based/0, resource_spec_query_based/1,
-		add_table_resource/0, add_table_resource/1]).
+		add_table_resource/0, add_table_resource/1,
+		add_row_resource/0, add_row_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -105,7 +106,7 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_table_resource].
+			add_table_resource, add_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -259,10 +260,49 @@ add_table_resource(Config) ->
 	{ok, #{} = ResourceMap} = zj:decode(ResponseBody),
 	true = is_resource(ResourceMap).
 
+add_row_resource() ->
+	[{userdata, [{doc,"Add prefix row resource in rest interface"}]}].
+
+add_row_resource(Config) ->
+	TableName = "examplePrefixTable2",
+	cse_gtt:new(TableName, []),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource(Cont1,
+						'_', {exact, TableName}, '_', '_'),
+				F(Cont2, [L | Acc])
+   end,
+	[#resource{id = TableId} | _] = F(start, []),
+	Resource = prefix_row(TableId, TableName),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(ResponseBody)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, #{} = ResourceMap} = zj:decode(ResponseBody),
+	true = is_resource(ResourceMap).
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
 
+is_resource(#{"id" := Id, "href" := Href, "name" := Name,
+		"description" := Description, "version" := Version,
+		"lastUpdate" := LastUpdate, "category" := Category,
+		"resourceSpecification" := ResourceSpec,
+		"resourceCharacteristic" := Chars, "resourceRelationship" := Rels})
+		when is_list(Id), is_list(Href), is_list(Name), is_list(Description),
+		is_list(Version), is_list(LastUpdate), is_list(Category),
+		is_map(ResourceSpec), is_list(Chars), is_list(Rels) ->
+	true = is_resource_spec_ref(ResourceSpec),
+	true = lists:all(fun is_resource_rel/1, Rels),
+	lists:all(fun is_resource_char/1, Chars);
 is_resource(#{"id" := Id, "href" := Href, "name" := Name,
 		"description" := Description, "version" := Version,
 		"lastUpdate" := LastUpdate, "category" := Category,
@@ -280,6 +320,19 @@ is_resource_spec_ref(#{"id" := SpecId, "href" := SpecHref, "name" := SpecName})
 is_resource_spec_ref(_) ->
 	false.
 
+is_resource_rel(#{"relationshipType" := "contained",
+		"resource" := #{"id" := ResId, "href" := ResHref, "name" := ResName}})
+		when is_list(ResId), is_list(ResHref), is_list(ResName) ->
+	true;
+is_resource_rel(_R) ->
+	false.
+
+is_resource_char(#{"name" := Name, "value" := Value})
+		when is_list(Name), is_list(Value) ->
+	true;
+is_resource_char(_) ->
+	false.
+
 prefix_table(Name) ->
 	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	#resource{name = Name, description = "Prefix Table", category = "Prefix",
@@ -288,6 +341,20 @@ prefix_table(Name) ->
 					href = "/resourceCatalogManagement/v4/resourceSpecification/"
 							++ SpecId,
 					name = "PrefixTable"}}.
+
+prefix_row(TableId, TableName) ->
+	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
+	#resource{name = "examplePrefixRow", description = "Policy Row",
+			category = "Policy", base_type = "Resource", version = "1.0",
+			related = [#resource_rel{id = TableId,
+					href = "/resourceInventoryManagement/v1/resource/"
+					++ TableId, name = TableName, rel_type = "contained"}],
+			specification = #resource_spec_ref{id = SpecId,
+					href = "/resourceCatalogManagement/v2/resourceSpecification/"
+							++ SpecId,
+					name = "examplePrefixTable"},
+			characteristic = [#resource_char{name = "prefix", value = "15796"},
+					#resource_char{name = "value", value = "hello world"}]}.
 
 row_resource_spec(Name, TableId, TableName) ->
 	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),

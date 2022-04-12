@@ -372,11 +372,13 @@ clear_table(Table) when is_atom(Table) ->
 add_resource(Table) when is_atom(Table) ->
 	add_resource(atom_to_list(Table));
 add_resource(Table) when is_list(Table) ->
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	Resource = #resource{name = Table,
 			description = Table ++ " prefix table",
-			specification = #resource_spec_ref{id = "1",
-			href = "/resourceCatalogManagement/v4/resourceSpecification/1",
-			name = "PrefixTable"}},
+			specification = #resource_spec_ref{id = TableSpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ TableSpecId,
+					name = "PrefixTable"}},
 	case cse:add_resource(Resource) of
 		{ok, #resource{}} ->
 			ok;
