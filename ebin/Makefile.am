@@ -19,6 +19,7 @@ beam_DATA = cse.beam \
 		cse_slp_inap_fsm.beam \
 		cse_slp_prepaid_cap_fsm.beam \
 		cse_slp_prepaid_inap_fsm.beam \
+		cse_slp_prepaid_diameter_fsm.beam \
 		cse_tco_server_cb.beam \
 		cse_codec.beam \
 		cse_log.beam \

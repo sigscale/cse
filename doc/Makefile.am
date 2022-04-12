@@ -17,6 +17,7 @@ modhtml = cse.html \
 		cse_slp_inap_fsm.html \
 		cse_slp_prepaid_cap_fsm.html \
 		cse_slp_prepaid_inap_fsm.html \
+		cse_slp_prepaid_diameter_fsm.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \

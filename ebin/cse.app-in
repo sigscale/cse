@@ -16,6 +16,7 @@
 				cse_slp_inap_fsm,
 				cse_slp_prepaid_cap_fsm,
 				cse_slp_prepaid_inap_fsm,
+				cse_slp_prepaid_diameter_fsm,
 				cse_tco_server_cb,
 				cse_codec,
 				cse_log,
