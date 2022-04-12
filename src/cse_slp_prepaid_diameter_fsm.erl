@@ -49,7 +49,10 @@
 
 -type state() :: init.
 
--type statedata() :: #{}.
+-type statedata() :: #{nrf_profile => atom(),
+		nrf_uri => string(),
+		nrf_location => string() | undefined,
+		nrf_reqid => reference() | undefined}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_prepaid_diameter_fsm gen_statem callbacks
@@ -134,5 +137,4 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
-
 
