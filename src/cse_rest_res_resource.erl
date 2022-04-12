@@ -415,7 +415,7 @@ add_resource3(Resource,
 	add_resource_prefix_row(Resource);
 add_resource3(Resource,
 		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
-	add_resource_result(add_resource_prefix_table(Resource));
+	add_resource_prefix_table(Resource);
 add_resource3(Resource, [_ | T]) ->
 	add_resource3(Resource, T);
 add_resource3(Resource, []) ->
