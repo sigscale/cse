@@ -32,6 +32,10 @@
 
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
+-include("diameter_gen_ietf.hrl").
+-include("diameter_gen_3gpp.hrl").
+-include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_cc_application_rfc4006.hrl").
 
 -record(state, {}).
 
@@ -155,9 +159,9 @@ handle_error(_Reason, _Request, _ServiceName, _Peer) ->
 		Opt :: diameter:call_opt(),
 		PostF :: diameter:evaluable().
 %% @doc Invoked when a request message is received from the peer.
-handle_request(#diameter_packet{msg = _Request, errors = []} = _Packet,
-		{_, _IpAddress, _Port} = _ServiceName, {_, _Capabilities} = _Peer) ->
-	discard;
+handle_request(#diameter_packet{msg = Request, errors = []} = _Packet,
+		{_, IpAddress, Port} = _ServiceName, {_, Capabilities} = _Peer) ->
+	{reply, process_request(IpAddress, Port, Capabilities, Request)};
 handle_request(#diameter_packet{msg = Request, errors = Errors} = _Packet,
 		ServiceName, {_, Caps} = _Peer) ->
 	errors(ServiceName, Caps, Request, Errors).
@@ -229,4 +233,78 @@ errors(_ServiceName, _Capabilities, _Request, [{ResultCode, _} | _]) ->
 	{answer_message, ResultCode};
 errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 	{answer_message, ResultCode}.
+
+-spec process_request(IpAddress, Port, Caps, Request) -> Result
+	when
+		IpAddress :: inet:ip_address(),
+		Port :: inet:port_number(),
+		Request :: #'3gpp_ro_CCR'{},
+		Caps :: capabilities(),
+		Result :: packet() | message().
+%% @doc Process a received DIAMETER packet.
+%% @private
+process_request(_IpAddress, _Port,
+		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'Auth-Application-Id' = ?RO_APPLICATION_ID,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum} = Request)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
+	try
+		Children = supervisor:which_children(cse_sup),
+		{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
+		 supervisor:start_child(SlpSup, [cse_slp_prepaid_diameter_fsm, [], []])
+	of
+		{ok, Child} ->
+			Reply = gen_statem:call(Child, Request),
+			{ok, _Session} = cse:add_session(SessionId, Child),
+			Reply;
+		{ok, Child, _Info} ->
+			Reply = gen_statem:call(Child, Request),
+			{ok, _Session} = cse:add_session(SessionId, Child),
+			Reply;
+		{error, Reason} ->
+			error_logger:error_report(["Diameter Error",
+					{module, ?MODULE}, {error, Reason},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{type, event_type(RequestType)}]),
+			Reply = diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Reply
+	catch
+		?CATCH_STACK ->
+			?SET_STACK,
+			error_logger:warning_report(["Unable to process DIAMETER request",
+						{origin_host, OHost}, {origin_realm, ORealm},
+						{request, Request}, {error, Reason}, {stack, StackTrace}]),
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
+	end.
+
+-spec diameter_error(SessionId, ResultCode, OriginHost,
+		OriginRealm, RequestType, RequestNum) -> Reply
+	when
+		SessionId :: binary(),
+		ResultCode :: pos_integer(),
+		OriginHost :: string(),
+		OriginRealm :: string(),
+		RequestType :: integer(),
+		RequestNum :: integer(),
+		Reply :: #'3gpp_ro_CCA'{}.
+%% @doc Send CCA to DIAMETER client indicating an operation failure.
+%% @hidden
+diameter_error(SessionId, ResultCode, OHost, ORealm, RequestType, RequestNum) ->
+	#'3gpp_ro_CCA'{'Session-Id' = SessionId, 'Result-Code' = ResultCode,
+			'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+			'Auth-Application-Id' = ?RO_APPLICATION_ID, 'CC-Request-Type' = RequestType,
+			'CC-Request-Number' = RequestNum}.
+
+-spec event_type(RequestType) -> EventType
+	when
+	RequestType :: 1..4,
+	EventType :: start | interim | stop.
+%% @doc Converts CC-Request-Type integer value to a readable atom.
+event_type(?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST') -> start;
+event_type(?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST') -> interim;
+event_type(?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST') -> stop.
 
