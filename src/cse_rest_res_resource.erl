@@ -458,14 +458,7 @@ add_resource_prefix_row(Table,
 	end,
 	Prefix = F("prefix"),
 	{ok, #gtt{}} = cse_gtt:insert(Table, Prefix, F("value")),
-	Id = Table ++ "-" ++ Prefix,
-	Href = "/resourceInventoryManagement/v4/resource/" ++ Id,
-	LM = {erlang:system_time(millisecond), erlang:unique_integer([positive])},
-	Resource1 = Resource#resource{id = Id, href = Href, last_modified = LM},
-	Headers = [{content_type, "application/json"},
-			{location, Href}, {etag, cse_rest:etag(LM)}],
-	Body = zj:encode(resource(Resource1)),
-	{ok, Headers, Body}.
+	add_resource_result(cse:add_resource(Resource)).
 
 %% @hidden
 add_resource_result({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
