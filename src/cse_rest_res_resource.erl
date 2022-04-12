@@ -25,7 +25,8 @@
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1,
 		delete_resource_spec/1, resource_spec/1]).
--export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1]).
+-export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1,
+		resource/1]).
 % export cse_rest_res_resource private API
 -export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1]).
 
@@ -395,7 +396,7 @@ add_resource(RequestBody) ->
 %% @hidden
 add_resource1(#resource{specification
 		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}} = Resource) ->
-	add_resource_result(add_resource_prefix_table(Resource));
+	add_resource_prefix_table(Resource);
 add_resource1(#resource{specification
 		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource) ->
 	add_resource_prefix_row(Resource);

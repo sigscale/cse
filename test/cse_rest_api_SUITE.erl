@@ -31,13 +31,14 @@
 		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1,
 		resource_spec_delete_static/0, resource_spec_delete_static/1,
 		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
-		resource_spec_query_based/0, resource_spec_query_based/1]).
+		resource_spec_query_based/0, resource_spec_query_based/1,
+		add_table_resource/0, add_table_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
--define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
+-define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
 %%---------------------------------------------------------------------
 %%  Test server callback functions
@@ -103,7 +104,8 @@ sequences() ->
 all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
-			resource_spec_delete_dynamic, resource_spec_query_based].
+			resource_spec_delete_dynamic, resource_spec_query_based,
+			add_table_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -235,9 +237,57 @@ resource_spec_query_based(Config) ->
 	end,
 	true = lists:all(F1, ResSpecs).
 
+add_table_resource() ->
+	[{userdata, [{doc,"Add prefix table resource in rest interface"}]}].
+
+add_table_resource(Config) ->
+	TableName = "examplePrefixTable",
+	Options = [{disc_copies, [node() | nodes()]}],
+	{atomic, ok} = mnesia:create_table(list_to_atom(TableName), Options ++
+			[{attributes, record_info(fields, gtt)}, {record_name, gtt}]),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	Resource = prefix_table(TableName),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(ResponseBody)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, #{} = ResourceMap} = zj:decode(ResponseBody),
+	true = is_resource(ResourceMap).
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
+
+is_resource(#{"id" := Id, "href" := Href, "name" := Name,
+		"description" := Description, "version" := Version,
+		"lastUpdate" := LastUpdate, "category" := Category,
+		"resourceSpecification" := ResourceSpec})
+		when is_list(Id), is_list(Href), is_list(Name), is_list(Description),
+		is_list(Version), is_list(LastUpdate),
+		is_list(Category), is_map(ResourceSpec) ->
+	is_resource_spec_ref(ResourceSpec);
+is_resource(_S) ->
+	false.
+
+is_resource_spec_ref(#{"id" := SpecId, "href" := SpecHref, "name" := SpecName})
+		when is_list(SpecId), is_list(SpecHref), is_list(SpecName) ->
+	true;
+is_resource_spec_ref(_) ->
+	false.
+
+prefix_table(Name) ->
+	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	#resource{name = Name, description = "Prefix Table", category = "Prefix",
+			base_type = "Resource", version = "1.0",
+			specification = #resource_spec_ref{id = SpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ SpecId,
+					name = "PrefixTable"}}.
 
 row_resource_spec(Name, TableId, TableName) ->
 	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),
