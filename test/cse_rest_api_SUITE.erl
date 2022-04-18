@@ -33,7 +33,7 @@
 		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
 		resource_spec_query_based/0, resource_spec_query_based/1,
 		add_table_resource/0, add_table_resource/1,
-		add_row_resource/0, add_row_resource/1]).
+		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -106,7 +106,7 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_table_resource, add_row_resource].
+			add_table_resource, add_row_resource, get_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -287,6 +287,30 @@ add_row_resource(Config) ->
 	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
 	{ok, #{} = ResourceMap} = zj:decode(ResponseBody),
 	true = is_resource(ResourceMap).
+
+get_resource() ->
+	[{userdata, [{doc, "Retrieve Prefix Resource"}]}].
+
+get_resource(Config) ->
+	TableName = "tempPrefixTable",
+	cse_gtt:new(TableName, []),
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource(Cont1,
+						'_', {exact, TableName}, '_', '_'),
+				F(Cont2, [L | Acc])
+	end,
+	[#resource{id = TableId} | _] = F(start, []),
+	{ok, #resource{id = Id}}= cse:add_resource(prefix_row(TableId, TableName)),
+	Request = {Host ++ ?inventoryPath ++ Id, [Accept]},
+	{ok, Result} = httpc:request(get, Request, [], []),
+	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	{ok, Resource} = zj:decode(Body),
+	true = is_resource(Resource).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

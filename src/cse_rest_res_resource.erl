@@ -188,33 +188,15 @@ delete_resource_spec(Id) ->
 %% @doc Respond to `GET /resourceInventoryManagement/v4/resource/{id}'.
 %%    Retrieve resource from inventory management.
 get_resource(Id) ->
-	try
-		string:tokens(Id, "-")
-	of
-		[Table, Prefix] ->
-			LM = {erlang:system_time(millisecond),
-					erlang:unique_integer([positive])},
+	case cse:find_resource(Id) of
+		{ok, #resource{last_modified = LM} = Resource} ->
 			Headers = [{content_type, "application/json"},
-					{etag, cse_rest:etag(LM)}],
-			Value = cse_gtt:lookup_first(Table, Prefix),
-			Body = zj:encode(gtt(Table, {Prefix, Value})),
-			{ok, Headers, Body};
-		_ ->
-			case cse:find_resource(Id) of
-				{ok, #resource{last_modified = LM} = Resource} ->
-					Headers = [{content_type, "application/json"},
 							{etag, cse_rest:etag(LM)}],
-					Body = zj:encode(resource(Resource)),
+			Body = zj:encode(resource(Resource)),
 					{ok, Headers, Body};
-				{error, not_found} ->
-					{error, 404};
-				{error, _Reason} ->
-					{error, 500}
-			end
-	catch
-		error:badarg ->
+		{error, not_found} ->
 			{error, 404};
-		_:_Reason1 ->
+		{error, _Reason} ->
 			{error, 500}
 	end.
 
