@@ -229,10 +229,6 @@ get_resource(Query, Headers) ->
 					{Query, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
 		end
 	of
-		{Query2, [_, _, {exact, ?PREFIX_ROW_SPEC}, {exact, Table}]} ->
-			Codec = fun gtt/2,
-			query_filter({cse_gtt, list, [list_to_existing_atom(Table)]},
-					Codec, Query2, Headers);
 		{Query2, Args} ->
 			Codec = fun resource/1,
 			query_filter({cse, query_resource, Args}, Codec, Query2, Headers)

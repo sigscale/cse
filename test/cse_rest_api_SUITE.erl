@@ -33,7 +33,8 @@
 		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
 		resource_spec_query_based/0, resource_spec_query_based/1,
 		add_table_resource/0, add_table_resource/1,
-		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1]).
+		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1,
+		query_resource/0, query_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -106,7 +107,7 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_table_resource, add_row_resource, get_resource].
+			add_table_resource, add_row_resource, get_resource, query_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -311,6 +312,54 @@ get_resource(Config) ->
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
 	{ok, Resource} = zj:decode(Body),
 	true = is_resource(Resource).
+
+query_resource() ->
+	[{userdata, [{doc,"Query Resource collection"}]}].
+
+query_resource(Config) ->
+	TableName = "testPrefixTable",
+	cse_gtt:new(TableName, []),
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource(Cont1,
+						'_', {exact, TableName}, '_', '_'),
+				F(Cont2, [L | Acc])
+	end,
+	[#resource{id = TableId} | _] = F(start, []),
+	{ok, #resource{}}= cse:add_resource(prefix_row(TableId, TableName)),
+	Res = prefix_row(TableId, TableName),
+	PrefixRow2 = Res#resource{name = "testPrefixRow",
+			characteristic = [#resource_char{name = "prefix", value = "14736"},
+					#resource_char{name = "value", value = "testing"}]},
+	{ok, #resource{}} = cse:add_resource(PrefixRow2),
+	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
+	Accept = {"accept", "application/json"},
+	Query = "?resourceRelationship.resource.name=" ++ TableName
+			++ "&resourceSpecification.id=" ++ SpecId,
+	Request = {Host ++ lists:droplast(?inventoryPath) ++ Query, [Accept]},
+	{ok, Result} = httpc:request(get, Request, [], []),
+	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(Body)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, Resources} = zj:decode(Body),
+	true = length(Resources) >= 2,
+	F1 = fun(#{"resourceRelationship" := Rels,
+			"resourceSpecification" := #{"id" := SId}}) when SId == SpecId ->
+		F2 = fun F2([#{"relationshipType" := "contained",
+				"resource" := #{"name" := TN}} | _]) when TN == TableName ->
+					true;
+				F2([_ | T]) ->
+					F2(T);
+				F2([]) ->
+					false
+		end,
+		F2(Rels)
+	end,
+	true = lists:all(F1, Resources).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
