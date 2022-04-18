@@ -39,7 +39,7 @@
 %% export API
 -export([new/2, new/3, insert/2, insert/3, delete/2, lookup_first/2,
 		lookup_last/2, lookup_all/2, list/0, list/2, backup/2, restore/2,
-		clear_table/1]).
+		clear_table/1, add_range/4, delete_range/3, range/2]).
 
 -define(CHUNKSIZE, 100).
 
@@ -360,6 +360,47 @@ clear_table(Table) when is_atom(Table) ->
 			exit(Reason)
 	end.
 
+-spec add_range(Table, Start, End, Value) -> Result
+	when
+		Table :: atom() | string(),
+		Start :: [$0..$9] | integer(),
+		End :: [$0..$9] | integer(),
+		Value :: any(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Add prefixes to cover range.
+add_range(Table, Start, End, Value) when is_integer(Start), is_integer(End) ->
+	add_range(Table, integer_to_list(Start), integer_to_list(End), Value);
+add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =< End ->
+	case catch range(Start, End) of
+	[] ->
+			[];
+	Seq when length(Seq) > 0 ->
+		insert(Table,[{X, Value} || X <- Seq]);
+	{'EXIT', Reason} ->
+		{error, Reason}
+	end.
+
+-spec delete_range(Table, Start, End) -> Result
+	when
+		Table :: atom() | string(),
+		Start :: [$0..$9] | integer(),
+		End :: [$0..$9] | integer(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Delete prefixes covering the range.
+delete_range(Table, Start, End) when is_integer(Start), is_integer(End) ->
+	delete_range(Table, integer_to_list(Start), integer_to_list(End));
+delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End ->
+	case catch range(Start, End) of
+	[] ->
+		[];
+	Seq when length(Seq) > 0 ->
+		[delete(Table, X) || X <- Seq];
+	{'EXIT', Reason} ->
+		{error, Reason}
+	end.
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
@@ -422,4 +463,52 @@ insert(Table, [H | T], Value, NumWrites, Acc) ->
 			mnesia:write(Table, #gtt{num = Number}, write),
 			insert(Table, T, Value, NumWrites + 1, Number)
 	end.
+
+-spec range(Start, End) -> Prefixes
+	when
+		Start :: string(),
+		End :: string(),
+		Prefixes :: [string()].
+%% @doc Find prefixes covering range.
+range(Start, End) when is_list(Start), is_list(End),
+		length(Start) =:= length(End), Start =< End ->
+	range(Start, End, []).
+%% @hidden
+range(Start, End, Acc) ->
+	PrefixLen = prefix_len(Start, End),
+	{Prefix, StartTail} = lists:split(PrefixLen, Start),
+	{_, EndTail} = lists:split(PrefixLen, End),
+	TailLen = length(StartTail),
+	Zeros = lists:duplicate(TailLen, $0),
+	Nines = lists:duplicate(TailLen, $9),
+	range(Prefix, StartTail, Zeros, EndTail, Nines, Acc).
+%% @hidden
+range(Prefix, Zeros, Zeros, Nines, Nines, Acc) ->
+	[Prefix | Acc];
+range(Prefix, Zeros, Zeros, [E | _] = End, _Nines, Acc)
+		when E > $0 ->
+	NewAcc = [Prefix ++ [P] || P <- lists:seq($0, E - 1)] ++ Acc,
+	range(Prefix ++ [E | tl(Zeros)], Prefix ++ End, NewAcc);
+range(Prefix, [S | _] = Start, Zeros, [E | _] = End, Nines, Acc)
+		when S < E ->
+	NewAcc = range(Prefix ++ Start, Prefix ++ [S | tl(Nines)], Acc),
+	range(Prefix ++ [S + 1 | tl(Zeros)], Prefix ++ End, NewAcc).
+
+-spec prefix_len(Start, End) -> Len
+	when
+		Start :: string(),
+		End :: string(),
+		Len :: non_neg_integer().
+%% @doc Return length of common prefix.
+prefix_len(Start, Start = _End) ->
+	length(Start);
+prefix_len(Start, End) ->
+	prefix_len(lists:reverse(Start), lists:reverse(End), length(Start)).
+%% @hidden
+prefix_len([_ | T], [_ | T], N) ->
+	N - 1;
+prefix_len([_ | Tstart], [_ | Tend], N) ->
+	prefix_len(Tstart, Tend, N - 1);
+prefix_len([], [], 0) ->
+	0.
 
