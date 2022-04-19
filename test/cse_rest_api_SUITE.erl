@@ -480,8 +480,7 @@ is_resource_rel(#{"relationshipType" := "contained",
 is_resource_rel(_R) ->
 	false.
 
-is_resource_char(#{"name" := Name, "value" := Value})
-		when is_list(Name), is_list(Value) ->
+is_resource_char(#{"name" := Name}) when is_list(Name) ->
 	true;
 is_resource_char(_) ->
 	false.
