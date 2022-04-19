@@ -32,7 +32,7 @@
 		resource_spec_delete_static/0, resource_spec_delete_static/1,
 		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
 		resource_spec_query_based/0, resource_spec_query_based/1,
-		add_table_resource/0, add_table_resource/1,
+		add_static_table_resource/0, add_static_table_resource/1,
 		add_dynamic_table_resource/0, add_dynamic_table_resource/1,
 		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1,
 		query_resource/0, query_resource/1,
@@ -110,7 +110,7 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_table_resource, add_dynamic_table_resource, add_row_resource,
+			add_static_table_resource, add_dynamic_table_resource, add_row_resource,
 			get_resource, query_resource,
 			delete_table_resource, delete_row_resource].
 
@@ -244,10 +244,10 @@ resource_spec_query_based(Config) ->
 	end,
 	true = lists:all(F1, ResSpecs).
 
-add_table_resource() ->
+add_static_table_resource() ->
 	[{userdata, [{doc,"Add prefix table resource in rest interface"}]}].
 
-add_table_resource(Config) ->
+add_static_table_resource(Config) ->
 	TableName = "examplePrefixTable",
 	Options = [{disc_copies, [node() | nodes()]}],
 	{atomic, ok} = mnesia:create_table(list_to_atom(TableName), Options ++
@@ -255,7 +255,7 @@ add_table_resource(Config) ->
 	Host = ?config(host, Config),
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
-	Resource = prefix_table(TableName),
+	Resource = static_prefix_table(TableName),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
 	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
@@ -486,7 +486,7 @@ is_resource_char(#{"name" := Name, "value" := Value})
 is_resource_char(_) ->
 	false.
 
-prefix_table(Name) ->
+static_prefix_table(Name) ->
 	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	#resource{name = Name, description = "Prefix Table", category = "Prefix",
 			base_type = "Resource", version = "1.0",
