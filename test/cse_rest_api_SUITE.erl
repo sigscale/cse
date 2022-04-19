@@ -470,7 +470,11 @@ delete_row_resource(Config) ->
 	{ok, Result2} = httpc:request(delete, Request2, [], []),
 	{{"HTTP/1.1", 204, _NoContent}, _Headers2, []} = Result2,
 	{ok, Result3} = httpc:request(get, Request2, [], []),
-	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers3, _Response} = Result3.
+	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers3, _Response} = Result3,
+	Chars = PrefixRow#resource.characteristic,
+	#resource_char{value = Prefix}
+			= lists:keyfind("prefix", #resource_char.name, Chars),
+	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
