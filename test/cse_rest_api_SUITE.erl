@@ -34,7 +34,8 @@
 		resource_spec_query_based/0, resource_spec_query_based/1,
 		add_table_resource/0, add_table_resource/1,
 		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1,
-		query_resource/0, query_resource/1]).
+		query_resource/0, query_resource/1,
+		delete_table_resource/0, delete_table_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -107,7 +108,8 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_table_resource, add_row_resource, get_resource, query_resource].
+			add_table_resource, add_row_resource, get_resource, query_resource,
+			delete_table_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -360,6 +362,28 @@ query_resource(Config) ->
 		F2(Rels)
 	end,
 	true = lists:all(F1, Resources).
+
+delete_table_resource() ->
+	[{userdata, [{doc,"Delete Resource by its id"}]}].
+
+delete_table_resource(Config) ->
+	TableName = "samplePrefixTable",
+	cse_gtt:new(TableName, []),
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource(Cont1,
+						'_', {exact, TableName}, '_', '_'),
+				F(Cont2, [L | Acc])
+	end,
+	[#resource{id = TableId} | _] = F(start, []),
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	Request = {Host ++ ?inventoryPath ++ TableId, [Accept]},
+	{ok, Result1} = httpc:request(delete, Request, [], []),
+	{{"HTTP/1.1", 204, _NoContent}, _Headers1, []} = Result1,
+	{ok, Result2} = httpc:request(get, Request, [], []),
+	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
