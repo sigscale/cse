@@ -33,6 +33,7 @@
 		resource_spec_delete_dynamic/0, resource_spec_delete_dynamic/1,
 		resource_spec_query_based/0, resource_spec_query_based/1,
 		add_table_resource/0, add_table_resource/1,
+		add_dynamic_table_resource/0, add_dynamic_table_resource/1,
 		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1,
 		query_resource/0, query_resource/1,
 		delete_table_resource/0, delete_table_resource/1,
@@ -109,7 +110,8 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_table_resource, add_row_resource, get_resource, query_resource,
+			add_table_resource, add_dynamic_table_resource, add_row_resource,
+			get_resource, query_resource,
 			delete_table_resource, delete_row_resource].
 
 %%---------------------------------------------------------------------
@@ -263,6 +265,29 @@ add_table_resource(Config) ->
 	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
 	{ok, #{} = ResourceMap} = zj:decode(ResponseBody),
 	true = is_resource(ResourceMap).
+
+add_dynamic_table_resource() ->
+	[{userdata, [{doc,"Add dynamic prefix table resource"}]}].
+
+add_dynamic_table_resource(Config) ->
+	TableName = "examplePrefixTable3",
+	Options = [{disc_copies, [node() | nodes()]}],
+	{atomic, ok} = mnesia:create_table(list_to_atom(TableName), Options ++
+			[{attributes, record_info(fields, gtt)}, {record_name, gtt}]),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	Resource = dynamic_prefix_table(TableName),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(ResponseBody)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, #{"id" := Id} = ResourceMap} = zj:decode(ResponseBody),
+	true = is_resource(ResourceMap),
+	{ok, #resource{id = Id}} = cse:find_resource(Id).
 
 add_row_resource() ->
 	[{userdata, [{doc,"Add prefix row resource in rest interface"}]}].
@@ -469,6 +494,17 @@ prefix_table(Name) ->
 					href = "/resourceCatalogManagement/v4/resourceSpecification/"
 							++ SpecId,
 					name = "PrefixTable"}}.
+
+dynamic_prefix_table(Name) ->
+	SpecName = "sampleDynamicResSpec",
+	Spec = table_resource_spec(SpecName),
+	{ok, #resource_spec{id = SpecId}} = cse:add_resource_spec(Spec),
+	#resource{name = Name, description = "Prefix Table", category = "Prefix",
+			base_type = "Resource", version = "1.0",
+			specification = #resource_spec_ref{id = SpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ SpecId,
+					name = SpecName}}.
 
 prefix_row(TableId, TableName) ->
 	prefix_row("examplePrefixRow", TableId, TableName).
