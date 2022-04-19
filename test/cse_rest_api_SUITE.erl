@@ -35,7 +35,8 @@
 		add_table_resource/0, add_table_resource/1,
 		add_row_resource/0, add_row_resource/1, get_resource/0, get_resource/1,
 		query_resource/0, query_resource/1,
-		delete_table_resource/0, delete_table_resource/1]).
+		delete_table_resource/0, delete_table_resource/1,
+		delete_row_resource/0, delete_row_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -109,7 +110,7 @@ all() ->
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
 			add_table_resource, add_row_resource, get_resource, query_resource,
-			delete_table_resource].
+			delete_table_resource, delete_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -385,6 +386,36 @@ delete_table_resource(Config) ->
 	{ok, Result2} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
 
+delete_row_resource() ->
+	[{userdata, [{doc,"Delete Resource by its id"}]}].
+
+delete_row_resource(Config) ->
+	TableName = "samplePrefixTable2",
+	cse_gtt:new(TableName, []),
+	F = fun F(eof, Acc) ->
+				lists:flatten(Acc);
+			F(Cont1, Acc) ->
+				{Cont2, L} = cse:query_resource(Cont1,
+						'_', {exact, TableName}, '_', '_'),
+				F(Cont2, [L | Acc])
+	end,
+	[#resource{id = TableId} | _] = F(start, []),
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	ContentType = "application/json",
+	PrefixRow = prefix_row("samplePrefixRow", TableId, TableName),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(PrefixRow)),
+	Request1 = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result1} = httpc:request(post, Request1, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers1, _ResponseBody} = Result1,
+	{_, URI} = lists:keyfind("location", 1, Headers1),
+	{?inventoryPath ++ Id, _} = httpd_util:split_path(URI),
+	Request2 = {Host ++ ?inventoryPath ++ Id, [Accept]},
+	{ok, Result2} = httpc:request(delete, Request2, [], []),
+	{{"HTTP/1.1", 204, _NoContent}, _Headers2, []} = Result2,
+	{ok, Result3} = httpc:request(get, Request2, [], []),
+	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers3, _Response} = Result3.
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -440,8 +471,10 @@ prefix_table(Name) ->
 					name = "PrefixTable"}}.
 
 prefix_row(TableId, TableName) ->
+	prefix_row("examplePrefixRow", TableId, TableName).
+prefix_row(Name, TableId, TableName) ->
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
-	#resource{name = "examplePrefixRow", description = "Policy Row",
+	#resource{name = Name, description = "Policy Row",
 			category = "Policy", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
 					href = "/resourceInventoryManagement/v1/resource/"
