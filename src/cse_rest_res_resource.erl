@@ -457,24 +457,63 @@ add_resource_result({error, _Reason}) ->
 %%    request to remove a table row.
 delete_resource(Id) ->
 	try
-		case string:tokens(Id, "-") of
-			[Table, Prefix] ->
-				Name = list_to_existing_atom(Table),
-				ok = cse_gtt:delete(Name, Prefix),
-				{ok, [], []};
-			[Id] ->
-				delete_resource1(cse:delete_resource(Id))
-		end
+		delete_resource1(cse:find_resource(Id))
 	catch
-		error:badarg ->
-			{error, 404};
 		_:_ ->
 			{error, 400}
 	end.
 %% @hidden
-delete_resource1(ok) ->
-	{ok, [], []};
+delete_resource1({ok, #resource{id = Id, specification
+		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}) ->
+	delete_resource_result(cse:delete_resource(Id));
+delete_resource1({ok, #resource{specification
+		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource}) ->
+	delete_resource_row(Resource);
+delete_resource1({ok, #resource{specification
+		= #resource_spec_ref{id = SpecId}} = Resource}) ->
+	delete_resource2(Resource, cse:find_resource_spec(SpecId));
 delete_resource1({error, _Reason}) ->
+	{error, 400}.
+%% @hidden
+delete_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
+	delete_resource3(Resource, Related);
+delete_resource2(_Resource, {error, _Reason}) ->
+	{error, 400}.
+%% @hidden
+delete_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
+	delete_resource_row(Resource);
+delete_resource3(#resource{id = Id},
+		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
+	delete_resource_result(cse:delete_resource(Id));
+delete_resource3(Resource, [_ | T]) ->
+	delete_resource3(Resource, T);
+delete_resource3(#resource{id = Id}, []) ->
+	delete_resource_result(cse:delete_resource(Id)).
+
+%% @hidden
+delete_resource_row(#resource{related = Related} = Resource) ->
+	case lists:keyfind("contained", #resource_rel.rel_type, Related) of
+		#resource_rel{name = Table} ->
+			delete_resource_row(Table, Resource);
+		false ->
+			{error, 400}
+	end.
+%% @hidden
+delete_resource_row(Table, #resource{id = Id, characteristic = Chars}) ->
+	TableName = list_to_existing_atom(Table),
+	case lists:keyfind("prefix", #resource_char.name, Chars) of
+		#resource_char{value = Prefix} ->
+			ok = cse_gtt:delete(TableName, Prefix),
+			delete_resource_result(cse:delete_resource(Id));
+		false ->
+			{error, 400}
+	end.
+
+%% @hidden
+delete_resource_result(ok) ->
+	{ok, [], []};
+delete_resource_result({error, _Reason}) ->
 	{error, 400}.
 
 %%----------------------------------------------------------------------
