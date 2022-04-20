@@ -91,7 +91,7 @@ end_per_suite(_Config) ->
 %% Initiation before each test case.
 %%
 init_per_testcase(_TestCase, Config) ->
-   Config.
+	Config.
 
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.
@@ -307,7 +307,7 @@ add_static_row_resource(Config) ->
 				{Cont2, L} = cse:query_resource(Cont1,
 						'_', {exact, TableName}, '_', '_'),
 				F(Cont2, [L | Acc])
-   end,
+	end,
 	[#resource{id = TableId} | _] = F(start, []),
 	Resource = static_prefix_row(TableId, TableName),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
@@ -391,7 +391,7 @@ query_resource(Config) ->
 				F(Cont2, [L | Acc])
 	end,
 	[#resource{id = TableId} | _] = F(start, []),
-	{ok, #resource{}}= cse:add_resource(static_prefix_row(TableId, TableName)),
+	{ok, #resource{}} = cse:add_resource(static_prefix_row(TableId, TableName)),
 	Res = static_prefix_row(TableId, TableName),
 	PrefixRow2 = Res#resource{name = "testPrefixRow",
 			characteristic = [#resource_char{name = "prefix", value = "14736"},
@@ -572,15 +572,15 @@ static_prefix_row(TableId, TableName) ->
 	static_prefix_row("examplePrefixRow", TableId, TableName).
 static_prefix_row(Name, TableId, TableName) ->
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
-	#resource{name = Name, description = "Policy Row",
-			category = "Policy", base_type = "Resource", version = "1.0",
+	#resource{name = Name, description = "Prefix Row",
+			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
 					href = "/resourceInventoryManagement/v1/resource/"
 					++ TableId, name = TableName, rel_type = "contained"}],
 			specification = #resource_spec_ref{id = SpecId,
 					href = "/resourceCatalogManagement/v2/resourceSpecification/"
 							++ SpecId,
-					name = "examplePrefixTable"},
+					name = "PrefixRow"},
 			characteristic = [#resource_char{name = "prefix", value = "15796"},
 					#resource_char{name = "value", value = "hello world"}]}.
 
@@ -592,8 +592,8 @@ dynamic_prefix_row(Name, TableId, TableName) ->
 	SpecName = "sampleDynamicRowResSpec",
 	Spec = row_resource_spec(SpecName, TableSpecId, TableSpecName),
 	{ok, #resource_spec{id = SpecId}} = cse:add_resource_spec(Spec),
-	#resource{name = Name, description = "Policy Row",
-			category = "Policy", base_type = "Resource", version = "1.0",
+	#resource{name = Name, description = "Prefix Row",
+			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
 					href = "/resourceInventoryManagement/v1/resource/"
 					++ TableId, name = TableName, rel_type = "contained"}],
