@@ -427,7 +427,7 @@ add_resource3({aborted, Reason}, _NewResource) ->
 get_resource_specs() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-				F(mnesia:select(resource_spec, MatchSpec, 100, read), Acc);
+				F(mnesia:select(resource_spec, MatchSpec, ?CHUNKSIZE, read), Acc);
 			F('$end_of_table', Acc) ->
 				Acc;
 			F({error, Reason}, _Acc) ->
