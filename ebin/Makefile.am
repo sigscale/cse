@@ -42,7 +42,7 @@ beam_DATA = cse.beam \
 		cse_mib.beam
 
 %.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
-	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
+	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include -I $(top_builddir)/include $<
 
 cse_rest_query_scanner.beam:$(top_builddir)/src/cse_rest_query_scanner.erl
 	$(ERLC) $<
