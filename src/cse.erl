@@ -551,8 +551,22 @@ delete_resource(ID) when is_list(ID) ->
 		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = TableSpecId}}}} ->
 			cse_gtt:clear_table(Name);
-		{atomic, {ok, _R}} ->
-			ok
+		{atomic, {ok, #resource{name = Name,
+				specification = #resource_spec_ref{id = SpecId}}}} ->
+			case cse:find_resource_spec(SpecId) of
+				{ok, #resource_spec{related = Related}} ->
+					case lists:keyfind("based",
+							#resource_spec_rel.rel_type, Related) of
+						#resource_spec_rel{id = TableSpecId, rel_type = "based"} ->
+							cse_gtt:clear_table(Name);
+						#resource_spec_rel{} ->
+							ok;
+						false ->
+							ok
+					end;
+				{error, Reason} ->
+					{error, Reason}
+			end
 	end.
 
 -spec query_resource_spec(Cont, MatchId,

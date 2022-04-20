@@ -38,6 +38,7 @@
 		add_dynamic_row_resource/1, get_resource/0, get_resource/1,
 		query_resource/0, query_resource/1,
 		delete_table_resource/0, delete_table_resource/1,
+		delete_dynamic_table_resource/0, delete_dynamic_table_resource/1,
 		delete_row_resource/0, delete_row_resource/1]).
 
 -include("cse.hrl").
@@ -113,7 +114,7 @@ all() ->
 			resource_spec_delete_dynamic, resource_spec_query_based,
 			add_static_table_resource, add_dynamic_table_resource, add_row_resource,
 			add_dynamic_row_resource, get_resource, query_resource,
-			delete_table_resource, delete_row_resource].
+			delete_table_resource, delete_dynamic_table_resource, delete_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -441,6 +442,31 @@ delete_table_resource(Config) ->
 	{{"HTTP/1.1", 204, _NoContent}, _Headers1, []} = Result1,
 	{ok, Result2} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
+
+delete_dynamic_table_resource() ->
+	[{userdata, [{doc,"Delete dynamic Resource by its id"}]}].
+
+delete_dynamic_table_resource(Config) ->
+	TableName = "tempDynamicTable",
+	Options = [{disc_copies, [node() | nodes()]}],
+	{atomic, ok} = mnesia:create_table(list_to_atom(TableName), Options ++
+			[{attributes, record_info(fields, gtt)}, {record_name, gtt}]),
+	TableRes = dynamic_prefix_table(TableName),
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	Resource = dynamic_prefix_row("sampleDynamicRow", TableId, TableName),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	Request1 = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result1} = httpc:request(post, Request1, [], []),
+	{{"HTTP/1.1", 201, _Created}, _Headers1, _ResponseBody} = Result1,
+	Request2 = {Host ++ ?inventoryPath ++ TableId, [Accept]},
+	{ok, Result2} = httpc:request(delete, Request2, [], []),
+	{{"HTTP/1.1", 204, _NoContent}, _Headers2, []} = Result2,
+	{ok, Result3} = httpc:request(get, Request2, [], []),
+	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers3, _Response} = Result3,
+	0 = mnesia:table_info('tempDynamicTable', size).
 
 delete_row_resource() ->
 	[{userdata, [{doc,"Delete Resource by its id"}]}].
