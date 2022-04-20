@@ -34,9 +34,9 @@
 		resource_spec_query_based/0, resource_spec_query_based/1,
 		add_static_table_resource/0, add_static_table_resource/1,
 		add_dynamic_table_resource/0, add_dynamic_table_resource/1,
-		add_row_resource/0, add_row_resource/1, add_dynamic_row_resource/0,
-		add_dynamic_row_resource/1, get_resource/0, get_resource/1,
-		query_resource/0, query_resource/1,
+		add_static_row_resource/0, add_static_row_resource/1,
+		add_dynamic_row_resource/0, add_dynamic_row_resource/1,
+		get_resource/0, get_resource/1, query_resource/0, query_resource/1,
 		delete_static_table_resource/0, delete_static_table_resource/1,
 		delete_dynamic_table_resource/0, delete_dynamic_table_resource/1,
 		delete_row_resource/0, delete_row_resource/1]).
@@ -112,10 +112,10 @@ all() ->
 	[resource_spec_add, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
-			add_static_table_resource, add_dynamic_table_resource, add_row_resource,
-			add_dynamic_row_resource, get_resource, query_resource,
-			delete_static_table_resource, delete_dynamic_table_resource,
-			delete_row_resource].
+			add_static_table_resource, add_dynamic_table_resource,
+			add_static_row_resource, add_dynamic_row_resource,
+			get_resource, query_resource, delete_static_table_resource,
+			delete_dynamic_table_resource, delete_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -292,10 +292,10 @@ add_dynamic_table_resource(Config) ->
 	true = is_resource(ResourceMap),
 	{ok, #resource{id = Id}} = cse:find_resource(Id).
 
-add_row_resource() ->
+add_static_row_resource() ->
 	[{userdata, [{doc,"Add prefix row resource in rest interface"}]}].
 
-add_row_resource(Config) ->
+add_static_row_resource(Config) ->
 	TableName = "examplePrefixTable2",
 	cse_gtt:new(TableName, []),
 	Host = ?config(host, Config),
@@ -309,7 +309,7 @@ add_row_resource(Config) ->
 				F(Cont2, [L | Acc])
    end,
 	[#resource{id = TableId} | _] = F(start, []),
-	Resource = prefix_row(TableId, TableName),
+	Resource = static_prefix_row(TableId, TableName),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
 	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
@@ -366,7 +366,8 @@ get_resource(Config) ->
 				F(Cont2, [L | Acc])
 	end,
 	[#resource{id = TableId} | _] = F(start, []),
-	{ok, #resource{id = Id}}= cse:add_resource(prefix_row(TableId, TableName)),
+	PrefixRow = static_prefix_row(TableId, TableName),
+	{ok, #resource{id = Id}}= cse:add_resource(PrefixRow),
 	Request = {Host ++ ?inventoryPath ++ Id, [Accept]},
 	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
@@ -390,8 +391,8 @@ query_resource(Config) ->
 				F(Cont2, [L | Acc])
 	end,
 	[#resource{id = TableId} | _] = F(start, []),
-	{ok, #resource{}}= cse:add_resource(prefix_row(TableId, TableName)),
-	Res = prefix_row(TableId, TableName),
+	{ok, #resource{}}= cse:add_resource(static_prefix_row(TableId, TableName)),
+	Res = static_prefix_row(TableId, TableName),
 	PrefixRow2 = Res#resource{name = "testPrefixRow",
 			characteristic = [#resource_char{name = "prefix", value = "14736"},
 					#resource_char{name = "value", value = "testing"}]},
@@ -486,7 +487,7 @@ delete_row_resource(Config) ->
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
 	ContentType = "application/json",
-	PrefixRow = prefix_row("samplePrefixRow", TableId, TableName),
+	PrefixRow = static_prefix_row("samplePrefixRow", TableId, TableName),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(PrefixRow)),
 	Request1 = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
 	{ok, Result1} = httpc:request(post, Request1, [], []),
@@ -567,9 +568,9 @@ dynamic_prefix_table(Name) ->
 							++ SpecId,
 					name = SpecName}}.
 
-prefix_row(TableId, TableName) ->
-	prefix_row("examplePrefixRow", TableId, TableName).
-prefix_row(Name, TableId, TableName) ->
+static_prefix_row(TableId, TableName) ->
+	static_prefix_row("examplePrefixRow", TableId, TableName).
+static_prefix_row(Name, TableId, TableName) ->
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
 	#resource{name = Name, description = "Policy Row",
 			category = "Policy", base_type = "Resource", version = "1.0",
