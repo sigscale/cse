@@ -45,7 +45,6 @@
 -export([]).
 
 -include_lib("kernel/include/logger.hrl").
--include_lib("cse/include/cse_codec.hrl").
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 -include("diameter_gen_ietf.hrl").
