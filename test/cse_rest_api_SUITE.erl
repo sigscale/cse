@@ -37,7 +37,7 @@
 		add_row_resource/0, add_row_resource/1, add_dynamic_row_resource/0,
 		add_dynamic_row_resource/1, get_resource/0, get_resource/1,
 		query_resource/0, query_resource/1,
-		delete_table_resource/0, delete_table_resource/1,
+		delete_static_table_resource/0, delete_static_table_resource/1,
 		delete_dynamic_table_resource/0, delete_dynamic_table_resource/1,
 		delete_row_resource/0, delete_row_resource/1]).
 
@@ -114,7 +114,8 @@ all() ->
 			resource_spec_delete_dynamic, resource_spec_query_based,
 			add_static_table_resource, add_dynamic_table_resource, add_row_resource,
 			add_dynamic_row_resource, get_resource, query_resource,
-			delete_table_resource, delete_dynamic_table_resource, delete_row_resource].
+			delete_static_table_resource, delete_dynamic_table_resource,
+			delete_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -421,10 +422,10 @@ query_resource(Config) ->
 	end,
 	true = lists:all(F1, Resources).
 
-delete_table_resource() ->
-	[{userdata, [{doc,"Delete Resource by its id"}]}].
+delete_static_table_resource() ->
+	[{userdata, [{doc,"Delete static table Resource by its id"}]}].
 
-delete_table_resource(Config) ->
+delete_static_table_resource(Config) ->
 	TableName = "samplePrefixTable",
 	cse_gtt:new(TableName, []),
 	F = fun F(eof, Acc) ->
