@@ -446,7 +446,7 @@ get_resource_specs() ->
 
 -spec get_resources() -> Result
 	when
-		Result :: {ok, [#resource{}]} | {error, Reason},
+		Result :: [#resource{}] | {error, Reason},
 		Reason :: term().
 %% @doc List all entries in the Resource table.
 get_resources() ->
@@ -460,10 +460,12 @@ get_resources() ->
 			F({L, Cont}, Acc) ->
 				F(mnesia:select(Cont), [L | Acc])
 	end,
-	case mnesia:ets(F, [F, start, []]) of
-		{ok, Acc} when is_list(Acc) ->
-			{ok, lists:flatten(lists:reverse(Acc))};
-		{error, Reason} ->
+	case catch mnesia:ets(F, [start, []]) of
+		[] ->
+			{error, not_found};
+		Acc when is_list(Acc) ->
+			lists:flatten(lists:reverse(Acc));
+		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
 
