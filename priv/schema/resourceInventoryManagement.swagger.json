@@ -17,7 +17,7 @@
     "url" : "http://cse.example.net/resourceInventoryManagement/v4"
   } ],
   "paths" : {
-    "/resource/" : {
+    "/resource" : {
       "get" : {
         "tags" : [ "resource" ],
         "summary" : "Retrieve Resources",
@@ -116,9 +116,7 @@
           }
         },
         "deprecated" : false
-      }
-    },
-    "/resource" : {
+      },
       "post" : {
         "tags" : [ "resource" ],
         "summary" : "Create a Resource",
