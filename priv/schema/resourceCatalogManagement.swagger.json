@@ -69,8 +69,8 @@
                   }, {
                     "id" : "1650454919566-290",
                     "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                    "name" : "DynamicPrefixTable",
-                    "description" : "Dynamic prefix table specification",
+                    "name" : "TariffTable",
+                    "description" : "Tariff table specification",
                     "category" : "PrefixTable",
                     "lastUpdate" : "2022-02-16",
                     "lifecycleStatus" : "Active",
@@ -84,18 +84,18 @@
                   }, {
                     "id" : "1650455430575-306",
                     "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
-                    "name" : "DynamicPrefixRow",
-                    "description" : "Dynamic prefix row specification",
+                    "name" : "TariffRow",
+                    "description" : "Tariff row specification",
                     "category" : "PrefixRow",
                     "lastUpdate" : "2022-02-16",
                     "lifecycleStatus" : "Active",
                     "resourceSpecCharacteristic" : [ {
                       "name" : "prefix",
-                      "description" : "Prefix to match",
+                      "description" : "Destination address prefix to match",
                       "valueType" : "String"
                     }, {
                       "name" : "value",
-                      "description" : "Value returned from prefix match",
+                      "description" : "Tariff rate for destination",
                       "valueType" : "Integer"
                     } ],
                     "resourceSpecRelationship" : [ {
@@ -106,7 +106,7 @@
                     }, {
                       "id" : "1650454919566-290",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "DynamicPrefixTable",
+                      "name" : "TariffTable",
                       "relationshipType" : "contained"
                     } ],
                     "version" : "1.0"
@@ -173,12 +173,12 @@
                     "version" : "1.0"
                   }
                 },
-                "Dynamic Prefix Table" : {
-                  "summary" : "Dynamic Prefix Table",
-                  "description" : "Dynamic prefix table specification",
+                "Tariff Table" : {
+                  "summary" : "Tariff Table",
+                  "description" : "Tariff table specification",
                   "value" : {
-                    "name" : "DynamicPrefixTable",
-                    "description" : "Dynamic prefix table specification",
+                    "name" : "TariffTable",
+                    "description" : "Tariff table specification",
                     "category" : "PrefixTable",
                     "lifecycleStatus" : "Active",
                     "resourceSpecRelationship" : [ {
@@ -190,21 +190,21 @@
                     "version" : "1.0"
                   }
                 },
-                "Dynamic Prefix Row" : {
-                  "summary" : "Dynamic Prefix Row",
-                  "description" : "Dynamic prefix row specification",
+                "Tariff Row" : {
+                  "summary" : "Tariff Row",
+                  "description" : "Tariff row specification",
                   "value" : {
-                    "name" : "DynamicPrefixRow",
-                    "description" : "Dynamic prefix row specification",
+                    "name" : "TariffRow",
+                    "description" : "Tariff row specification",
                     "category" : "PrefixRow",
                     "lifecycleStatus" : "Active",
                     "resourceSpecCharacteristic" : [ {
                       "name" : "prefix",
-                      "description" : "Prefix to match",
+                      "description" : "Destination address prefix to match",
                       "valueType" : "String"
                     }, {
                       "name" : "value",
-                      "description" : "Value returned from prefix match",
+                      "description" : "Tariff rate for destination",
                       "valueType" : "Integer"
                     } ],
                     "resourceSpecRelationship" : [ {
@@ -215,7 +215,7 @@
                     }, {
                       "id" : "1650454919566-290",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "DynamicPrefixTable",
+                      "name" : "TariffTable",
                       "relationshipType" : "contained"
                     } ],
                     "version" : "1.0"
@@ -284,14 +284,14 @@
                       "version" : "1.0"
                     }
                   },
-                  "Dynamic Prefix Table" : {
-                    "summary" : "Dynamic Prefix Table",
-                    "description" : "Dynamic prefix table specification",
+                  "Tariff Table" : {
+                    "summary" : "Tariff Table",
+                    "description" : "Tariff table specification",
                     "value" : {
                       "id" : "1650454919566-290",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "DynamicPrefixTable",
-                      "description" : "Dynamic prefix table specification",
+                      "name" : "TariffPrefixTable",
+                      "description" : "Tariff table specification",
                       "category" : "PrefixTable",
                       "lastUpdate" : "2022-02-16",
                       "lifecycleStatus" : "Active",
@@ -304,24 +304,24 @@
                       "version" : "1.0"
                     }
                   },
-                  "Dynamic Prefix Row" : {
-                    "summary" : "Dynamic Prefix Row",
-                    "description" : "Dynamic prefix row specification",
+                  "Tariff Row" : {
+                    "summary" : "Tariff Row",
+                    "description" : "Tariff row specification",
                     "value" : {
                       "id" : "1650455430575-306",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
-                      "name" : "DynamicPrefixRow",
-                      "description" : "Dynamic prefix row specification",
+                      "name" : "TariffRow",
+                      "description" : "Tariff row specification",
                       "category" : "PrefixRow",
                       "lastUpdate" : "2022-02-16",
                       "lifecycleStatus" : "Active",
                       "resourceSpecCharacteristic" : [ {
                         "name" : "prefix",
-                        "description" : "Prefix to match",
+                        "description" : "Destination address prefix to match",
                         "valueType" : "String"
                       }, {
                         "name" : "value",
-                        "description" : "Value returned from prefix match",
+                        "description" : "Tariff rate for destination",
                         "valueType" : "Integer"
                       } ],
                       "resourceSpecRelationship" : [ {
@@ -332,7 +332,7 @@
                       }, {
                         "id" : "1650454919566-290",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                        "name" : "DynamicPrefixTable",
+                        "name" : "TariffTable",
                         "relationshipType" : "contained"
                       } ],
                       "version" : "1.0"
@@ -421,14 +421,14 @@
                       "version" : "1.0"
                     }
                   },
-                  "Dynamic Prefix Table" : {
-                    "summary" : "Dynamic Prefix Table",
-                    "description" : "Dynamic prefix table specification",
+                  "Tariff Table" : {
+                    "summary" : "Tariff Table",
+                    "description" : "Tariff table specification",
                     "value" : {
                       "id" : "1650454919566-290",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "DynamicPrefixTable",
-                      "description" : "Dynamic prefix table specification",
+                      "name" : "TariffTable",
+                      "description" : "Tariff table specification",
                       "category" : "PrefixTable",
                       "lastUpdate" : "2022-02-16",
                       "lifecycleStatus" : "Active",
@@ -441,24 +441,24 @@
                       "version" : "1.0"
                     }
                   },
-                  "Dynamic Prefix Row" : {
-                    "summary" : "Dynamic Prefix Row",
-                    "description" : "Dynamic prefix row specification",
+                  "Tariff Row" : {
+                    "summary" : "Tariff Row",
+                    "description" : "Tariff row specification",
                     "value" : {
                       "id" : "1650455430575-306",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
-                      "name" : "DynamicPrefixRow",
-                      "description" : "Dynamic prefix row specification",
+                      "name" : "TariffRow",
+                      "description" : "Tariff row specification",
                       "category" : "PrefixRow",
                       "lastUpdate" : "2022-02-16",
                       "lifecycleStatus" : "Active",
                       "resourceSpecCharacteristic" : [ {
                         "name" : "prefix",
-                        "description" : "Prefix to match",
+                        "description" : "Destination address prefix to match",
                         "valueType" : "String"
                       }, {
                         "name" : "value",
-                        "description" : "Value returned from prefix match",
+                        "description" : "Tariff rate for destination",
                         "valueType" : "Integer"
                       } ],
                       "resourceSpecRelationship" : [ {
@@ -469,7 +469,7 @@
                       }, {
                         "id" : "1650454919566-290",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                        "name" : "DynamicPrefixTable",
+                        "name" : "TariffTable",
                         "relationshipType" : "contained"
                       } ],
                       "version" : "1.0"
