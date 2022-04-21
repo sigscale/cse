@@ -2,7 +2,7 @@
   "openapi" : "3.0.0",
   "info" : {
     "title" : "SigScale CSE - Resource Catalog",
-    "description" : "# TMF634 Resource Catalog Management\nSigScale uses the standard TM Forum [Open APIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF634 API is used in SigScale CSE to make available the Resource Specifications describing characteristics used to define entities in the TMF639 API for Resource Inventory.",
+    "description" : "# TMF634 Resource Catalog Management\n\nSigScale uses the standard TM Forum [Open APIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF634 API is used in SigScale CSE to make available the Resource Specifications describing characteristics used to define entities in the TMF639 API for Resource Inventory.",
     "version" : "4.0.0",
     "license" : {
       "name" : "Apache 2.0"
@@ -35,8 +35,8 @@
                     "$ref" : "#/components/schemas/ResourceSpecification"
                   },
                   "example" : [ {
-                    "id" : "1",
-                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
+                    "id" : "1647577955926-50",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                     "name" : "PrefixTable",
                     "description" : "Prefix table specification",
                     "category" : "PrefixTable",
@@ -44,8 +44,8 @@
                     "lifecycleStatus" : "Active",
                     "version" : "1.0"
                   }, {
-                    "id" : "2",
-                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                    "id" : "1647577957914-66",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
                     "name" : "PrefixRow",
                     "description" : "Prefix row specification",
                     "category" : "PrefixRow",
@@ -59,11 +59,291 @@
                       "name" : "value",
                       "description" : "Value returned from prefix match"
                     } ],
+                    "resourceSpecRelationship" : {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "relationshipType" : "contained"
+                    },
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1650454919566-290",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                    "name" : "DynamicPrefixTable",
+                    "description" : "Dynamic prefix table specification",
+                    "category" : "PrefixTable",
+                    "lastUpdate" : "2022-02-16",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "relationshipType" : "based"
+                    } ],
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1650455430575-306",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
+                    "name" : "DynamicPrefixRow",
+                    "description" : "Dynamic prefix row specification",
+                    "category" : "PrefixRow",
+                    "lastUpdate" : "2022-02-16",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecCharacteristic" : [ {
+                      "name" : "prefix",
+                      "description" : "Prefix to match",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "value",
+                      "description" : "Value returned from prefix match",
+                      "valueType" : "Integer"
+                    } ],
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow",
+                      "relationshipType" : "based"
+                    }, {
+                      "id" : "1650454919566-290",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                      "name" : "DynamicPrefixTable",
+                      "relationshipType" : "contained"
+                    } ],
                     "version" : "1.0"
                   } ]
                 }
               }
             }
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "post" : {
+        "tags" : [ "resourceSpecification" ],
+        "summary" : "Create a Resource Specification",
+        "description" : "Create a new `Resource Specification` entity",
+        "operationId" : "createResourceSpecification",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResourceSpecification"
+              },
+              "examples" : {
+                "Prefix Table" : {
+                  "summary" : "Prefix Table",
+                  "description" : "Prefix table specification",
+                  "value" : {
+                    "name" : "PrefixTable",
+                    "description" : "Prefix table specification",
+                    "category" : "PrefixTable",
+                    "lifecycleStatus" : "Active",
+                    "version" : "1.0"
+                  }
+                },
+                "Prefix Row" : {
+                  "summary" : "Prefix Row",
+                  "description" : "Prefix row specification",
+                  "value" : {
+                    "name" : "PrefixRow",
+                    "description" : "Prefix row specification",
+                    "category" : "PrefixRow",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecCharacteristic" : [ {
+                      "name" : "prefix",
+                      "description" : "Prefix to match",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "value",
+                      "description" : "Value returned from prefix match"
+                    } ],
+                    "resourceSpecRelationship" : {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "relationshipType" : "contained"
+                    },
+                    "version" : "1.0"
+                  }
+                },
+                "Dynamic Prefix Table" : {
+                  "summary" : "Dynamic Prefix Table",
+                  "description" : "Dynamic prefix table specification",
+                  "value" : {
+                    "name" : "DynamicPrefixTable",
+                    "description" : "Dynamic prefix table specification",
+                    "category" : "PrefixTable",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "relationshipType" : "based"
+                    } ],
+                    "version" : "1.0"
+                  }
+                },
+                "Dynamic Prefix Row" : {
+                  "summary" : "Dynamic Prefix Row",
+                  "description" : "Dynamic prefix row specification",
+                  "value" : {
+                    "name" : "DynamicPrefixRow",
+                    "description" : "Dynamic prefix row specification",
+                    "category" : "PrefixRow",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecCharacteristic" : [ {
+                      "name" : "prefix",
+                      "description" : "Prefix to match",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "value",
+                      "description" : "Value returned from prefix match",
+                      "valueType" : "Integer"
+                    } ],
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow",
+                      "relationshipType" : "based"
+                    }, {
+                      "id" : "1650454919566-290",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                      "name" : "DynamicPrefixTable",
+                      "relationshipType" : "contained"
+                    } ],
+                    "version" : "1.0"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Success",
+            "headers" : {
+              "Location" : {
+                "schema" : {
+                  "description" : "ResourceRef",
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceSpecification"
+                },
+                "examples" : {
+                  "Prefix Table" : {
+                    "summary" : "Prefix Table",
+                    "description" : "Prefix table specification",
+                    "value" : {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "description" : "Prefix table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-02-16",
+                      "lifecycleStatus" : "Active",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Prefix Row" : {
+                    "summary" : "Prefix Row",
+                    "description" : "Prefix row specification",
+                    "value" : {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow",
+                      "description" : "Prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-16",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix to match",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Value returned from prefix match"
+                      } ],
+                      "resourceSpecRelationship" : {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable",
+                        "relationshipType" : "contained"
+                      },
+                      "version" : "1.0"
+                    }
+                  },
+                  "Dynamic Prefix Table" : {
+                    "summary" : "Dynamic Prefix Table",
+                    "description" : "Dynamic prefix table specification",
+                    "value" : {
+                      "id" : "1650454919566-290",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                      "name" : "DynamicPrefixTable",
+                      "description" : "Dynamic prefix table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-02-16",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable",
+                        "relationshipType" : "based"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  },
+                  "Dynamic Prefix Row" : {
+                    "summary" : "Dynamic Prefix Row",
+                    "description" : "Dynamic prefix row specification",
+                    "value" : {
+                      "id" : "1650455430575-306",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
+                      "name" : "DynamicPrefixRow",
+                      "description" : "Dynamic prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-16",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix to match",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Value returned from prefix match",
+                        "valueType" : "Integer"
+                      } ],
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow",
+                        "relationshipType" : "based"
+                      }, {
+                        "id" : "1650454919566-290",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                        "name" : "DynamicPrefixTable",
+                        "relationshipType" : "contained"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
           },
           "404" : {
             "description" : "Not Found"
@@ -100,11 +380,11 @@
                 },
                 "examples" : {
                   "Prefix Table" : {
-                    "summary" : "Prefix Table Specification",
+                    "summary" : "Prefix Table",
                     "description" : "Prefix table specification",
                     "value" : {
-                      "id" : "1",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1",
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                       "name" : "PrefixTable",
                       "description" : "Prefix table specification",
                       "category" : "PrefixTable",
@@ -114,11 +394,11 @@
                     }
                   },
                   "Prefix Row" : {
-                    "summary" : "Prefix Row Specification",
-                    "description" : "Prefix Row Specification",
+                    "summary" : "Prefix Row",
+                    "description" : "Prefix row specification",
                     "value" : {
-                      "id" : "2",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/2",
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
                       "name" : "PrefixRow",
                       "description" : "Prefix row specification",
                       "category" : "PrefixRow",
@@ -132,12 +412,102 @@
                         "name" : "value",
                         "description" : "Value returned from prefix match"
                       } ],
+                      "resourceSpecRelationship" : {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable",
+                        "relationshipType" : "contained"
+                      },
+                      "version" : "1.0"
+                    }
+                  },
+                  "Dynamic Prefix Table" : {
+                    "summary" : "Dynamic Prefix Table",
+                    "description" : "Dynamic prefix table specification",
+                    "value" : {
+                      "id" : "1650454919566-290",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                      "name" : "DynamicPrefixTable",
+                      "description" : "Dynamic prefix table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-02-16",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable",
+                        "relationshipType" : "based"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  },
+                  "Dynamic Prefix Row" : {
+                    "summary" : "Dynamic Prefix Row",
+                    "description" : "Dynamic prefix row specification",
+                    "value" : {
+                      "id" : "1650455430575-306",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
+                      "name" : "DynamicPrefixRow",
+                      "description" : "Dynamic prefix row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-02-16",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "prefix",
+                        "description" : "Prefix to match",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Value returned from prefix match",
+                        "valueType" : "Integer"
+                      } ],
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow",
+                        "relationshipType" : "based"
+                      }, {
+                        "id" : "1650454919566-290",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
+                        "name" : "DynamicPrefixTable",
+                        "relationshipType" : "contained"
+                      } ],
                       "version" : "1.0"
                     }
                   }
                 }
               }
             }
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "delete" : {
+        "tags" : [ "resourceSpecification" ],
+        "summary" : "Delete a Resource Specification",
+        "description" : "Delete a `Resource Specification` entity by its identifier",
+        "operationId" : "deleteResourceSpecification",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted"
+          },
+          "400" : {
+            "description" : "Bad Request"
           },
           "404" : {
             "description" : "Not Found"
@@ -193,6 +563,12 @@
             "items" : {
               "$ref" : "#/components/schemas/ResourceSpecCharacteristic"
             }
+          },
+          "resourceSpecRelationship" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceSpecRelationship"
+            }
           }
         },
         "description" : "Resources are physical or non-physical components (or some combination of these) within an enterprise's infrastructure or inventory. They are typically consumed or used by services (for example a physical port\n  assigned to a service) or contribute to the realization of a Product (for\nexample, a SIM card). They can be drawn from the Application, Computing and Network domains, and include, for example, Network Elements, software, IT systems, content and information, and technology components.\nA ResourceSpecification is an abstract base class for representing a generic means for implementing a particular type of Resource. In essence, a ResourceSpecification defines the common attributes and relationships of a set of related Resources, while Resource defines a specific instance that is based on a particular ResourceSpecification."
@@ -214,6 +590,28 @@
           }
         },
         "description" : "This class defines the characteristic features of a resource specification. Every ResourceSpecification has a variety of important attributes, methods, constraints, and\nrelationships, which distinguish a resource specification from other resource specifications."
+      },
+      "ResourceSpecRelationship" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Identifier of related Resource Specification."
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "Hyperlink reference to related Resource Specification."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name given to related Resource Specification."
+          },
+          "relationshipType" : {
+            "type" : "string",
+            "description" : "Relationship type between this and related Resource Specifications."
+          }
+        },
+        "description" : "This class defines the related features of a resource specification. Some ResourceSpecifications have different types of relationships to other resource specifications."
       }
     }
   }
