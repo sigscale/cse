@@ -591,6 +591,21 @@ static_spec(?PREFIX_ROW_SPEC = SpecId) ->
 				value_type = "String"},
 			#resource_spec_char{name = "value",
 				description = "Value returned from prefix match"}]
+	};
+static_spec(?PREFIX_RANGE_TABLE_SPEC = SpecId) ->
+	[TS, N] = string:split(SpecId, "-"),
+	LM = {list_to_integer(TS), list_to_integer(N)},
+	#resource_spec{id = SpecId,
+		href = ?specPath ++ SpecId,
+		name = "PrefixRangeTable",
+		description = "Prefix range table specification",
+		version = "1.0",
+		last_modified = LM,
+		category = "PrefixTable",
+		related = [#resource_spec_rel{id = ?PREFIX_TABLE_SPEC,
+				href = ?specPath ++ ?PREFIX_TABLE_SPEC,
+				name = "PrefixTable",
+				rel_type = "based"}]
 	}.
 
 %%----------------------------------------------------------------------
