@@ -606,6 +606,33 @@ static_spec(?PREFIX_RANGE_TABLE_SPEC = SpecId) ->
 				href = ?specPath ++ ?PREFIX_TABLE_SPEC,
 				name = "PrefixTable",
 				rel_type = "based"}]
+	};
+static_spec(?PREFIX_RANGE_ROW_SPEC = SpecId) ->
+	[TS, N] = string:split(SpecId, "-"),
+	LM = {list_to_integer(TS), list_to_integer(N)},
+	#resource_spec{id = SpecId,
+		href = ?specPath ++ SpecId,
+		name = "PrefixRangeRow",
+		description = "Prefix range table row specification",
+		version = "1.0",
+		last_modified = LM,
+		category = "PrefixRow",
+		related = [#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC,
+				href = ?specPath ++ ?PREFIX_RANGE_TABLE_SPEC,
+				name = "PrefixRangeTable",
+				rel_type = "contained"},
+			#resource_spec_rel{id = ?PREFIX_ROW_SPEC,
+				href = ?specPath ++ ?PREFIX_ROW_SPEC,
+				name = "PrefixRow",
+				rel_type = "based"}],
+		characteristic = [#resource_spec_char{name = "start",
+				description = "Start of prefix range",
+				value_type = "String"},
+			#resource_spec_char{name = "end",
+				description = "End of prefix range",
+				value_type = "String"},
+			#resource_spec_char{name = "value",
+				description = "Description of prefix range"}]
 	}.
 
 %%----------------------------------------------------------------------
