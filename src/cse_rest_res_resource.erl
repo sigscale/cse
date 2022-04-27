@@ -29,7 +29,7 @@
 		resource/1]).
 % export cse_rest_res_resource private API
 -export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1,
-		prefix_range_table_spec_id/0]).
+		prefix_range_table_spec_id/0, prefix_range_row_spec_id/0]).
 
 -include("cse.hrl").
 
@@ -39,6 +39,7 @@
 -define(PREFIX_TABLE_SPEC, "1647577955926-50").
 -define(PREFIX_ROW_SPEC,   "1647577957914-66").
 -define(PREFIX_RANGE_TABLE_SPEC, "1651055414682-258").
+-define(PREFIX_RANGE_ROW_SPEC,   "1651057291061-274").
 
 %%----------------------------------------------------------------------
 %%  cse_rest_res_resource public API functions
@@ -545,6 +546,14 @@ prefix_row_spec_id() ->
 %% @private
 prefix_range_table_spec_id() ->
 	?PREFIX_RANGE_TABLE_SPEC.
+
+-spec prefix_range_row_spec_id() -> SpecId
+	when
+		SpecId :: string().
+%% @doc Get the identifier of the prefix range row Resource Specification.
+%% @private
+prefix_range_row_spec_id() ->
+	?PREFIX_RANGE_ROW_SPEC.
 
 -spec static_spec(SpecId) -> Specification
 	when
