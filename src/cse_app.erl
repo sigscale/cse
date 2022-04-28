@@ -103,7 +103,7 @@ start4() ->
 	case catch ets:new(session, Options) of
 		{'EXIT', Reason} ->
 			{error, Reason};
-		TID ->
+		_TID ->
 			start5()
 	end.
 %% @hidden
@@ -119,12 +119,8 @@ start5() ->
 	end,
 	TopSup = supervisor:start_link({local, cse_sup}, cse_sup, []),
 	lists:foreach(F1, DiameterServices),
-	case cse_mib:load() of
-		ok ->
-			TopSup;
-		{error, Reason} ->
-			throw(Reason)
-	end.
+	catch cse_mib:load(),
+	TopSup.
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
 	when
