@@ -8,15 +8,19 @@ testmods = cse_api_SUITE \
 		cse_inap_SUITE \
 		cse_codec_SUITE \
 		cse_test_lib \
-		mod_ct_nrf
+		mod_ct_nrf \
+		cse_diameter_SUITE \
+		cse_snmp_SUITE \
+		cse_test_ocs_server \
+		diameter_test_client_cb
 
 check_DATA = .dialyzer_ok .common_test_ok
 
 .dialyzer_ok:	$(addsuffix .beam, $(testmods))
-	dialyzer --src $(top_srcdir)/src
+	dialyzer  --src -I $(top_builddir)/include $(top_srcdir)/src
 
 %.beam:$(top_srcdir)/test/%.erl
-	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include $<
+	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include -I $(top_builddir)/include $<
 
 .common_test_ok:	$(addsuffix .beam, $(testmods))
 	@if [ ! -d log ]; then mkdir log; fi
@@ -24,6 +28,7 @@ check_DATA = .dialyzer_ok .common_test_ok
 	@if [ ! -f test.spec ]; then cp $(top_srcdir)/test/test.spec .; fi
 	@if [ ! -d cse_cap_SUITE_data ]; then mkdir cse_cap_SUITE_data; fi
 	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
+	@if [ ! -d cse_diameter_SUITE_data ]; then mkdir cse_diameter_SUITE_data; fi
 	ct_run -no_auto_compile \
 			-pa $(top_builddir)/ebin \
 			-pa $(ERLANG_LIB_DIR_sccp)/ebin \
