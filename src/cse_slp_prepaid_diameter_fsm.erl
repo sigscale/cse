@@ -42,7 +42,7 @@
 %% export the callbacks for gen_statem states.
 -export([null/3, collect_information/3, exception/3]).
 %% export the private api
--export([nrf_start_reply/2]).
+-export([nrf_start_reply/2, nrf_update_reply/2]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("cse/include/cse_codec.hrl").
@@ -76,7 +76,7 @@
 -type mscc() :: #{rg => pos_integer() | undefined,
 		si => pos_integer() | undefined,
 		usu => #{unit() => pos_integer()} | undefined,
-		rsu => #{unit() => pos_integer()} | undefined}.
+		rsu => #{unit() => pos_integer()} | list() | undefined}.
 
 -type unit() :: time | downlinkVolume | uplinkVolume
 				| totalVolume | serviceSpecificUnit.
@@ -194,16 +194,58 @@ collect_information(cast, {nrf_start,
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, exception, Data, Actions1}
 			end;
-		{error, Reason} ->
-			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			Reply = diameter_error(SessionId, ResultCode, OHost,
-					ORealm, RequestType, RequestNum),
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
-				{profile, Profile}, {uri, URI}, {slpi, self()},
-				{origin_host, OHost}, {origin_realm, ORealm},
-				{type, start}]),
-			Actions = [{reply, From, Reply}],
-			{next_state, exception, Data, Actions}
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {slpi, self()},
+					{partial, Partial}, {remaining, Remaining},
+					{origin_host, OHost}, {origin_realm, ORealm}, {type, start}]),
+			{next_state, exception, Data}
+	end;
+collect_information(internal, #'3gpp_ro_CCR'{
+		'Session-Id' = SessionId,
+		'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+		'CC-Request-Number' = RequestNum,
+		'Multiple-Services-Credit-Control' = MSCC,
+		'Service-Information' = _ServiceInformation} = _EventContent,
+		#{session_id := SessionId} = Data) ->
+	NewData = Data#{mscc => MSCC, session_id => SessionId,
+			reqno => RequestNum,
+			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+	nrf_update(NewData);
+collect_information(cast, {nrf_update,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, msisdn := MSISDN, calling := MSISDN,
+				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId,
+				reqt := RequestType} = Data) ->
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				Container = build_container(MSCC),
+				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				{next_state, null, Data, Actions}
+			catch
+				_:Reason ->
+					ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					Reply1 = diameter_error(SessionId, ResultCode1, OHost,
+							ORealm, RequestType, RequestNum),
+					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{type, interim}]),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, exception, Data, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {slpi, self()},
+					{partial, Partial}, {remaining, Remaining},
+					{origin_host, OHost}, {origin_realm, ORealm}, {type, interim}]),
+			{next_state, exception, Data}
 	end.
 
 -spec exception(EventType, EventContent, Data) -> Result
@@ -279,6 +321,19 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 nrf_start_reply(ReplyInfo, Fsm) ->
 	gen_statem:cast(Fsm, {nrf_start, ReplyInfo}).
 
+-spec nrf_update_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_update/1}.
+%% @private
+nrf_update_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_update, ReplyInfo}).
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
@@ -301,7 +356,7 @@ nrf_start1(Subscriber, Data) ->
 	nrf_start2(Subscriber, Data).
 %% @hidden
 nrf_start2(Subscriber, #{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating_inital(mscc(MSCC), ServiceContextId),
+	ServiceRating = service_rating(mscc(MSCC), ServiceContextId),
 	nrf_start3(Subscriber, ServiceRating, service_type(ServiceContextId), Data).
 %% @hidden
 nrf_start3(Subscriber, ServiceRating, 32251, Data) ->
@@ -333,6 +388,62 @@ nrf_start4(JSON, #{nrf_profile := Profile, nrf_uri := URI} = Data) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			{next_state, exception, Data}
+	end.
+
+-spec nrf_update(Data) -> Result
+	when
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
+%% @doc Start rating a session.
+nrf_update(#{msisdn := MSISDN} = Data)
+		when is_integer(MSISDN) ->
+	nrf_update1(["msisdn-" ++ integer_to_list(MSISDN)], Data);
+nrf_update(Data) ->
+	nrf_update1([], Data).
+%% @hidden
+nrf_update1(Subscriber, #{imsi := IMSI} = Data)
+		when is_integer(IMSI) ->
+	nrf_update2(["imsi-" ++ integer_to_list(IMSI) | Subscriber], Data);
+nrf_update1(Subscriber, Data) ->
+	nrf_update2(Subscriber, Data).
+%% @hidden
+nrf_update2(Subscriber, #{mscc := MSCC, context := ServiceContextId} = Data) ->
+	ServiceRating = service_rating(mscc(MSCC), ServiceContextId),
+	nrf_update3(Subscriber, ServiceRating, service_type(ServiceContextId), Data).
+%% @hidden
+nrf_update3(Subscriber, ServiceRating, 32251, Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => Subscriber,
+			"serviceRating" => ServiceRating},
+	nrf_update4(JSON, Data).
+%% @hidden
+nrf_update4(JSON, #{nrf_profile := Profile,
+		nrf_uri := URI, nrf_location := Location} = Data)
+		when is_list(Location) ->
+	MFA = {?MODULE, nrf_update_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Body = zj:encode(JSON),
+	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#{nrf_reqid => RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, exception, NewData};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, exception, NewData}
 	end.
 
 -spec mscc(MSCC) -> Result
@@ -389,7 +500,7 @@ rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	#{serviceSpecificUnit => CCSpecUnits};
 rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Requested-Service-Unit' = [#'3gpp_ro_Requested-Service-Unit'{}]}) ->
-	undefined;
+	[];
 rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{}) ->
 	undefined.
 
@@ -435,41 +546,47 @@ gsu(#{"serviceSpecificUnit" := CCSpecUnits})
 gsu(_) ->
 	[].
 
--spec service_rating_inital(MSCC, ServiceContextId) -> ServiceRating
+-spec service_rating(MSCC, ServiceContextId) -> ServiceRating
 	when
 		MSCC :: [mscc()],
 		ServiceContextId :: binary(),
 		ServiceRating :: [service_rating()].
-%% @doc Build a intial `serviceRating' object.
+%% @doc Build a `serviceRating' object.
 %% @hidden
-service_rating_inital(MSCC, ServiceContextId) ->
-	service_rating_inital(MSCC, ServiceContextId, []).
+service_rating(MSCC, ServiceContextId) ->
+	service_rating(MSCC, ServiceContextId, []).
 %% @hidden
-service_rating_inital([#{} = H| T], ServiceContextId, Acc) ->
-	service_rating_inital(T, ServiceContextId,
-			[service_rating_inital1(H, ServiceContextId) | Acc]);
-service_rating_inital([], _ServiceContextId, Acc) ->
+service_rating([#{} = H| T], ServiceContextId, Acc) ->
+	service_rating(T, ServiceContextId,
+			Acc ++ service_rating1(H, ServiceContextId));
+service_rating([], _ServiceContextId, Acc) ->
 	lists:reverse(Acc).
 %% @hidden
-service_rating_inital1(#{rg := undefined} = MSCC, ServiceContextId) ->
-	Acc = #{serviceContextId => ServiceContextId},
-	service_rating_inital2(MSCC, Acc);
-service_rating_inital1(#{rg := RG} = MSCC, ServiceContextId)
+service_rating1(#{rg := RG} = MSCC, ServiceContextId)
 		when is_integer(RG) ->
 	Acc = #{serviceContextId => ServiceContextId, ratingGroup => RG},
-	service_rating_inital2(MSCC, Acc).
+	service_rating2(MSCC, Acc);
+service_rating1(MSCC, ServiceContextId) ->
+	Acc = #{serviceContextId => ServiceContextId},
+	service_rating2(MSCC, Acc).
 %% @hidden
-service_rating_inital2(#{si := undefined} = MSCC, Acc) ->
-	service_rating_inital3(MSCC, Acc);
-service_rating_inital2(#{si := SI} = MSCC, Acc)
+service_rating2(#{si := SI} = MSCC, Acc)
 		when is_integer(SI) ->
 	Acc1 = Acc#{serviceId => SI},
-	service_rating_inital3(MSCC, Acc1).
+	service_rating3(MSCC, Acc1);
+service_rating2(MSCC, Acc) ->
+	service_rating3(MSCC, Acc).
 %% @hidden
-service_rating_inital3(#{rsu := undefined}, Acc) ->
-	Acc#{requestSubType => "RESERVE"};
-service_rating_inital3(#{rsu := RSU}, Acc) ->
-	Acc#{requestSubType => "RESERVE", requestedUnit => RSU}.
+service_rating3(#{rsu := [], usu := undefined}, Acc) ->
+	RatingObject = Acc#{requestSubType => "RESERVE"},
+	[RatingObject];
+service_rating3(#{rsu := [], usu := #{} = USU}, Acc) ->
+	RatingObject1 = Acc#{requestSubType => "RESERVE"},
+	RatingObject2 = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
+	[RatingObject1, RatingObject2];
+service_rating3(#{rsu := #{} = RSU, usu := undefined}, Acc) ->
+	RatingObject = Acc#{requestSubType => "RESERVE", grantedUnit => RSU},
+	[RatingObject].
 
 -spec subscriber_id(Subscribers, SubIdType) -> SubscriberId
 	when
@@ -537,11 +654,19 @@ build_mscc(ServiceRatings, Container) ->
 	build_mscc(ServiceRatings, Container, undefined).
 %% @hidden
 build_mscc([H | T], Container, FinalResultCode) ->
-	F = fun F(#{"serviceId" := SI, "ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
+	F = fun F(#{"consumedUnit" := _, "resultCode" := "SUCCESS"}, MSCC, _Acc) ->
+				build_mscc(T, MSCC, FinalResultCode);
+		F(#{"serviceId" := SI, "ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
 			[#'3gpp_ro_Multiple-Services-Credit-Control'
 					{'Service-Identifier' = [SI], 'Rating-Group' = [RG]} = MSCC1 | T1], Acc) ->
-				case gsu(maps:get("grantedUnit", ServiceRating)) of
-					[] ->
+				case catch gsu(maps:get("grantedUnit", ServiceRating)) of
+					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
+						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
+								'Granted-Service-Unit' = [GSU],
+								'Result-Code' = [RC2]},
+						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc};
+					_ ->
 						RC2 = result_code(RC),
 						RC3 = case FinalResultCode of
 							undefined ->
@@ -551,13 +676,7 @@ build_mscc([H | T], Container, FinalResultCode) ->
 						end,
 						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
 								'Result-Code' = [RC2]},
-						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc};
-					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
-						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Granted-Service-Unit' = [GSU],
-								'Result-Code' = [RC2]},
-						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc}
+						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc}
 				end;
 		F(#{"serviceId" := SI, "resultCode" := RC} = ServiceRating,
 			[#'3gpp_ro_Multiple-Services-Credit-Control'
@@ -579,13 +698,21 @@ build_mscc([H | T], Container, FinalResultCode) ->
 						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
 								'Granted-Service-Unit' = [GSU],
 								'Result-Code' = [RC2]},
-						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc}
+						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc};
+					_ ->
+						{FinalResultCode, lists:reverse(T1) ++ Acc}
 				end;
 			F(#{"ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
 					[#'3gpp_ro_Multiple-Services-Credit-Control'
 							{'Service-Identifier' = [], 'Rating-Group' = [RG]} = MSCC1 | T1], Acc) ->
 				case gsu(maps:get("grantedUnit", ServiceRating)) of
-					[] ->
+					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
+						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
+								'Granted-Service-Unit' = [GSU],
+								'Result-Code' = [RC2]},
+						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc};
+					_ ->
 						RC2 = result_code(RC),
 						RC3 = case FinalResultCode of
 							undefined ->
@@ -595,13 +722,7 @@ build_mscc([H | T], Container, FinalResultCode) ->
 						end,
 						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
 								'Result-Code' = [RC2]},
-						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc};
-					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
-						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Granted-Service-Unit' = [GSU],
-								'Result-Code' = [RC2]},
-						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc}
+						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc}
 				end;
 			F(ServiceRating, [H1 | T1], Acc) ->
 				F(ServiceRating, T1, [H1 | Acc])
@@ -671,3 +792,4 @@ result_code("USER_UNKNOWN") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN';
 result_code("RATING_FAILED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED'.
+
