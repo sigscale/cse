@@ -100,13 +100,12 @@ do_post(ModData, Body, ["ratingdata"]) ->
 do_post(ModData, Body, ["ratingdata", _RatingDataRef, Op])
 		when Op == "update"; Op == "release" ->
 	case zj:decode(Body) of
-		{ok, #{"invocationSequenceNumber" := SequenceNumber,
-				"serviceRating" := ServiceRatingRequests}} ->
+		{ok, #{"invocationSequenceNumber" := SequenceNumber} = Request} ->
 			Now = erlang:system_time(millisecond),
-			ServiceRatingResults = rate(ServiceRatingRequests, ModData),
+			ServiceRatingResponse = rate(Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
-					"serviceRating" => ServiceRatingResults},
+					"serviceRating" => ServiceRatingResponse},
 			do_response(ModData, {200, [], zj:encode(Response)});
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
@@ -166,7 +165,8 @@ rate1(Subscriber, Balance, [#{"requestSubType" := "DEBIT",
 	USU = get_units(ConsumedUnit),
 	case gen_server:call(ocs, {reserve, Subscriber, USU}) of
 		{ok, {Subscriber, NewBalance}} ->
-			ServiceRating = H#{"resultCode" => "SUCCESS"},
+			ServiceRating = H#{"consumedUnit" => ConsumedUnit,
+					"resultCode" => "SUCCESS"},
 			rate1(Subscriber, NewBalance, T, ModData, [ServiceRating | Acc]);
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
