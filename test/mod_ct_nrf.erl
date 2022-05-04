@@ -120,21 +120,12 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, Op])
 rate(#{"subscriptionId" := Subscriber, "serviceRating" := ServiceRating}, ModData) ->
 	MSISDN = get_msisdn(Subscriber),
 	case gen_server:call(ocs, {get_subscriber, MSISDN}) of
-		{ok, {MSISDN, Balance}} when Balance < 0 ->
-			Problem = #{cause => "QUOTA_LIMIT_REACHED",
-					type => "https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0#/",
-					title => "Request denied due to insufficient credit (usage applied)"},
-			do_response(ModData, {error, 403, Problem});
+		{ok, {MSISDN, Balance}} when Balance =< 0 ->
+			do_response(ModData, {error, 403});
 		{ok, {MSISDN, Balance}} when Balance > 0 ->
 			rate1(MSISDN, Balance, ServiceRating, ModData, []);
 		{error, not_found} ->
-			InvalidParams = [#{param => "/subscriptionId",
-					reason => "Unknown subscriber identifier"}],
-			Problem = #{cause => "USER_UNKNOWN",
-					type => "https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0#/",
-					title => "Request denied because the subscriber identity is unrecognized",
-					invalidParams => InvalidParams},
-			do_response(ModData, {error, 404, Problem});
+			do_response(ModData, {error, 404});
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end.
@@ -175,6 +166,29 @@ rate1(_, _, [], _, Acc) ->
 	lists:reverse(Acc).
 	
 %% @hidden
+do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData, {error, 404}) ->
+	InvalidParams = [#{param => "/subscriptionId",
+			reason => "Unknown subscriber identifier"}],
+	Problem = #{cause => "USER_UNKNOWN",
+			type => "https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0#/",
+			title => "Request denied because the subscriber identity is unrecognized",
+			code => "", status => 404,
+			invalidParams => InvalidParams},
+	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 404, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 404, Size}} | Data]};
+do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData, {error, 403}) ->
+	Problem = #{cause => "QUOTA_LIMIT_REACHED",
+			type => "https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0#/",
+			code => "", status => 403,
+			title => "Request denied due to insufficient credit (usage applied)"},
+	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 403, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 403, Size}} | Data]};
 do_response(#mod{data = Data} = ModData, {Code, Headers, ResponseBody}) ->
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	NewHeaders = Headers ++ [{content_length, Size},
