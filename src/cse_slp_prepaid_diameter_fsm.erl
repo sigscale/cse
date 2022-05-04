@@ -305,6 +305,19 @@ collect_information(cast, {_NrfState,
 	Data1 = maps:remove(nrf_location, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
+	{next_state, exception, NewData, Actions};
+collect_information(cast, {_NrfState,
+		{_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum,
+				session_id := SessionId,
+				reqt := RequestType} = Data) ->
+	ResultCode = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED',
+	Reply = diameter_error(SessionId, ResultCode, OHost,
+			ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(nrf_location, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	Actions = [{reply, From, Reply}],
 	{next_state, exception, NewData, Actions}.
 
 -spec exception(EventType, EventContent, Data) -> Result
