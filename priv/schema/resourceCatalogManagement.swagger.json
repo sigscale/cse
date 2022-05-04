@@ -110,6 +110,53 @@
                       "relationshipType" : "contained"
                     } ],
                     "version" : "1.0"
+                  }, {
+                    "id" : "1651055414682-258",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                    "name" : "PrefixRangeTable",
+                    "description" : "Prefix range table specification",
+                    "category" : "PrefixTable",
+                    "lastUpdate" : "2022-04-27T10:30:14.682",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "relationshipType" : "based"
+                    } ],
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1651057291061-274",
+                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                    "name" : "PrefixRangeRow",
+                    "description" : "Prefix range table row specification",
+                    "category" : "PrefixRow",
+                    "lastUpdate" : "2022-04-27T11:01:31.061",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecCharacteristic" : [ {
+                      "name" : "start",
+                      "description" : "Start of prefix range",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "end",
+                      "description" : "End of prefix range",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "value",
+                      "description" : "Description of prefix range"
+                    } ],
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow",
+                      "relationshipType" : "based"
+                    }, {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable",
+                      "relationshipType" : "contained"
+                    } ],
+                    "version" : "1.0"
                   } ]
                 }
               }
@@ -216,6 +263,57 @@
                       "id" : "1650454919566-290",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
                       "name" : "TariffTable",
+                      "relationshipType" : "contained"
+                    } ],
+                    "version" : "1.0"
+                  }
+                },
+                "Prefix Range Table" : {
+                  "summary" : "Prefix Range Table",
+                  "description" : "Prefix range table specification",
+                  "value" : {
+                    "name" : "PrefixRangeTable",
+                    "description" : "Prefix range table specification",
+                    "category" : "PrefixTable",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "relationshipType" : "based"
+                    } ],
+                    "version" : "1.0"
+                  }
+                },
+                "Prefix Range Row" : {
+                  "summary" : "Prefix Range Row",
+                  "description" : "Prefix range row specification",
+                  "value" : {
+                    "name" : "PrefixRangeRow",
+                    "description" : "Prefix range table row specification",
+                    "category" : "PrefixRow",
+                    "lifecycleStatus" : "Active",
+                    "resourceSpecCharacteristic" : [ {
+                      "name" : "start",
+                      "description" : "Start of prefix range",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "end",
+                      "description" : "End of prefix range",
+                      "valueType" : "String"
+                    }, {
+                      "name" : "value",
+                      "description" : "Description of prefix range"
+                    } ],
+                    "resourceSpecRelationship" : [ {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow",
+                      "relationshipType" : "based"
+                    }, {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable",
                       "relationshipType" : "contained"
                     } ],
                     "version" : "1.0"
@@ -333,6 +431,63 @@
                         "id" : "1650454919566-290",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
                         "name" : "TariffTable",
+                        "relationshipType" : "contained"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  },
+                  "Prefix Range Table" : {
+                    "summary" : "Prefix Range Table",
+                    "description" : "Prefix Range table specification",
+                    "value" : {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable",
+                      "description" : "Prefix Range table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-04-27T10:30:14.682",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable",
+                        "relationshipType" : "based"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  },
+                  "Prefix Range Row" : {
+                    "summary" : "Prefix Range Row",
+                    "description" : "Prefix range table row specification",
+                    "value" : {
+                      "id" : "1651057291061-274",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                      "name" : "PrefixRangeRow",
+                      "description" : "Prefix range table row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-04-27T11:01:31.061",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "start",
+                        "description" : "Start of prefix range",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "end",
+                        "description" : "End of prefix range",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Description of prefix range"
+                      } ],
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow",
+                        "relationshipType" : "based"
+                      }, {
+                        "id" : "1651055414682-258",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                        "name" : "PrefixRangeTable",
                         "relationshipType" : "contained"
                       } ],
                       "version" : "1.0"
@@ -470,6 +625,63 @@
                         "id" : "1650454919566-290",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
                         "name" : "TariffTable",
+                        "relationshipType" : "contained"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  },
+                  "Prefix Range Table" : {
+                    "summary" : "Prefix Range Table",
+                    "description" : "Prefix Range table specification",
+                    "value" : {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable",
+                      "description" : "Prefix Range table specification",
+                      "category" : "PrefixTable",
+                      "lastUpdate" : "2022-04-27T10:30:14.682",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable",
+                        "relationshipType" : "based"
+                      } ],
+                      "version" : "1.0"
+                    }
+                  },
+                  "Prefix Range Row" : {
+                    "summary" : "Prefix Range Row",
+                    "description" : "Prefix range table row specification",
+                    "value" : {
+                      "id" : "1651057291061-274",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                      "name" : "PrefixRangeRow",
+                      "description" : "Prefix range table row specification",
+                      "category" : "PrefixRow",
+                      "lastUpdate" : "2022-04-27T11:01:31.061",
+                      "lifecycleStatus" : "Active",
+                      "resourceSpecCharacteristic" : [ {
+                        "name" : "start",
+                        "description" : "Start of prefix range",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "end",
+                        "description" : "End of prefix range",
+                        "valueType" : "String"
+                      }, {
+                        "name" : "value",
+                        "description" : "Description of prefix range"
+                      } ],
+                      "resourceSpecRelationship" : [ {
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow",
+                        "relationshipType" : "based"
+                      }, {
+                        "id" : "1651055414682-258",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                        "name" : "PrefixRangeTable",
                         "relationshipType" : "contained"
                       } ],
                       "version" : "1.0"
