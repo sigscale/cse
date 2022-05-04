@@ -23,6 +23,10 @@
 
 -include_lib("inets/include/httpd.hrl").
 
+-define(DIAMETERDATA, 32251).
+-define(DIAMETERVOICE, 32260).
+-define(DIAMETERSMS, 32274).
+
 -spec do(ModData) -> Result when
 	ModData :: #mod{},
 	Result :: {proceed, OldData} | {proceed, NewData} | {break, NewData} | done,
@@ -81,13 +85,12 @@ content_type_available(Headers, Uri, Body, #mod{data = Data} = ModData) ->
 %% @hidden
 do_post(ModData, Body, ["ratingdata"]) ->
 	case zj:decode(Body) of
-		{ok, #{"invocationSequenceNumber" := SequenceNumber,
-				"serviceRating" := ServiceRatingRequests}} ->
+		{ok, #{"invocationSequenceNumber" := SequenceNumber} = Request} ->
 			Now = erlang:system_time(millisecond),
-			ServiceRatingResults = service_rating(ServiceRatingRequests, []),
+			ServiceRatingResponse = rate(Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
-					"serviceRating" => ServiceRatingResults},
+					"serviceRating" => ServiceRatingResponse},
 			RatingDataRef = integer_to_list(rand:uniform(16#ffff)),
 			Headers = [{location, "/ratingdata/" ++ RatingDataRef}],
 			do_response(ModData, {201, Headers, zj:encode(Response)});
@@ -97,48 +100,80 @@ do_post(ModData, Body, ["ratingdata"]) ->
 do_post(ModData, Body, ["ratingdata", _RatingDataRef, Op])
 		when Op == "update"; Op == "release" ->
 	case zj:decode(Body) of
-		{ok, #{"invocationSequenceNumber" := SequenceNumber,
-				"serviceRating" := ServiceRatingRequests}} ->
+		{ok, #{"invocationSequenceNumber" := SequenceNumber} = Request} ->
 			Now = erlang:system_time(millisecond),
-			ServiceRatingResults = service_rating(ServiceRatingRequests, []),
+			ServiceRatingResponse = rate(Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
-					"serviceRating" => ServiceRatingResults},
+					"serviceRating" => ServiceRatingResponse},
 			do_response(ModData, {200, [], zj:encode(Response)});
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
 	end.
 
-service_rating([#{"serviceContextId" := "32276@3gpp.org",
-		"requestSubType" := "RESERVE"} = Request | T], Acc) ->
-	GrantedUnit = #{"time" => 60},
-	Result = Request#{"grantedUnit" => GrantedUnit, "resultCode" => "SUCCESS"},
-	service_rating(T, [maps:remove("destinationId", Result) | Acc]);
-service_rating([#{"serviceContextId" := "32251@3gpp.org",
-		"requestSubType" := "RESERVE"} = Request | T], Acc) ->
-	GrantedUnit = #{"totalVolume" => 10000000},
-	Result = Request#{"grantedUnit" => GrantedUnit, "resultCode" => "SUCCESS"},
-	service_rating(T, [Result | Acc]);
-service_rating([#{"serviceContextId" := "32274@3gpp.org",
-		"requestSubType" := "RESERVE"} = Request | T], Acc) ->
-	GrantedUnit = #{"serviceSpecificUnit" => 1},
-	Result = Request#{"grantedUnit" => GrantedUnit, "resultCode" => "SUCCESS"},
-	service_rating(T, [maps:remove("destinationId", Result) | Acc]);
-service_rating([#{"serviceContextId" := "32276@3gpp.org",
-		"requestSubType" := "DEBIT"} = Request | T], Acc) ->
-	Result = Request#{"resultCode" => "SUCCESS"},
-	service_rating(T, [maps:remove("destinationId", Result) | Acc]);
-service_rating([#{"serviceContextId" := "32251@3gpp.org",
-		"requestSubType" := "DEBIT"} = Request | T], Acc) ->
-	Result = Request#{"resultCode" => "SUCCESS"},
-	service_rating(T, [Result | Acc]);
-service_rating([#{"serviceContextId" := "32274@3gpp.org",
-		"requestSubType" := "DEBIT"} = Request | T], Acc) ->
-	Result = Request#{"resultCode" => "SUCCESS"},
-	service_rating(T, [maps:remove("destinationId", Result) | Acc]);
-service_rating([], Acc) ->
+-spec rate(Request, ModData) -> Response
+	when
+		Request :: map(),
+		ModData :: #mod{},
+		Response :: map().
+%% @doc Build a rating response.
+rate(#{"subscriptionId" := Subscriber, "serviceRating" := ServiceRating}, ModData) ->
+	MSISDN = get_msisdn(Subscriber),
+	case gen_server:call(ocs, {get_subscriber, MSISDN}) of
+		{ok, {MSISDN, Balance}} when Balance < 0 ->
+			Problem = #{cause => "QUOTA_LIMIT_REACHED",
+					type => "https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0#/",
+					title => "Request denied due to insufficient credit (usage applied)"},
+			do_response(ModData, {error, 403, Problem});
+		{ok, {MSISDN, Balance}} when Balance > 0 ->
+			rate1(MSISDN, Balance, ServiceRating, ModData, []);
+		{error, not_found} ->
+			InvalidParams = [#{param => "/subscriptionId",
+					reason => "Unknown subscriber identifier"}],
+			Problem = #{cause => "USER_UNKNOWN",
+					type => "https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0#/",
+					title => "Request denied because the subscriber identity is unrecognized",
+					invalidParams => InvalidParams},
+			do_response(ModData, {error, 404, Problem});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end.
+%% @hidden
+rate1(Subscriber, Balance, [#{"requestSubType" := "RESERVE",
+		"serviceContextId" := SvcContextId} = H | T], ModData, Acc)
+		when Balance > 0 ->
+	RSU = case service_type(SvcContextId) of
+		?DIAMETERDATA ->
+			rand:uniform(10000);
+		?DIAMETERVOICE ->
+			rand:uniform(3600);
+		?DIAMETERSMS ->
+			rand:uniform(10)
+	end,
+	case gen_server:call(ocs, {reserve, Subscriber, RSU}) of
+		{ok, {Subscriber, NewBalance}} ->
+			Data = maps:remove("requestedUnit", H),
+			ServiceRating = Data#{"grantedUnit" => #{"totalVolume" => RSU},
+			"resultCode" => "SUCCESS"},
+			rate1(Subscriber, NewBalance, T, ModData, [ServiceRating | Acc]);
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(Subscriber, Balance, [#{"requestSubType" := "DEBIT",
+		"consumedUnit" := ConsumedUnit} = H | T], ModData, Acc)
+		when Balance > 0 ->
+	USU = get_units(ConsumedUnit),
+	case gen_server:call(ocs, {reserve, Subscriber, USU}) of
+		{ok, {Subscriber, NewBalance}} ->
+			ServiceRating = H#{"consumedUnit" => ConsumedUnit,
+					"resultCode" => "SUCCESS"},
+			rate1(Subscriber, NewBalance, T, ModData, [ServiceRating | Acc]);
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(_, _, [], _, Acc) ->
 	lists:reverse(Acc).
-
+	
 %% @hidden
 do_response(#mod{data = Data} = ModData, {Code, Headers, ResponseBody}) ->
 	Size = integer_to_list(iolist_size(ResponseBody)),
@@ -155,4 +190,44 @@ send(#mod{socket = Socket, socket_type = SocketType} = Info,
 		StatusCode, Headers, ResponseBody) ->
 	httpd_response:send_header(Info, StatusCode, Headers),
 	httpd_socket:deliver(SocketType, Socket, ResponseBody).
+
+-spec get_msisdn(SubscriptionIds) -> Subscriber
+	when
+		SubscriptionIds :: [Id],
+		Id :: string(),
+		Subscriber :: string().
+%% @hidden Get a subscriber id from list of subscribers.
+get_msisdn(["msisdn-" ++ MSISDN | _]) ->
+	MSISDN;
+get_msisdn([_ | T]) ->
+	get_msisdn(T);
+get_msisdn([]) ->
+	undefined.
+
+%% @hidden
+get_units(#{"time" := CCTime}) ->
+	CCTime;
+get_units(#{"totalVolume" := TotalVolume}) ->
+	TotalVolume;
+get_units(#{"serviceSpecificUnit" := ServiceSpecificUnit}) ->
+	ServiceSpecificUnit.
+
+%% @hidden
+service_type(Id)
+		when is_list(Id) ->
+	service_type(list_to_binary(Id));
+service_type(Id) ->
+	% allow ".3gpp.org" or the proper "@3gpp.org"
+	case binary:part(Id, size(Id), -8) of
+		<<"3gpp.org">> ->
+			ServiceContext = binary:part(Id, byte_size(Id) - 14, 5),
+			case catch binary_to_integer(ServiceContext) of
+				{'EXIT', _} ->
+					undefined;
+				SeviceType ->
+					SeviceType
+			end;
+		_ ->
+			undefined
+	end.
 
