@@ -108,7 +108,11 @@ do(#mod{method = Method, request_uri = Uri,
 	end.
 
 %% @hidden
-do_post(Resource, ModData, Body, ["resourceInventoryManagement", "v4", "resource"]) ->
+do_post(Resource, ModData, Body,
+		["resourceCatalogManagement", "v4", "resourceSpecification"]) ->
+	do_response(ModData, Resource:add_resource_spec(Body));
+do_post(Resource, ModData, Body,
+		["resourceInventoryManagement", "v4", "resource"]) ->
 	do_response(ModData, Resource:add_resource(Body)).
 
 %% @hidden

@@ -53,74 +53,129 @@
 		Reason :: term().
 %% @doc Starts the application processes.
 start(normal = _StartType, _Args) ->
-	case inets:services_info() of
-		ServicesInfo when is_list(ServicesInfo) ->
-			{ok, Profile} = application:get_env(nrf_profile),
-			start1(Profile, ServicesInfo);
+	HttpdTables = case is_mod_auth_mnesia() of
+		true ->
+			[httpd_user, httpd_group];
+		false ->
+			[]
+	end,
+	Tables = [resource_spec, resource, service] ++ HttpdTables,
+	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
+		ok ->
+			start1();
+		{timeout, BadTables} ->
+			case force(BadTables) of
+				ok ->
+					error_logger:warning_report(["Force loaded mnesia tables",
+							{tables, BadTables}, {module, ?MODULE}]),
+					start1();
+				{error, Reason} ->
+					error_logger:error_report(["Failed to force load mnesia tables",
+							{tables, BadTables}, {reason, Reason}, {module, ?MODULE}]),
+					{error, Reason}
+			end;
 		{error, Reason} ->
+			error_logger:error_report(["Failed to load mnesia tables",
+					{tables, Tables}, {reason, Reason}, {module, ?MODULE}]),
 			{error, Reason}
 	end.
 %% @hidden
-start1(Profile, [{httpc, _Pid, Info} | T]) ->
-	case proplists:lookup(profile, Info) of
-		{profile, Profile} ->
-			start2(Profile);
-		_ ->
-			start1(Profile, T)
+start1() ->
+	start2([cse_rest_res_resource:prefix_table_spec_id(),
+			cse_rest_res_resource:prefix_row_spec_id()], []).
+%% @hidden
+start2([H | T], Acc) ->
+	case cse:find_resource_spec(H) of
+		{ok, _} ->
+			start2(T, Acc);
+		{error, not_found} ->
+			start2(T, [H | Acc]);
+		{error, Reason} ->
+			{error, Reason}
 	end;
-start1(Profile, [_ | T]) ->
-	start1(Profile, T);
-start1(Profile, []) ->
-	case inets:start(httpc, [{profile, Profile}]) of
-		{ok, _Pid} ->
-			start2(Profile);
-		{error, Reason} ->
-			{error, Reason}
-	end.
-%% @hidden
-start2(Profile) ->
-	{ok, Options} = application:get_env(nrf_options),
-	case httpc:set_options(Options, Profile) of
+start2([], Acc) when length(Acc) > 0 ->
+	case install_resource_specs(Acc) of
 		ok ->
 			start3();
 		{error, Reason} ->
 			{error, Reason}
-	end.
+	end;
+start2([], []) ->
+	start3().
 %% @hidden
 start3() ->
+	case inets:services_info() of
+		ServicesInfo when is_list(ServicesInfo) ->
+			{ok, Profile} = application:get_env(nrf_profile),
+			start4(Profile, ServicesInfo);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start4(Profile, [{httpc, _Pid, Info} | T]) ->
+	case proplists:lookup(profile, Info) of
+		{profile, Profile} ->
+			start5(Profile);
+		_ ->
+			start4(Profile, T)
+	end;
+start4(Profile, [_ | T]) ->
+	start4(Profile, T);
+start4(Profile, []) ->
+	case inets:start(httpc, [{profile, Profile}]) of
+		{ok, _Pid} ->
+			start5(Profile);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start5(Profile) ->
+	{ok, Options} = application:get_env(nrf_options),
+	case httpc:set_options(Options, Profile) of
+		ok ->
+			start6();
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start6() ->
 	Options = [set, public, named_table, {write_concurrency, true}],
 	ets:new(cse_counters, Options),
 	case catch ets:insert(cse_counters, {nrf_seq, 0}) of
 		true ->
-			start4();
+			start7();
 		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start4() ->
+start7() ->
 	Options = [set, public, named_table, {write_concurrency, true},
 			{keypos, 1}],
 	case catch ets:new(session, Options) of
 		{'EXIT', Reason} ->
 			{error, Reason};
-		_TID ->
-			start5()
+		TID ->
+			start8()
 	end.
 %% @hidden
-start5() ->
-	{ok, DiameterServices} = application:get_env(diameter),
-	F1 = fun({Addr, Port, Options}) ->
-		case cse:start_diameter(Addr, Port, Options) of
-			{ok, _Sup} ->
-				ok;
-			{error, Reason} ->
-				throw(Reason)
-		end
-	end,
-	TopSup = supervisor:start_link({local, cse_sup}, cse_sup, []),
-	lists:foreach(F1, DiameterServices),
-	catch cse_mib:load(),
-	TopSup.
+start8() ->
+	case supervisor:start_link({local, cse_sup}, cse_sup, []) of
+		{ok, TopSup} ->
+			{ok, DiameterServices} = application:get_env(diameter),
+			start9(TopSup, DiameterServices);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start9(TopSup, [{Addr, Port, Options} | T]) ->
+	case cse:start_diameter(Addr, Port, Options) of
+		{ok, _Sup} ->
+			start9(TopSup, T);
+		{error, Reason} ->
+			{error, Reason}
+	end;
+start9(TopSup, []) ->
+	{ok, TopSup}.
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
 	when
@@ -267,60 +322,73 @@ install2(Nodes) ->
 	end.
 %% @hidden
 install3(Nodes, Acc) ->
-	case create_table(resource, Nodes) of
+	case create_table(resource_spec, Nodes) of
 		ok ->
-			install4(Nodes, [resource | Acc]);
+			case install_resource_specs() of
+				ok ->
+					install4(Nodes, [resource_spec | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
 install4(Nodes, Acc) ->
-	case create_table(service, Nodes) of
+	case create_table(resource, Nodes) of
 		ok ->
-			install5(Nodes, [service | Acc]);
+			install5(Nodes, [resource | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
 install5(Nodes, Acc) ->
-	case application:load(inets) of
+	case create_table(service, Nodes) of
 		ok ->
-			error_logger:info_msg("Loaded inets.~n"),
-			install6(Nodes, Acc);
-		{error, {already_loaded, inets}} ->
-			install6(Nodes, Acc)
+			install6(Nodes, [service | Acc]);
+		{error, Reason} ->
+			{error, Reason}
 	end.
 %% @hidden
 install6(Nodes, Acc) ->
-	case is_mod_auth_mnesia() of
-		true ->
+	case application:load(inets) of
+		ok ->
+			error_logger:info_msg("Loaded inets.~n"),
 			install7(Nodes, Acc);
-		false ->
-			error_logger:info_msg("Httpd service not defined. "
-					"User table not created~n"),
-			install9(Nodes, Acc)
+		{error, {already_loaded, inets}} ->
+			install7(Nodes, Acc)
 	end.
 %% @hidden
 install7(Nodes, Acc) ->
-	case create_table(httpd_user, Nodes) of
-		ok ->
-			install8(Nodes, [httpd_user | Acc]);
-		{error, Reason} ->
-			{error, Reason}
+	case is_mod_auth_mnesia() of
+		true ->
+			install8(Nodes, Acc);
+		false ->
+			error_logger:info_msg("Httpd service not defined. "
+					"User table not created~n"),
+			install10(Nodes, Acc)
 	end.
 %% @hidden
 install8(Nodes, Acc) ->
-	case create_table(httpd_group, Nodes) of
+	case create_table(httpd_user, Nodes) of
 		ok ->
-			install9(Nodes, [httpd_group | Acc]);
+			install9(Nodes, [httpd_user | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-install9(_Nodes, Tables) ->
+install9(Nodes, Acc) ->
+	case create_table(httpd_group, Nodes) of
+		ok ->
+			install10(Nodes, [httpd_group | Acc]);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+install10(_Nodes, Tables) ->
 	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
 		ok ->
-			install10(Tables, lists:member(httpd_user, Tables));
+			install11(Tables, lists:member(httpd_user, Tables));
 		{timeout, Tables} ->
 			error_logger:error_report(["Timeout waiting for tables",
 					{tables, Tables}]),
@@ -331,21 +399,21 @@ install9(_Nodes, Tables) ->
 			{error, Reason}
 	end.
 %% @hidden
-install10(Tables, true) ->
+install11(Tables, true) ->
 	case inets:start() of
 		ok ->
 			error_logger:info_msg("Started inets.~n"),
-			install11(Tables);
+			install12(Tables);
 		{error, {already_started, inets}} ->
-			install11(Tables);
+			install12(Tables);
 		{error, Reason} ->
 			error_logger:error_msg("Failed to start inets~n"),
 			{error, Reason}
 	end;
-install10(Tables, false) ->
+install11(Tables, false) ->
 	{ok, Tables}.
 %% @hidden
-install11(Tables) ->
+install12(Tables) ->
 	case cse:list_users() of
 		{ok, []} ->
 			UserData = [{locale, "en"}],
@@ -375,6 +443,24 @@ install11(Tables) ->
 %%  Internal functions
 %%----------------------------------------------------------------------
 
+-spec force(Tables) -> Result
+	when
+		Tables :: [TableName],
+		Result :: ok | {error, Reason},
+		TableName :: atom(),
+		Reason :: term().
+%% @doc Try to force load bad tables.
+%% @private
+force([H | T]) ->
+	case mnesia:force_load_table(H) of
+		yes ->
+			force(T);
+		ErrorDescription ->
+			{error, ErrorDescription}
+	end;
+force([]) ->
+	ok.
+
 -spec create_table(Table, Nodes) -> Result
 	when
 		Table :: atom(),
@@ -383,17 +469,26 @@ install11(Tables) ->
 		Reason :: term().
 %% @doc Create mnesia table.
 %% @private
+create_table(resource_spec, Nodes) when is_list(Nodes) ->
+	create_table1(resource_spec, mnesia:create_table(resource_spec,
+			[{disc_copies, Nodes},
+			{attributes, record_info(fields, resource_spec)}]));
 create_table(resource, Nodes) when is_list(Nodes) ->
-	create_table1(resource, mnesia:create_table(resource, [{disc_copies, Nodes},
+	create_table1(resource, mnesia:create_table(resource,
+			[{disc_copies, Nodes},
 			{attributes, record_info(fields, resource)}]));
 create_table(service, Nodes) when is_list(Nodes) ->
-	create_table1(service, mnesia:create_table(service, [{disc_copies, Nodes},
+	create_table1(service, mnesia:create_table(service,
+			[{disc_copies, Nodes},
 			{attributes, record_info(fields, service)}]));
 create_table(httpd_user, Nodes) when is_list(Nodes) ->
-	create_table1(httpd_user, mnesia:create_table(httpd_user, [{type, bag},
-			{disc_copies, Nodes}, {attributes, record_info(fields, httpd_user)}]));
+	create_table1(httpd_user,
+			mnesia:create_table(httpd_user, [{type, bag},
+			{disc_copies, Nodes},
+			{attributes, record_info(fields, httpd_user)}]));
 create_table(httpd_group, Nodes) when is_list(Nodes) ->
-	create_table1(httpd_group, mnesia:create_table(httpd_group,
+	create_table1(httpd_group,
+			mnesia:create_table(httpd_group,
 			[{type, bag}, {disc_copies, Nodes},
 			{attributes, record_info(fields, httpd_group)}])).
 %% @hidden
@@ -409,6 +504,43 @@ create_table1(_Table, {aborted, {not_active, _, Node} = Reason}) ->
 create_table1(_Table, {aborted, Reason}) ->
 	error_logger:error_report([mnesia:error_description(Reason), {error, Reason}]),
 	{error, Reason}.
+
+-spec install_resource_specs() -> Result
+	when
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @equiv install_resource_specs([cse_rest_res_resource:prefix_table_spec_id(),
+%% 		cse_rest_res_resource:prefix_row_spec_id(),
+%%			cse_rest_res_resource:prefix_range_table_spec_id(),
+%%			cse_rest_res_resource:prefix_range_row_spec_id()])
+%% @private
+install_resource_specs() ->
+	SpecIds = [cse_rest_res_resource:prefix_table_spec_id(),
+			cse_rest_res_resource:prefix_row_spec_id(),
+			cse_rest_res_resource:prefix_range_table_spec_id(),
+			cse_rest_res_resource:prefix_range_row_spec_id()],
+	install_resource_specs(SpecIds).
+
+-spec install_resource_specs(SpecIds) -> Result
+	when
+		SpecIds :: [string()],
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Install static Resource Specifications.
+%% @private
+install_resource_specs([H | T]) ->
+	Spec = cse_rest_res_resource:static_spec(H),
+	F = fun() ->
+				mnesia:write(resource_spec, Spec, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			install_resource_specs(T);
+		{aborted, Reason} ->
+			{error, Reason}
+	end;
+install_resource_specs([]) ->
+	ok.
 
 -spec is_mod_auth_mnesia() -> boolean().
 %% @doc Check if inets mod_auth uses mmnesia tables.

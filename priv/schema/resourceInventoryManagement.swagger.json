@@ -2,7 +2,7 @@
   "openapi" : "3.0.0",
   "info" : {
     "title" : "SigScale CSE - Resource Inventory",
-    "description" : "# TMF639 Resource Inventory Management\nSigScale uses the standard TM Forum [Open APIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF639 API is used in SigScale CSE to represent logical resources such as tables and table rows.\n# Prefix Tables\nThe Service Logic Execution Environment (SLEE) includes a general purpose facility for prefix matching tables. Multiple key-value tables may be created, using this API, where the key is a string representing a prefix. A typical use case is matching of dialed digits.\n## Table\nA table is respresented by a `Resource` entity in the inventory. The `name` attribute will be used by Service Logic Processing Programs (SLP) to select a table. Use the `PrefixTable` `ResourceSpecification` (id=1).\n## Row\nEach row in a table is an individual `Resource` entity with a `resourceRelationship` to the containing table. Use the `PrefixTableRow` `ResourceSpecification` (id=2). The `prefix` characteristic value represents the string to match while the result of the match is provided by the value of the characteristic named `value`.", 
+    "description" : "# TMF639 Resource Inventory Management\n\nSigScale uses the standard TM Forum [OpenAPIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF639 API is used in SigScale CSE to represent logical resources such as tables and table rows.\n\n# Prefix Tables\n\nThe Service Logic Execution Environment (SLEE) includes a general purpose facility for prefix matching tables. Multiple key-value tables may be created, using this API, where the key is a string representing a prefix. A typical use case is matching of dialed digits.\n\n## Table\n\nA table is respresented by a `Resource` entity in the inventory. The `name` attribute will be used by Service Logic Processing Programs (SLP) to select a table. Use the `PrefixTable` `ResourceSpecification` (id=1).\n\n## Row\n\nEach row in a table is an individual `Resource` entity with a `resourceRelationship` to the containing table. Use the `PrefixTableRow` `ResourceSpecification` (id=2). The `prefix` characteristic value represents the string to match while the result of the match is provided by the value of the characteristic named `value`.",
     "version" : "4.0.0",
     "license" : {
       "name" : "Apache 2.0"
@@ -17,7 +17,7 @@
     "url" : "http://cse.example.net/resourceInventoryManagement/v4"
   } ],
   "paths" : {
-    "/resource/" : {
+    "/resource" : {
       "get" : {
         "tags" : [ "resource" ],
         "summary" : "Retrieve Resources",
@@ -35,7 +35,7 @@
           "name" : "category",
           "in" : "query",
           "description" : "Category of the resource",
-          "required" : true,
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -43,7 +43,7 @@
           "name" : "resourceSpecification.id",
           "in" : "query",
           "description" : "Id of the resource specification",
-          "required" : true,
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -51,7 +51,7 @@
           "name" : "resourceRelationship.name",
           "in" : "query",
           "description" : "Name of the resource relationship",
-          "required" : true,
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -71,7 +71,8 @@
                     "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
                     "name" : "example",
                     "resourceSpecification" : {
-                      "id" : "1",
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                       "name" : "PrefixTable"
                     },
                     "lastUpdate" : "2022-02-08T05:53:32.300Z"
@@ -79,8 +80,9 @@
                     "id" : "1644987999944",
                     "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
                     "resourceSpecification" : {
-                      "id" : "2",
-                      "name" : "PrefixTableRow"
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow"
                     },
                     "resourceRelationship" : [ {
                       "resource" : {
@@ -114,9 +116,7 @@
           }
         },
         "deprecated" : false
-      }
-    },
-    "/resource" : {
+      },
       "post" : {
         "tags" : [ "resource" ],
         "summary" : "Create a Resource",
@@ -135,7 +135,8 @@
                   "value" : {
                     "name" : "example",
                     "resourceSpecification" : {
-                      "id" : "1",
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                       "name" : "PrefixTable"
                     }
                   }
@@ -144,8 +145,9 @@
                   "summary" : "Table Row Resource",
                   "value" : {
                     "resourceSpecification" : {
-                      "id" : "2",
-                      "name" : "PrefixTableRow"
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow"
                     },
                     "resourceRelationship" : [ {
                       "resource" : {
@@ -192,7 +194,8 @@
                       "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
                       "name" : "example",
                       "resourceSpecification" : {
-                        "id" : "1",
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                         "name" : "PrefixTable"
                       },
                       "lastUpdate" : "2022-02-08T05:53:32.300Z"
@@ -204,8 +207,9 @@
                       "id" : "1644987999944",
                       "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
                       "resourceSpecification" : {
-                        "id" : "2",
-                        "name" : "PrefixTableRow"
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow"
                       },
                       "resourceRelationship" : [ {
                         "resource" : {
@@ -246,7 +250,7 @@
       "get" : {
         "tags" : [ "resource" ],
         "summary" : "Retrieve a Resource",
-        "description" : "Retrieve  a `Resource` entity by it's identifier",
+        "description" : "Retrieve  a `Resource` entity by its identifier",
         "operationId" : "getResource",
         "parameters" : [ {
           "name" : "Id",
@@ -273,7 +277,8 @@
                       "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
                       "name" : "example",
                       "resourceSpecification" : {
-                        "id" : "1",
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                         "name" : "PrefixTable"
                       },
                       "lastUpdate" : "2022-02-08T05:53:32.300Z"
@@ -285,8 +290,9 @@
                       "id" : "1644987999944",
                       "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
                       "resourceSpecification" : {
-                        "id" : "2",
-                        "name" : "PrefixTableRow"
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow"
                       },
                       "resourceRelationship" : [ {
                         "resource" : {
