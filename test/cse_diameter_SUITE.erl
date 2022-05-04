@@ -157,7 +157,8 @@ sequences() ->
 %%
 all() ->
 	[send_initial_scur, receive_initial_scur, send_interim_scur,
-			receive_interim_scur, send_final_scur, receive_final_scur].
+			receive_interim_scur, send_final_scur, receive_final_scur,
+			unknown_subscriber].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -348,6 +349,19 @@ receive_final_scur(Config) ->
 	{ok, {Subscriber, NewBalance2}} = gen_server:call(Server, {get_subscriber, Subscriber}),
 	TotalUSU1 = InputOctets1 + OutputOctets1 + UsedServiceUnits1,
 	Balance = TotalRSU + TotalUSU1 + NewBalance2.
+
+unknown_subscriber() ->
+	[{userdata, [{doc, "Recieve Diameter User Unknown"}]}].
+
+unknown_subscriber(_Config) ->
+	MSISDN = list_to_binary(generate_identity(7)),
+	IMSI = list_to_binary(generate_identity(7)),
+	Subscriber1 = {MSISDN, IMSI},
+	Ref = erlang:ref_to_list(make_ref()),
+	SId = diameter:session_id(Ref),
+	RequestNum = 0,
+	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
