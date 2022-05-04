@@ -320,6 +320,7 @@ receive_final_scur(Config) ->
 			'Granted-Service-Unit' = [GrantedUnits]} = MCC,
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets]} = GrantedUnits,
 	{ok, {Subscriber, NewBalance}} = gen_server:call(Server, {get_subscriber, Subscriber}),
+	Balance = NewBalance + TotalOctets,
 	RequestNum1 = RequestNum0 + 1,
 	InputOctets1 = rand:uniform(100),
 	OutputOctets1 = rand:uniform(200),
