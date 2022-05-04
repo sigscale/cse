@@ -296,6 +296,58 @@ send_final_scur(Config) ->
 	Answer2 = diameter_scur_stop(SId, Subscriber1, RequestNum2, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2.
 
+receive_final_scur() ->
+	[{userdata, [{doc, "On SCUR endRatingresponse send CCA-T"}]}].
+
+receive_final_scur(Config) ->
+	Server = ?config(ocs_server, Config),
+	Subscriber = generate_identity(7),
+	Balance = rand:uniform(100000),
+	MSISDN = list_to_binary(Subscriber),
+	IMSI = list_to_binary(generate_identity(7)),
+	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
+	Subscriber1 = {MSISDN, IMSI},
+	Ref = erlang:ref_to_list(make_ref()),
+	SId = diameter:session_id(Ref),
+	RequestNum0 = 0,
+	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
+			'CC-Request-Number' = RequestNum0,
+			'Multiple-Services-Credit-Control' = [MCC]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GrantedUnits]} = MCC,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets]} = GrantedUnits,
+	{ok, {Subscriber, NewBalance}} = gen_server:call(Server, {get_subscriber, Subscriber}),
+	RequestNum1 = RequestNum0 + 1,
+	InputOctets1 = rand:uniform(100),
+	OutputOctets1 = rand:uniform(200),
+	UsedServiceUnits = {InputOctets1, OutputOctets1},
+	Answer1 = diameter_scur_interim(SId, Subscriber1, RequestNum1, UsedServiceUnits),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+			'CC-Request-Number' = RequestNum1,
+			'Multiple-Services-Credit-Control' = [MCC1]} = Answer1,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GrantedUnits1]} = MCC1,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets1]} = GrantedUnits1,
+	{ok, {Subscriber, NewBalance1}} = gen_server:call(Server, {get_subscriber, Subscriber}),
+	TotalRSU = TotalOctets + TotalOctets1,
+	TotalUSU = InputOctets1 + OutputOctets1,
+	Balance = TotalRSU + TotalUSU + NewBalance1,
+	RequestNum2 = RequestNum1 + 1,
+	UsedServiceUnits1 = rand:uniform(300),
+	Answer2 = diameter_scur_stop(SId, Subscriber1, RequestNum2, UsedServiceUnits1),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+			'CC-Request-Number' = RequestNum2} = Answer2,
+	{ok, {Subscriber, NewBalance2}} = gen_server:call(Server, {get_subscriber, Subscriber}),
+	TotalUSU1 = InputOctets1 + OutputOctets1 + UsedServiceUnits1,
+	Balance = TotalRSU + TotalUSU1 + NewBalance2.
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
