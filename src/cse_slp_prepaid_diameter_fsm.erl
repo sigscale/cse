@@ -807,7 +807,7 @@ build_mscc([H | T], Container, FinalResultCode) ->
 		F(#{"serviceId" := SI, "resultCode" := RC} = ServiceRating,
 			[#'3gpp_ro_Multiple-Services-Credit-Control'
 					{'Service-Identifier' = [SI], 'Rating-Group' = []} = MSCC1 | T1], Acc) ->
-				case gsu(maps:get("grantedUnit", ServiceRating)) of
+				case catch gsu(maps:get("grantedUnit", ServiceRating)) of
 					[] ->
 						RC2 = result_code(RC),
 						RC3 = case FinalResultCode of
@@ -831,7 +831,7 @@ build_mscc([H | T], Container, FinalResultCode) ->
 			F(#{"ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
 					[#'3gpp_ro_Multiple-Services-Credit-Control'
 							{'Service-Identifier' = [], 'Rating-Group' = [RG]} = MSCC1 | T1], Acc) ->
-				case gsu(maps:get("grantedUnit", ServiceRating)) of
+				case catch gsu(maps:get("grantedUnit", ServiceRating)) of
 					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
 						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
