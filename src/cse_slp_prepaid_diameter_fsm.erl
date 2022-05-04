@@ -42,7 +42,7 @@
 %% export the callbacks for gen_statem states.
 -export([null/3, collect_information/3, exception/3]).
 %% export the private api
--export([nrf_start_reply/2, nrf_update_reply/2]).
+-export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("cse/include/cse_codec.hrl").
@@ -246,6 +246,52 @@ collect_information(cast, {nrf_update,
 					{partial, Partial}, {remaining, Remaining},
 					{origin_host, OHost}, {origin_realm, ORealm}, {type, interim}]),
 			{next_state, exception, Data}
+	end;
+collect_information(internal, #'3gpp_ro_CCR'{
+		'Session-Id' = SessionId,
+		'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+		'CC-Request-Number' = RequestNum,
+		'Multiple-Services-Credit-Control' = MSCC,
+		'Service-Information' = _ServiceInformation} = _EventContent,
+		#{session_id := SessionId} = Data) ->
+	NewData = Data#{mscc => MSCC, session_id => SessionId,
+			reqno => RequestNum,
+			reqt => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+	nrf_release(NewData);
+collect_information(cast, {nrf_release,
+		{RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, msisdn := MSISDN, calling := MSISDN,
+				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId,
+				reqt := RequestType} = Data) ->
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				Container = build_container(MSCC),
+				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				{next_state, null, Data, Actions}
+			catch
+				_:Reason ->
+					ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					Reply1 = diameter_error(SessionId, ResultCode1, OHost,
+							ORealm, RequestType, RequestNum),
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{type, final}]),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, exception, Data, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {slpi, self()},
+					{partial, Partial}, {remaining, Remaining},
+					{origin_host, OHost}, {origin_realm, ORealm}, {type, final}]),
+			{next_state, exception, Data}
 	end.
 
 -spec exception(EventType, EventContent, Data) -> Result
@@ -334,6 +380,19 @@ nrf_start_reply(ReplyInfo, Fsm) ->
 nrf_update_reply(ReplyInfo, Fsm) ->
 	gen_statem:cast(Fsm, {nrf_update, ReplyInfo}).
 
+-spec nrf_release_reply(ReplyInfo, Fsm) -> ok
+	when
+		ReplyInfo :: {RequestId, Result} | {RequestId, {error, Reason}},
+		RequestId :: reference(),
+		Result :: {httpc:status_line(), httpc:headers(), Body},
+		Body :: binary(),
+		Reason :: term(),
+		Fsm :: pid().
+%% @doc Handle sending a reply to {@link nrf_release/1}.
+%% @private
+nrf_release_reply(ReplyInfo, Fsm) ->
+	gen_statem:cast(Fsm, {nrf_release, ReplyInfo}).
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
@@ -394,7 +453,7 @@ nrf_start4(JSON, #{nrf_profile := Profile, nrf_uri := URI} = Data) ->
 	when
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {next_state, exception, Data}.
-%% @doc Start rating a session.
+%% @doc Update rating a session.
 nrf_update(#{msisdn := MSISDN} = Data)
 		when is_integer(MSISDN) ->
 	nrf_update1(["msisdn-" ++ integer_to_list(MSISDN)], Data);
@@ -441,6 +500,62 @@ nrf_update4(JSON, #{nrf_profile := Profile,
 			{next_state, exception, NewData};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, exception, NewData}
+	end.
+
+-spec nrf_release(Data) -> Result
+	when
+		Data ::  statedata(),
+		Result :: {keep_state, Data} | {next_state, exception, Data}.
+%% @doc Finish rating a session.
+nrf_release(#{msisdn := MSISDN} = Data)
+		when is_integer(MSISDN) ->
+	nrf_release1(["msisdn-" ++ integer_to_list(MSISDN)], Data);
+nrf_release(Data) ->
+	nrf_release1([], Data).
+%% @hidden
+nrf_release1(Subscriber, #{imsi := IMSI} = Data)
+		when is_integer(IMSI) ->
+	nrf_release2(["imsi-" ++ integer_to_list(IMSI) | Subscriber], Data);
+nrf_release1(Subscriber, Data) ->
+	nrf_release2(Subscriber, Data).
+%% @hidden
+nrf_release2(Subscriber, #{mscc := MSCC, context := ServiceContextId} = Data) ->
+	ServiceRating = service_rating(mscc(MSCC), ServiceContextId),
+	nrf_release3(Subscriber, ServiceRating, service_type(ServiceContextId), Data).
+%% @hidden
+nrf_release3(Subscriber, ServiceRating, 32251, Data) ->
+	Now = erlang:system_time(millisecond),
+	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
+	JSON = #{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"subscriptionId" => Subscriber,
+			"serviceRating" => ServiceRating},
+	nrf_release4(JSON, Data).
+%% @hidden
+nrf_release4(JSON, #{nrf_profile := Profile,
+		nrf_uri := URI, nrf_location := Location} = Data)
+		when is_list(Location) ->
+	MFA = {?MODULE, nrf_release_reply, [self()]},
+	Options = [{sync, false}, {receiver, MFA}],
+	Headers = [{"accept", "application/json"}],
+	Body = zj:encode(JSON),
+	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
+	HttpOptions = [{relaxed, true}],
+	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+		{ok, RequestId} when is_reference(RequestId) ->
+			NewData = Data#{nrf_reqid => RequestId},
+			{keep_state, NewData};
+		{error, {failed_connect, _} = Reason} ->
+			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, exception, NewData};
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			{next_state, exception, NewData}
@@ -577,16 +692,29 @@ service_rating2(#{si := SI} = MSCC, Acc)
 service_rating2(MSCC, Acc) ->
 	service_rating3(MSCC, Acc).
 %% @hidden
+%% Initial
 service_rating3(#{rsu := [], usu := undefined}, Acc) ->
 	RatingObject = Acc#{requestSubType => "RESERVE"},
 	[RatingObject];
+service_rating3(#{rsu := #{} = RSU, usu := undefined}, Acc) ->
+	RatingObject = Acc#{requestSubType => "RESERVE", grantedUnit => RSU},
+	[RatingObject];
+%% Interim
 service_rating3(#{rsu := [], usu := #{} = USU}, Acc) ->
 	RatingObject1 = Acc#{requestSubType => "RESERVE"},
 	RatingObject2 = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
 	[RatingObject1, RatingObject2];
-service_rating3(#{rsu := #{} = RSU, usu := undefined}, Acc) ->
-	RatingObject = Acc#{requestSubType => "RESERVE", grantedUnit => RSU},
-	[RatingObject].
+service_rating3(#{rsu := #{} = RSU , usu := #{} = USU}, Acc) ->
+	RatingObject1 = Acc#{requestSubType => "RESERVE", grantedUnit => RSU},
+	RatingObject2 = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
+	[RatingObject1, RatingObject2];
+%% Final
+service_rating3(#{rsu := undefined, usu := #{} = USU}, Acc) ->
+	RatingObject = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
+	[RatingObject];
+%% No RSU & No GSU
+service_rating3(#{rsu := undefined, usu := undefined}, Acc) ->
+	[Acc].
 
 -spec subscriber_id(Subscribers, SubIdType) -> SubscriberId
 	when
@@ -654,9 +782,7 @@ build_mscc(ServiceRatings, Container) ->
 	build_mscc(ServiceRatings, Container, undefined).
 %% @hidden
 build_mscc([H | T], Container, FinalResultCode) ->
-	F = fun F(#{"consumedUnit" := _, "resultCode" := "SUCCESS"}, MSCC, _Acc) ->
-				build_mscc(T, MSCC, FinalResultCode);
-		F(#{"serviceId" := SI, "ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
+	F = fun F(#{"serviceId" := SI, "ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
 			[#'3gpp_ro_Multiple-Services-Credit-Control'
 					{'Service-Identifier' = [SI], 'Rating-Group' = [RG]} = MSCC1 | T1], Acc) ->
 				case catch gsu(maps:get("grantedUnit", ServiceRating)) of

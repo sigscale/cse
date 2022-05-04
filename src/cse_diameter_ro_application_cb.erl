@@ -308,6 +308,37 @@ process_request(_IpAddress, _Port,
 						{request, Request}, {error, Reason}, {stack, StackTrace}]),
 			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum)
+	end;
+process_request(_IpAddress, _Port,
+		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'Auth-Application-Id' = ?RO_APPLICATION_ID,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum} = Request)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
+	try
+		cse:get_session(SessionId)
+	of
+		{ok, {SessionId, Pid}} ->
+			Reply = gen_statem:call(Pid, Request),
+			ok = cse:delete_session(SessionId),
+			Reply;
+		{error, Reason} ->
+			error_logger:error_report(["Diameter Error",
+					{module, ?MODULE}, {error, Reason},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{type, event_type(RequestType)}]),
+			Reply = diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Reply
+	catch
+		?CATCH_STACK ->
+			?SET_STACK,
+			error_logger:warning_report(["Unable to process DIAMETER request",
+						{origin_host, OHost}, {origin_realm, ORealm},
+						{request, Request}, {error, Reason}, {stack, StackTrace}]),
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
 	end.
 
 -spec diameter_error(SessionId, ResultCode, OriginHost,
