@@ -34,7 +34,7 @@
 -include("cse.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
--define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
+-define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
 -define(PREFIX_TABLE_SPEC, "1647577955926-50").
 -define(PREFIX_ROW_SPEC,   "1647577957914-66").
@@ -361,7 +361,7 @@ query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
 		Body     :: iolist(),
 		Status   :: 400 | 500 .
 %% @doc Respond to
-%% 	`POST /resourceInventoryManagement/v1/resource'.
+%% 	`POST /resourceInventoryManagement/v4/resource'.
 %%    Add a new resource in inventory.
 add_resource(RequestBody) ->
 	try
