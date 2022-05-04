@@ -158,7 +158,7 @@ sequences() ->
 all() ->
 	[send_initial_scur, receive_initial_scur, send_interim_scur,
 			receive_interim_scur, send_final_scur, receive_final_scur,
-			unknown_subscriber].
+			unknown_subscriber, out_of_credit].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -356,12 +356,28 @@ unknown_subscriber() ->
 unknown_subscriber(_Config) ->
 	MSISDN = list_to_binary(generate_identity(7)),
 	IMSI = list_to_binary(generate_identity(7)),
+	Subscriber = {MSISDN, IMSI},
+	Ref = erlang:ref_to_list(make_ref()),
+	SId = diameter:session_id(Ref),
+	RequestNum = 0,
+	Answer0 = diameter_scur_start(SId, Subscriber, RequestNum),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
+
+out_of_credit() ->
+	[{userdata, [{doc, "Recieve Diameter Credit Limit Reached"}]}].
+
+out_of_credit(Config) ->
+	Server = ?config(ocs_server, Config),
+	Subscriber = generate_identity(7),
+	MSISDN = list_to_binary(Subscriber),
+	IMSI = list_to_binary(generate_identity(7)),
 	Subscriber1 = {MSISDN, IMSI},
+	{ok, {Subscriber, 0}} = gen_server:call(Server, {add_subscriber, Subscriber, 0}),
 	Ref = erlang:ref_to_list(make_ref()),
 	SId = diameter:session_id(Ref),
 	RequestNum = 0,
 	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
+	#'3gpp_ro_CCA'{'Result-Code' = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED'} = Answer0.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
