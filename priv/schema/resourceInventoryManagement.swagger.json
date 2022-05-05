@@ -107,6 +107,50 @@
                     } ],
                     "lastUpdate" : "2022-02-16T05:06:39.944Z",
                     "version" : "1.0"
+                  }, {
+                    "id" : "1651725112010-274",
+                    "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                    "name" : "SpecialNumbersTable",
+                    "description" : "Special Numbers prefix range table resource",
+                    "category" : "PrefixTable",
+                    "resourceSpecification" : {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable"
+                    },
+                    "lastUpdate" : "2022-05-04T11:20:22.367",
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1651725462999-290",
+                    "href" : "/resourceInventoryManagement/v4/resource/1651725462999-290",
+                    "name" : "SpecialNumbersRow",
+                    "description" : "Special Numbers prefix range table row resource",
+                    "category" : "PrefixRow",
+                    "resourceSpecification" : {
+                      "id" : "1651057291061-274",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                      "name" : "PrefixRangeRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1651725112010-274",
+                        "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                        "name" : "SpecialNumbersTable"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "start",
+                      "value" : "18001234"
+                    }, {
+                      "name" : "end",
+                      "value" : "18009999"
+                    }, {
+                      "name" : "value",
+                      "value" : "example"
+                    } ],
+                    "lastUpdate" : "2022-05-05T11:20:22.367",
+                    "version" : "1.0"
                   } ]
                 }
               }
@@ -179,6 +223,52 @@
                     } ],
                     "version" : "1.0"
                   }
+                },
+                "Special Numbers Table" : {
+                  "summary" : "Special Numbers Table",
+                  "value" : {
+                    "name" : "SpecialNumbersTable",
+                    "description" : "Special numbers table resource",
+                    "category" : "PrefixTable",
+                    "resourceSpecification" : {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable",
+                      "version" : "1.0"
+                    }
+                  }
+                },
+                "Special Numbers Row" : {
+                  "summary" : "Special Numbers Row",
+                  "value" : {
+                    "name" : "SpecialNumbersRow",
+                    "description" : "Special numbers table row resource",
+                    "category" : "PrefixRow",
+                    "resourceSpecification" : {
+                      "id" : "1651057291061-274",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                      "name" : "PrefixRangeRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1651725112010-274",
+                        "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                        "name" : "SpecialNumbersTable"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "start",
+                      "value" : "18001234"
+                    }, {
+                      "name" : "end",
+                      "value" : "18009999"
+                    }, {
+                      "name" : "value",
+                      "value" : "example"
+                    } ],
+                    "version" : "1.0"
+                  }
                 }
               }
             }
@@ -247,6 +337,58 @@
                         "value" : "Toronto, Canada"
                       } ],
                       "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Table" : {
+                    "summary" : "Special Numbers Table",
+                    "value" : {
+                      "id" : "1651725112010-274",
+                      "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                      "name" : "SpecialNumbersTable",
+                      "description" : "Special Numbers prefix range table resource",
+                      "category" : "PrefixTable",
+                      "resourceSpecification" : {
+                        "id" : "1651055414682-258",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                        "name" : "PrefixRangeTable"
+                      },
+                      "lastUpdate" : "2022-05-04T11:20:22.367",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Row" : {
+                    "summary" : "Special Numbers Row",
+                    "value" : {
+                      "id" : "1651725462999-290",
+                      "href" : "/resourceInventoryManagement/v4/resource/1651725462999-290",
+                      "name" : "SpecialNumbersRow",
+                      "description" : "Special Numbers prefix range table row resource",
+                      "category" : "PrefixRow",
+                      "resourceSpecification" : {
+                        "id" : "1651057291061-274",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                        "name" : "PrefixRangeRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1651725112010-274",
+                          "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                          "name" : "SpecialNumbersTable"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "start",
+                        "value" : "18001234"
+                      }, {
+                        "name" : "end",
+                        "value" : "18009999"
+                      }, {
+                        "name" : "value",
+                        "value" : "example"
+                      } ],
+                      "lastUpdate" : "2022-05-05T11:20:22.367",
                       "version" : "1.0"
                     }
                   }
@@ -337,6 +479,58 @@
                         "value" : "Toronto, Canada"
                       } ],
                       "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Table" : {
+                    "summary" : "Special Numbers Table",
+                    "value" : {
+                      "id" : "1651725112010-274",
+                      "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                      "name" : "SpecialNumbersTable",
+                      "description" : "Special Numbers prefix range table resource",
+                      "category" : "PrefixTable",
+                      "resourceSpecification" : {
+                        "id" : "1651055414682-258",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                        "name" : "PrefixRangeTable"
+                      },
+                      "lastUpdate" : "2022-05-04T11:20:22.367",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Row" : {
+                    "summary" : "Special Numbers Row",
+                    "value" : {
+                      "id" : "1651725462999-290",
+                      "href" : "/resourceInventoryManagement/v4/resource/1651725462999-290",
+                      "name" : "SpecialNumbersRow",
+                      "description" : "Special Numbers prefix range table row resource",
+                      "category" : "PrefixRow",
+                      "resourceSpecification" : {
+                        "id" : "1651057291061-274",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                        "name" : "PrefixRangeRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1651725112010-274",
+                          "href" : "/resourceInventoryManagement/v4/resource/1651725112010-274",
+                          "name" : "SpecialNumbersTable"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "start",
+                        "value" : "18001234"
+                      }, {
+                        "name" : "end",
+                        "value" : "18009999"
+                      }, {
+                        "name" : "value",
+                        "value" : "example"
+                      } ],
+                      "lastUpdate" : "2022-05-05T11:20:22.367",
                       "version" : "1.0"
                     }
                   }
