@@ -404,7 +404,7 @@ add_resource1(#resource{name = Name} = Resource) ->
 add_resource2(#resource{} = Resource) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
-	Id = integer_to_list(TS) ++ integer_to_list(N),
+	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
 	Href = ?PathInventory ++ "resource/" ++ Id,
 	NewResource = Resource#resource{id = Id,
