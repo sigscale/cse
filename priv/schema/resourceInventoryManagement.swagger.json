@@ -67,18 +67,24 @@
                     "$ref" : "#/components/schemas/Resource"
                   },
                   "example" : [ {
-                    "id" : "1644299612300",
-                    "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                    "name" : "example",
+                    "id" : "1644299612300-763",
+                    "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                    "name" : "TableResource",
+                    "description" : "Prefix table resource",
+                    "category" : "PrefixTable",
                     "resourceSpecification" : {
                       "id" : "1647577955926-50",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                       "name" : "PrefixTable"
                     },
-                    "lastUpdate" : "2022-02-08T05:53:32.300Z"
+                    "lastUpdate" : "2022-02-08T05:53:32.300Z",
+                    "version" : "1.0"
                   }, {
-                    "id" : "1644987999944",
-                    "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
+                    "id" : "1644987999944-36",
+                    "href" : "/resourceInventoryManagement/v4/resource/1644987999944-36",
+                    "name" : "RowResource",
+                    "description" : "Prefix table row resource",
+                    "category" : "PrefixRow",
                     "resourceSpecification" : {
                       "id" : "1647577957914-66",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
@@ -86,9 +92,9 @@
                     },
                     "resourceRelationship" : [ {
                       "resource" : {
-                        "id" : "1644299612300",
-                        "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                        "name" : "example"
+                        "id" : "1644299612300-763",
+                        "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                        "name" : "TableResource"
                       },
                       "relationshipType" : "contained"
                     } ],
@@ -99,7 +105,8 @@
                       "name" : "value",
                       "value" : "Toronto, Canada"
                     } ],
-                    "lastUpdate" : "2022-02-16T05:06:39.944Z"
+                    "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                    "version" : "1.0"
                   } ]
                 }
               }
@@ -133,17 +140,23 @@
                 "Table Resource" : {
                   "summary" : "Table Resource",
                   "value" : {
-                    "name" : "example",
+                    "name" : "TableResource",
+                    "description" : "Prefix table resource",
+                    "category" : "PrefixTable",
                     "resourceSpecification" : {
                       "id" : "1647577955926-50",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
-                      "name" : "PrefixTable"
+                      "name" : "PrefixTable",
+                      "version" : "1.0"
                     }
                   }
                 },
                 "Table Row Resource" : {
                   "summary" : "Table Row Resource",
                   "value" : {
+                    "name" : "RowResource",
+                    "description" : "Prefix table row resource",
+                    "category" : "PrefixRow",
                     "resourceSpecification" : {
                       "id" : "1647577957914-66",
                       "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
@@ -151,9 +164,9 @@
                     },
                     "resourceRelationship" : [ {
                       "resource" : {
-                        "id" : "1644299612300",
-                        "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                        "name" : "example"
+                        "id" : "1644299612300-763",
+                        "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                        "name" : "TableResource"
                       },
                       "relationshipType" : "contained"
                     } ],
@@ -163,7 +176,8 @@
                     }, {
                       "name" : "value",
                       "value" : "Toronto, Canada"
-                    } ]
+                    } ],
+                    "version" : "1.0"
                   }
                 }
               }
@@ -190,22 +204,28 @@
                   "Table Resource" : {
                     "summary" : "Table Resource",
                     "value" : {
-                      "id" : "1644299612300",
-                      "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                      "name" : "example",
+                      "id" : "1644299612300-763",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                      "name" : "TableResource",
+                      "description" : "Prefix table resource",
+                      "category" : "PrefixTable",
                       "resourceSpecification" : {
                         "id" : "1647577955926-50",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                         "name" : "PrefixTable"
                       },
-                      "lastUpdate" : "2022-02-08T05:53:32.300Z"
+                      "lastUpdate" : "2022-02-08T05:53:32.300Z",
+                      "version" : "1.0"
                     }
                   },
                   "Table Row Resource" : {
                     "summary" : "Table Row Resource",
                     "value" : {
-                      "id" : "1644987999944",
-                      "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
+                      "id" : "1644987999944-36",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644987999944-36",
+                      "name" : "RowResource",
+                      "description" : "Prefix table row resource",
+                      "category" : "PrefixRow",
                       "resourceSpecification" : {
                         "id" : "1647577957914-66",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
@@ -213,9 +233,9 @@
                       },
                       "resourceRelationship" : [ {
                         "resource" : {
-                          "id" : "1644299612300",
-                          "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                          "name" : "example"
+                          "id" : "1644299612300-763",
+                          "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                          "name" : "TableResource"
                         },
                         "relationshipType" : "contained"
                       } ],
@@ -226,7 +246,8 @@
                         "name" : "value",
                         "value" : "Toronto, Canada"
                       } ],
-                      "lastUpdate" : "2022-02-16T05:06:39.944Z"
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                      "version" : "1.0"
                     }
                   }
                 }
@@ -273,22 +294,28 @@
                   "Table Resource" : {
                     "summary" : "Table Resource",
                     "value" : {
-                      "id" : "1644299612300",
-                      "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                      "name" : "example",
+                      "id" : "1644299612300-763",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                      "name" : "TableResource",
+                      "description" : "Prefix table resource",
+                      "category" : "PrefixTable",
                       "resourceSpecification" : {
                         "id" : "1647577955926-50",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
                         "name" : "PrefixTable"
                       },
-                      "lastUpdate" : "2022-02-08T05:53:32.300Z"
+                      "lastUpdate" : "2022-02-08T05:53:32.300Z",
+                      "version" : "1.0"
                     }
                   },
                   "Table Row Resource" : {
                     "summary" : "Table Row Resource",
                     "value" : {
-                      "id" : "1644987999944",
-                      "href" : "/resourceInventoryManagement/v4/resource/1644987999944",
+                      "id" : "1644987999944-36",
+                      "href" : "/resourceInventoryManagement/v4/resource/1644987999944-36",
+                      "name" : "RowResource",
+                      "description" : "Prefix table row resource",
+                      "category" : "PrefixRow",
                       "resourceSpecification" : {
                         "id" : "1647577957914-66",
                         "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
@@ -296,9 +323,9 @@
                       },
                       "resourceRelationship" : [ {
                         "resource" : {
-                          "id" : "1644299612300",
-                          "href" : "/resourceInventoryManagement/v4/resource/1644299612300",
-                          "name" : "example"
+                          "id" : "1644299612300-763",
+                          "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
+                          "name" : "TableResource"
                         },
                         "relationshipType" : "contained"
                       } ],
@@ -309,7 +336,8 @@
                         "name" : "value",
                         "value" : "Toronto, Canada"
                       } ],
-                      "lastUpdate" : "2022-02-16T05:06:39.944Z"
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                      "version" : "1.0"
                     }
                   }
                 }
