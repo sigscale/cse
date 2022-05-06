@@ -175,6 +175,7 @@ start9(TopSup, [{Addr, Port, Options} | T]) ->
 			{error, Reason}
 	end;
 start9(TopSup, []) ->
+	catch cse_mib:load(),
 	{ok, TopSup}.
 
 -spec start_phase(Phase, StartType, PhaseArgs) -> Result
