@@ -14,6 +14,9 @@
     }
   },
   "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/SigScale/cse-resource-inventory/4.0.0"
+  }, {
     "url" : "http://cse.example.net/resourceInventoryManagement/v4"
   } ],
   "paths" : {
@@ -69,7 +72,7 @@
                   "example" : [ {
                     "id" : "1644299612300-763",
                     "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                    "name" : "TableResource",
+                    "name" : "CitiesTable",
                     "description" : "Prefix table resource",
                     "category" : "PrefixTable",
                     "resourceSpecification" : {
@@ -82,7 +85,7 @@
                   }, {
                     "id" : "1644987999944-36",
                     "href" : "/resourceInventoryManagement/v4/resource/1644987999944-36",
-                    "name" : "RowResource",
+                    "name" : "CitiesRow",
                     "description" : "Prefix table row resource",
                     "category" : "PrefixRow",
                     "resourceSpecification" : {
@@ -94,7 +97,7 @@
                       "resource" : {
                         "id" : "1644299612300-763",
                         "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                        "name" : "TableResource"
+                        "name" : "CitiesTable"
                       },
                       "relationshipType" : "contained"
                     } ],
@@ -184,7 +187,7 @@
                 "Table Resource" : {
                   "summary" : "Table Resource",
                   "value" : {
-                    "name" : "TableResource",
+                    "name" : "CitiesTable",
                     "description" : "Prefix table resource",
                     "category" : "PrefixTable",
                     "resourceSpecification" : {
@@ -198,7 +201,7 @@
                 "Table Row Resource" : {
                   "summary" : "Table Row Resource",
                   "value" : {
-                    "name" : "RowResource",
+                    "name" : "CitiesRow",
                     "description" : "Prefix table row resource",
                     "category" : "PrefixRow",
                     "resourceSpecification" : {
@@ -210,7 +213,7 @@
                       "resource" : {
                         "id" : "1644299612300-763",
                         "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                        "name" : "TableResource"
+                        "name" : "CitiesTable"
                       },
                       "relationshipType" : "contained"
                     } ],
@@ -296,7 +299,7 @@
                     "value" : {
                       "id" : "1644299612300-763",
                       "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                      "name" : "TableResource",
+                      "name" : "CitiesTable",
                       "description" : "Prefix table resource",
                       "category" : "PrefixTable",
                       "resourceSpecification" : {
@@ -313,7 +316,7 @@
                     "value" : {
                       "id" : "1644987999944-36",
                       "href" : "/resourceInventoryManagement/v4/resource/1644987999944-36",
-                      "name" : "RowResource",
+                      "name" : "CitiesRow",
                       "description" : "Prefix table row resource",
                       "category" : "PrefixRow",
                       "resourceSpecification" : {
@@ -325,7 +328,7 @@
                         "resource" : {
                           "id" : "1644299612300-763",
                           "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                          "name" : "TableResource"
+                          "name" : "CitiesTable"
                         },
                         "relationshipType" : "contained"
                       } ],
@@ -438,7 +441,7 @@
                     "value" : {
                       "id" : "1644299612300-763",
                       "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                      "name" : "TableResource",
+                      "name" : "CitiesTable",
                       "description" : "Prefix table resource",
                       "category" : "PrefixTable",
                       "resourceSpecification" : {
@@ -455,7 +458,7 @@
                     "value" : {
                       "id" : "1644987999944-36",
                       "href" : "/resourceInventoryManagement/v4/resource/1644987999944-36",
-                      "name" : "RowResource",
+                      "name" : "CitiesRow",
                       "description" : "Prefix table row resource",
                       "category" : "PrefixRow",
                       "resourceSpecification" : {
@@ -467,7 +470,7 @@
                         "resource" : {
                           "id" : "1644299612300-763",
                           "href" : "/resourceInventoryManagement/v4/resource/1644299612300-763",
-                          "name" : "TableResource"
+                          "name" : "CitiesTable"
                         },
                         "relationshipType" : "contained"
                       } ],
