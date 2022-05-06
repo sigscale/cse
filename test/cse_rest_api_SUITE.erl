@@ -575,7 +575,7 @@ static_prefix_row(Name, TableId, TableName) ->
 	#resource{name = Name, description = "Prefix Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
-					href = "/resourceInventoryManagement/v1/resource/"
+					href = "/resourceInventoryManagement/v4/resource/"
 					++ TableId, name = TableName, rel_type = "contained"}],
 			specification = #resource_spec_ref{id = SpecId,
 					href = "/resourceCatalogManagement/v2/resourceSpecification/"
@@ -595,7 +595,7 @@ dynamic_prefix_row(Name, TableId, TableName) ->
 	#resource{name = Name, description = "Prefix Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
-					href = "/resourceInventoryManagement/v1/resource/"
+					href = "/resourceInventoryManagement/v4/resource/"
 					++ TableId, name = TableName, rel_type = "contained"}],
 			specification = #resource_spec_ref{id = SpecId,
 					href = "/resourceCatalogManagement/v2/resourceSpecification/"

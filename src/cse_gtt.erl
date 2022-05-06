@@ -69,7 +69,6 @@ new(Table, Options) when is_list(Options) ->
 			[{attributes, record_info(fields, gtt)},
 			{record_name, gtt}]) of
 		{atomic, ok} ->
-			add_resource(Table),
 			ok;
 		{aborted, Reason} ->
 			exit(Reason)
@@ -100,7 +99,6 @@ new(Table, Options, Items) when is_list(Options), is_list(Items) ->
 	mnesia:create_table(Table, Options ++
 			[{attributes, record_info(fields, gtt)},
 			{record_name, gtt}]),
-	add_resource(Table),
 	Threshold = mnesia:system_info(dump_log_write_threshold) - 1,
 	Ftran = fun(F, [{Number, Value} | T], N) when is_integer(Number) ->
 				F(F, [{integer_to_list(Number), Value} | T], N);
@@ -295,7 +293,6 @@ restore(Tables, File) when is_atom(Tables) ->
 restore(Tables, File) when is_list(Tables), is_list(File) ->
 	case mnesia:restore(File, [{clear_tables, Tables}]) of
 		{atomic, RestoredTabs} ->
-			add_resources(RestoredTabs),
 			{ok, RestoredTabs};
 		{aborted, Reason} ->
 			exit(Reason)
@@ -404,39 +401,6 @@ delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
-
--spec add_resource(Table) -> Result
-	when
-		Table :: atom() | string(),
-		Result :: ok.
-%% @doc Add a REST resource.
-add_resource(Table) when is_atom(Table) ->
-	add_resource(atom_to_list(Table));
-add_resource(Table) when is_list(Table) ->
-	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
-	Resource = #resource{name = Table,
-			description = Table ++ " prefix table",
-			specification = #resource_spec_ref{id = TableSpecId,
-					href = "/resourceCatalogManagement/v4/resourceSpecification/"
-							++ TableSpecId,
-					name = "PrefixTable"}},
-	case cse:add_resource(Resource) of
-		{ok, #resource{}} ->
-			ok;
-		{error, Reason} ->
-			exit(Reason)
-	end.
-
--spec add_resources(Tables) -> Result
-	when
-		Tables :: [atom() | string()],
-		Result :: ok.
-%% @doc Add a REST resource.
-add_resources([H | T]) ->
-	ok = add_resource(H),
-	add_resources(T);
-add_resources([]) ->
-	ok.
 
 -spec insert(Table, Number, Value, []) -> {NumWrites, #gtt{}}
 	when

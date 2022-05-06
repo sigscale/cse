@@ -34,7 +34,7 @@
 -include("cse.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
--define(inventoryPath, "/resourceInventoryManagement/v1/resource/").
+-define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
 -define(PREFIX_TABLE_SPEC, "1647577955926-50").
 -define(PREFIX_ROW_SPEC,   "1647577957914-66").
@@ -361,7 +361,7 @@ query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
 		Body     :: iolist(),
 		Status   :: 400 | 500 .
 %% @doc Respond to
-%% 	`POST /resourceInventoryManagement/v1/resource'.
+%% 	`POST /resourceInventoryManagement/v4/resource'.
 %%    Add a new resource in inventory.
 add_resource(RequestBody) ->
 	try
@@ -617,14 +617,14 @@ static_spec(?PREFIX_RANGE_ROW_SPEC = SpecId) ->
 		version = "1.0",
 		last_modified = LM,
 		category = "PrefixRow",
-		related = [#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC,
-				href = ?specPath ++ ?PREFIX_RANGE_TABLE_SPEC,
-				name = "PrefixRangeTable",
-				rel_type = "contained"},
-			#resource_spec_rel{id = ?PREFIX_ROW_SPEC,
+		related = [#resource_spec_rel{id = ?PREFIX_ROW_SPEC,
 				href = ?specPath ++ ?PREFIX_ROW_SPEC,
 				name = "PrefixRow",
-				rel_type = "based"}],
+				rel_type = "based"},
+			#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC,
+				href = ?specPath ++ ?PREFIX_RANGE_TABLE_SPEC,
+				name = "PrefixRangeTable",
+				rel_type = "contained"}],
 		characteristic = [#resource_spec_char{name = "start",
 				description = "Start of prefix range",
 				value_type = "String"},
