@@ -14,6 +14,9 @@
     }
   },
   "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/SigScale/cse-resource-catalog/4.0.0"
+  }, {
     "url" : "http://cse.example.net/resourceCatalogManagement/v4"
   } ],
   "paths" : {
@@ -65,50 +68,6 @@
                       "name" : "PrefixTable",
                       "relationshipType" : "contained"
                     },
-                    "version" : "1.0"
-                  }, {
-                    "id" : "1650454919566-290",
-                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                    "name" : "TariffTable",
-                    "description" : "Tariff table specification",
-                    "category" : "PrefixTable",
-                    "lastUpdate" : "2022-02-16",
-                    "lifecycleStatus" : "Active",
-                    "resourceSpecRelationship" : [ {
-                      "id" : "1647577955926-50",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
-                      "name" : "PrefixTable",
-                      "relationshipType" : "based"
-                    } ],
-                    "version" : "1.0"
-                  }, {
-                    "id" : "1650455430575-306",
-                    "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
-                    "name" : "TariffRow",
-                    "description" : "Tariff row specification",
-                    "category" : "PrefixRow",
-                    "lastUpdate" : "2022-02-16",
-                    "lifecycleStatus" : "Active",
-                    "resourceSpecCharacteristic" : [ {
-                      "name" : "prefix",
-                      "description" : "Destination address prefix to match",
-                      "valueType" : "String"
-                    }, {
-                      "name" : "value",
-                      "description" : "Tariff rate for destination",
-                      "valueType" : "Integer"
-                    } ],
-                    "resourceSpecRelationship" : [ {
-                      "id" : "1647577957914-66",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
-                      "name" : "PrefixRow",
-                      "relationshipType" : "based"
-                    }, {
-                      "id" : "1650454919566-290",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "TariffTable",
-                      "relationshipType" : "contained"
-                    } ],
                     "version" : "1.0"
                   }, {
                     "id" : "1651055414682-258",
@@ -217,54 +176,6 @@
                       "name" : "PrefixTable",
                       "relationshipType" : "contained"
                     },
-                    "version" : "1.0"
-                  }
-                },
-                "Tariff Table" : {
-                  "summary" : "Tariff Table",
-                  "description" : "Tariff table specification",
-                  "value" : {
-                    "name" : "TariffTable",
-                    "description" : "Tariff table specification",
-                    "category" : "PrefixTable",
-                    "lifecycleStatus" : "Active",
-                    "resourceSpecRelationship" : [ {
-                      "id" : "1647577955926-50",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
-                      "name" : "PrefixTable",
-                      "relationshipType" : "based"
-                    } ],
-                    "version" : "1.0"
-                  }
-                },
-                "Tariff Row" : {
-                  "summary" : "Tariff Row",
-                  "description" : "Tariff row specification",
-                  "value" : {
-                    "name" : "TariffRow",
-                    "description" : "Tariff row specification",
-                    "category" : "PrefixRow",
-                    "lifecycleStatus" : "Active",
-                    "resourceSpecCharacteristic" : [ {
-                      "name" : "prefix",
-                      "description" : "Destination address prefix to match",
-                      "valueType" : "String"
-                    }, {
-                      "name" : "value",
-                      "description" : "Tariff rate for destination",
-                      "valueType" : "Integer"
-                    } ],
-                    "resourceSpecRelationship" : [ {
-                      "id" : "1647577957914-66",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
-                      "name" : "PrefixRow",
-                      "relationshipType" : "based"
-                    }, {
-                      "id" : "1650454919566-290",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "TariffTable",
-                      "relationshipType" : "contained"
-                    } ],
                     "version" : "1.0"
                   }
                 },
@@ -379,60 +290,6 @@
                         "name" : "PrefixTable",
                         "relationshipType" : "contained"
                       },
-                      "version" : "1.0"
-                    }
-                  },
-                  "Tariff Table" : {
-                    "summary" : "Tariff Table",
-                    "description" : "Tariff table specification",
-                    "value" : {
-                      "id" : "1650454919566-290",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "TariffPrefixTable",
-                      "description" : "Tariff table specification",
-                      "category" : "PrefixTable",
-                      "lastUpdate" : "2022-02-16",
-                      "lifecycleStatus" : "Active",
-                      "resourceSpecRelationship" : [ {
-                        "id" : "1647577955926-50",
-                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
-                        "name" : "PrefixTable",
-                        "relationshipType" : "based"
-                      } ],
-                      "version" : "1.0"
-                    }
-                  },
-                  "Tariff Row" : {
-                    "summary" : "Tariff Row",
-                    "description" : "Tariff row specification",
-                    "value" : {
-                      "id" : "1650455430575-306",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
-                      "name" : "TariffRow",
-                      "description" : "Tariff row specification",
-                      "category" : "PrefixRow",
-                      "lastUpdate" : "2022-02-16",
-                      "lifecycleStatus" : "Active",
-                      "resourceSpecCharacteristic" : [ {
-                        "name" : "prefix",
-                        "description" : "Destination address prefix to match",
-                        "valueType" : "String"
-                      }, {
-                        "name" : "value",
-                        "description" : "Tariff rate for destination",
-                        "valueType" : "Integer"
-                      } ],
-                      "resourceSpecRelationship" : [ {
-                        "id" : "1647577957914-66",
-                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
-                        "name" : "PrefixRow",
-                        "relationshipType" : "based"
-                      }, {
-                        "id" : "1650454919566-290",
-                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                        "name" : "TariffTable",
-                        "relationshipType" : "contained"
-                      } ],
                       "version" : "1.0"
                     }
                   },
@@ -573,60 +430,6 @@
                         "name" : "PrefixTable",
                         "relationshipType" : "contained"
                       },
-                      "version" : "1.0"
-                    }
-                  },
-                  "Tariff Table" : {
-                    "summary" : "Tariff Table",
-                    "description" : "Tariff table specification",
-                    "value" : {
-                      "id" : "1650454919566-290",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                      "name" : "TariffTable",
-                      "description" : "Tariff table specification",
-                      "category" : "PrefixTable",
-                      "lastUpdate" : "2022-02-16",
-                      "lifecycleStatus" : "Active",
-                      "resourceSpecRelationship" : [ {
-                        "id" : "1647577955926-50",
-                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
-                        "name" : "PrefixTable",
-                        "relationshipType" : "based"
-                      } ],
-                      "version" : "1.0"
-                    }
-                  },
-                  "Tariff Row" : {
-                    "summary" : "Tariff Row",
-                    "description" : "Tariff row specification",
-                    "value" : {
-                      "id" : "1650455430575-306",
-                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650455430575-306",
-                      "name" : "TariffRow",
-                      "description" : "Tariff row specification",
-                      "category" : "PrefixRow",
-                      "lastUpdate" : "2022-02-16",
-                      "lifecycleStatus" : "Active",
-                      "resourceSpecCharacteristic" : [ {
-                        "name" : "prefix",
-                        "description" : "Destination address prefix to match",
-                        "valueType" : "String"
-                      }, {
-                        "name" : "value",
-                        "description" : "Tariff rate for destination",
-                        "valueType" : "Integer"
-                      } ],
-                      "resourceSpecRelationship" : [ {
-                        "id" : "1647577957914-66",
-                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
-                        "name" : "PrefixRow",
-                        "relationshipType" : "based"
-                      }, {
-                        "id" : "1650454919566-290",
-                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1650454919566-290",
-                        "name" : "TariffTable",
-                        "relationshipType" : "contained"
-                      } ],
                       "version" : "1.0"
                     }
                   },
