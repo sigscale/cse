@@ -13,7 +13,8 @@ testmods = cse_api_SUITE \
 		cse_diameter_SUITE \
 		cse_snmp_SUITE \
 		cse_test_ocs_server \
-		diameter_test_client_cb
+		diameter_test_client_cb \
+		cse_snmpm_cb
 
 check_DATA = .dialyzer_ok .common_test_ok
 
