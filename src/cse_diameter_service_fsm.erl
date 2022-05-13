@@ -243,19 +243,21 @@ send_notification1(Notification, false, Varbinds) ->
 	case catch snmpa:send_notification(snmp_master_agent,
 			Notification, no_receiver, Varbinds) of
 		ok ->
-erlang:display({?MODULE, ?LINE}),
 			ok;
 		{'EXIT', Reason} ->
-			ok
+			error_logger:info_report(["SNMP Notification send faliure",
+					{notification, Notification}, {notify_name, false},
+					{error, Reason}])
 	end;
 send_notification1(Notification, {notify_name, NotifyName}, Varbinds) ->
 	case catch snmpa:send_notification(snmp_master_agent,
 			Notification, no_receiver, NotifyName, Varbinds) of
 		ok ->
-erlang:display({?MODULE, ?LINE}),
 			ok;
 		{'EXIT', Reason} ->
-			ok
+			error_logger:info_report(["SNMP Notification send faliure",
+					{notification, Notification}, {notify_name, NotifyName},
+					{error, Reason}])
 	end.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
