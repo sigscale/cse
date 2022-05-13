@@ -163,7 +163,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[peer_up].
+	[peer_up, peer_down].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -180,6 +180,36 @@ peer_up(Config) ->
 	receive
 		ok ->
 			ok = diameter:remove_transport(ServiceName, true);
+		{error, Reason} ->
+			ct:fail(Reason)
+	after
+		4000 ->
+			ct:fail(timeout)
+	end.
+
+peer_down() ->
+	[{userdata, [{doc, "Test suite for SNMP manager in SigScale CSE"}]}].
+
+peer_down(Config) ->
+	ServiceName = ?config(diameter_service, Config),
+	DiameterAddress = ?config(diameter_address, Config),
+	DiameterPort = ?config(diameter_port, Config),
+   {ok, _Ref2} = connect(ServiceName, DiameterAddress, DiameterPort, diameter_tcp),
+	receive
+		ok ->
+			peer_down1(ServiceName);
+		{error, Reason} ->
+			ct:fail(Reason)
+	after
+		4000 ->
+			ct:fail(timeout)
+	end.
+%% @hidden
+peer_down1(ServiceName) ->
+	ok = diameter:remove_transport(ServiceName, true),
+	receive
+		ok ->
+			ok;
 		{error, Reason} ->
 			ct:fail(Reason)
 	after
