@@ -87,8 +87,9 @@ init([Address, Port, Options] = _Args) ->
 		process_flag(trap_exit, true),
 			case diameter:add_transport(SvcName, TOptions2) of
 				{ok, Ref} ->
+					{ok, Alarms} = application:get_env(cse, snmp_alarms),
 					Data = #{transport_ref => Ref, address => Address,
-							port => Port, options => Options},
+							port => Port, options => Options, alarms => Alarms},
 					{ok, wait_for_start, Data};
 				{error, Reason} ->
 					{stop, Reason}
@@ -126,17 +127,28 @@ wait_for_start(info, #diameter_event{info = stop, service = Service},
 started(_EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
 started(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == up;
+		#{alarms := Alarms} = Data) when element(1, Event) == up;
 		element(1, Event) == down ->
-	{_PeerRef, #diameter_caps{origin_host = {_, Peer}}} = element(3, Event),
+	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
+	Peer = binary_to_list(P),
 	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
-			{peer, binary_to_list(Peer)}]),
+			{peer, Peer}]),
+	ok = send_notification(element(1, Event), Peer, Alarms),
+	{next_state, started, Data};
+started(info, #diameter_event{info = Event, service = Service},
+		Data) when element(1, Event) == up;
+		element(1, Event) == down ->
+	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
+	Peer = binary_to_list(P),
+	error_logger:info_report(["DIAMETER peer connection state changed",
+			{service, Service}, {event, element(1, Event)},
+			{peer, Peer}]),
 	{next_state, started, Data};
 started(info, #diameter_event{info = Event, service = Service},
 		Data) when element(1, Event) == closed ->
 	{_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
-	error_logger:info_report(["DIAMETER peer address not found",
+	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
 			{peer, binary_to_list(Peer)}]),
 	{stop, stop, Data};
@@ -165,13 +177,24 @@ started(info, #diameter_event{info = Event, service = Service},
 wait_for_stop(_EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
 wait_for_stop(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == up;
+		#{alarms := Alarms} = Data) when element(1, Event) == up;
 		element(1, Event) == down ->
-	{_PeerRef, #diameter_caps{origin_host = {_, Peer}}} = element(3, Event),
+	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
+	Peer = binary_to_list(P),
 	error_logger:info_report(["DIAMETER peer connection state changed",
 			{service, Service}, {event, element(1, Event)},
-			started, {peer, binary_to_list(Peer)}]),
-	{next_state, wait_for_stop, Data};
+			{peer, Peer}]),
+	ok = send_notification(element(1, Event), Peer, Alarms),
+	{next_state, started, Data};
+wait_for_stop(info, #diameter_event{info = Event, service = Service},
+		Data) when element(1, Event) == up;
+		element(1, Event) == down ->
+	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
+	Peer = binary_to_list(P),
+	error_logger:info_report(["DIAMETER peer connection state changed",
+			{service, Service}, {event, element(1, Event)},
+			{peer, Peer}]),
+	{next_state, started, Data};
 wait_for_stop(info, #diameter_event{info = {watchdog,
 			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
 	{next_state, shutdown, Data};
@@ -185,6 +208,55 @@ wait_for_stop(info, {'EXIT', _Pid, noconnection}, Data) ->
 wait_for_stop(info, #diameter_event{info = stop, service = Service},
 		#{service := Service} = Data) ->
 	{stop, stop, Data}.
+
+-spec send_notification(Event, Peer, AlarmList) -> ok
+	when
+		Event :: up | down,
+		Peer :: string(),
+		AlarmList :: [Alarms],
+		Alarms :: {Notification, Options},
+		Notification  :: atom(),
+		Options :: [{OptionName, OptionValue}],
+		OptionName :: term(),
+		OptionValue :: term().
+%% @doc Send a SNMP Notification.
+send_notification(up, Peer, AlarmList) ->
+	case lists:keyfind(dbpPeerConnectionUpNotif, 1, AlarmList) of
+		{Notification, Options} ->
+			NotifyName = lists:keyfind(notify_name, 1, Options),
+			Varbinds = [{dbpPeerId, Peer}],
+			send_notification1(Notification, NotifyName, Varbinds);
+		false ->
+			ok
+	end;
+send_notification(down, Peer, AlarmList) ->
+	case lists:keyfind(dbpPeerConnectionDownNotif, 1, AlarmList) of
+		{Notification, Options} ->
+			NotifyName = lists:keyfind(notify_name, 1, Options),
+			Varbinds = [{dbpPeerId, Peer}],
+			send_notification1(Notification, NotifyName, Varbinds);
+		false ->
+			ok
+	end.
+%% @hidden
+send_notification1(Notification, false, Varbinds) ->
+	case catch snmpa:send_notification(snmp_master_agent,
+			Notification, no_receiver, Varbinds) of
+		ok ->
+erlang:display({?MODULE, ?LINE}),
+			ok;
+		{'EXIT', Reason} ->
+			ok
+	end;
+send_notification1(Notification, {notify_name, NotifyName}, Varbinds) ->
+	case catch snmpa:send_notification(snmp_master_agent,
+			Notification, no_receiver, NotifyName, Varbinds) of
+		ok ->
+erlang:display({?MODULE, ?LINE}),
+			ok;
+		{'EXIT', Reason} ->
+			ok
+	end.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
