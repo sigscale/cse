@@ -170,7 +170,7 @@ all() ->
 %%---------------------------------------------------------------------
 
 peer_up() ->
-	[{userdata, [{doc, "Test suite for SNMP manager in SigScale CSE"}]}].
+	[{userdata, [{doc, "Recieve SNMP Notification for Diameter Peer UP"}]}].
 
 peer_up(Config) ->
 	ServiceName = ?config(diameter_service, Config),
@@ -188,7 +188,7 @@ peer_up(Config) ->
 	end.
 
 peer_down() ->
-	[{userdata, [{doc, "Test suite for SNMP manager in SigScale CSE"}]}].
+	[{userdata, [{doc, "Recieve SNMP Notification for Diameter Peer Down"}]}].
 
 peer_down(Config) ->
 	ServiceName = ?config(diameter_service, Config),
