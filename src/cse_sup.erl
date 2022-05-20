@@ -27,6 +27,10 @@
 %% export the callback needed for supervisor behaviour
 -export([init/1]).
 
+-type registered_name() :: {local, Name :: atom()}
+		| {global, Name :: atom()}
+		| {via, ViaModule :: atom(), Name :: any()}.
+
 %%----------------------------------------------------------------------
 %%  The cse_sup private API
 %%----------------------------------------------------------------------
@@ -47,11 +51,12 @@
 %% @private
 %%
 init(_Args) ->
-	ChildSpecs = [server(cse_server, {local, cse}, [self()], []),
+	ChildSpecs = [server({local, cse}, cse_server, [self()], []),
 			bridge(cse_tco_sup, [self()]),
 			supervisor(cse_slp_sup, []),
 			supervisor(cse_diameter_sup, cse_diameter_sup, []),
-			supervisor(cse_rest_pagination_sup, cse_rest_pagination_sup, [])],
+			supervisor({local, cse_rest_pagination_sup},
+					cse_rest_pagination_sup, [])],
 	SupFlags = #{},
 	{ok, {SupFlags, ChildSpecs}}.
 
@@ -74,10 +79,10 @@ supervisor(StartMod, Args) ->
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
 
--spec supervisor(StartMod, RegName, Args) -> Result
+-spec supervisor(RegName, StartMod, Args) -> Result
 	when
+		RegName :: registered_name(),
 		StartMod :: atom(),
-		RegName :: atom(),
 		Args :: [term()],
 		Result :: supervisor:child_spec().
 %% @doc Build a supervisor child specification for a
@@ -85,10 +90,11 @@ supervisor(StartMod, Args) ->
 %%    with registered name.
 %% @private
 %%
-supervisor(StartMod, RegName, Args) ->
-	StartArgs = [{local, RegName}, StartMod, Args],
+supervisor(RegName, StartMod, Args) ->
+	StartArgs = [RegName, StartMod, Args],
 	StartFunc = {supervisor, start_link, StartArgs},
-	{StartMod, StartFunc, permanent, infinity, supervisor, [StartMod]}.
+	#{id => StartMod, start => StartFunc,
+			type => supervisor, modules => [StartMod]}.
 
 -spec bridge(StartMod, Args) -> Result
 	when
@@ -105,15 +111,10 @@ bridge(StartMod, Args) ->
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
 
--spec server(StartMod, Name, Args, Opts) -> Result
+-spec server(RegName, StartMod, Args, Opts) -> Result
 	when
+		RegName :: registered_name(),
 		StartMod :: atom(),
-		Name :: {local, LocalName} | {global, GlobalName}
-				| {via, ViaModule, ViaName},
-		LocalName :: atom(),
-		GlobalName :: term(),
-		ViaModule :: atom(),
-		ViaName :: term(),
 		Args :: [term()],
 		Opts :: [Option],
 		Option :: {timeout, Timeout} | {debug, [Flag]},

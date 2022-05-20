@@ -46,9 +46,9 @@
 -export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
 -include_lib("kernel/include/logger.hrl").
--include_lib("cse/include/cse_codec.hrl").
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
+-include("cse_codec.hrl").
 -include("diameter_gen_ietf.hrl").
 -include("diameter_gen_3gpp.hrl").
 -include("diameter_gen_3gpp_ro_application.hrl").

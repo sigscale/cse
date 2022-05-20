@@ -31,9 +31,10 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [term()],
-		Result :: {ok, {{supervisor:strategy(), non_neg_integer(), pos_integer()},
-			[supervisor:child_spec()]}} | ignore.
+		Args :: [],
+		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
+		SupFlags :: supervisor:sup_flags(),
+		ChildSpec :: supervisor:child_spec().
 %% @doc Initialize the {@module} supervisor.
 %% @see //stdlib/supervisor:init/1
 %% @private
@@ -41,7 +42,8 @@
 init([] = _Args) ->
 	StartMod = cse_rest_pagination_server,
 	StartFunc = {StartMod, start_link, []},
-	ChildSpecs = [{StartMod, StartFunc,
-			transient, infinity, worker, [StartMod]}],
-	{ok, {{simple_one_for_one, 10, 60}, ChildSpecs}}.
+	ChildSpec = #{id => StartMod, start => StartFunc,
+			restart => transient, modules => [StartMod]},
+	SupFlags = #{strategy => simple_one_for_one},
+	{ok, {SupFlags, [ChildSpec]}}.
 
