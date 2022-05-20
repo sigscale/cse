@@ -18,7 +18,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
 %%% 	module implements a Service Logic Processing Program (SLP)
-%%% 	for CAMEL Application Part (CAP) within the
+%%% 	for Diameter Ro Application Part within the
 %%% 	{@link //cse. cse} application.
 %%%
 %%% 	This module is not intended to be started directly but rather
