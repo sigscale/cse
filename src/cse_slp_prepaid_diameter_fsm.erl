@@ -346,7 +346,7 @@ collect_information(cast, {nrf_update,
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>routing</em> state.
 %% @private
-routing(enter, null = _EventContent, _Data) ->
+routing(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 routing(internal, #'3gpp_ro_CCR'{
 		'Session-Id' = SessionId,
