@@ -278,7 +278,7 @@ analyse_information(_EventType, #'3gpp_ro_CCR'{
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>collect_information</em> state.
 %% @private
-collect_information(enter, null = _EventContent, _Data) ->
+collect_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 collect_information(internal, #'3gpp_ro_CCR'{
 		'Session-Id' = SessionId,
