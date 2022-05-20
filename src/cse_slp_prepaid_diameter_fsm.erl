@@ -206,8 +206,8 @@ authorize_origination_attempt(cast, {nrf_start,
 		{false, undefined} ->
 			collect_information
 	end,
-	Data1 = maps:remove(nrf_reqid, Data),
-	NewData = maps:remove(from, Data1),
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
 				when is_list(Location) ->
@@ -280,14 +280,14 @@ analyse_information(_EventType, #'3gpp_ro_CCR'{
 %% @private
 collect_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
-collect_information(internal, #'3gpp_ro_CCR'{
+collect_information({call, From}, #'3gpp_ro_CCR'{
 		'Session-Id' = SessionId,
 		'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 		'CC-Request-Number' = RequestNum,
 		'Multiple-Services-Credit-Control' = MSCC,
 		'Service-Information' = _ServiceInformation} = _EventContent,
 		#{session_id := SessionId} = Data) ->
-	NewData = Data#{mscc => MSCC, reqno => RequestNum,
+	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
 			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
 	nrf_update(NewData);
 collect_information(cast, {nrf_update,
@@ -303,7 +303,7 @@ collect_information(cast, {nrf_update,
 		{false, undefined} ->
 			collect_information
 	end,
-	Data1 = maps:remove(nrf_reqid, Data),
+	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
@@ -348,14 +348,14 @@ collect_information(cast, {nrf_update,
 %% @private
 routing(enter, _EventContent, _Data) ->
 	keep_state_and_data;
-routing(internal, #'3gpp_ro_CCR'{
+routing({call, From}, #'3gpp_ro_CCR'{
 		'Session-Id' = SessionId,
 		'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 		'CC-Request-Number' = RequestNum,
 		'Multiple-Services-Credit-Control' = MSCC,
 		'Service-Information' = _ServiceInformation} = _EventContent,
 		#{session_id := SessionId} = Data) ->
-	NewData = Data#{mscc => MSCC, reqno => RequestNum,
+	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
 			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
 	nrf_update(NewData);
 routing(cast, {nrf_update,
@@ -371,7 +371,7 @@ routing(cast, {nrf_update,
 		false ->
 			routing
 	end,
-	Data1 = maps:remove(nrf_reqid, Data),
+	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
