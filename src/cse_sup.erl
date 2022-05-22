@@ -54,7 +54,7 @@ init(_Args) ->
 	ChildSpecs = [server({local, cse}, cse_server, [self()], []),
 			bridge(cse_tco_sup, [self()]),
 			supervisor(cse_slp_sup, []),
-			supervisor(cse_diameter_sup, cse_diameter_sup, []),
+			supervisor({local, cse_diameter_sup}, cse_diameter_sup, []),
 			supervisor({local, cse_rest_pagination_sup},
 					cse_rest_pagination_sup, [])],
 	SupFlags = #{},
@@ -127,8 +127,8 @@ bridge(StartMod, Args) ->
 %% 	with a registered name and options.
 %% @private
 %%
-server(StartMod, Name, Args, Opts) ->
-	StartArgs = [Name, StartMod, Args, Opts],
+server(RegName, StartMod, Args, Opts) ->
+	StartArgs = [RegName, StartMod, Args, Opts],
 	StartFunc = {gen_server, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc, modules => [StartMod]}.
 
