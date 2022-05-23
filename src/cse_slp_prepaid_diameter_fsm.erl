@@ -200,12 +200,6 @@ authorize_origination_attempt(cast, {nrf_start,
 				called := Called, nrf_profile := Profile, nrf_uri := URI,
 				mscc := MSCC, ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId, reqt := RequestType} = Data) ->
-	NextState = case {rsu_postive(MSCC), Called} of
-		{true, Destination} when is_list(Destination) ->
-			analyse_information;
-		{false, undefined} ->
-			collect_information
-	end,
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
@@ -218,7 +212,12 @@ authorize_origination_attempt(cast, {nrf_start,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				{next_state, NextState, NewData1, Actions}
+				case {rsu_postive(MSCC), Called} of
+					{true, Destination} when is_list(Destination) ->
+						{next_state, analyse_information, NewData1, Actions};
+					{false, undefined} ->
+						{next_state, collect_information, NewData1, Actions}
+				end
 			catch
 				_:Reason ->
 					?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
@@ -262,13 +261,12 @@ analyse_information(_EventType, #'3gpp_ro_CCR'{
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{mscc => MSCC, reqno => RequestNum,
 			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
-	NextState = case usu_postive(MSCC) of
+	case usu_postive(MSCC) of
 		true ->
-			o_active;
+			{next_state, o_active, NewData, postpone};
 		false ->
-			routing
-	end,
-	{next_state, NextState, NewData, postpone}.
+			{next_state, routing, NewData, postpone}
+	end.
 		
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
@@ -297,12 +295,6 @@ collect_information(cast, {nrf_update,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
 				reqt := RequestType} = Data) ->
-	NextState = case {rsu_postive(MSCC), Called} of
-		{true, Destination} when is_list(Destination) ->
-			analyse_information;
-		{false, undefined} ->
-			collect_information
-	end,
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -313,7 +305,12 @@ collect_information(cast, {nrf_update,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				{next_state, NextState, NewData, Actions}
+				case {rsu_postive(MSCC), Called} of
+					{true, Destination} when is_list(Destination) ->
+						{next_state, analyse_information, NewData, Actions};
+					{false, undefined} ->
+						{keep_state, NewData, Actions}
+				end
 			catch
 				_:Reason ->
 					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
@@ -365,12 +362,6 @@ routing(cast, {nrf_update,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
 				reqt := RequestType} = Data) ->
-	NextState = case usu_postive(MSCC) of
-		true ->
-			o_active;
-		false ->
-			routing
-	end,
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -381,7 +372,12 @@ routing(cast, {nrf_update,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				{next_state, NextState, NewData, Actions}
+				case usu_postive(MSCC) of
+					true ->
+						{next_state, o_active, NewData, Actions};
+					false ->
+						{keep_state, NewData, Actions}
+				end
 			catch
 				_:Reason ->
 					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
@@ -447,12 +443,6 @@ o_active(cast, {nrf_update,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
 				reqt := RequestType} = Data) ->
-	NextState = case usu_postive(MSCC) of
-		true ->
-			o_active;
-		false ->
-			routing
-	end,
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -463,7 +453,7 @@ o_active(cast, {nrf_update,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				{next_state, NextState, NewData, Actions}
+				{keep_state, NewData, Actions}
 			catch
 				_:Reason ->
 					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
