@@ -1,3 +1,245 @@
+2022-05-24  Vance Shipley <vances@sigscale.org>
+
+	* refactor and correct state transitions
+	* correct swapped argument order in to sup
+	* update callback pid; typos
+	* fix edoc
+	* refactor state transition flow
+	* include cse codec from project
+	* rest pagination in supervision hierarchy diagram
+	* refactor rest pagination supervisor for modernization
+	* refactor top supervisor for consistent modernization
+	* test: fix doc lines in userdata
+	* test: add peer down test case
+	* test: add peer up test case
+	* add snmp manager callback
+	* test: add cse snmp suite
+	* send snmp notification event about diameter peer status
+	* send snmp traps for diameter peer status
+	* restore loading mibs in cse start
+	* rename example table and row in inventory swagger
+	* remove tariff table and row examples from catalog swagger
+	* add range table section to inventory swagger description
+	* make resource id consistent with spec id
+	* add range table examples in inventory swagger
+	* refactor example prefix table and row resources
+	* remove hard coded specification ids from resource inventory swagger
+	* include examples of prefix range table and row specs in catalog swagger
+	* based relationship should come first
+	* improved error responses
+	* test: add out_of_credit testcase
+	* handle credit limit reached error response
+	* test: add unknown_subscriber testcase
+	* handle unknown subscriber error response
+	* specification should be defined when creating resource
+	* test: verify balance after ccr-u
+	* add missing catch to case statement
+	* test: add receive_final_scur testcase
+	* test: add send_final_scur testcase
+	* test: add receive_interim_scur test case
+	* add diameter ccr-u handling; add diameter cca handling for ccr-u
+	* correct nrf update handling
+	* test: add send_interim_scur test case
+	* add: send_initial_scur test case
+	* test: add diamete test suite
+	* test: add diameter test client callback
+	* test:add ocs gen_server
+	* test:add http callback module for nrf rating
+	* add diameter ccr-i handling; add diameter cca handling for ccr-i
+	* include required header file directories
+	* loading snmp mibs is not mandatory
+	* install range table row spec
+	* install range table spec
+	* private API to get range table row spec id
+	* private API to get range table spec id
+	* correct dynamic example table and row names
+	* add dynamic spec examples in resource catalog swagger
+	* add new static spec ids in resource inventory swagger
+	* replace chunk size macro
+	* refactor get resources erlang api
+	* remove unused header file inclusion
+	* include build_dir headers in make
+	* rename add_row_resource test case and its functions
+	* rename delete table resource test case
+	* test: delete dynamic table row resource
+	* validate the gtt entry is removed from the table
+	* test: add dynamic spec table row resource
+	* #gtt.value can be anything
+	* rename test case and its functions
+	* test: add dynamic spec table resource
+	* refactor delete resource rest api
+	* test: delete table row resource
+	* test: delete table resource by id
+	* test: rest api to query resources
+	* test: rest api to get resource by id
+	* cse gtt api for add range and delete range
+	* remove redundant function call
+	* add entry in resource table for prefix row resource
+	* test: rest api to add prefix row resource
+	* test: add prefix table resource
+	* handle diameter ccr entry in null state
+	* add nrf state data
+	* handle diameter ro initial request in callback
+	* add diameter ro callback scaffolding
+	* add diameter slp scaffolding
+	* test: query based relationship type resource specs
+	* based relationship should come first
+	* test: start cse application and it's dependencies
+	* test: refactor row resource spec external function
+	* add diameter to the list of applications to be loaded
+	* resource spec id should follow pattern ts-n
+	* test: delete dynamic resource spec
+	* test: delete static resource spec
+	* validate statement is true
+	* export resource spec codec
+	* test: retrieve static resource specs
+	* test: get dynamic resource spec
+	* test: add resource spec
+	* rest api to delete resource spec by id
+	* rest api to add dynamic resource spec
+	* correct process_flag/2 placement
+	* add configurable snmp alarms environment variable
+	* improved diameter event handling; correct event types
+	* correct diameter service name
+	* load mibs on application start
+	* rest api to query resource specs
+	* query resource specs based of relationship type
+	* include diameter cc mib in mib list
+	* erlang api function to query resource specs
+	* fix dialyzer complains
+	* handle snmp requests for the peer table
+	* transform resource spec record to map before zj encoding
+	* codec for resource specification
+	* add diameter cc mib
+	* correct return value from list:keytake/3
+	* support getting local statistics
+	* support getting local configuration
+	* correct origin-host construction
+	* refactor list resource specs function
+	* add cse_mib module
+	* add cse_mib module; add apis to load/unload mibs (in-29)
+	* add diameter base snmp mib (in-25)
+	* allow all diameter applications to be configured
+	* support vendors diameter service option configuration
+	* test suite for rest api
+	* test: start diameter application
+	* add 3gpp ro dictionary
+	* add rfc7155 dictionary
+	* add rfc4006 dictionary
+	* refactor static resource specification handling
+	* refactor diameter services start
+	* install static resource specifications
+	* handle subclassed prefix table resource specifications
+	* add resource specification table
+	* remove unused deprecated attribute
+	* use uniform id
+	* correct type specification for add resource
+	* rename resource specification reference
+	* Revert "add 3gpp_ro_application.dia"
+	* hide internal function clauses
+	* add 3gpp_ro_application.dia
+	* uniform identifiers for resource specifications
+	* rest library function for uniform resource id
+	* httpd log module must be last
+	* add diameter application
+	* update list of supported vendors
+	* use fully qualified hostname
+	* add diameter application to dependencies
+	* pretty print SSF/SCF addresses in log reports of the cse application (in-78)
+	* correct function return
+	* remove display lines
+	* refactor building service options
+	* allow auth and acct diameter application service ids
+	* remove diameter peer auth from cer/cea
+	* handle diameter start event; allow new diameter applications
+	* clean priv
+	* correct table name and update time in 639 spec
+	* api specification improvements; example corrections, verbose descriptions
+	* prefix row spec char descriptions
+	* refactor examples in resource catalog and inventory swaggers
+	* open api swaggers for resource catalog and inventory
+	* query filters are not implemented yet
+	* correct add resource response href
+	* replace depricated http_uri:decode/1 with uri_string functions
+	* correct origin host
+	* migrate swaggers
+	* add examples in resourceInventoryManagement oas
+	* add examples in resourceCatalogManagement oas
+	* create new mod_cse_rest_patch module
+	* correct default origin host
+	* correct return values in add_session/2
+	* add delete_session/1 api
+	* add get_sessions/0 api; typos
+	* add get_session/1 api
+	* add add_session/2 api
+	* add ets session table (in-86)
+	* remove redundant clauses
+	* scalable vector graphics (svg) diagrams
+	* typos in 3gpp trigger-type avp enum
+	* update copyright
+	* simplify diameter service state handlers
+	* prevent priv added to release package twice
+	* install diagrams
+	* update supervision diagram in edoc for diameter
+	* edoc cleanup in diameter service fsm
+	* edoc cleanup in diameter base aoplication callback
+	* export type for announcement words
+	* api to get word list for amount
+	* remove display line
+	* create resource api swaggers in priv directory
+	* match correct result
+	* pass top sup pid to server
+	* handle gen_server to start a diameter service
+	* match empty arguments
+	* correct arguments for start link
+	* fix diameter encoding typo
+	* start diameter service instances
+	* add api for starting diameter service
+	* correct doc line
+	* remove unused opt
+	* handle empty query results
+	* rest api to delete resource
+	* create mod_cse_rest_delete module
+	* add base diameter callback
+	* add diameter service fsm
+	* diameter dictionaries; rest query scanner/parser
+	* make rules to build scanner and parser
+	* rest api to add resource
+	* handle resource relationship type
+	* create mod_cse_rest_post module
+	* example sys.config
+	* include stack codec apps in application specification
+	* add diameter service fsm sup
+	* add diameter service top supervisor
+	* add app env for diameter services
+	* rest api to query resource
+	* register pagination supervisor under main supervisor
+	* create query scanner and query parser modules
+	* create new pagination supervisor module
+	* create new pagination server module
+	* set rest page size and timeout env variables
+	* create query scanner and query parser modules
+	* add common rest apis: range/1, fields/2
+	* rest api to get resource by id
+	* resource codec
+	* general rest api functions: etag/1, date/1, iso8601/1
+	* use environmant variable for pwd
+	* cse installation instructions is user guide
+	* correct build steps for shell expansion in current directory
+	* renumber build steps
+	* detailed build instructions
+	* remove runtime dependencies from application specification
+	* include doc in release package
+	* rename get_resource as find_resource to match pattern
+	* get all resource specs; get resource spec by id
+	* add new module cse_rest_res_resource.erl
+	* add mod_cse_rest_accepted_content and mod_cse_rest_get to sys.config
+	* add new module mod_cse_rest_get.erl
+	* query parsing function
+	* format the problem for errors
+	* add new module mod_cse_rest_accepted_content.erl
+	* add new module cse_rest.erl
+
 2022-01-27  Vance Shipley <vances@sigscale.org>
 
 	* test cases for service table api functions
