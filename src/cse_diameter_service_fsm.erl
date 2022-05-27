@@ -84,7 +84,7 @@ init([Address, Port, Options] = _Args) ->
 	diameter:subscribe(SvcName),
 	case diameter:start_service(SvcName, SOptions2) of
 		ok ->
-		process_flag(trap_exit, true),
+			process_flag(trap_exit, true),
 			case diameter:add_transport(SvcName, TOptions2) of
 				{ok, Ref} ->
 					{ok, Alarms} = application:get_env(cse, snmp_alarms),
@@ -137,15 +137,6 @@ started(info, #diameter_event{info = Event, service = Service},
 	ok = send_notification(element(1, Event), Peer, Alarms),
 	{next_state, started, Data};
 started(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == up;
-		element(1, Event) == down ->
-	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
-	Peer = binary_to_list(P),
-	error_logger:info_report(["DIAMETER peer connection state changed",
-			{service, Service}, {event, element(1, Event)},
-			{peer, Peer}]),
-	{next_state, started, Data};
-started(info, #diameter_event{info = Event, service = Service},
 		Data) when element(1, Event) == closed ->
 	{_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
 	error_logger:info_report(["DIAMETER peer connection state changed",
@@ -185,15 +176,6 @@ wait_for_stop(info, #diameter_event{info = Event, service = Service},
 			{service, Service}, {event, element(1, Event)},
 			{peer, Peer}]),
 	ok = send_notification(element(1, Event), Peer, Alarms),
-	{next_state, started, Data};
-wait_for_stop(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == up;
-		element(1, Event) == down ->
-	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
-	Peer = binary_to_list(P),
-	error_logger:info_report(["DIAMETER peer connection state changed",
-			{service, Service}, {event, element(1, Event)},
-			{peer, Peer}]),
 	{next_state, started, Data};
 wait_for_stop(info, #diameter_event{info = {watchdog,
 			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
