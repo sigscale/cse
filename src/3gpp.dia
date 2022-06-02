@@ -1123,7 +1123,7 @@
 ;  CPDT-Information ::= <AVP Header: 3927>
 ;     [ External-Identifier ]
 ;     [ SCEF-ID ]
-;     [ Serving Node Identity ]
+;     [ Serving-Node-Identity ]
 ;     [ SGW-Change ]
 ;     [ NIDD-submission ]
 
