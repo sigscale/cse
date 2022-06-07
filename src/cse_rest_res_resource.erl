@@ -475,8 +475,8 @@ delete_resource1({ok, #resource{specification
 delete_resource1({ok, #resource{specification
 		= #resource_spec_ref{id = SpecId}} = Resource}) ->
 	delete_resource2(Resource, cse:find_resource_spec(SpecId));
-delete_resource1({error, _Reason}) ->
-	{error, 400}.
+delete_resource1({error, not_found}) ->
+	{error, 404}.
 %% @hidden
 delete_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
 	delete_resource3(Resource, Related);
