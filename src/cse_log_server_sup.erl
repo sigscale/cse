@@ -1,4 +1,4 @@
-%%% cse_sup.erl
+%%% cse_log_server_sup.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021-2022 SigScale Global Inc.
@@ -18,7 +18,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @docfile "{@docsrc supervision.edoc}"
 %%%
--module(cse_sup).
+-module(cse_log_server_sup).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
@@ -32,12 +32,7 @@
 		| {via, ViaModule :: atom(), Name :: any()}.
 
 %%----------------------------------------------------------------------
-%%  The cse_sup private API
-%%----------------------------------------------------------------------
-
-
-%%----------------------------------------------------------------------
-%%  The supervisor callback
+%%  The supervisor callbacks
 %%----------------------------------------------------------------------
 
 -spec init(Args) -> Result
@@ -50,67 +45,15 @@
 %% @see //stdlib/supervisor:init/1
 %% @private
 %%
-init(_Args) ->
-	ChildSpecs = [server({local, cse}, cse_server, [self()], []),
-			supervisor({local, cse_log_sup}, cse_log_sup, []),
-			bridge(cse_tco_sup, [self()]),
-			supervisor(cse_slp_sup, []),
-			supervisor({local, cse_diameter_sup}, cse_diameter_sup, []),
-			supervisor({local, cse_rest_pagination_sup},
-					cse_rest_pagination_sup, [])],
+init([LogName, Options] = _Args) ->
+	ChildSpecs = [server(LogName, cse_log_server, [self() | Options], []),
+			supervisor(cse_log_job_sup, [])],
 	SupFlags = #{},
 	{ok, {SupFlags, ChildSpecs}}.
 
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
-
--spec supervisor(StartMod, Args) -> Result
-	when
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: supervisor:child_spec().
-%% @doc Build a supervisor child specification for a
-%% 	{@link //stdlib/supervisor. supervisor} behaviour.
-%% @private
-%%
-supervisor(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
-	StartFunc = {supervisor, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			type => supervisor, modules => [StartMod]}.
-
--spec supervisor(RegName, StartMod, Args) -> Result
-	when
-		RegName :: registered_name(),
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: supervisor:child_spec().
-%% @doc Build a supervisor child specification for a
-%%    {@link //stdlib/supervisor. supervisor} behaviour
-%%    with registered name.
-%% @private
-%%
-supervisor(RegName, StartMod, Args) ->
-	StartArgs = [RegName, StartMod, Args],
-	StartFunc = {supervisor, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			type => supervisor, modules => [StartMod]}.
-
--spec bridge(StartMod, Args) -> Result
-	when
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: supervisor:child_spec().
-%% @doc Build a supervisor child specification for a
-%% 	{@link //stdlib/supervisor_bridge. supervisor_bridge} behaviour.
-%% @private
-%%
-bridge(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
-	StartFunc = {supervisor_bridge, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			type => supervisor, modules => [StartMod]}.
 
 -spec server(RegName, StartMod, Args, Opts) -> Result
 	when
@@ -132,4 +75,19 @@ server(RegName, StartMod, Args, Opts) ->
 	StartArgs = [RegName, StartMod, Args, Opts],
 	StartFunc = {gen_server, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc, modules => [StartMod]}.
+
+-spec supervisor(StartMod, Args) -> Result
+	when
+		StartMod :: atom(),
+		Args :: [term()],
+		Result :: supervisor:child_spec().
+%% @doc Build a supervisor child specification for a
+%% 	{@link //stdlib/supervisor. supervisor} behaviour.
+%% @private
+%%
+supervisor(StartMod, Args) ->
+	StartArgs = [StartMod, Args],
+	StartFunc = {supervisor, start_link, StartArgs},
+	#{id => StartMod, start => StartFunc,
+			type => supervisor, modules => [StartMod]}.
 

@@ -6,7 +6,11 @@
 modhtml = cse.html \
 		cse_app.html \
 		cse_sup.html \
+		cse_log_sup.html \
 		cse_diameter_sup.html \
+		cse_log_server_sup.html \
+		cse_log_server.html \
+		cse_log_job_sup.html \
 		cse_diameter_service_fsm_sup.html \
 		cse_diameter_service_fsm.html \
 		cse_diameter_base_application_cb.html \
