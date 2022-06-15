@@ -5,6 +5,7 @@
 
 testmods = cse_api_SUITE \
 		cse_rest_api_SUITE \
+		cse_log_SUITE \
 		cse_cap_SUITE \
 		cse_inap_SUITE \
 		cse_codec_SUITE \
@@ -30,14 +31,21 @@ check_DATA = .dialyzer_ok .common_test_ok
 	@if [ ! -f test.spec ]; then cp $(top_srcdir)/test/test.spec .; fi
 	@if [ ! -d cse_api_SUITE_data ]; then mkdir cse_api_SUITE_data; fi
 	@if [ ! -d cse_rest_api_SUITE_data ]; then mkdir cse_rest_api_SUITE_data; fi
+	@if [ ! -d cse_log_SUITE_data ]; then mkdir cse_log_SUITE_data; fi
 	@if [ ! -d cse_cap_SUITE_data ]; then mkdir cse_cap_SUITE_data; fi
 	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
 	@if [ ! -d cse_diameter_SUITE_data ]; then mkdir cse_diameter_SUITE_data; fi
 	ct_run -no_auto_compile \
 			-pa $(top_builddir)/ebin \
+			-pa $(ERLANG_LIB_DIR_m3ua)/ebin \
 			-pa $(ERLANG_LIB_DIR_sccp)/ebin \
+			-pa $(ERLANG_LIB_DIR_gtt)/ebin \
 			-pa $(ERLANG_LIB_DIR_tcap)/ebin \
+			-pa $(ERLANG_LIB_DIR_map)/ebin \
+			-pa $(ERLANG_LIB_DIR_cap)/ebin \
 			-pa $(ERLANG_LIB_DIR_inap)/ebin \
+			-pa $(ERLANG_LIB_DIR_sigscale_mibs)/ebin \
+			-pa $(ERLANG_LIB_DIR_zj)/ebin \
 			-logdir log -config ct.cfg -spec test.spec -dir . \
 			-erl_args -noshell -sname $(LOGNAME)-ct
 
