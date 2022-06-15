@@ -55,26 +55,25 @@
 suite() ->
    [{userdata, [{doc, "Test suite for Diameter in CSE"}]},
 	{require, diameter},
-	{default_config, diameter, [{address, {127,0,0,1}}]},
+	{default_config, diameter,
+			[{address, {127,0,0,1}}]},
    {timetrap, {minutes, 60}},
 	{require, rest},
-	{default_config, rest, [{user, "nrf"},
+	{default_config, rest,
+			[{user, "nrf"},
 			{password, "4yjhe6ydsrh4"}]}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
 %%
 init_per_suite(Config) ->
-	ok = cse_test_lib:unload(mnesia),
 	DataDir = ?config(priv_dir, Config),
+	ok = cse_test_lib:unload(mnesia),
 	ok = cse_test_lib:load(mnesia),
 	ok = application:set_env(mnesia, dir, DataDir),
 	ok = cse_test_lib:unload(cse),
 	ok = cse_test_lib:load(cse),
 	ok = cse_test_lib:init_tables(),
-	init_per_suite1(Config).
-%% @hidden
-init_per_suite1(Config) ->
 	DiameterAddress = ct:get_config({diameter, address}, {127,0,0,1}),
 	DiameterPort = ct:get_config({diameter, auth_port}, rand:uniform(64511) + 1024),
 	DiameterApplication = [{alias, ?RO_APPLICATION},
@@ -96,11 +95,11 @@ init_per_suite1(Config) ->
    receive
       #diameter_event{service = ?MODULE, info = Info}
             when element(1, Info) == up ->
-			init_per_suite2(Config1);
+			init_per_suite1(Config1);
       _Other ->
          {skip, diameter_client_service_not_started}
    end.
-init_per_suite2(Config) ->
+init_per_suite1(Config) ->
 	case inets:start(httpd,
 			[{port, 0},
 			{server_name, atom_to_list(?MODULE)},
@@ -112,12 +111,12 @@ init_per_suite2(Config) ->
 			NrfUri = "http://localhost:" ++ integer_to_list(Port),
 			ok = application:set_env(cse, nrf_uri, NrfUri),
 			Config1 = [{server_port, Port}, {server_pid, HttpdPid}, {nrf_uri, NrfUri} | Config],
-			init_per_suite3(Config1);
+			init_per_suite2(Config1);
 		{error, InetsReason} ->
 			ct:fail(InetsReason)
 	end.
 %% @hidden
-init_per_suite3(Config) ->
+init_per_suite2(Config) ->
 	case gen_server:start({local, ocs}, cse_test_ocs_server, [], []) of
 		{ok, Pid} ->
 			[{ocs_server, Pid} | Config];
