@@ -27,7 +27,9 @@
 
 %% export test cases
 -export([new/0, new/1, close/0, close/1,
-		log/0, log/1, blog/0, blog/1, alog/0, alog/1]).
+		log/0, log/1, blog/0, blog/1,
+		alog/0, alog/1, balog/0, balog/1,
+		log_wrap/0, log_wrap/1, blog_wrap/0, blog_wrap/1]).
 
 -include_lib("common_test/include/ct.hrl").
 
@@ -89,7 +91,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[new, close, log, blog, alog].
+	[new, close, log, blog, alog, balog, log_wrap, blog_wrap].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -129,23 +131,85 @@ blog(Config) ->
 	Name = cse_test_lib:rand_name(),
 	LogName = list_to_atom(Name),
 	cse_log:open(LogName, [{format, external}]),
-	Term = cse_test_lib:rand_name(40),
-	ok = cse_log:blog(LogName, Term),
+	BytesIn = cse_test_lib:rand_name(40),
+	ok = cse_log:blog(LogName, BytesIn),
 	ok = disk_log:sync(LogName),
 	Filename = filename:join(PrivDir, Name),
-	{ok, Binary} = file:read_file(Filename),
-	[Term, $\r, $\n] = binary_to_list(Binary).
+	BytesOut = iolist_to_binary([BytesIn, $\r, $\n]),
+	Size = byte_size(BytesOut),
+	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
 alog() ->
-	[{userdata, [{doc, "Write to a log asynchronously"}]}].
+	[{userdata, [{doc, "Write to an internal log asynchronously"}]}].
 
 alog(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
 	cse_log:open(LogName, []),
 	Term = {?MODULE, cse_test_lib:rand_name(), erlang:universaltime()},
 	ok = cse_log:alog(LogName, Term),
+	ct:sleep(500),
 	ok = disk_log:sync(LogName),
 	{_, [Term]} = disk_log:chunk(LogName, start).
+
+balog() ->
+	[{userdata, [{doc, "Write to an external log asynchronously"}]}].
+
+balog(Config) ->
+	PrivDir = ?config(priv_dir, Config),
+	Name = cse_test_lib:rand_name(),
+	LogName = list_to_atom(Name),
+	cse_log:open(LogName, [{format, external}]),
+	BytesIn = cse_test_lib:rand_name(40),
+	ok = cse_log:balog(LogName, BytesIn),
+	ct:sleep(500),
+	ok = disk_log:sync(LogName),
+	Filename = filename:join(PrivDir, Name),
+	BytesOut = iolist_to_binary([BytesIn, $\r, $\n]),
+	Size = byte_size(BytesOut),
+	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
+
+log_wrap() ->
+	[{userdata, [{doc, "Write to a internal format wrap log"}]}].
+
+log_wrap(_Config) ->
+	LogName = list_to_atom(cse_test_lib:rand_name()),
+	cse_log:open(LogName, [{format, internal},
+			{type, wrap}, {size, {1024, 5}}]),
+	F = fun F(0) ->
+				disk_log:sync(LogName);
+			F(N) ->
+				Term = {?MODULE, cse_test_lib:rand_name(20), erlang:universaltime()},
+				ok = cse_log:log(LogName, Term),
+				F(N - 1)
+	end,
+	ok = F(50),
+	{ok, Cont} = disk_log:chunk_step(LogName, start, 1),
+	{_, [{?MODULE, _, _} | _]} = disk_log:chunk(LogName, Cont).
+
+blog_wrap() ->
+	[{userdata, [{doc, "Write to a external format wrap log"}]}].
+
+blog_wrap(Config) ->
+	PrivDir = ?config(priv_dir, Config),
+	Name = cse_test_lib:rand_name(),
+	LogName = list_to_atom(Name),
+	Module = atom_to_list(?MODULE),
+	Rand = cse_test_lib:rand_name(20),
+	Time = cse_log:iso8601(cse_log:date(erlang:universaltime())),
+	BytesIn = [Module, $;, Rand, $;, Time],
+	cse_log:open(LogName, [{format, external},
+			{type, wrap}, {size, {1024, 5}}]),
+	F = fun F(0) ->
+				disk_log:sync(LogName);
+			F(N) ->
+				ok = cse_log:blog(LogName, BytesIn),
+				F(N - 1)
+	end,
+	ok = F(50),
+	Filename = filename:join(PrivDir, Name ++ ".2"),
+	BytesOut = iolist_to_binary([BytesIn, $\r, $\n]),
+	Size = byte_size(BytesOut),
+	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
