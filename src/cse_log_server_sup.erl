@@ -37,7 +37,9 @@
 
 -spec init(Args) -> Result
 	when
-		Args :: [],
+		Args :: [LogName | Options],
+		LogName :: registered_name(),
+		Options :: [tuple()],
 		Result :: {ok, {SupFlags, [ChildSpec]}} | ignore,
 		SupFlags :: supervisor:sup_flags(),
 		ChildSpec :: supervisor:child_spec().
