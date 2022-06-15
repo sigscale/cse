@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc This library module implements loggingfunctions for the
+%%% @doc This library module implements logging functions for the
 %%%   {@link //cse. cse} application.
 %%%
 -module(cse_log).
@@ -23,6 +23,7 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log  public API
+-export([open/2, close/1, log/2]).
 -export([date/1, iso8601/1]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
@@ -31,6 +32,56 @@
 %%----------------------------------------------------------------------
 %%  The cse_log public API
 %%----------------------------------------------------------------------
+
+-spec open(LogName, Options) -> Result
+   when
+      LogName :: LocalName | {local, LocalName}
+				| {global, GlobalNname :: term()}
+				| {via, RegMod :: module(), ViaName :: term()},
+		LocalName :: atom(),
+      Options :: [Option],
+      Option :: disk_log:dlog_option()
+            | {codec, {Module, Function}}
+            | {process, boolean()},
+      Module :: module(),
+      Function :: atom(),
+      Result :: {ok, LogServer} | {error, Reason},
+		LogServer :: pid(),
+		Reason :: term().
+%% @doc Start a log manager for `LogName'.
+%%
+%%   An `cse_log_server' process is created to manage the log.
+%%
+%%   Optionally `{codec, {Module, Function}}' provides a CODEC
+%%   function `Module:Function(Item)' to transform `Item' before
+%%   sending to the log.
+%%
+%%   Option `{process, true}' indicates a process is started to run the CODEC.
+%%
+open(LogName, Options) when is_atom(LogName) ->
+	open({local, LogName}, Options);
+open(LogName, Options) when is_tuple(LogName), is_list(Options) ->
+	case supervisor:start_child(cse_log_sup, [[LogName, Options]]) of
+		{ok, _ServerSup, LogServer} ->
+			{ok, LogServer};
+		{error, Reason} ->
+			{error, Reason}
+	end.
+
+-spec close(LogServer) -> ok
+   when
+      LogServer :: pid().
+%% @doc Stop a log manager.
+close(LogServer) when is_pid(LogServer) ->
+	gen_server:call(LogServer, close).
+
+-spec log(LogServer, Item) -> ok
+   when
+      LogServer :: pid(),
+      Item :: term().
+%% @doc Write an `Item' to an open log.
+log(LogServer, Item) when is_pid(LogServer) ->
+	gen_server:call(LogServer, {log, Item}).
 
 -spec date(DateTime) -> DateTime
 	when
