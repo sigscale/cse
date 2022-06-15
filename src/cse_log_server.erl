@@ -37,12 +37,12 @@
 
 -record(state,
 		{sup :: pid(),
-		job_sup :: pid(),
+		job_sup :: pid() | undefined,
 		log :: disk_log:log(),
 		codec :: {Module :: atom(), Function :: atom()} | undefined,
 		process = false :: boolean(),
 		format = internal :: internal | external,
-		dopts :: [tuple()]}).
+		dopts :: [tuple()] | undefined}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -80,12 +80,14 @@ init([Sup | Options]) ->
 	case disk_log:open(Options2) of
 		{ok, Log} ->
 			process_flag(trap_exit, true),
-			{ok, State3#state{log = Log}, {continue, init}};
+			State4 = State3#state{log = Log, dopts = Options2},
+			{ok, State4, {continue, init}};
 		{repaired, Log, {recovered, Rec}, {badbytes, Bad}} ->
 			?LOG_WARNING([{?MODULE, init}, {disk_log, Log},
 					{recovered, Rec}, {badbytes, Bad}]),
 			process_flag(trap_exit, true),
-			{ok, State3#state{log = Log}, {continue, init}};
+			State4 = State3#state{log = Log, dopts = Options2},
+			{ok, State4, {continue, init}};
 		{error, Reason} ->
 			{stop, Reason}
 	end.
@@ -225,7 +227,7 @@ format_status(_Opt, [_PDict, State] = _StatusData) ->
 		Item :: term(),
 		Result :: {stop, normal} | {error, Reason},
 		Reason :: term().
-%% @doc Child worker of the `cse_log_job_sup` supervisor.
+%% @doc Child worker of the `cse_log_job_sup' supervisor.
 %% @private
 codec_worker(Log, Operation, Module, Function, Item) ->
 	proc_lib:init_ack({ok, self()}),
