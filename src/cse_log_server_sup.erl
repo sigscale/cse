@@ -28,8 +28,7 @@
 -export([init/1]).
 
 -type registered_name() :: {local, Name :: atom()}
-		| {global, Name :: atom()}
-		| {via, ViaModule :: atom(), Name :: any()}.
+		| {global, Name :: atom()}.
 
 %%----------------------------------------------------------------------
 %%  The supervisor callbacks

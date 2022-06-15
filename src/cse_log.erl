@@ -23,7 +23,7 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log  public API
--export([open/2, close/1, log/2]).
+-export([open/2, close/1, log/2, blog/2, alog/2, balog/2]).
 -export([date/1, iso8601/1]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
@@ -36,17 +36,16 @@
 -spec open(LogName, Options) -> Result
    when
       LogName :: LocalName | {local, LocalName}
-				| {global, GlobalNname :: term()}
-				| {via, RegMod :: module(), ViaName :: term()},
+				| {global, GlobalName},
 		LocalName :: atom(),
+		GlobalName :: term(),
       Options :: [Option],
       Option :: disk_log:dlog_option()
             | {codec, {Module, Function}}
             | {process, boolean()},
       Module :: module(),
       Function :: atom(),
-      Result :: {ok, LogServer} | {error, Reason},
-		LogServer :: pid(),
+      Result :: ok | {error, Reason},
 		Reason :: term().
 %% @doc Start a log manager for `LogName'.
 %%
@@ -60,28 +59,105 @@
 %%
 open(LogName, Options) when is_atom(LogName) ->
 	open({local, LogName}, Options);
-open(LogName, Options) when is_tuple(LogName), is_list(Options) ->
+open({RegType, Name} = LogName, Options)
+		when is_list(Options), ((RegType == local) or (RegType == global)) ->
+	case lists:keymember(name, 1, Options) of
+		true ->
+			open1(LogName, Options);
+		false ->
+			open1(LogName, [{name, Name} | Options])
+	end.
+%% @hidden
+open1(LogName, Options) ->
 	case supervisor:start_child(cse_log_sup, [[LogName, Options]]) of
-		{ok, _ServerSup, LogServer} ->
-			{ok, LogServer};
+		{ok, _Child} ->
+			ok;
 		{error, Reason} ->
 			{error, Reason}
 	end.
 
--spec close(LogServer) -> ok
+-spec close(LogName) -> Result
    when
-      LogServer :: pid().
+      LogName :: LocalName | {NodeName, LocalName}
+				| {global, GlobalName},
+		LocalName :: atom(),
+		NodeName :: atom(),
+		GlobalName :: term(),
+      Result :: ok | {error, Reason},
+		Reason :: not_found | term().
 %% @doc Stop a log manager.
-close(LogServer) when is_pid(LogServer) ->
-	gen_server:call(LogServer, close).
+close(LogName)
+		when is_atom(LogName); is_tuple(LogName) ->
+	case catch gen_server:call(LogName, supervisor) of
+		{ok, Sup} ->
+			supervisor:terminate_child(cse_log_sup, Sup);
+		{'EXIT', Reason} ->
+			{error, Reason}
+	end.
 
--spec log(LogServer, Item) -> ok
+-spec log(LogName, Term) -> ok
    when
-      LogServer :: pid(),
-      Item :: term().
-%% @doc Write an `Item' to an open log.
-log(LogServer, Item) when is_pid(LogServer) ->
-	gen_server:call(LogServer, {log, Item}).
+      LogName :: LocalName | {NodeName, LocalName}
+				| {global, GlobalName},
+		LocalName :: atom(),
+		NodeName :: atom(),
+		GlobalName :: term(),
+      Term :: term().
+%% @doc Synchronously write `Term' to an open log.
+%%
+%% 	The log should have been created with `{format, internal}'.
+%%
+log(LogName, Term)
+		when is_atom(LogName); is_tuple(LogName) ->
+	gen_server:call(LogName, {log, Term}).
+
+-spec blog(LogName, Bytes) -> ok
+   when
+      LogName :: LocalName | {NodeName, LocalName}
+				| {global, GlobalName},
+		LocalName :: atom(),
+		NodeName :: atom(),
+		GlobalName :: term(),
+      Bytes :: iodata().
+%% @doc Synchronously wite `Bytes' to an open log.
+%%
+%% 	The log should have been created with `{format, external}'.
+%%
+blog(LogName, Bytes)
+		when is_atom(LogName); is_tuple(LogName) ->
+	gen_server:call(LogName, {blog, Bytes}).
+
+-spec alog(LogName, Term) -> ok
+   when
+      LogName :: LocalName | {NodeName, LocalName}
+				| {global, GlobalName},
+		LocalName :: atom(),
+		NodeName :: atom(),
+		GlobalName :: term(),
+      Term :: term().
+%% @doc Asynchronously write `Term' to an open log.
+%%
+%% 	The log should have been created with `{format, internal}'.
+%%
+alog(LogName, Term)
+		when is_atom(LogName); is_tuple(LogName) ->
+	gen_server:cast(LogName, {alog, Term}).
+
+-spec balog(LogName, Bytes) -> ok
+   when
+      LogName :: LocalName | {NodeName, LocalName}
+				| {global, GlobalName},
+		LocalName :: atom(),
+		NodeName :: atom(),
+		GlobalName :: term(),
+      Bytes :: iodata().
+%% @doc Asynchronously wite `Bytes' to an open log.
+%%
+%% 	The log should have been created with `{format, external}'.
+%%
+balog(LogName, Bytes)
+		when is_atom(LogName); is_tuple(LogName) ->
+	gen_server:cast(LogName, {balog, Bytes}).
 
 -spec date(DateTime) -> DateTime
 	when

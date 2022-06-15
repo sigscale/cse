@@ -27,35 +27,6 @@
 %% export the callback needed for supervisor behaviour
 -export([init/1]).
 
-%% export the cse_log_sup private API
--export([start_link/2]).
-
-%%----------------------------------------------------------------------
-%%  The cse_log_sup private API
-%%----------------------------------------------------------------------
-
--spec start_link(StartMod, Args) -> Result
-	when
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: {ok, Sup, Child} | {error, Reason},
-		Sup :: pid(),
-		Child :: pid(),
-		Reason :: supervisor:startlink_err().
-%% @doc Initialize the {@module} supervisor.
-%% @see //stdlib/supervisor:init/1
-%% @private
-%%
-start_link(StartMod, Args) ->
-	case supervisor:start_link(StartMod, Args) of
-		{ok, Sup} ->
-			{_, Child, _, _} = lists:keyfind(cse_log_server, 1,
-					supervisor:which_children(Sup)),
-			{ok, Sup, Child}; 
-		{error, Reason} ->
-			{error, Reason}
-	end.
-
 %%----------------------------------------------------------------------
 %%  The supervisor callback
 %%----------------------------------------------------------------------
@@ -72,7 +43,7 @@ start_link(StartMod, Args) ->
 %%
 init([] = _Args) ->
 	StartMod = cse_log_server_sup,
-	StartFunc = {?MODULE, start_link, [StartMod]},
+	StartFunc = {supervisor, start_link, [StartMod]},
 	ChildSpec = #{id => StartMod, start => StartFunc, 
 			type => supervisor, modules => [StartMod]},
 	SupFlags = #{strategy => simple_one_for_one},

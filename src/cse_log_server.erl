@@ -72,16 +72,23 @@ init([Sup | Options]) ->
 		false ->
 			{State1, Options1}
 	end,
-	Options3 = case lists:keytake(filename, 1, Options2) of
-		{value, {filename, Filename}, O3} when is_list(Filename) ->
-			case filename:pathtype(Filename) of
+	Options3 = case lists:keytake(file, 1, Options2) of
+		{value, {file, File}, O3} when is_list(File) ->
+			case filename:pathtype(File) of
 				absolute ->
 					Options2;
 				relative ->
-					[{filename, filename:join(LogDir, Filename)} | O3]
+					[{file, filename:join(LogDir, File)} | O3]
 			end;
 		false ->
-			Options2
+			case lists:keyfind(name, 1, Options2) of
+				{_, Name} when is_atom(Name) ->
+					File = filename:join(LogDir, atom_to_list(Name)),
+					[{file, File} | Options2];
+				{_, Name} when is_list(Name) ->
+					File = filename:join(LogDir, Name),
+					[{file, File} | Options2]
+			end
 	end,
 	State3 = case lists:keyfind(format, 1, Options3) of
 		{format, Format} ->
@@ -117,41 +124,64 @@ init([Sup | Options]) ->
 				| {stop, Reason :: term(), NewState :: state()}.
 %% @see //stdlib/gen_server:handle_call/3
 %% @private
-handle_call({log, Item}, _From, #state{format = internal} = State) ->
-	handle_call1(log, Item, State);
-handle_call({blog, Item}, _From, #state{format = external} = State) ->
-	handle_call1(blog, Item, State);
-handle_call({alog, Item}, _From, #state{format = internal} = State) ->
-	handle_call1(alog, Item, State);
-handle_call({balog, Item}, _From, #state{format = external} = State) ->
-	handle_call1(balog, Item, State);
-handle_call(close, _From, State) ->
-	{stop, shutdown, State}.
-%% @hidden
-handle_call1(Operation, Item,
-		#state{process = false,
+handle_call({log, Term} = _Request, _From,
+		#state{process = false, format = internal,
+		log = Log, codec = undefined} = State) ->
+	case disk_log:log(Log, Term) of
+		ok ->
+			{reply, ok, State};
+		{error, Reason} ->
+			{reply, {error, Reason}, State}
+	end;
+handle_call({blog, Bytes}, _From,
+		#state{process = false, format = external,
+		log = Log, codec = undefined} = State) ->
+	case disk_log:blog(Log, [Bytes | [$\r, $\n]]) of
+		ok ->
+			{reply, ok, State};
+		{error, Reason} ->
+			{reply, {error, Reason}, State}
+	end;
+handle_call({log, Term}, _From,
+		#state{process = false, format = internal,
 		log = Log, codec = {Module, Function}} = State) ->
-	case catch Module:Function(Item) of
+	case catch Module:Function(Term) of
 		{'EXIT', Reason} ->
 			{reply, {error, Reason}, State};
 		LogItem ->
-			case disk_log:Operation(Log, LogItem) of
+			case disk_log:log(Log, LogItem) of
 				ok ->
 					{reply, ok, State};
 				{error, Reason} ->
 					{reply, {error, Reason}, State}
 			end
 	end;
-handle_call1(Operation, Item,
+handle_call({blog, Term}, _From,
+		#state{process = false, format = external,
+		log = Log, codec = {Module, Function}} = State) ->
+	case catch Module:Function(Term) of
+		{'EXIT', Reason} ->
+			{reply, {error, Reason}, State};
+		Bytes ->
+			case disk_log:blog(Log, [Bytes | [$\r, $\n]]) of
+				ok ->
+					{reply, ok, State};
+				{error, Reason} ->
+					{reply, {error, Reason}, State}
+			end
+	end;
+handle_call({Operation, Term}, _From,
 		#state{process = true, job_sup = Sup,
 		log = Log, codec = {Module, Function}} = State) ->
 	case supervisor:start_child(Sup,
-			[[Log, Operation, Module, Function, Item]]) of
+			[[Log, Operation, Module, Function, Term]]) of
 		{ok, _Child} ->
 			{reply, ok, State};
 		{error, Reason} ->
 			{reply, {error, Reason}, State}
-	end.
+	end;
+handle_call(supervisor, _From, #state{sup = Supervisor} = State) ->
+	{reply, {ok, Supervisor}, State}.
 
 -spec handle_cast(Request, State) -> Result
 	when
@@ -165,8 +195,42 @@ handle_call1(Operation, Item,
 %% 	gen_server:abcast/2,3}.
 %% @@see //stdlib/gen_server:handle_cast/2
 %% @private
-handle_cast(Request, State) ->
-	{stop, Request, State}.
+handle_cast({alog, Term} = _Request,
+		#state{process = false, format = internal,
+		log = Log, codec = undefined} = State) ->
+	disk_log:alog(Log, Term),
+	{noreply, State};
+handle_cast({balog, Bytes},
+		#state{process = false, format = external,
+		log = Log, codec = undefined} = State) ->
+	disk_log:balog(Log, [Bytes | [$\r, $\n]]),
+	{noreply, State};
+handle_cast({alog, Term},
+		#state{process = false, format = internal,
+		log = Log, codec = {Module, Function}} = State) ->
+	case catch Module:Function(Term) of
+		{'EXIT', _Reason} ->
+			{noreply, State};
+		LogTerm ->
+			disk_log:alog(Log, LogTerm),
+			{noreply, State}
+	end;
+handle_cast({balog, Term},
+		#state{process = false, format = external,
+		log = Log, codec = {Module, Function}} = State) ->
+	case catch Module:Function(Term) of
+		{'EXIT', _Reason} ->
+			{noreply, State};
+		Bytes ->
+			disk_log:balog(Log, [Bytes | [$\r, $\n]]),
+			{noreply, State}
+	end;
+handle_cast({Operation, Term},
+		#state{process = true, job_sup = Sup,
+		log = Log, codec = {Module, Function}} = State) ->
+	supervisor:start_child(Sup,
+			[[Log, Operation, Module, Function, Term]]),
+	{noreply, State}.
 
 -spec handle_continue(Continue, State) -> Result
 	when
@@ -200,8 +264,8 @@ handle_info(Info, State) ->
       State :: state().
 %% @see //stdlib/gen_server:terminate/3
 %% @private
-terminate(_Reason, _State) ->
-	ok.
+terminate(_Reason, #state{log = Log} = _State) ->
+	disk_log:close(Log).
 
 -spec code_change(OldVersion, State, Extra) -> Result
 	when
@@ -230,20 +294,32 @@ format_status(_Opt, [_PDict, State] = _StatusData) ->
 %%  The cse_log_server private API
 %%----------------------------------------------------------------------
 
--spec codec_worker(Log, Operation, Module, Function, Item) -> Result
+-spec codec_worker(Log, Operation, Module, Function, Term) -> Result
 	when
 		Log :: disk_log:log(),
 		Operation :: log | blog | alog | balog,
 		Module :: atom(),
 		Function :: atom(),
-		Item :: term(),
+		Term :: term(),
 		Result :: {stop, normal} | {error, Reason},
 		Reason :: term().
 %% @doc Child worker of the `cse_log_job_sup' supervisor.
 %% @private
-codec_worker(Log, Operation, Module, Function, Item) ->
+codec_worker(Log, Operation, Module, Function, Term)
+		when Operation == log; Operation == alog ->
 	proc_lib:init_ack({ok, self()}),
-	case disk_log:Operation(Log, Module:Function(Item)) of
+	LogTerm = Module:Function(Term),
+	case disk_log:Operation(Log, LogTerm) of
+		ok ->
+			exit(normal);
+		{error, Reason} ->
+			exit(Reason)
+	end;
+codec_worker(Log, Operation, Module, Function, Term)
+		when Operation == blog; Operation == balog ->
+	proc_lib:init_ack({ok, self()}),
+	Bytes = Module:Function(Term),
+	case disk_log:Operation(Log, [Bytes | [$\r, $\n]]) of
 		ok ->
 			exit(normal);
 		{error, Reason} ->
