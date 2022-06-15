@@ -6,6 +6,7 @@
 -export([init_tables/0]).
 -export([start/0, start/1, stop/0, stop/1]).
 -export([load/1, unload/1]).
+-export([rand_name/0, rand_name/1]).
 
 -define(Applications, [mnesia, inets, asn1, snmp, sigscale_mibs, m3ua, tcap, gtt, diameter, cse]).
 -define(TIMEOUT, 1000).
@@ -92,4 +93,21 @@ unload(Application) ->
 		{error, {not_loaded, Application}} ->
 			ok
 	end.
+
+%% @doc Returns 5-3 random printable characters.
+rand_name() ->
+	rand_name(rand:uniform(8) + 5).
+%% @doc Returns N random printable characters.
+rand_name(N) -> 
+	UpperCase = lists:seq(65, 90),	
+	LowerCase = lists:seq(97, 122), 
+	Digits = lists:seq(48, 57),
+	Special = [$#, $%, $+, $-, $.],
+	CharSet = lists:flatten([UpperCase, LowerCase, Digits, Special]),
+	rand_name(N, CharSet, []).
+rand_name(0, _CharSet, Acc) -> 
+	Acc;
+rand_name(N, CharSet, Acc) -> 
+	Char = lists:nth(rand:uniform(length(CharSet)), CharSet),
+	rand_name(N - 1, CharSet, [Char | Acc]).
 
