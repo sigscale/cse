@@ -58,6 +58,7 @@
 %% @see //stdlib/gen_server:init/1
 %% @private
 init([Sup | Options]) ->
+	{ok, LogDir} = application:get_env(log_dir),
 	State = #state{sup = Sup},
 	{State1, Options1} = case lists:keytake(codec, 1, Options) of
 		{value, {codec, {M, F}}, O1} when is_atom(M), is_atom(F) ->
@@ -71,22 +72,33 @@ init([Sup | Options]) ->
 		false ->
 			{State1, Options1}
 	end,
-	State3 = case lists:keyfind(format, 1, Options2) of
+	Options3 = case lists:keytake(filename, 1, Options2) of
+		{value, {filename, Filename}, O3} when is_list(Filename) ->
+			case filename:pathtype(Filename) of
+				absolute ->
+					Options2;
+				relative ->
+					[{filename, filename:join(LogDir, Filename)} | O3]
+			end;
+		false ->
+			Options2
+	end,
+	State3 = case lists:keyfind(format, 1, Options3) of
 		{format, Format} ->
 			State2#state{format = Format};
 		false ->
 			State2
 	end,
-	case disk_log:open(Options2) of
+	case disk_log:open(Options3) of
 		{ok, Log} ->
 			process_flag(trap_exit, true),
-			State4 = State3#state{log = Log, dopts = Options2},
+			State4 = State3#state{log = Log, dopts = Options3},
 			{ok, State4, {continue, init}};
 		{repaired, Log, {recovered, Rec}, {badbytes, Bad}} ->
 			?LOG_WARNING([{?MODULE, init}, {disk_log, Log},
 					{recovered, Rec}, {badbytes, Bad}]),
 			process_flag(trap_exit, true),
-			State4 = State3#state{log = Log, dopts = Options2},
+			State4 = State3#state{log = Log, dopts = Options3},
 			{ok, State4, {continue, init}};
 		{error, Reason} ->
 			{stop, Reason}
