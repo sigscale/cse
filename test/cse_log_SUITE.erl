@@ -30,7 +30,8 @@
 		log/0, log/1, blog/0, blog/1,
 		alog/0, alog/1, balog/0, balog/1,
 		log_wrap/0, log_wrap/1, blog_wrap/0, blog_wrap/1,
-		log_codec/0, log_codec/1, blog_codec/0, blog_codec/1]).
+		log_codec/0, log_codec/1, blog_codec/0, blog_codec/1,
+		log_job/0, log_job/1, blog_job/0, blog_job/1]).
 %% export the private api
 -export([codec_int/1, codec_ext/1]).
 
@@ -95,7 +96,7 @@ sequences() ->
 %%
 all() ->
 	[new, close, log, blog, alog, balog, log_wrap, blog_wrap,
-			log_codec, blog_codec].
+			log_codec, blog_codec, log_job, blog_job].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -237,6 +238,36 @@ blog_codec(Config) ->
 	cse_log:open(LogName, [{format, external}, {codec, {?MODULE, codec_ext}}]),
 	Binary = rand:bytes(100),
 	ok = cse_log:blog(LogName, Binary),
+	ok = disk_log:sync(LogName),
+	Filename = filename:join(PrivDir, Name),
+	{ok, File} = file:open(Filename, [read]),
+	{ok, JSON} = file:read_line(File),
+	Binary = codec_ext(JSON).
+
+log_job() ->
+	[{userdata, [{doc, "Write with CODEC job to an internal format log"}]}].
+
+log_job(_Config) ->
+	LogName = list_to_atom(cse_test_lib:rand_name()),
+	cse_log:open(LogName, [{process, true}, {codec, {?MODULE, codec_int}}]),
+	Binary = rand:bytes(100),
+	ok = cse_log:log(LogName, Binary),
+	ct:sleep(500),
+	ok = disk_log:sync(LogName),
+	{_, [Term | _]} = disk_log:chunk(LogName, start),
+	Binary = codec_int(Term).
+
+blog_job() ->
+	[{userdata, [{doc, "Write with CODEC job to an external format log"}]}].
+
+blog_job(Config) ->
+	PrivDir = ?config(priv_dir, Config),
+	Name = cse_test_lib:rand_name(),
+	LogName = list_to_atom(Name),
+	cse_log:open(LogName, [{process, true}, {format, external}, {codec, {?MODULE, codec_ext}}]),
+	Binary = rand:bytes(100),
+	ok = cse_log:blog(LogName, Binary),
+	ct:sleep(500),
 	ok = disk_log:sync(LogName),
 	Filename = filename:join(PrivDir, Name),
 	{ok, File} = file:open(Filename, [read]),
