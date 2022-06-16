@@ -29,7 +29,10 @@
 -export([new/0, new/1, close/0, close/1,
 		log/0, log/1, blog/0, blog/1,
 		alog/0, alog/1, balog/0, balog/1,
-		log_wrap/0, log_wrap/1, blog_wrap/0, blog_wrap/1]).
+		log_wrap/0, log_wrap/1, blog_wrap/0, blog_wrap/1,
+		log_codec/0, log_codec/1, blog_codec/0, blog_codec/1]).
+%% export the private api
+-export([codec_int/1, codec_ext/1]).
 
 -include_lib("common_test/include/ct.hrl").
 
@@ -91,7 +94,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[new, close, log, blog, alog, balog, log_wrap, blog_wrap].
+	[new, close, log, blog, alog, balog, log_wrap, blog_wrap,
+			log_codec, blog_codec].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -113,7 +117,7 @@ close(_Config) ->
 	ok = cse_log:close(LogName).
 
 log() ->
-	[{userdata, [{doc, "Write to a internal format log"}]}].
+	[{userdata, [{doc, "Write to an internal format log"}]}].
 
 log(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -169,7 +173,7 @@ balog(Config) ->
 	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
 log_wrap() ->
-	[{userdata, [{doc, "Write to a internal format wrap log"}]}].
+	[{userdata, [{doc, "Write to an internal format wrap log"}]}].
 
 log_wrap(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -187,7 +191,7 @@ log_wrap(_Config) ->
 	{_, [{?MODULE, _, _} | _]} = disk_log:chunk(LogName, Cont).
 
 blog_wrap() ->
-	[{userdata, [{doc, "Write to a external format wrap log"}]}].
+	[{userdata, [{doc, "Write to an external format wrap log"}]}].
 
 blog_wrap(Config) ->
 	PrivDir = ?config(priv_dir, Config),
@@ -211,7 +215,68 @@ blog_wrap(Config) ->
 	Size = byte_size(BytesOut),
 	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
+log_codec() ->
+	[{userdata, [{doc, "Write through CODEC to an internal format log"}]}].
+
+log_codec(_Config) ->
+	LogName = list_to_atom(cse_test_lib:rand_name()),
+	cse_log:open(LogName, [{codec, {?MODULE, codec_int}}]),
+	Binary = rand:bytes(100),
+	ok = cse_log:log(LogName, Binary),
+	ok = disk_log:sync(LogName),
+	{_, [Term | _]} = disk_log:chunk(LogName, start),
+	Binary = codec_int(Term).
+
+blog_codec() ->
+	[{userdata, [{doc, "Write through CODEC to an external format log"}]}].
+
+blog_codec(Config) ->
+	PrivDir = ?config(priv_dir, Config),
+	Name = cse_test_lib:rand_name(),
+	LogName = list_to_atom(Name),
+	cse_log:open(LogName, [{format, external}, {codec, {?MODULE, codec_ext}}]),
+	Binary = rand:bytes(100),
+	ok = cse_log:blog(LogName, Binary),
+	ok = disk_log:sync(LogName),
+	Filename = filename:join(PrivDir, Name),
+	{ok, File} = file:open(Filename, [read]),
+	{ok, JSON} = file:read_line(File),
+	Binary = codec_ext(JSON).
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
+
+codec_int(Binary) when is_binary(Binary) ->
+	codec_int(Binary, $a, #{});
+codec_int(Map) when is_map(Map) ->
+	AVPs = lists:keysort(1, maps:to_list(Map)),
+	codec_int(lists:reverse(AVPs), <<>>).
+
+codec_int(<<Value:40, Rest/binary>>, N, Acc) ->
+	Attribute = lists:duplicate(5, N),
+	codec_int(Rest, N + 1, Acc#{Attribute => Value});
+codec_int(<<>>, _, Acc) ->
+	Acc.
+codec_int([{_Attribute, Value} | T], Acc) ->
+	codec_int(T, <<Value:40, Acc/binary>>);
+codec_int([], Acc) ->
+	Acc.
+
+codec_ext(Binary) when is_binary(Binary) ->
+	codec_ext(Binary, $a, #{});
+codec_ext(JSON) when is_list(JSON) ->
+	{ok, Map} = zj:decode(JSON),
+	AVPs = lists:keysort(1, maps:to_list(Map)),
+	codec_ext(lists:reverse(AVPs), <<>>).
+
+codec_ext(<<Value:40, Rest/binary>>, N, Acc) ->
+	Attribute = lists:duplicate(5, N),
+	codec_ext(Rest, N + 1, Acc#{Attribute => Value});
+codec_ext(<<>>, _, Acc) ->
+	zj:encode(Acc).
+codec_ext([{_Attribute, Value} | T], Acc) ->
+	codec_ext(T, <<Value:40, Acc/binary>>);
+codec_ext([], Acc) ->
+	Acc.
 
