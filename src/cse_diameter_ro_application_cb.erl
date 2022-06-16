@@ -243,6 +243,7 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 		Result :: packet() | message().
 %% @doc Process a received DIAMETER packet.
 %% @private
+%% @todo Dynamic SLP selection.
 process_request(_IpAddress, _Port,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
