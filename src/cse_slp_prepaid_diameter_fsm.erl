@@ -72,7 +72,7 @@
 		msisdn => list() | undefined,
 		context => binary() | undefined,
 		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}] | undefined,
-		reqt => pos_integer() | undefined,
+		req_type => pos_integer() | undefined,
 		reqno =>  integer() | undefined,
 		session_id => binary() | undefined,
 		ohost => binary() | undefined,
@@ -167,14 +167,14 @@ authorize_origination_attempt({call, From}, #'3gpp_ro_CCR'{
 			direction => Direction, context => SvcContextId,
 			mscc => MSCC, session_id => SessionId, ohost => OHost,
 			orealm => ORealm, reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST'},
 	nrf_start(NewData);
 authorize_origination_attempt(cast, {_NrfState,
 		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
 		#{from := From, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(SessionId, ResultCode, OHost,
 			ORealm, RequestType, RequestNum),
@@ -186,7 +186,7 @@ authorize_origination_attempt(cast, {_NrfState,
 		#{from := From, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	ResultCode = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(SessionId, ResultCode, OHost,
 			ORealm, RequestType, RequestNum),
@@ -199,7 +199,7 @@ authorize_origination_attempt(cast, {nrf_start,
 		#{from := From, nrf_reqid := RequestId,
 				called := Called, nrf_profile := Profile, nrf_uri := URI,
 				mscc := MSCC, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, reqt := RequestType} = Data) ->
+				session_id := SessionId, req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
@@ -260,7 +260,7 @@ analyse_information(_EventType, #'3gpp_ro_CCR'{
 		'Service-Information' = _ServiceInformation} = _EventContent,
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{mscc => MSCC, reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
 	case usu_postive(MSCC) of
 		true ->
 			{next_state, o_active, NewData, postpone};
@@ -286,7 +286,7 @@ collect_information({call, From}, #'3gpp_ro_CCR'{
 		'Service-Information' = _ServiceInformation} = _EventContent,
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
 	nrf_update(NewData);
 collect_information(cast, {nrf_update,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -294,7 +294,7 @@ collect_information(cast, {nrf_update,
 				called := Called, nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -353,7 +353,7 @@ routing({call, From}, #'3gpp_ro_CCR'{
 		'Service-Information' = _ServiceInformation} = _EventContent,
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
 	nrf_update(NewData);
 routing(cast, {nrf_update,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -361,7 +361,7 @@ routing(cast, {nrf_update,
 				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -421,14 +421,14 @@ o_active({call, From}, #'3gpp_ro_CCR'{
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{from => From, mscc => MSCC, session_id => SessionId,
 			reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
 	nrf_update(NewData);
 o_active(cast, {_NrfState,
 		{_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
 		#{from := From, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	ResultCode = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(SessionId, ResultCode, OHost,
 			ORealm, RequestType, RequestNum),
@@ -442,7 +442,7 @@ o_active(cast, {nrf_update,
 				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -486,7 +486,7 @@ o_active({call, From}, #'3gpp_ro_CCR'{
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{from => From, mscc => MSCC, session_id => SessionId,
 			reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
 	nrf_release(NewData);
 o_active(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -494,7 +494,7 @@ o_active(cast, {nrf_release,
 				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -549,7 +549,7 @@ exception({call, From}, #'3gpp_ro_CCR'{
 		#{session_id := SessionId} = Data) ->
 	NewData = Data#{from => From, mscc => MSCC, session_id => SessionId,
 			reqno => RequestNum,
-			reqt => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
 	nrf_release(NewData);
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -557,7 +557,7 @@ exception(cast, {nrf_release,
 				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId,
-				reqt := RequestType} = Data) ->
+				req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
