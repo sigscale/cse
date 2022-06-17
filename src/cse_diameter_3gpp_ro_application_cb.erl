@@ -1,4 +1,4 @@
-%%% cse_diameter_ro_application_cb.erl
+%%% cse_diameter_3gpp_ro_application_cb.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2016 - 2022 SigScale Global Inc.
@@ -23,7 +23,7 @@
 %%% @reference <a href="https://tools.ietf.org/pdf/rfc4006.pdf">
 %%% 	RFC4006 - DIAMETER Credit-Control Application </a>
 %%%
--module(cse_diameter_ro_application_cb).
+-module(cse_diameter_3gpp_ro_application_cb).
 -copyright('Copyright (c) 2016 - 2022 SigScale Global Inc.').
 
 -export([peer_up/3, peer_down/3, pick_peer/4, prepare_request/3,

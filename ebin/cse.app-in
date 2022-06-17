@@ -13,7 +13,7 @@
 				cse_diameter_service_fsm_sup,
 				cse_diameter_service_fsm,
 				cse_diameter_base_application_cb,
-				cse_diameter_ro_application_cb,
+				cse_diameter_3gpp_ro_application_cb,
 				cse_server,
 				cse_tco_sup,
 				cse_slp_sup,
@@ -50,7 +50,9 @@
 				diameter]},
 		{included_applications, [cap, inap, map]},
 		{env,
-				[{diameter, [{{0,0,0,0}, 3868, []}]},
+				[{diameter, [
+						% {{0,0,0,0}, 3868, []}
+						]},
 				{tsl_name, cse_tsl},
 				{tsl_callback, cse_tco_server_cb},
 				{tsl_args,
@@ -70,6 +72,6 @@
 				{rest_page_timeout, 60000},
 				{log_dir, "log/slp"},
 				{snmp_alarms,[
-						%% {Notification :: atom(), Options :: list()},
+						% {Notification :: atom(), Options :: list()},
 						]}]},
 		{mod, {cse_app,[]}}]}.

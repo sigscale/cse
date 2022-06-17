@@ -38,9 +38,9 @@
 -include_lib("cse/include/diameter_gen_cc_application_rfc4006.hrl").
 
 -define(MILLISECOND, millisecond).
--define(RO_APPLICATION, cse_diameter_ro_application).
+-define(RO_APPLICATION, cse_diameter_3gpp_ro_application).
 -define(RO_APPLICATION_DICT, diameter_gen_3gpp_ro_application).
--define(RO_APPLICATION_CALLBACK, cse_diameter_ro_application_cb).
+-define(RO_APPLICATION_CALLBACK, cse_diameter_3gpp_ro_application_cb).
 -define(RO_APPLICATION_ID, 4).
 -define(IANA_PEN_3GPP, 10415).
 -define(IANA_PEN_SigScale, 50386).
