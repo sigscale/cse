@@ -199,7 +199,7 @@ wait_for_stop(info, #diameter_event{info = stop, service = Service},
 		Alarms :: {Notification, Options},
 		Notification  :: atom(),
 		Options :: [{OptionName, OptionValue}],
-		OptionName :: term(),
+		OptionName :: notify_name,
 		OptionValue :: term().
 %% @doc Send a SNMP Notification.
 send_notification(up, Peer, AlarmList) ->
@@ -221,14 +221,14 @@ send_notification(down, Peer, AlarmList) ->
 			ok
 	end.
 %% @hidden
-send_notification1(Notification, false, Varbinds) ->
+send_notification1(Notification, false = NotifyName, Varbinds) ->
 	case catch snmpa:send_notification(snmp_master_agent,
 			Notification, no_receiver, Varbinds) of
 		ok ->
 			ok;
 		{'EXIT', Reason} ->
 			error_logger:info_report(["SNMP Notification send faliure",
-					{notification, Notification}, {notify_name, false},
+					{notification, Notification}, {notify_name, NotifyName},
 					{error, Reason}])
 	end;
 send_notification1(Notification, {notify_name, NotifyName}, Varbinds) ->
