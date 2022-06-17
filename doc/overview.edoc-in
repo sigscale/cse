@@ -222,12 +222,28 @@ Application environment variables configuring SLP logs.
 <dl>
 	<dt>`log_dir'</dt>
 		<dd>The base path to use for filename of logs. (default: `"log/slp"')</dd>
+	<dt>`logs'</dt>
+		<dd>Defines log handlers as `[{LogName, Options}]'
+				(see {@link //cse/cse_log:open/2. cse_log:open/2}). (default: `[]')</dd>
 </dl>
 
 ===Example sys.config===
 ```
 [{cse,
      [{nrf_uri, "http://ocs.mnc001.mcc001.3gppnetwork.org/nrf-rating/v1"},
+     {logs,
+           [{'3gpp_ro',
+                 [{format, external},
+                 {type, wrap},
+                 {size, {10485760, 10}}]},
+           {nrf_rating,
+                 [{format, external},
+                 {type, wrap},
+                 {size, {10485760, 10}}]},
+           {prepaid,
+                 [{format, external},
+                 {type, wrap},
+                 {size, {10485760, 10}}]}]},
      {diameter,
            [{{0,0,0,0}, 3868,
                  [{'Auth-Application-Id', [4]},

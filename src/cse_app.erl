@@ -161,20 +161,31 @@ start7() ->
 start8() ->
 	case supervisor:start_link({local, cse_sup}, cse_sup, []) of
 		{ok, TopSup} ->
-			{ok, DiameterServices} = application:get_env(diameter),
-			start9(TopSup, DiameterServices);
+			{ok, Logs} = application:get_env(logs),
+			start9(TopSup, Logs);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start9(TopSup, [{Addr, Port, Options} | T]) ->
-	case cse:start_diameter(Addr, Port, Options) of
-		{ok, _Sup} ->
+start9(TopSup, [{LogName, Options} | T]) ->
+	case cse_log:open(LogName, Options) of
+		ok ->
 			start9(TopSup, T);
 		{error, Reason} ->
 			{error, Reason}
 	end;
 start9(TopSup, []) ->
+	{ok, DiameterServices} = application:get_env(diameter),
+	start10(TopSup, DiameterServices).
+%% @hidden
+start10(TopSup, [{Addr, Port, Options} | T]) ->
+	case cse:start_diameter(Addr, Port, Options) of
+		{ok, _Sup} ->
+			start10(TopSup, T);
+		{error, Reason} ->
+			{error, Reason}
+	end;
+start10(TopSup, []) ->
 	catch cse_mib:load(),
 	{ok, TopSup}.
 

@@ -39,7 +39,8 @@
 				cse_rest_query_parser,
 				diameter_gen_ietf,
 				diameter_gen_etsi,
-				diameter_gen_3gpp]},
+				diameter_gen_3gpp,
+				diameter_gen_3gpp_ro_application]},
 		{registered, [cse]},
 		{applications,
 				[kernel,
@@ -71,6 +72,10 @@
 				{rest_page_size, 1000},
 				{rest_page_timeout, 60000},
 				{log_dir, "log/slp"},
+				{logs, [
+						% {LogName :: atom() | {global, term()},
+						%       Options :: [cse_log:log_option()]}
+				]},
 				{snmp_alarms,[
 						% {Notification :: atom(), Options :: list()},
 						]}]},
