@@ -49,15 +49,4 @@
 {gtt,
       []},
 {cse,
-     [{nrf_uri,"http://10.171.60.64:8080/api/realtimeevent?usaget=call"},
-     {nrf_profile, ocs},
-     {diameter,
-           [{{0,0,0,0}, 3868,
-                 [{'Auth-Application-Id', [4]},
-                 {'Supported-Vendor-Id',[193]},
-                 {application,[{alias, cse_pelephone_diameter_ro_application},
-                       {dictionary, diameter_gen_ericsson_ro_application},
-                       {module, cse_pelephone_diameter_ro_application_cb},
-                       {request_errors, callback}]},
-                 {'Origin-Realm',"ims.mnc003.mnc425.3gppnetwork.org"},
-                 {transport_module, diameter_sctp}]}]}]}].
+      []}].
