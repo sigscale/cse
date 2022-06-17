@@ -136,6 +136,22 @@ otp@cse:~$ ERL_LIBS=lib erl -sname cse -config releases/%VERSION%/sys
 ==Configuration==
 The {@link //cse. cse} application may be configured using the following
 application environment variables (`~/releases/<VERSION>/sys.config'):
+
+===DIAMETER===
+Application environment variables configuring instances of the
+{@link //diameter. diameter} application.
+<dl>
+	<dt>`diameter'</dt>
+		<dd>Defines DIAMETER services as `[{Addr, Port, Options}]'.
+				Each set of local bind address (`Addr :: inet:ip_address()'),
+				port (`Port :: 0..65535') and options
+				(`Options :: [diameter:service_opt()]') define a
+				DIAMETER service. (default: `[]')</dd>
+</dl>
+
+===TCAP===
+Application environment variables configuring binding of the
+Transaction Sublayer (TSL) of the {@link //tcap. tcap} application.
 <dl>
 	<dt>`tsl_name'</dt>
 		<dd>Registered name of the TCO process in the TCAP Transaction
@@ -144,24 +160,89 @@ application environment variables (`~/releases/<VERSION>/sys.config'):
 		<dd>Name of the {@link //tcap/tcap_tco_server. `tcap_tco_server'}
 				behaviour callback module implementing the TCAP binding.
 				(default: `cse_tco_server_cb')</dd>
-	<dt>`tsl_opt'</dt>
+	<dt>`tsl_opts'</dt>
 		<dd>Options in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/'4}.
 				(default: `[]')</dd>
 	<dt>`tsl_args'</dt>
 		<dd>Extra arguments in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/4'}.
+				The default value (`[{ac, ApplicationContexts}]') binds the
+				CAP Phase 2,3,4 application contexts to module `cse_slp_cap_fsm'
+				and INAP CS2 to `cse_slp_inap_fsm'.</dd>
+</dl>
+
+===Nrf_Rating===
+Application environment variables configuring HTTP client
+({@link //inets/httpc. httpc}) behaviour for the
+<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
+API on the 3GPP Re interface to a remote Rating Funtion (RF) (i.e. OCS).
+<dl>
+	<dt>`nrf_profile'</dt>
+		<dd>Provides the {@link //inets/httpc:profile(). profile}
+				name of a manager process for the {@link //inets/httpc. httpc}
+				client. (default: `nrf')</dd>
+	<dt>`nrf_uri'</dt>
+		<dd>Uniform Resource Identifier (URI) for a
+				<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
+				server (i.e. OCS).</dd>
+	<dt>`nrf_options'</dt>
+		<dd>HTTP {@link //inets/httpc:http_options(). options} used by the
+				{@link //inets/httpc. httpc} client
+				(default: `[{keep_alive_timeout, 4000}]').</dd>
+</dl>
+
+===REST===
+Application environment variables configuring HTTP server
+({@link //inets/httpd. httpd}) behaviour.
+<dl>
+	<dt>`rest_page_size'</dt>
+		<dd>Defines the maximum number of items to return in a single
+				response to GET of a collection.</dd>
+	<dt>`rest_page_timeout'</dt>
+		<dd>Defines the idle timeout for a pagination server, after which
+				it's Etag is no longer valid. (default: `60000')</dd>
+</dl>
+
+===SNMP===
+Application environment variables configuring the SNMP
+{@link //snmp/snmpa. agent} behaviour.
+<dl>
+	<dt>`snmp_alarms'</dt>
+		<dd>Defines SNMP notifications ("traps"). The value format is
+				`[{Notification, Options}]' where `Notification' is the
+				Object Identifier (OID) name (`atom()') of a supported alarm
+				and `Options' shall include `notify_name' defining a management
+				target in the `snmpNotifyTable' (SNMP-NOTIFICATION-MIB)
+				(e.g. `[{dbpPeerConnectionDownNotif, [{notify_name, "nms"}]},
+				{dbpPeerConnectionUpNotif, [{notify_name, "nms"}]}]').
 				(default: `[]')</dd>
-	<dt>rest_page_size</dt>
-		<dd>Defines the maximum number of items to return for a REST collection.</dd>
+</dl>
+
+===Logging===
+Application environment variables configuring SLP logs.
+<dl>
+	<dt>`log_dir'</dt>
+		<dd>The base path to use for filename of logs. (default: `"log/slp"')</dd>
 </dl>
 
 ===Example sys.config===
 ```
-[{mnesia,
+[{cse,
+     [{nrf_uri, "http://ocs.mnc001.mcc001.3gppnetwork.org/nrf-rating/v1"},
+     {diameter,
+           [{{0,0,0,0}, 3868,
+                 [{'Auth-Application-Id', [4]},
+                 {'Supported-Vendor-Id',[193]},
+                 {application,[{alias, cse_diameter_3gpp_ro_application},
+                       {dictionary, diameter_gen_3gpp_ro_application},
+                       {module, cse_diameter_3gpp_ro_application_cb},
+                       {request_errors, callback}]},
+                 {'Origin-Realm',"ims.mnc001.mnc001.3gppnetwork.org"}]}]}]},
+{m3ua,
+      []},
+{gtt,
+      []},
+{mnesia,
       [{dir, "db"}]},
-{snmp,
-      [{agent,
-           [{config, [{dir, "snmp/conf"}]},
-           {db_dir, "snmp/db"}]}]},
 {inets,
       [{services,
          [{httpd,
@@ -170,13 +251,13 @@ application environment variables (`~/releases/<VERSION>/sys.config'):
                   [{auth_type, mnesia},
                   {auth_name, "cse.sigscale.org"},
                   {require_group, ["staff"]}]}},
-            {transfer_disk_log, "/usr/lib/erlang/lib/cse-%VERSION%/log/http/transfer"},
-            {security_disk_log, "/usr/lib/erlang/lib/cse-%VERSION%/log/http/security"},
-            {error_disk_log, "/usr/lib/erlang/lib/cse-%VERSION%/log/http/error"},
+            {transfer_disk_log, "log/http/transfer"},
+            {security_disk_log, "log/http/security"},
+            {error_disk_log, "log/http/error"},
             {transfer_disk_log_size, {10485760, 10}},
             {security_disk_log_size, {10485760, 10}},
             {error_disk_log_size, {10485760, 10}},
-            {disk_log_format, internal},
+            {disk_log_format, external},
             {modules,
                   [mod_alias,
                   mod_auth,
@@ -187,20 +268,18 @@ application environment variables (`~/releases/<VERSION>/sys.config'):
                   mod_disk_log,
                   mod_cse_rest_post,
                   mod_cse_rest_delete,
-                  mod_cse_rest_patch]},
+                  mod_cse_rest_patch,
+                  mod_disk_log]},
             {port, 8080},
             {socket_type, {essl,
-                  [{certfile,  "/etc/ssl/certs/cse.pem"},
-                  {keyfile, "/etc/ssl/private/cse.pem"}]}},
+                  [{certfile,  "ssl/certs/cse.pem"},
+                  {keyfile, "ssl/private/cse.pem"}]}},
             {server_root, "/home/cse"},
-            {alias, {"/doc", "/usr/lib/erlang/lib/cse-%VERSION%/doc"}},
-            {document_root, "/usr/lib/erlang/lib/cse-%VERSION%/priv/www"}]}]}]},
-{m3ua,
-      []},
-{gtt,
-      []},
-{cse,
-      []}].
-
+            {alias, {"/doc", "lib/cse-%VERSION%/doc"}},
+            {document_root, "lib/cse-%VERSION%/priv/www"}]}]}]},
+{snmp,
+      [{agent,
+           [{config, [{dir, "snmp/conf"}]},
+           {db_dir, "snmp/db"}]}]}].
 '''
 
