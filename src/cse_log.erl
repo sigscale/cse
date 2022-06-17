@@ -29,22 +29,20 @@
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(EPOCH, 62167219200).
 
+-type log_option() :: disk_log:dlog_option()
+		| {codec, {Module :: module(), Function :: atom()}}
+		| {process, boolean()}.
+
 %%----------------------------------------------------------------------
 %%  The cse_log public API
 %%----------------------------------------------------------------------
 
 -spec open(LogName, Options) -> Result
    when
-      LogName :: LocalName | {local, LocalName}
-				| {global, GlobalName},
+      LogName :: LocalName | {global, GlobalName},
 		LocalName :: atom(),
 		GlobalName :: term(),
-      Options :: [Option],
-      Option :: disk_log:dlog_option()
-            | {codec, {Module, Function}}
-            | {process, boolean()},
-      Module :: module(),
-      Function :: atom(),
+      Options :: [log_option()],
       Result :: ok | {error, Reason},
 		Reason :: term().
 %% @doc Start a log manager for `LogName'.
