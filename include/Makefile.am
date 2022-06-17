@@ -28,13 +28,17 @@ $(top_builddir)/src/diameter_gen_3gpp.erl:	$(top_srcdir)/src/3gpp.dia \
 		$(top_builddir)/ebin/diameter_gen_etsi.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -H -o $(top_builddir)/src $<
 
-$(top_builddir)/src/diameter_gen_cc_application_rfc4006.erl:	$(top_srcdir)/src/cc_application_rfc4006.dia
-	$(DIAMETERC) -H -o $(top_builddir)/src $<
+$(top_builddir)/src/diameter_gen_cc_application_rfc4006.erl:	$(top_srcdir)/src/cc_application_rfc4006.dia \
+		$(top_builddir)/ebin/nas_application_rfc7155.beam
+	$(DIAMETERC) -i $(top_builddir)/ebin -H -o $(top_builddir)/src $<
 
 $(top_builddir)/src/diameter_gen_nas_application_rfc7155.erl:	$(top_srcdir)/src/nas_application_rfc7155.dia
 	$(DIAMETERC) -H -o $(top_builddir)/src $<
 
-$(top_builddir)/src/diameter_gen_3gpp_ro_application.erl:	$(top_srcdir)/src/3gpp_ro_application.dia
+$(top_builddir)/src/diameter_gen_3gpp_ro_application.erl:	$(top_srcdir)/src/3gpp_ro_application.dia \
+		$(top_builddir)/ebin/diameter_gen_ietf.beam \
+		$(top_builddir)/ebin/diameter_gen_etsi.beam \
+		$(top_builddir)/ebin/diameter_gen_3gpp.beam \
 	$(DIAMETERC) -i $(top_builddir)/ebin -H -o $(top_builddir)/src $<
 
 diameter_gen_ietf.hrl:	$(top_srcdir)/src/ietf.dia
@@ -49,13 +53,17 @@ diameter_gen_3gpp.hrl:	$(top_srcdir)/src/3gpp.dia \
 		$(top_builddir)/ebin/diameter_gen_etsi.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
 
-diameter_gen_cc_application_rfc4006.hrl:	$(top_srcdir)/src/cc_application_rfc4006.dia $(top_builddir)/ebin/diameter_gen_nas_application_rfc7155.beam
+diameter_gen_cc_application_rfc4006.hrl:	$(top_srcdir)/src/cc_application_rfc4006.dia \
+		$(top_builddir)/ebin/diameter_gen_nas_application_rfc7155.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
 
 diameter_gen_nas_application_rfc7155.hrl:	$(top_srcdir)/src/nas_application_rfc7155.dia
-	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
+	$(DIAMETERC) -E $<
 
-diameter_gen_3gpp_ro_application.hrl:	$(top_srcdir)/src/3gpp_ro_application.dia $(top_builddir)/ebin/diameter_gen_3gpp.beam
+diameter_gen_3gpp_ro_application.hrl:	$(top_srcdir)/src/3gpp_ro_application.dia \
+		$(top_builddir)/ebin/diameter_gen_ietf.beam \
+		$(top_builddir)/ebin/diameter_gen_etsi.beam \
+		$(top_builddir)/ebin/diameter_gen_3gpp.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
 
 CLEANFILES = diameter_gen_ietf.hrl \
