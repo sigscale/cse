@@ -24,7 +24,7 @@
 
 %% export the cse_log  public API
 -export([open/2, close/1, log/2, blog/2, alog/2, balog/2]).
--export([date/1, iso8601/1]).
+-export([now/0, date/1, iso8601/1]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(EPOCH, 62167219200).
@@ -39,7 +39,7 @@
 
 -spec open(LogName, Options) -> Result
    when
-      LogName :: LocalName | {global, GlobalName},
+      LogName :: LocalName | {local, LogName} | {global, GlobalName},
 		LocalName :: atom(),
 		GlobalName :: term(),
       Options :: [log_option()],
@@ -57,8 +57,8 @@
 %%
 open(LogName, Options) when is_atom(LogName) ->
 	open({local, LogName}, Options);
-open({RegType, Name} = LogName, Options)
-		when is_list(Options), ((RegType == local) or (RegType == global)) ->
+open({RegType, Name} = LogName, Options) when is_list(Options),
+		(((RegType == local) and is_atom(Name)) or (RegType == global)) ->
 	case lists:keymember(name, 1, Options) of
 		true ->
 			open1(LogName, Options);
@@ -109,21 +109,21 @@ log(LogName, Term)
 		when is_atom(LogName); is_tuple(LogName) ->
 	gen_server:call(LogName, {log, Term}).
 
--spec blog(LogName, Bytes) -> ok
+-spec blog(LogName, Term) -> ok
    when
       LogName :: LocalName | {NodeName, LocalName}
 				| {global, GlobalName},
 		LocalName :: atom(),
 		NodeName :: atom(),
 		GlobalName :: term(),
-      Bytes :: iodata().
+      Term :: term() | iodata().
 %% @doc Synchronously wite `Bytes' to an open log.
 %%
 %% 	The log should have been created with `{format, external}'.
 %%
-blog(LogName, Bytes)
+blog(LogName, Term)
 		when is_atom(LogName); is_tuple(LogName) ->
-	gen_server:call(LogName, {blog, Bytes}).
+	gen_server:call(LogName, {blog, Term}).
 
 -spec alog(LogName, Term) -> ok
    when
@@ -141,21 +141,28 @@ alog(LogName, Term)
 		when is_atom(LogName); is_tuple(LogName) ->
 	gen_server:cast(LogName, {alog, Term}).
 
--spec balog(LogName, Bytes) -> ok
+-spec balog(LogName, Term) -> ok
    when
       LogName :: LocalName | {NodeName, LocalName}
 				| {global, GlobalName},
 		LocalName :: atom(),
 		NodeName :: atom(),
 		GlobalName :: term(),
-      Bytes :: iodata().
+      Term :: term() | iodata().
 %% @doc Asynchronously wite `Bytes' to an open log.
 %%
 %% 	The log should have been created with `{format, external}'.
 %%
-balog(LogName, Bytes)
+balog(LogName, Term)
 		when is_atom(LogName); is_tuple(LogName) ->
-	gen_server:cast(LogName, {balog, Bytes}).
+	gen_server:cast(LogName, {balog, Term}).
+
+-spec now() -> ISO8601
+	when
+		ISO8601 :: string().
+%% @doc Returns the current time in ISO 8601 format.
+now() ->
+	cse_log:iso8601(erlang:system_time(millisecond)).
 
 -spec date(DateTime) -> DateTime
 	when
