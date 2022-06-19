@@ -27,7 +27,7 @@
 
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
--include_lib("cse/include/diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_3gpp_ro_application.hrl").
 
 -record(state, {}).
 

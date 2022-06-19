@@ -39,10 +39,10 @@
 -include_lib("inets/include/mod_auth.hrl").
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
--include_lib("cse/include/diameter_gen_ietf.hrl").
--include_lib("cse/include/diameter_gen_3gpp.hrl").
--include_lib("cse/include/diameter_gen_3gpp_ro_application.hrl").
--include_lib("cse/include/diameter_gen_cc_application_rfc4006.hrl").
+-include("diameter_gen_ietf.hrl").
+-include("diameter_gen_3gpp.hrl").
+-include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_cc_application_rfc4006.hrl").
 
 -define(MILLISECOND, millisecond).
 -define(RO_APPLICATION, cse_diameter_3gpp_ro_application).
