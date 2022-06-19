@@ -95,9 +95,11 @@ content_type_available(Headers, Uri, Body, #mod{data = Data} = ModData) ->
 %% @hidden
 do_post(ModData, Body, ["ratingdata"]) ->
 	case zj:decode(Body) of
-		{ok, #{"invocationSequenceNumber" := SequenceNumber} = Request} ->
+		{ok, #{"invocationSequenceNumber" := SequenceNumber,
+				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
-			ServiceRatingResponse = rate(Request, ModData),
+			IMSI = get_imsi(SubscriptionId),
+			ServiceRatingResponse = rate(IMSI, Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
 					"serviceRating" => ServiceRatingResponse},
@@ -107,12 +109,28 @@ do_post(ModData, Body, ["ratingdata"]) ->
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
 	end;
-do_post(ModData, Body, ["ratingdata", _RatingDataRef, Op])
-		when Op == "update"; Op == "release" ->
+do_post(ModData, Body, ["ratingdata", _RatingDataRef, "update"]) ->
 	case zj:decode(Body) of
-		{ok, #{"invocationSequenceNumber" := SequenceNumber} = Request} ->
+		{ok, #{"invocationSequenceNumber" := SequenceNumber,
+				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
-			ServiceRatingResponse = rate(Request, ModData),
+			IMSI = get_imsi(SubscriptionId),
+			ServiceRatingResponse = rate(IMSI, Request, ModData),
+			Response = #{"invocationSequenceNumber" => SequenceNumber,
+					"invocationTimeStamp" => cse_log:iso8601(Now),
+					"serviceRating" => ServiceRatingResponse},
+			do_response(ModData, {200, [], zj:encode(Response)});
+		{error, _Partial, _Remaining} ->
+			do_response(ModData, {error, 400})
+	end;
+do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
+	case zj:decode(Body) of
+		{ok, #{"invocationSequenceNumber" := SequenceNumber,
+				"subscriptionId" := SubscriptionId} = Request} ->
+			Now = erlang:system_time(millisecond),
+			IMSI = get_imsi(SubscriptionId),
+			ServiceRatingResponse = rate(IMSI, Request, ModData),
+			{ok, {_, 0} = _Account} = gen_server:call(ocs, {release, IMSI}),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
 					"serviceRating" => ServiceRatingResponse},
@@ -121,60 +139,83 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, Op])
 			do_response(ModData, {error, 400})
 	end.
 
--spec rate(Request, ModData) -> Response
+-spec rate(Subscriber, Request, ModData) -> Response
 	when
+		Subscriber :: string(),
 		Request :: map(),
 		ModData :: #mod{},
 		Response :: map().
 %% @doc Build a rating response.
-rate(#{"subscriptionId" := Subscriber, "serviceRating" := ServiceRating}, ModData) ->
-	MSISDN = get_msisdn(Subscriber),
-	case gen_server:call(ocs, {get_subscriber, MSISDN}) of
-		{ok, {MSISDN, Balance}} when Balance =< 0 ->
+rate(IMSI, #{"serviceRating" := ServiceRating}, ModData) ->
+	rate1(IMSI, ServiceRating, ModData, []).
+%% @hidden
+rate1(Subscriber, [#{"requestSubType" := "RESERVE",
+		"serviceContextId" := SvcContextId} = H | T] , ModData, Acc) ->
+	case service_type(SvcContextId) of
+		?DIAMETERDATA ->
+			Amount = rand:uniform(10) * 1000000,
+			case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+				{ok, {_Balance, Reserve}} when Reserve > 0 ->
+					H1 = maps:remove("requestedUnit", H),
+					ServiceRating = H1#{"resultCode" => "SUCCESS",
+							"grantedUnit" => #{"totalVolume" => Reserve}},
+					rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+				{error, out_of_credit} ->
+					do_response(ModData, {error, 403});
+				{error, not_found} ->
+					do_response(ModData, {error, 404});
+				{error, _Reason} ->
+					do_response(ModData, {error, 500})
+			end;
+		?DIAMETERVOICE ->
+			Amount = rand:uniform(50) * 30,
+			case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+				{ok, {_Balance, Reserve}} when Reserve > 0 ->
+					H1 = maps:remove("requestedUnit", H),
+					ServiceRating = H1#{"resultCode" => "SUCCESS",
+							"grantedUnit" => #{"time" => Reserve}},
+					rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+				{error, out_of_credit} ->
+					do_response(ModData, {error, 403});
+				{error, not_found} ->
+					do_response(ModData, {error, 404});
+				{error, _Reason} ->
+					do_response(ModData, {error, 500})
+			end;
+		?DIAMETERSMS ->
+			Amount = rand:uniform(5),
+			case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+				{ok, {_Balance, Reserve}} when Reserve > 0 ->
+					H1 = maps:remove("requestedUnit", H),
+					ServiceRating = H1#{"resultCode" => "SUCCESS",
+							"grantedUnit" => #{"serviceSpecificUnit" => Reserve}},
+					rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+				{error, out_of_credit} ->
+					do_response(ModData, {error, 403});
+				{error, not_found} ->
+					do_response(ModData, {error, 404});
+				{error, _Reason} ->
+					do_response(ModData, {error, 500})
+			end
+	end;
+rate1(Subscriber, [#{"requestSubType" := "DEBIT",
+		"consumedUnit" := ConsumedUnit} = H | T], ModData, Acc) ->
+	Amount = get_units(ConsumedUnit),
+	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
+		{ok, {Balance, _Reserve}} when Balance >= 0 ->
+			ServiceRating = H#{"consumedUnit" => ConsumedUnit,
+					"resultCode" => "SUCCESS"},
+			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
-		{ok, {MSISDN, Balance}} when Balance > 0 ->
-			rate1(MSISDN, Balance, ServiceRating, ModData, []);
 		{error, not_found} ->
 			do_response(ModData, {error, 404});
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
-	end.
-%% @hidden
-rate1(Subscriber, Balance, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := SvcContextId} = H | T], ModData, Acc)
-		when Balance > 0 ->
-	RSU = case service_type(SvcContextId) of
-		?DIAMETERDATA ->
-			rand:uniform(10000);
-		?DIAMETERVOICE ->
-			rand:uniform(3600);
-		?DIAMETERSMS ->
-			rand:uniform(10)
-	end,
-	case gen_server:call(ocs, {reserve, Subscriber, RSU}) of
-		{ok, {Subscriber, NewBalance}} ->
-			Data = maps:remove("requestedUnit", H),
-			ServiceRating = Data#{"grantedUnit" => #{"totalVolume" => RSU},
-			"resultCode" => "SUCCESS"},
-			rate1(Subscriber, NewBalance, T, ModData, [ServiceRating | Acc]);
-		{error, _Reason} ->
-			do_response(ModData, {error, 500})
 	end;
-rate1(Subscriber, Balance, [#{"requestSubType" := "DEBIT",
-		"consumedUnit" := ConsumedUnit} = H | T], ModData, Acc)
-		when Balance > 0 ->
-	USU = get_units(ConsumedUnit),
-	case gen_server:call(ocs, {reserve, Subscriber, USU}) of
-		{ok, {Subscriber, NewBalance}} ->
-			ServiceRating = H#{"consumedUnit" => ConsumedUnit,
-					"resultCode" => "SUCCESS"},
-			rate1(Subscriber, NewBalance, T, ModData, [ServiceRating | Acc]);
-		{error, _Reason} ->
-			do_response(ModData, {error, 500})
-	end;
-rate1(_, _, [], _, Acc) ->
+rate1(_, [], _, Acc) ->
 	lists:reverse(Acc).
-	
+
 %% @hidden
 do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData, {error, 404}) ->
 	InvalidParams = [#{param => "/subscriptionId",
@@ -215,22 +256,22 @@ send(#mod{socket = Socket, socket_type = SocketType} = Info,
 	httpd_response:send_header(Info, StatusCode, Headers),
 	httpd_socket:deliver(SocketType, Socket, ResponseBody).
 
--spec get_msisdn(SubscriptionIds) -> Subscriber
+-spec get_imsi(SubscriptionIds) -> Subscriber
 	when
 		SubscriptionIds :: [Id],
 		Id :: string(),
 		Subscriber :: string().
-%% @hidden Get a subscriber id from list of subscribers.
-get_msisdn(["msisdn-" ++ MSISDN | _]) ->
-	MSISDN;
-get_msisdn([_ | T]) ->
-	get_msisdn(T);
-get_msisdn([]) ->
+%% @hidden Get a subscriber IMSI from list of subscription identifiers.
+get_imsi(["imsi-" ++ IMSI | _]) ->
+	IMSI;
+get_imsi([_ | T]) ->
+	get_imsi(T);
+get_imsi([]) ->
 	undefined.
 
 %% @hidden
-get_units(#{"time" := CCTime}) ->
-	CCTime;
+get_units(#{"time" := Time}) ->
+	Time;
 get_units(#{"totalVolume" := TotalVolume}) ->
 	TotalVolume;
 get_units(#{"serviceSpecificUnit" := ServiceSpecificUnit}) ->
@@ -241,9 +282,8 @@ service_type(Id)
 		when is_list(Id) ->
 	service_type(list_to_binary(Id));
 service_type(Id) ->
-	% allow ".3gpp.org" or the proper "@3gpp.org"
-	case binary:part(Id, size(Id), -8) of
-		<<"3gpp.org">> ->
+	case binary:part(Id, size(Id), -9) of
+		<<"@3gpp.org">> ->
 			ServiceContext = binary:part(Id, byte_size(Id) - 14, 5),
 			case catch binary_to_integer(ServiceContext) of
 				{'EXIT', _} ->

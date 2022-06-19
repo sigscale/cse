@@ -25,8 +25,15 @@
 -export([init_per_suite/1, end_per_suite/1]).
 -export([init_per_testcase/2, end_per_testcase/2]).
 
-%% Note: This directive should only be used in test suites.
--compile(export_all).
+% export test case functions
+-export([initial_scur/0, initial_scur/1,
+		initial_scur_nrf/0, initial_scur_nrf/1,
+		interim_scur/0, interim_scur/1,
+		interim_scur_nrf/0, interim_scur_nrf/1,
+		final_scur/0, final_scur/1,
+		final_scur_nrf/0, final_scur_nrf/1,
+		unknown_subscriber/0, unknown_subscriber/1,
+		out_of_credit/0, out_of_credit/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("inets/include/mod_auth.hrl").
@@ -91,7 +98,8 @@ init_per_suite(Config) ->
 	ok = cse_test_lib:start(),
    ok = diameter:start_service(?MODULE, client_acct_service_opts(Config1)),
    true = diameter:subscribe(?MODULE),
-   {ok, _Ref2} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
+	ct:sleep(500),
+   {ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
    receive
       #diameter_event{service = ?MODULE, info = Info}
             when element(1, Info) == up ->
@@ -119,7 +127,7 @@ init_per_suite1(Config) ->
 init_per_suite2(Config) ->
 	case gen_server:start({local, ocs}, cse_test_ocs_server, [], []) of
 		{ok, Pid} ->
-			[{ocs_server, Pid} | Config];
+			[{ocs, Pid} | Config];
 		{error, Reason} ->
 			ct:fail(Reason)
 	end.
@@ -129,8 +137,8 @@ init_per_suite2(Config) ->
 %%
 end_per_suite(Config) ->
 	ok = cse_test_lib:stop(),
-	OCSServer = ?config(ocs_server, Config),
-	ok = gen_server:stop(OCSServer),
+	OCS = ?config(ocs, Config),
+	ok = gen_server:stop(OCS),
 	Config.
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
@@ -155,368 +163,330 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[send_initial_scur, receive_initial_scur, send_interim_scur,
-			receive_interim_scur, send_final_scur, receive_final_scur,
+	[initial_scur, initial_scur_nrf, interim_scur,
+			interim_scur_nrf, final_scur, final_scur_nrf,
 			unknown_subscriber, out_of_credit].
 
 %%---------------------------------------------------------------------
 %%  Test cases
 %%---------------------------------------------------------------------
 
-send_initial_scur() ->
-	[{userdata, [{doc, "On received SCUR CCR-I send startRating"}]}].
+initial_scur() ->
+	[{userdata, [{doc, "SCUR CCA-I success"}]}].
 
-send_initial_scur(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
-	Balance = rand:uniform(100000),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
-	Subscriber1 = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
+initial_scur(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
 	RequestNum = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer0.
-
-receive_initial_scur(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
-	Balance = rand:uniform(100000),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
-	Subscriber1 = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
-	RequestNum = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum),
+	{ok, Answer} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 			'CC-Request-Number' = RequestNum,
-			'Multiple-Services-Credit-Control' = [MultiServices_CC]} = Answer0,
+			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Granted-Service-Unit' = [GrantedUnits]} = MultiServices_CC,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets]} = GrantedUnits,
-	{ok, {Subscriber, NewBalance}} = gen_server:call(Server, {get_subscriber, Subscriber}),
-	Balance = NewBalance + TotalOctets.
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Requested-Service-Unit' = [],
+			'Used-Service-Unit' = [],
+			'Granted-Service-Unit' = [GSU],
+			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant]} = GSU,
+	Grant > 0.
 
-send_interim_scur() ->
-	[{userdata, [{doc, "On received SCUR CCR-U send updateRating"}]}].
+initial_scur_nrf() ->
+	[{userdata, [{doc, "SCUR Nrf start"}]}].
 
-send_interim_scur(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
-	Balance = rand:uniform(100000),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
-	Subscriber1 = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
-	RequestNum0 = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum0),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer0,
-	RequestNum1 = RequestNum0 + 1,
-	InputOctets2 = rand:uniform(100),
-	OutputOctets2 = rand:uniform(200),
-	UsedServiceUnits = {InputOctets2, OutputOctets2},
-	Answer1 = diameter_scur_interim(SId, Subscriber1, RequestNum1, UsedServiceUnits),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1.
-
-receive_interim_scur() ->
-	[{userdata, [{doc, "On SCUR updateRating response send CCA-U"}]}].
-
-receive_interim_scur(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
-	Balance = rand:uniform(100000),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
-	Subscriber1 = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
-	RequestNum0 = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum0),
+initial_scur_nrf(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	RequestNum = 0,
+	{ok, Answer} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
-			'CC-Request-Number' = RequestNum0,
-			'Multiple-Services-Credit-Control' = [MCC]} = Answer0,
+			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Granted-Service-Unit' = [GrantedUnits]} = MCC,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets]} = GrantedUnits,
-	{ok, {Subscriber, NewBalance}} = gen_server:call(Server, {get_subscriber, Subscriber}),
-	Balance = NewBalance + TotalOctets,
+			'Granted-Service-Unit' = [GSU]} = MSCC,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant]} = GSU,
+	{ok, {NewBalance, Grant}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Grant.
+
+interim_scur() ->
+	[{userdata, [{doc, "SCUR CCA-U success"}]}].
+
+interim_scur(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	RequestNum0 = 0,
+	{ok, Answer0} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
-	InputOctets = rand:uniform(100),
-	OutputOctets = rand:uniform(200),
-	UsedServiceUnits = {InputOctets, OutputOctets},
-	Answer1 = diameter_scur_interim(SId, Subscriber1, RequestNum1, UsedServiceUnits),
+	Used = rand:uniform(Grant0),
+	{ok, Answer1} = diameter_scur_interim(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MCC1]} = Answer1,
+			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Granted-Service-Unit' = [GrantedUnits1]} = MCC1,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets1]} = GrantedUnits1,
-	{ok, {Subscriber, NewBalance1}} = gen_server:call(Server, {get_subscriber, Subscriber}),
-	TotalRSU = TotalOctets + TotalOctets1,
-	TotalUSU = InputOctets + OutputOctets,
-	Balance = TotalRSU + TotalUSU + NewBalance1.
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Requested-Service-Unit' = [],
+			'Used-Service-Unit' = [],
+			'Granted-Service-Unit' = [GSU1],
+			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant]} = GSU1,
+	Grant > 0.
 
-send_final_scur() ->
-	[{userdata, [{doc, "On received SCUR CCR-T send endRating"}]}].
+interim_scur_nrf() ->
+	[{userdata, [{doc, "SCUR CCR-U with Nrf update"}]}].
 
-send_final_scur(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
-	Balance = rand:uniform(100000),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
-	Subscriber1 = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
+interim_scur_nrf(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
 	RequestNum0 = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum0),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer0,
+	{ok, Answer0} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
-	InputOctets2 =  rand:uniform(100),
-	OutputOctets2 = rand:uniform(200),
-	UsedServiceUnits = {InputOctets2, OutputOctets2},
-	Answer1 = diameter_scur_interim(SId, Subscriber1, RequestNum1, UsedServiceUnits),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
-	RequestNum2 = RequestNum1 + 1,
-	Used = rand:uniform(300),
-	Answer2 = diameter_scur_stop(SId, Subscriber1, RequestNum2, Used),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2.
+	Used = rand:uniform(Grant0),
+	{ok, Answer1} = diameter_scur_interim(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU1]} = MSCC1,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant1]} = GSU1,
+	{ok, {NewBalance, Grant1}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Grant1 + Used.
 
-receive_final_scur() ->
-	[{userdata, [{doc, "On SCUR endRatingresponse send CCA-T"}]}].
+final_scur() ->
+	[{userdata, [{doc, "SCUR CCR-T with CCA-T success"}]}].
 
-receive_final_scur(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
+final_scur(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	{ok, {Subscriber, Balance}} = gen_server:call(Server, {add_subscriber, Subscriber, Balance}),
-	Subscriber1 = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
 	RequestNum0 = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum0),
+	{ok, Answer0} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
-			'CC-Request-Number' = RequestNum0,
-			'Multiple-Services-Credit-Control' = [MCC]} = Answer0,
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Granted-Service-Unit' = [GrantedUnits]} = MCC,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets]} = GrantedUnits,
-	{ok, {Subscriber, NewBalance}} = gen_server:call(Server, {get_subscriber, Subscriber}),
-	Balance = NewBalance + TotalOctets,
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
-	InputOctets1 = rand:uniform(100),
-	OutputOctets1 = rand:uniform(200),
-	UsedServiceUnits = {InputOctets1, OutputOctets1},
-	Answer1 = diameter_scur_interim(SId, Subscriber1, RequestNum1, UsedServiceUnits),
-	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MCC1]} = Answer1,
-	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Granted-Service-Unit' = [GrantedUnits1]} = MCC1,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [TotalOctets1]} = GrantedUnits1,
-	{ok, {Subscriber, NewBalance1}} = gen_server:call(Server, {get_subscriber, Subscriber}),
-	TotalRSU = TotalOctets + TotalOctets1,
-	TotalUSU = InputOctets1 + OutputOctets1,
-	Balance = TotalRSU + TotalUSU + NewBalance1,
-	RequestNum2 = RequestNum1 + 1,
-	UsedServiceUnits1 = rand:uniform(300),
-	Answer2 = diameter_scur_stop(SId, Subscriber1, RequestNum2, UsedServiceUnits1),
+	Used =  rand:uniform(Grant0),
+	{ok, Answer1} = diameter_scur_stop(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-			'CC-Request-Number' = RequestNum2} = Answer2,
-	{ok, {Subscriber, NewBalance2}} = gen_server:call(Server, {get_subscriber, Subscriber}),
-	TotalUSU1 = InputOctets1 + OutputOctets1 + UsedServiceUnits1,
-	Balance = TotalRSU + TotalUSU1 + NewBalance2.
+			'CC-Request-Number' = RequestNum1,
+			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Requested-Service-Unit' = [],
+			'Used-Service-Unit' = [],
+			'Granted-Service-Unit' = [],
+			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
+
+final_scur_nrf() ->
+	[{userdata, [{doc, "SCUR CCR-T with Nrf release"}]}].
+
+final_scur_nrf(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	RequestNum0 = 0,
+	{ok, Answer0} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
+			'CC-Request-Number' = RequestNum0,
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
+	RequestNum1 = RequestNum0 + 1,
+	Used1 = rand:uniform(Grant0),
+	{ok, Answer1} = diameter_scur_interim(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used1),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU1]} = MSCC1,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant1]} = GSU1,
+	RequestNum2 = RequestNum1 + 1,
+	Used2 = rand:uniform(Grant1),
+	{ok, Answer2} = diameter_scur_stop(Session, SI, RG, IMSI, MSISDN, RequestNum2, Used2),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
+	{ok, {NewBalance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Used1 + Used2.
 
 unknown_subscriber() ->
-	[{userdata, [{doc, "Recieve Diameter User Unknown"}]}].
+	[{userdata, [{doc, "SCUR Nrf start with unknown user"}]}].
 
 unknown_subscriber(_Config) ->
-	MSISDN = list_to_binary(generate_identity(7)),
-	IMSI = list_to_binary(generate_identity(7)),
-	Subscriber = {MSISDN, IMSI},
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
 	RequestNum = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber, RequestNum),
+	{ok, Answer0} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
 
 out_of_credit() ->
-	[{userdata, [{doc, "Recieve Diameter Credit Limit Reached"}]}].
+	[{userdata, [{doc, "SCUR Nrf start when credit limit reached"}]}].
 
 out_of_credit(Config) ->
-	Server = ?config(ocs_server, Config),
-	Subscriber = generate_identity(7),
-	MSISDN = list_to_binary(Subscriber),
-	IMSI = list_to_binary(generate_identity(7)),
-	Subscriber1 = {MSISDN, IMSI},
-	{ok, {Subscriber, 0}} = gen_server:call(Server, {add_subscriber, Subscriber, 0}),
-	Ref = erlang:ref_to_list(make_ref()),
-	SId = diameter:session_id(Ref),
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ generate_identity(10),
+	MSISDN = generate_identity(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	{ok, {0, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, 0}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
 	RequestNum = 0,
-	Answer0 = diameter_scur_start(SId, Subscriber1, RequestNum),
+	{ok, Answer0} = diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED'} = Answer0.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
 
-diameter_scur_start(SId, {MSISDN, IMSI}, RequestNum) ->
+diameter_scur_start(Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
 	IMSI1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = IMSI},
-	RequestedUnits = #'3gpp_ro_Requested-Service-Unit' {
-			'CC-Total-Octets' = []},
-	MultiServices_CC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Requested-Service-Unit' = [RequestedUnits], 'Service-Identifier' = [1],
-			'Rating-Group' = [2]},
-	ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' =
-			[#'3gpp_ro_PS-Information'{
-					'3GPP-PDP-Type' = [3],
-					'Serving-Node-Type' = [2],
-					'SGSN-Address' = [{10,1,2,3}],
-					'GGSN-Address' = [{10,4,5,6}],
-					'3GPP-IMSI-MCC-MNC' = [<<"001001">>],
-					'3GPP-GGSN-MCC-MNC' = [<<"001001">>],
-					'3GPP-SGSN-MCC-MNC' = [<<"001001">>]}]},
-	CC_CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
+	RSU = #'3gpp_ro_Requested-Service-Unit'{'CC-Time' = []},
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Requested-Service-Unit' = [RSU]},
+	Destination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	IMS = #'3gpp_ro_IMS-Information'{
+			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
+			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
+			'Called-Party-Address' = [Destination]},
+	ServiceInformation = #'3gpp_ro_Service-Information'{'IMS-Information' = [IMS]},
+	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32251@3gpp.org",
+			'Service-Context-Id' = "32260@3gpp.org",
 			'User-Name' = [MSISDN],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
 			'Subscription-Id' = [MSISDN1, IMSI1],
-			'Multiple-Services-Credit-Control' = [MultiServices_CC],
+			'Multiple-Services-Indicator' = [1],
+			'Multiple-Services-Credit-Control' = [MSCC],
 			'Service-Information' = [ServiceInformation]},
-	{ok, Answer} = diameter:call(?MODULE, cc_app_test, CC_CCR, []),
-	Answer.
+	diameter:call(?MODULE, cc_app_test, CCR, []).
 
-diameter_scur_interim(SId, {MSISDN, IMSI}, RequestNum,
-		{UsedInputOctets, UsedOutputOctets}) ->
+diameter_scur_interim(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
 	IMSI1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = IMSI},
-	UsedUnits = #'3gpp_ro_Used-Service-Unit'{
-			'CC-Input-Octets' = [UsedInputOctets], 'CC-Output-Octets' = [UsedOutputOctets],
-			'CC-Total-Octets' = [UsedInputOctets + UsedOutputOctets]},
-	RequestedUnits = #'3gpp_ro_Requested-Service-Unit' {
-			'CC-Total-Octets' = []},
-	MCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Used-Service-Unit' = [UsedUnits],
-			'Requested-Service-Unit' = [RequestedUnits], 'Service-Identifier' = [1],
-			'Rating-Group' = [2]},
-	ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' =
-			[#'3gpp_ro_PS-Information'{
-					'3GPP-PDP-Type' = [3],
-					'Serving-Node-Type' = [2],
-					'SGSN-Address' = [{10,1,2,3}],
-					'GGSN-Address' = [{10,4,5,6}],
-					'3GPP-IMSI-MCC-MNC' = [<<"001001">>],
-					'3GPP-GGSN-MCC-MNC' = [<<"001001">>],
-					'3GPP-SGSN-MCC-MNC' = [<<"001001">>]}]},
-	CC_CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
-		'Auth-Application-Id' = ?RO_APPLICATION_ID,
-		'Service-Context-Id' = "32251@3gpp.org",
-		'User-Name' = [MSISDN],
-		'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-		'CC-Request-Number' = RequestNum,
-		'Event-Timestamp' = [calendar:universal_time()],
-		'Multiple-Services-Credit-Control' = [MCC],
-		'Subscription-Id' = [MSISDN1, IMSI1],
-		'Service-Information' = [ServiceInformation]},
-	{ok, Answer} = diameter:call(?MODULE, cc_app_test, CC_CCR, []),
-	Answer.
-
-diameter_ecur_final({MSISDN, IMSI}, SId, RequestNum) ->
-	MSISDN1 = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = MSISDN},
-	IMSI1 = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-			'Subscription-Id-Data' = IMSI},
-	UsedUnits = #'3gpp_ro_Used-Service-Unit'
-			{'CC-Service-Specific-Units' = [2]},
-	MultiServices_CC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Used-Service-Unit' = [UsedUnits], 'Service-Identifier' = [1],
-			'Rating-Group' = [2]},
-	ServiceInformation = #'3gpp_ro_Service-Information'{
-			'SMS-Information' = [#'3gpp_ro_SMS-Information'{
-			'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
-			'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-			'Address-Data' = [ocs:generate_identity()]}]}]}]},
-	CC_CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
+	USU = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [Used]},
+	RSU = #'3gpp_ro_Requested-Service-Unit' {'CC-Time' = []},
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Used-Service-Unit' = [USU],
+			'Requested-Service-Unit' = [RSU]},
+	Destination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	IMS = #'3gpp_ro_IMS-Information'{
+			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
+			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
+			'Called-Party-Address' = [Destination]},
+	ServiceInformation = #'3gpp_ro_Service-Information'{'IMS-Information' = [IMS]},
+	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32274@3gpp.org",
+			'Service-Context-Id' = "32260@3gpp.org",
+			'User-Name' = [MSISDN],
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+			'CC-Request-Number' = RequestNum,
+			'Event-Timestamp' = [calendar:universal_time()],
+			'Multiple-Services-Indicator' = [1],
+			'Multiple-Services-Credit-Control' = [MSCC],
+			'Subscription-Id' = [MSISDN1, IMSI1],
+			'Service-Information' = [ServiceInformation]},
+	diameter:call(?MODULE, cc_app_test, CCR, []).
+
+diameter_scur_stop(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+	MSISDN1 = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+			'Subscription-Id-Data' = MSISDN},
+	IMSI1 = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+			'Subscription-Id-Data' = IMSI},
+	USU = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [Used]},
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Used-Service-Unit' = [USU]},
+	Destination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	IMS = #'3gpp_ro_IMS-Information'{
+			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
+			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
+			'Called-Party-Address' = [Destination]},
+	ServiceInformation = #'3gpp_ro_Service-Information'{'IMS-Information' = [IMS]},
+	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'Service-Context-Id' = "32260@3gpp.org" ,
 			'User-Name' = [MSISDN],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
-			'Subscription-Id' = [MSISDN1, IMSI1],
-			'Multiple-Services-Credit-Control' = [MultiServices_CC],
-			'Service-Information' = [ServiceInformation]},
-	{ok, Answer} = diameter:call(?MODULE, cc_app_test, CC_CCR, []),
-	Answer.
-
-diameter_scur_stop(SId, {MSISDN, IMSI}, RequestNum, Used) ->
-	MSISDN1 = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = MSISDN},
-	IMSI1 = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-			'Subscription-Id-Data' = IMSI},
-	UsedUnits = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [Used]},
-	MultiServices_CC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Used-Service-Unit' = [UsedUnits], 'Service-Identifier' = [1],
-			'Rating-Group' = [2]},
-	ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' =
-			[#'3gpp_ro_PS-Information'{
-					'3GPP-PDP-Type' = [3],
-					'Serving-Node-Type' = [2],
-					'SGSN-Address' = [{10,1,2,3}],
-					'GGSN-Address' = [{10,4,5,6}],
-					'3GPP-IMSI-MCC-MNC' = [<<"001001">>],
-					'3GPP-GGSN-MCC-MNC' = [<<"001001">>],
-					'3GPP-SGSN-MCC-MNC' = [<<"001001">>]}]},
-	CC_CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
-			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32251@3gpp.org" ,
-			'User-Name' = [MSISDN],
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-			'CC-Request-Number' = RequestNum,
-			'Event-Timestamp' = [calendar:universal_time()],
-			'Multiple-Services-Credit-Control' = [MultiServices_CC],
+			'Multiple-Services-Indicator' = [1],
+			'Multiple-Services-Credit-Control' = [MSCC],
 			'Subscription-Id' = [MSISDN1, IMSI1],
 			'Service-Information' = [ServiceInformation]},
-	{ok, Answer} = diameter:call(?MODULE, cc_app_test, CC_CCR, []),
-	Answer.
+	diameter:call(?MODULE, cc_app_test, CCR, []).
 
 %% @doc Add a transport capability to diameter service.
 %% @hidden

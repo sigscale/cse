@@ -16,8 +16,8 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc OCS Server for the CSE cse_diameter_SUITE
-%%%
+%%% @doc This {@link //stdlib/gen_server. gen_server} behaviour callback
+%%% 	module mocks an OCS for the CSE `cse_diameter_SUITE' test suite.
 %%%
 -module(cse_test_ocs_server).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
@@ -33,7 +33,8 @@
 % export the private api
 -export([]).
 
--type state() :: #{Subscriber :: string() := Balance :: integer()}.
+-type state() :: #{Subscriber :: string()
+		:= Account :: {Balance :: integer(), Reserve :: integer()}}.
 
 %%----------------------------------------------------------------------
 %%  The gen_server callbacks
@@ -64,35 +65,70 @@ init(_Args) ->
 %% @see //stdlib/gen_server:handle_call/3
 %% @private
 handle_call({add_subscriber, Subscriber, Balance}, _From, State) ->
-	NewState = State#{Subscriber => Balance},
-	{reply, {ok, {Subscriber, Balance}}, NewState};
+	Account = {Balance, 0},
+	NewState = State#{Subscriber => Account},
+	{reply, {ok, Account}, NewState};
 handle_call({get_subscriber, Subscriber}, _From, State) ->
-	case get_subscriber(Subscriber, State) of
-		{ok, {Subscriber, Balance}} ->
-			{reply, {ok, {Subscriber, Balance}}, State};
-		{error, Reason} ->
-			{reply, {error, Reason}, State}
+	case maps:find(Subscriber, State) of
+		{ok, Account} ->
+			{reply, {ok, Account}, State};
+		error ->
+			{reply, {error, not_found}, State}
 	end;
-handle_call({add_balance, Subscriber, Balance}, _From, State) ->
-	case get_subscriber(Subscriber, State) of
-		{ok, {Subscriber, B}} ->
-			NewBalance = B + Balance,
-			NewState = State#{Subscriber => NewBalance},
-			{reply, {ok, {Subscriber, NewBalance}}, NewState};
-		{error, Reason} ->
-			{reply, {error, Reason}, State}
+handle_call({add_balance, Subscriber, Amount}, _From, State) ->
+	case maps:find(Subscriber, State) of
+		{ok, {Balance, Reserve}} ->
+			NewBalance = Balance + Amount,
+			Account = {NewBalance, Reserve},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		error ->
+			{reply, {error, not_found}, State}
 	end;
-handle_call({reserve, Subscriber, RSU}, _From, State) ->
-	case get_subscriber(Subscriber, State) of
-		{ok, {Subscriber, Balance}}
-				when Balance > 0 ->
-			NewBalance = Balance - RSU,
-			NewState = State#{Subscriber => NewBalance},
-			{reply, {ok, {Subscriber, NewBalance}}, NewState};
-		{ok, {_Subscriber, _Balance}} ->
+handle_call({reserve, Subscriber, Amount}, _From, State) ->
+	case maps:find(Subscriber, State) of
+		{ok, {Balance, Reserve}}
+				when (Balance + Reserve) >= Amount ->
+			Account = {(Balance + Reserve) - Amount, Amount},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		{ok, {Balance, Reserve}}
+				when (Balance + Reserve) > 0 ->
+			Account = {0, Balance + Reserve},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		{ok, _Account} ->
 			{reply, {error, out_of_credit}, State};
-		{error, Reason} ->
-			{reply, {error, Reason}, State}
+		error ->
+			{reply, {error, not_found}, State}
+	end;
+handle_call({debit, Subscriber, Amount}, _From, State) ->
+	case maps:find(Subscriber, State) of
+		{ok, {Balance, Reserve}}
+				when Balance >= Amount ->
+			Account = {Balance - Amount, Reserve},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		{ok, {Balance, Reserve}}
+				when (Balance + Reserve) > Amount->
+			Account = {0, (Balance + Reserve) - Amount},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		{ok, {Balance, Reserve}} ->
+			Account = {(Balance + Reserve) - Amount, 0},
+			NewState = State#{Subscriber => Account},
+			{reply, {error, out_of_credit}, NewState};
+		error ->
+			{reply, {error, not_found}, State}
+	end;
+handle_call({release, Subscriber}, _From, State) ->
+	case maps:find(Subscriber, State) of
+		{ok, {Balance, Reserve}} ->
+			Account = {Balance + Reserve, 0},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		error ->
+			{reply, {error, not_found}, State}
 	end;
 handle_call(Request, _From, State) ->
 	{stop, Request, State}.
@@ -171,22 +207,4 @@ format_status(_Opt, [_PDict, State] = _StatusData) ->
 %%----------------------------------------------------------------------
 %% internal functions
 %%----------------------------------------------------------------------
-
--spec get_subscriber(Subscriber, State) -> Result
-	when
-		Subscriber :: string(),
-		State :: state(),
-		Result :: {ok, {Subscriber, Balance}} |
-				{error, Reason},
-		Balance :: integer(),
-		Reason :: not_found | term().
-%% @doc Get a Subscriber from state data.
-%% @hidden
-get_subscriber(Subscriber, State) ->
-	case maps:find(Subscriber, State) of
-		{ok, Balance} ->
-			{ok, {Subscriber, Balance}};
-		error ->
-			{error, not_found}
-	end.
 
