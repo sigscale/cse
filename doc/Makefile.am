@@ -26,6 +26,7 @@ modhtml = cse.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \
+		cse_log_codec_ecs.html \
 		cse_gtt.html \
 		cse_rest.html \
 		mod_cse_rest_accepted_content.html \

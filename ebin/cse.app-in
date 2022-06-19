@@ -25,6 +25,7 @@
 				cse_tco_server_cb,
 				cse_codec,
 				cse_log,
+				cse_log_codec_ecs,
 				cse_gtt,
 				cse_rest,
 				mod_cse_rest_accepted_content,
