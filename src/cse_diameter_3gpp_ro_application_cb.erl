@@ -39,6 +39,7 @@
 
 -record(state, {}).
 
+-define(LOGNAME, '3gpp_ro').
 -define(RO_APPLICATION_ID, 4).
 
 -type state() :: #state{}.
@@ -159,12 +160,20 @@ handle_error(_Reason, _Request, _ServiceName, _Peer) ->
 		Opt :: diameter:call_opt(),
 		PostF :: diameter:evaluable().
 %% @doc Invoked when a request message is received from the peer.
-handle_request(#diameter_packet{msg = Request, errors = []} = _Packet,
-		{_, IpAddress, Port} = _ServiceName, {_, Capabilities} = _Peer) ->
-	{reply, process_request(IpAddress, Port, Capabilities, Request)};
-handle_request(#diameter_packet{msg = Request, errors = Errors} = _Packet,
-		ServiceName, {_, Caps} = _Peer) ->
-	errors(ServiceName, Caps, Request, Errors).
+handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
+		{_, IpAddress, Port} = ServiceName, {_, Capabilities} = Peer) ->
+	Start = erlang:system_time(millisecond),
+	Reply = process_request(IpAddress, Port, Capabilities, Request),
+	Stop = erlang:system_time(millisecond),
+	cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
+	Reply;
+handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
+		ServiceName, {_, Capabilities} = Peer) ->
+	Start = erlang:system_time(millisecond),
+	Reply = errors(ServiceName, Capabilities, Request, Errors),
+	Stop = erlang:system_time(millisecond),
+	cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
+	Reply.
 
 %%----------------------------------------------------------------------
 %%  internal functions
@@ -254,24 +263,28 @@ process_request(_IpAddress, _Port,
 	try
 		Children = supervisor:which_children(cse_sup),
 		{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
-		 supervisor:start_child(SlpSup, [cse_slp_prepaid_diameter_fsm, [], []])
+		supervisor:start_child(SlpSup, [cse_slp_prepaid_diameter_fsm, [], []])
 	of
 		{ok, Child} ->
-			Reply = gen_statem:call(Child, Request),
-			{ok, _Session} = cse:add_session(SessionId, Child),
-			Reply;
-		{ok, Child, _Info} ->
-			Reply = gen_statem:call(Child, Request),
-			{ok, _Session} = cse:add_session(SessionId, Child),
-			Reply;
+			case catch gen_statem:call(Child, Request) of
+				{'EXIT', Reason} ->
+					error_logger:error_report(["Diameter Error",
+							{module, ?MODULE}, {fsm, Child},
+							{type, event_type(RequestType)}, {error, Reason}]),
+					diameter_error(SessionId,
+							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							OHost, ORealm, RequestType, RequestNum);
+				Reply ->
+					{ok, _Session} = cse:add_session(SessionId, Child),
+					{reply, Reply}
+			end;
 		{error, Reason} ->
 			error_logger:error_report(["Diameter Error",
 					{module, ?MODULE}, {error, Reason},
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{type, event_type(RequestType)}]),
-			Reply = diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
-			Reply
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
 	catch
 		?CATCH_STACK ->
 			?SET_STACK,
@@ -291,15 +304,25 @@ process_request(_IpAddress, _Port,
 	try
 		case cse:get_session(SessionId) of
 			{ok, {SessionId, Pid}} ->
-				gen_statem:call(Pid, Request);
+				case catch gen_statem:call(Pid, Request) of
+					{'EXIT', Reason1} ->
+						error_logger:error_report(["Diameter Error",
+								{module, ?MODULE}, {session, SessionId},
+								{fsm, Pid}, {type, event_type(RequestType)},
+								{error, Reason1}]),
+						diameter_error(SessionId,
+								?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+								OHost, ORealm, RequestType, RequestNum);
+					Reply ->
+						{reply, Reply}
+				end;
 			{error, Reason1} ->
 				error_logger:error_report(["Diameter Error",
 						{module, ?MODULE}, {error, Reason1},
 						{origin_host, OHost}, {origin_realm, ORealm},
 						{type, event_type(RequestType)}]),
-				Reply = diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-						OHost, ORealm, RequestType, RequestNum),
-				Reply
+				diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+						OHost, ORealm, RequestType, RequestNum)
 		end
 	catch
 		?CATCH_STACK ->
@@ -321,17 +344,27 @@ process_request(_IpAddress, _Port,
 		cse:get_session(SessionId)
 	of
 		{ok, {SessionId, Pid}} ->
-			Reply = gen_statem:call(Pid, Request),
-			ok = cse:delete_session(SessionId),
-			Reply;
+			case catch gen_statem:call(Pid, Request) of
+				{'EXIT', Reason1} ->
+					error_logger:error_report(["Diameter Error",
+							{module, ?MODULE}, {session, SessionId},
+							{fsm, Pid}, {type, event_type(RequestType)},
+							{error, Reason1}]),
+					ok = cse:delete_session(SessionId),
+					diameter_error(SessionId,
+							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							OHost, ORealm, RequestType, RequestNum);
+				Reply ->
+					ok = cse:delete_session(SessionId),
+					{reply, Reply}
+			end;
 		{error, Reason} ->
 			error_logger:error_report(["Diameter Error",
 					{module, ?MODULE}, {error, Reason},
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{type, event_type(RequestType)}]),
-			Reply = diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
-			Reply
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
 	catch
 		?CATCH_STACK ->
 			?SET_STACK,
@@ -351,14 +384,14 @@ process_request(_IpAddress, _Port,
 		OriginRealm :: string(),
 		RequestType :: integer(),
 		RequestNum :: integer(),
-		Reply :: #'3gpp_ro_CCA'{}.
+		Reply :: {reply, #'3gpp_ro_CCA'{}}.
 %% @doc Send CCA to DIAMETER client indicating an operation failure.
 %% @hidden
 diameter_error(SessionId, ResultCode, OHost, ORealm, RequestType, RequestNum) ->
-	#'3gpp_ro_CCA'{'Session-Id' = SessionId, 'Result-Code' = ResultCode,
+	{reply, #'3gpp_ro_CCA'{'Session-Id' = SessionId, 'Result-Code' = ResultCode,
 			'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID, 'CC-Request-Type' = RequestType,
-			'CC-Request-Number' = RequestNum}.
+			'CC-Request-Number' = RequestNum}}.
 
 -spec event_type(RequestType) -> EventType
 	when
