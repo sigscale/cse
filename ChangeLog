@@ -1,3 +1,36 @@
+2022-06-20  Vance Shipley <vances@sigscale.org>
+
+	* log diameter ro with elastic schema codec
+	* elastic schema codec for logging diameter
+	* don't use include_lib for cse files in test suites
+	* log api for iso8601 now
+	* refactor diameter prepaid slp for ims voice
+	* correct make 3gpp ro application dictionary
+	* app var for log handlers; open logs in app start
+	* add log_option() type
+	* add diameter 3gpp ro service to release configuration
+	* document all application environment variables
+	* document snmp option value in diameter service fsm
+	* rename (3gpp) ro application callback module
+	* todo: dynamic slp selection for diameter ro
+	* verbose field name in prepaid fsm state
+	* test cases for log with dedicated process
+	* test cases for log with codec
+	* test cases for async, external, wrap logs
+	* test suite for log handling
+	* test suite library function for random names
+	* refactor public log handler api
+	* style refactor diameter test of suite
+	* macros for portable uri decode
+	* app env var for log directory
+	* public api for log handler
+	* include args in type spec of log server supervisor
+	* save disk_log options in log server state
+	* log event managers (in-104)
+	* return 404 when resource is not found to be deleted
+	* remove unused clauses in diameter service fsm
+	* update news with snmp
+
 2022-05-24  Vance Shipley <vances@sigscale.org>
 
 	* refactor and correct state transitions
