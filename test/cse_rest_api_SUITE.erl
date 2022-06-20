@@ -298,19 +298,19 @@ add_static_row_resource() ->
 add_static_row_resource(Config) ->
 	TableName = "examplePrefixTable2",
 	cse_gtt:new(TableName, []),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableRes = #resource{name = TableName,
+			description = TableName ++ " prefix table",
+			specification = #resource_spec_ref{id = TableSpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ TableSpecId,
+					name = "PrefixTable"}},
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
 	Host = ?config(host, Config),
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1,
-						'_', {exact, TableName}, '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	[#resource{id = TableId} | _] = F(start, []),
-	Resource = static_prefix_row(TableId, TableName),
-	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	RowRes = static_prefix_row(TableId, TableName),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(RowRes)),
 	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
@@ -356,16 +356,16 @@ get_resource() ->
 get_resource(Config) ->
 	TableName = "tempPrefixTable",
 	cse_gtt:new(TableName, []),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableRes = #resource{name = TableName,
+			description = TableName ++ " prefix table",
+			specification = #resource_spec_ref{id = TableSpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ TableSpecId,
+					name = "PrefixTable"}},
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1,
-						'_', {exact, TableName}, '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	[#resource{id = TableId} | _] = F(start, []),
 	PrefixRow = static_prefix_row(TableId, TableName),
 	{ok, #resource{id = Id}}= cse:add_resource(PrefixRow),
 	Request = {Host ++ ?inventoryPath ++ Id, [Accept]},
@@ -381,16 +381,16 @@ query_resource() ->
 query_resource(Config) ->
 	TableName = "testPrefixTable",
 	cse_gtt:new(TableName, []),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableRes = #resource{name = TableName,
+			description = TableName ++ " prefix table",
+			specification = #resource_spec_ref{id = TableSpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ TableSpecId,
+					name = "PrefixTable"}},
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1,
-						'_', {exact, TableName}, '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	[#resource{id = TableId} | _] = F(start, []),
 	{ok, #resource{}} = cse:add_resource(static_prefix_row(TableId, TableName)),
 	Res = static_prefix_row(TableId, TableName),
 	PrefixRow2 = Res#resource{name = "testPrefixRow",
@@ -429,14 +429,14 @@ delete_static_table_resource() ->
 delete_static_table_resource(Config) ->
 	TableName = "samplePrefixTable",
 	cse_gtt:new(TableName, []),
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1,
-						'_', {exact, TableName}, '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	[#resource{id = TableId} | _] = F(start, []),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableRes = #resource{name = TableName,
+			description = TableName ++ " prefix table",
+			specification = #resource_spec_ref{id = TableSpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ TableSpecId,
+					name = "PrefixTable"}},
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
 	Request = {Host ++ ?inventoryPath ++ TableId, [Accept]},
@@ -476,14 +476,14 @@ delete_row_resource() ->
 delete_row_resource(Config) ->
 	TableName = "samplePrefixTable2",
 	cse_gtt:new(TableName, []),
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1,
-						'_', {exact, TableName}, '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	[#resource{id = TableId} | _] = F(start, []),
+	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableRes = #resource{name = TableName,
+			description = TableName ++ " prefix table",
+			specification = #resource_spec_ref{id = TableSpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ TableSpecId,
+					name = "PrefixTable"}},
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
 	ContentType = "application/json",
