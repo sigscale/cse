@@ -39,7 +39,8 @@
 		get_resource/0, get_resource/1, query_resource/0, query_resource/1,
 		delete_static_table_resource/0, delete_static_table_resource/1,
 		delete_dynamic_table_resource/0, delete_dynamic_table_resource/1,
-		delete_row_resource/0, delete_row_resource/1]).
+		delete_row_resource/0, delete_row_resource/1,
+		add_range_row_resource/0, add_range_row_resource/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -115,7 +116,8 @@ all() ->
 			add_static_table_resource, add_dynamic_table_resource,
 			add_static_row_resource, add_dynamic_row_resource,
 			get_resource, query_resource, delete_static_table_resource,
-			delete_dynamic_table_resource, delete_row_resource].
+			delete_dynamic_table_resource, delete_row_resource,
+			add_range_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -504,6 +506,45 @@ delete_row_resource(Config) ->
 			= lists:keyfind("prefix", #resource_char.name, Chars),
 	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
+add_range_row_resource() ->
+	[{userdata, [{doc,"Add dynamic prefix row resource"}]}].
+
+add_range_row_resource(Config) ->
+	TableName = 'sampleRangeTable',
+	StringTableName = atom_to_list(TableName),
+	ok = cse_gtt:new(TableName, []),
+	TableRes = range_table(StringTableName),
+	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	Start = "14789",
+	End = "98741",
+	Resource = range_row("sampleRangeRow", TableId, StringTableName, Start, End),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(ResponseBody)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	F1 = fun F1({eof, Gtts}, Acc) ->
+				lists:flatten([Gtts | Acc]);
+			F1({Cont, [#gtt{} | _] = Gtts}, Acc) ->
+				F1(cse_gtt:list(Cont, TableName), [Gtts | Acc])
+	end,
+	RangeGtts = F1(cse_gtt:list(start, TableName), []),
+	Prefixes = cse_gtt:range(Start, End),
+	F2 = fun(Prefix) ->
+			case lists:keyfind(Prefix, #gtt.num, RangeGtts) of
+				#gtt{num = Prefix} ->
+					true;
+				false ->
+					false
+			end
+	end,
+	true = lists:all(F2, Prefixes).
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -568,6 +609,15 @@ dynamic_prefix_table(Name) ->
 							++ SpecId,
 					name = SpecName}}.
 
+range_table(Name) ->
+	SpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
+	#resource{name = Name, description = "Range Table", category = "Prefix",
+			base_type = "Resource", version = "1.0",
+			specification = #resource_spec_ref{id = SpecId,
+					href = "/resourceCatalogManagement/v4/resourceSpecification/"
+							++ SpecId,
+					name = "PrefixRangeTable"}}.
+
 static_prefix_row(TableId, TableName) ->
 	static_prefix_row("examplePrefixRow", TableId, TableName).
 static_prefix_row(Name, TableId, TableName) ->
@@ -603,6 +653,22 @@ dynamic_prefix_row(Name, TableId, TableName) ->
 					name = SpecName},
 			characteristic = [#resource_char{name = "prefix", value = "46892"},
 					#resource_char{name = "value", value = 64}]}.
+
+%% @hidden
+range_row(Name, TableId, TableName, Start, End) ->
+	SpecId = cse_rest_res_resource:prefix_range_row_spec_id(),
+	#resource{name = Name, description = "Range Row",
+			category = "Prefix", base_type = "Resource", version = "1.0",
+			related = [#resource_rel{id = TableId,
+					href = "/resourceInventoryManagement/v4/resource/"
+					++ TableId, name = TableName, rel_type = "contained"}],
+			specification = #resource_spec_ref{id = SpecId,
+					href = "/resourceCatalogManagement/v2/resourceSpecification/"
+							++ SpecId,
+					name = "PrefixRangeRow"},
+			characteristic = [#resource_char{name = "start", value = Start},
+					#resource_char{name = "end", value = End},
+					#resource_char{name = "value", value = "hello range"}]}.
 
 row_resource_spec(Name, TableId, TableName) ->
 	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),
