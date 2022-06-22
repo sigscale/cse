@@ -176,6 +176,17 @@ do_response(#mod{parsed_header = RequestHeaders,
 	send(ModData, 404, ResponseHeaders, ResponseBody),
 	{proceed, [{response, {already_sent, 404, Size}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, {error, 409}) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.8",
+			title => "Conflict",
+			detail => "Conflict with the current state of the target resource",
+			code => "", status => 409},
+	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 409, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 409, Size}} | Data]};
+do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 412}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7232#section-4.2",
 			title => "Precondition Failed",

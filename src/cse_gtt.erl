@@ -165,8 +165,12 @@ insert(Table, Items) when is_list(Table) ->
 insert(Table, Items) when is_atom(Table), is_list(Items)  ->
 	InsFun = fun({Number, Value}) -> insert(Table, Number, Value) end,
 	TransFun = fun() -> lists:foreach(InsFun, Items) end,
-	mnesia:transaction(TransFun),
-	ok.
+	case mnesia:transaction(TransFun) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
 
 -spec delete(Table, Number) -> ok
 	when
@@ -371,7 +375,7 @@ clear_table(Table) when is_atom(Table) ->
 		End :: [$0..$9] | integer(),
 		Value :: any(),
 		Result :: ok | {error, Reason},
-		Reason :: term().
+		Reason :: conflict | term().
 %% @doc Add prefixes to cover range.
 add_range(Table, Start, End, Value) when is_integer(Start), is_integer(End) ->
 	add_range(Table, integer_to_list(Start), integer_to_list(End), Value);
@@ -380,7 +384,12 @@ add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =<
 		[] ->
 			[];
 		Seq when length(Seq) > 0 ->
-			insert(Table, [{X, Value} || X <- Seq]);
+			case catch insert(Table, [{X, Value} || X <- Seq]) of
+				ok ->
+					ok;
+				{'EXIT', already_exists} ->
+					{error, conflict}
+			end;
 		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
