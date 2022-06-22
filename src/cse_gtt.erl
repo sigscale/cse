@@ -134,7 +134,14 @@ new(Table, Options, Items) when is_list(Options), is_list(Items) ->
 insert(Table, Number, Value) when is_list(Table) ->
 	insert(list_to_existing_atom(Table), Number, Value);
 insert(Table, Number, Value) when is_atom(Table), is_list(Number) ->
-	F = fun() -> insert(Table, Number, Value, []) end,
+	F = fun() ->
+			case mnesia:read(Table, Number) of
+				[#gtt{}] ->
+					mnesia:abort(already_exists);
+				[] ->
+					insert(Table, Number, Value, [])
+			end
+	end,
 	case mnesia:transaction(F) of
 		{atomic, {_NumWrites, Gtt}} ->
 			{ok, Gtt};
