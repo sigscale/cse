@@ -377,12 +377,12 @@ add_range(Table, Start, End, Value) when is_integer(Start), is_integer(End) ->
 	add_range(Table, integer_to_list(Start), integer_to_list(End), Value);
 add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =< End ->
 	case catch range(Start, End) of
-	[] ->
+		[] ->
 			[];
-	Seq when length(Seq) > 0 ->
-		insert(Table,[{X, Value} || X <- Seq]);
-	{'EXIT', Reason} ->
-		{error, Reason}
+		Seq when length(Seq) > 0 ->
+			insert(Table, [{X, Value} || X <- Seq]);
+		{'EXIT', Reason} ->
+			{error, Reason}
 	end.
 
 -spec delete_range(Table, Start, End) -> Result
