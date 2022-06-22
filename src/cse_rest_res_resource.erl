@@ -427,6 +427,25 @@ add_resource_prefix_row(#resource{related = Related} = Resource) ->
 			{error, 400}
 	end.
 %% @hidden
+add_resource_prefix_row(Table, #resource{
+		specification = #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC},
+		characteristic = Chars} = Resource) ->
+	F = fun(CharName) ->
+			case lists:keyfind(CharName, #resource_char.name, Chars) of
+				#resource_char{value = Value} ->
+					Value;
+				false ->
+					{error, 400}
+			end
+	end,
+	case cse_gtt:add_range(Table, F("start"), F("end"), F("value")) of
+		ok ->
+			add_resource_result(cse:add_resource(Resource));
+		{error, conflict} ->
+			{error, 409};
+		{error, _Reason} ->
+			{error, 400}
+	end;
 add_resource_prefix_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
 	F = fun(CharName) ->
