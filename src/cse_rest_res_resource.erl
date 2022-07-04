@@ -62,9 +62,13 @@ content_types_provided() ->
 -spec get_resource_spec(ID) -> Result
 	when
 		ID :: string(),
-		Result :: {struct, [tuple()]} | {error, 404}.
-%% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification/{id}'.
-%%		Retrieve a Resource Specification.
+		Result :: {ok, Headers, Body} | {error, Status},
+		Headers :: [tuple()],
+		Body :: string(),
+		Status :: 404 | 500.
+%% @doc Retrieve a Resource Specification.
+%%
+%% 	Respond to `GET /resourceCatalogManagement/v4/resourceSpecification/{id}'.
 get_resource_spec(ID) ->
 	case cse:find_resource_spec(ID) of
 		{ok, #resource_spec{} = Specification} ->
