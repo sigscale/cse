@@ -1,3 +1,13 @@
+2022-07-06  Vance Shipley <vances@sigscale.org>
+
+	* codec api for ims uri
+	* edoc corrections
+	* handle conflict error
+	* refrain inserting duplicates into gtt table
+	* add resource for range table row
+	* test: add range row resource in rest api
+	* table resource of gtt table should be created manually
+
 2022-06-20  Vance Shipley <vances@sigscale.org>
 
 	* log diameter ro with elastic schema codec
