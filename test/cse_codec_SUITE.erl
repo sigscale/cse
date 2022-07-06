@@ -33,7 +33,8 @@
 		generic_number/0, generic_number/1,
 		generic_digits/0, generic_digits/1,
 		date_time/0, date_time/1,
-		cause/0, cause/1]).
+		cause/0, cause/1,
+		ims_sip/0, ims_sip/1, ims_tel/0, ims_tel/1]).
 
 -include("cse_codec.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -83,7 +84,8 @@ sequences() ->
 %%
 all() ->
 	[called_party, called_party_bcd, calling_party, isdn_address,
-			generic_number, generic_digits, tbcd, date_time, cause].
+			generic_number, generic_digits, tbcd, date_time, cause,
+			ims_sip, ims_tel].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -240,6 +242,43 @@ cause(_Config) ->
 	Cause = #cause{coding = Coding, location = Location,
 		value = Value, diagnostic = Diagnostic},
 	Cause = cse_codec:cause(cse_codec:cause(Cause)).
+
+ims_sip() ->
+	[{userdata, [{doc, "Decode IMS SIP URI"}]}].
+
+ims_sip(_Config) ->
+	URIString1 = "sip:+14165551234;npdi;rn=+14162220000@ims.mnc001.mcc001.3gppnetwork.org:5060;user=phone",
+	URIMap1 = cse_codec:ims_uri(URIString1),
+	sip = map_get(scheme, URIMap1),
+	"+14165551234" = map_get(user, URIMap1),
+	UserParams = map_get(user_params, URIMap1),
+	true = map_get("npdi", UserParams),
+	"+14162220000"= map_get("rn", UserParams),
+	"ims.mnc001.mcc001.3gppnetwork.org" = map_get(host, URIMap1),
+	5060 = map_get(port, URIMap1),
+	UriParams1 = map_get(uri_params, URIMap1),
+	"phone" = map_get("user", UriParams1),
+	URIString2 = "sips:+14165559876@ims.mnc001.mcc001.3gppnetwork.org;user=phone",
+	URIMap2 = cse_codec:ims_uri(URIString2),
+	sips = map_get(scheme, URIMap2),
+	"ims.mnc001.mcc001.3gppnetwork.org" = map_get(host, URIMap2),
+	UriParams2 = map_get(uri_params, URIMap2),
+	"phone" = map_get("user", UriParams2).
+
+ims_tel() ->
+	[{userdata, [{doc, "Decode IMS Tel URI"}]}].
+
+ims_tel(_Config) ->
+	URIString1 = "tel:+14165551234;npdi;rn=+14162220000",
+	URIMap1 = cse_codec:ims_uri(URIString1),
+	tel = map_get(scheme, URIMap1),
+	"+14165551234" = map_get(user, URIMap1),
+	UserParams = map_get(user_params, URIMap1),
+	true = map_get("npdi", UserParams),
+	"+14162220000"= map_get("rn", UserParams),
+	URIString2 = "tel:+14165559876",
+	URIMap2 = cse_codec:ims_uri(URIString2),
+	"+14165559876" = map_get(user, URIMap2).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

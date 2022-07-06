@@ -25,7 +25,7 @@
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
 		isdn_address/1, tbcd/1, generic_number/1, generic_digits/1,
-		date_time/1, error_code/1, cause/1]).
+		date_time/1, error_code/1, cause/1, ims_uri/1]).
 
 -include("cse_codec.hrl").
 -include_lib("cap/include/CAP-errorcodes.hrl").
@@ -37,8 +37,10 @@
 -type generic_number() :: #generic_number{}.
 -type generic_digits() :: #generic_digits{}.
 -type cause() :: #cause{}.
+-type ims_uri() :: #ims_uri{}.
 -export_types([called_party/0, called_party_bcd/0, calling_party/0,
-		isdn_address/0, generic_number/0, generic_digits/0, cause/0]).
+		isdn_address/0, generic_number/0, generic_digits/0, cause/0,
+		ims_uri/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_codec public API
@@ -355,14 +357,89 @@ cause2(Coding, international, Acc) ->
 cause2(Coding, beyond, Acc) ->
 	<<1:1, Coding:2, 0:1, 7:4, Acc/binary>>.
 
+-spec ims_uri(URIString) -> Result
+	when
+		URIString :: uri_string:uri_string(),
+		Result :: ims_uri() | {error, Reason},
+		Reason :: term().
+%% @doc Parse an IMS address.
+%%
+%% 	An IP Multimedia Subsystem (IMS) address is provided
+%% 	as a SIP URI (RFC3261) or a Tel URI (RFC3966).
+%%
+ims_uri(URIString) when is_list(URIString) ->
+	ims_uri1(uri_string:parse(URIString)).
+%% @hidden
+ims_uri1(#{scheme := "tel", path := Path}) ->
+	[Subscriber | Params] = string:lexemes(Path, [$;]),
+	#{scheme => tel, user => Subscriber, user_params => params(Params)};
+ims_uri1(#{scheme := "sip", path := Path}) ->
+	ims_uri2(Path, #{scheme => sip});
+ims_uri1(#{scheme := "sips", path := Path}) ->
+	ims_uri2(Path, #{scheme => sips});
+ims_uri1({error, Reason, _}) ->
+	{error, Reason}.
+%% @hidden
+ims_uri2(Path, Acc) ->
+	Pred = fun($@) ->
+				false;
+			(_) ->
+				true
+	end,
+	ims_uri3(lists:splitwith(Pred, Path), Acc).
+%% @hidden
+ims_uri3({Rest, []}, Acc) ->
+	NewAcc = Acc#{user => [], user_params => #{}},
+	ims_uri4(Rest, NewAcc);
+ims_uri3({User, Rest}, Acc) ->
+	[Subscriber | Params] = string:lexemes(User, [$;]),
+	NewAcc = Acc#{user => Subscriber, user_params => params(Params)},
+	ims_uri4(tl(Rest), NewAcc).
+%% @hidden
+ims_uri4(Rest, Acc) ->
+	Pred = fun($:) ->
+				false;
+			(_) ->
+				true
+	end,
+	ims_uri5(lists:splitwith(Pred, Rest), Acc).
+%% @hidden
+ims_uri5({Rest, []}, Acc) ->
+	[Host | Params] = string:lexemes(Rest, [$;]),
+	Acc#{host => Host, uri_params => params(Params)};
+ims_uri5({Host, Rest}, Acc) ->
+	[Port | Params] = string:lexemes(tl(Rest), [$;]),
+	Acc#{host => Host, port => list_to_integer(Port),
+			uri_params => params(Params)}.
+
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
+
+-spec params(ParamList) -> Params
+	when
+		ParamList :: [string()],
+		Params :: map().
+%% @doc Create `map()' from parsed parameter list.
+%% @hidden
+params(ParamList) ->
+	params(ParamList, #{}).
+%% @hidden
+params([H | T], Acc) ->
+	case string:lexemes(H, [$=]) of
+		[Param] ->
+			params(T, Acc#{Param => true});
+		[Param, Value] ->
+			params(T, Acc#{Param => Value})
+	end;
+params([], Acc) ->
+	Acc.
 
 -spec digit(Digit) -> Digit
 	when
 		Digit :: 0..14 | $0..$9 | $* | $# | $a..$c.
 %% @doc Convert between integer and ASCII digit.
+%% @hidden
 digit(0) ->
 	$0;
 digit($0) ->
