@@ -37,7 +37,8 @@
 -type statedata() :: #{transport_ref =>  undefined | reference(),
 		address => inet:ip_address(),
 		port => inet:port_number(),
-		options => list()}.
+		options => list(),
+		alarms => list()}.
 
 -define(DIAMETER_SERVICE(A, P), {cse_diameter_service_fsm, A, P}).
 -define(BASE_APPLICATION, cse_diameter_base_application).
