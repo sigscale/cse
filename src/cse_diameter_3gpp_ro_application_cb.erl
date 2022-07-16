@@ -249,7 +249,7 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 		Port :: inet:port_number(),
 		Request :: #'3gpp_ro_CCR'{},
 		Caps :: capabilities(),
-		Result :: packet() | message().
+		Result :: {reply, message()} | {answer_message, 5000..5999}.
 %% @doc Process a received DIAMETER packet.
 %% @private
 %% @todo Dynamic SLP selection.
