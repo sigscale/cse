@@ -64,7 +64,6 @@ suite() ->
 	{require, diameter},
 	{default_config, diameter,
 			[{address, {127,0,0,1}}]},
-   {timetrap, {minutes, 60}},
 	{require, log},
 	{default_config, log,
 			[{logs,
@@ -74,7 +73,8 @@ suite() ->
 	{require, rest},
 	{default_config, rest,
 			[{user, "nrf"},
-			{password, "4yjhe6ydsrh4"}]}].
+			{password, "4yjhe6ydsrh4"}]},
+   {timetrap, {minutes, 60}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
