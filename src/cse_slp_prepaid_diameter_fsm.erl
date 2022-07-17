@@ -56,16 +56,19 @@
 
 -define(RO_APPLICATION_ID, 4).
 -define(IANA_PEN_SigScale, 50386).
+-define(LOGNAME, prepaid).
+-define(SERVICENAME, "Prepaid").
 
 -type state() :: null | collect_information | authorize_origination_attempt |
 		analyse_information | collect_information | routing | o_active |
 		o_alerting| exception.
 
--type statedata() :: #{nrf_profile => atom() | undefined,
+-type statedata() :: #{start := pos_integer(),
+		nrf_profile => atom() | undefined,
 		nrf_uri => string() | undefined,
 		nrf_location => string() | undefined,
 		nrf_reqid => reference() | undefined,
-		imsi => string() | undefined,
+		imsi => [$0..$9]| undefined,
 		direction => originating | terminating | undefined,
 		called =>  [$0..$9] | undefined,
 		calling => [$0..$9] | undefined,
@@ -77,6 +80,7 @@
 		session_id => binary() | undefined,
 		ohost => binary() | undefined,
 		orealm => binary() | undefined,
+		drealm => binary() | undefined,
 		from => pid() | undefined}.
 
 -type mscc() :: #{rg => pos_integer() | undefined,
@@ -123,7 +127,7 @@ callback_mode() ->
 %% @see //stdlib/gen_statem:init/1
 %% @private
 init(_Args) ->
-	{ok, null, #{}}.
+	{ok, null, #{start => erlang:system_time(millisecond)}}.
 
 -spec null(EventType, EventContent, Data) -> Result
 	when
@@ -133,8 +137,11 @@ init(_Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, _EventContent, _Data) ->
+null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
+null(enter = _EventType, OldState, Data) ->
+	log(OldState,Data),
+	{stop, shutdown};
 null({call, _From}, #'3gpp_ro_CCR'{} = _EventContent, Data) ->
 	{ok, Profile} = application:get_env(cse, nrf_profile),
 	{ok, URI} = application:get_env(cse, nrf_uri),
@@ -154,6 +161,7 @@ authorize_origination_attempt(enter, _EventContent, _Data) ->
 authorize_origination_attempt({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 		'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+		'Destination-Realm' = DRealm,
 		'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 		'Service-Context-Id' = SvcContextId,
 		'CC-Request-Number' = RequestNum,
@@ -166,7 +174,7 @@ authorize_origination_attempt({call, From},
 			direction => Direction, calling => CallingDN, called => CalledDN,
 			context => binary_to_list(SvcContextId),
 			mscc => MSCC, session_id => SessionId, ohost => OHost,
-			orealm => ORealm, reqno => RequestNum,
+			orealm => ORealm, drealm => DRealm, reqno => RequestNum,
 			req_type => ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST'},
 	nrf_start(NewData);
 authorize_origination_attempt(cast,
@@ -737,7 +745,7 @@ exception(cast,
 							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 							OHost, ORealm, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
-					{next_state, exception, NewData, Actions1}
+					{next_state, null, NewData, Actions1}
 			end;
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
@@ -748,7 +756,7 @@ exception(cast,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum),
 			Actions2 = [{reply, From, Reply2}],
-			{next_state, exception, NewData, Actions2}
+			{next_state, null, NewData, Actions2}
 	end.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
@@ -1373,4 +1381,28 @@ destination(<<"tel:", Dest/binary>>) ->
 	binary_to_list(Dest);
 destination(Dest) ->
 	binary_to_list(Dest).
+
+-spec log(OldState, Data) -> ok
+	when
+		OldState :: atom(),
+		Data :: statedata().
+%% Log an event.
+%% @hidden
+log(State,
+		#{start := Start,
+		nrf_location := NrfLocation,
+		imsi := IMSI,
+		msisdn := MSISDN,
+		direction := Direction,
+		called :=  Called,
+		calling := Calling,
+		context := Context,
+		session_id := SessionId} = _Data) ->
+	Stop = erlang:system_time(millisecond),
+	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
+	Call = #{direction => Direction, calling => Calling, called => Called},
+	Network = #{context => Context, session_id => SessionId},
+	OCS = #{nrf_location => NrfLocation},
+	cse_log:blog(?LOGNAME, {Start, Stop, ?SERVICENAME,
+			State, Subscriber, Call, Network, OCS}).
 
