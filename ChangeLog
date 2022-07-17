@@ -1,3 +1,11 @@
+2022-07-17  Vance Shipley <vances@sigscale.org>
+
+	* log call event in prepaid slp
+	* ecs codec for slp
+	* reorder variables
+	* include alarms in state data type specification
+	* correct result in type specification
+
 2022-07-06  Vance Shipley <vances@sigscale.org>
 
 	* codec api for ims uri
