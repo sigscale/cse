@@ -24,7 +24,7 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log_codec_ecs  public API
--export([codec_diameter_ecs/1]).
+-export([codec_diameter_ecs/1, codec_prepaid_ecs/1]).
 -export([ecs_base/1, ecs_server/4, ecs_client/2, ecs_network/2,
 		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7]).
 -export([subscriber_id/1]).
@@ -68,7 +68,7 @@
 codec_diameter_ecs({Start, Stop,
 		{_, Address, Port} = _ServiceName,
 		{_PeerRef, Capabilities} = _Peer,
-		Request, Reply}) ->
+		Request, Reply} = _Term) ->
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
 	Duration = integer_to_list((Stop - Start) * 1000000),
@@ -143,6 +143,63 @@ codec_diameter_ecs3({answer_message, ResultCode},
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
 					"event", "session", EventType, Outcome), $}].
+
+-spec codec_prepaid_ecs(Term) -> iodata()
+	when
+		Term :: {Start, Stop, ServiceName,
+				State, Subscriber, Call, Network, OCS},
+		Start :: pos_integer(),
+		Stop :: pos_integer(),
+		ServiceName :: string(),
+		State :: exception | atom(),
+		Subscriber :: #{imsi := IMSI, msisdn := MSISDN},
+		IMSI :: [$0..$9],
+		MSISDN :: [$0..$9],
+		Call :: #{direction := Direction, calling := Calling, called := Called},
+		Direction :: originating | terminating,
+		Calling :: [$0..$9],
+		Called :: [$0..$9],
+		Network :: #{context => Context, session_id => SessionId},
+		Context :: string(),
+		SessionId :: binary(),
+		OCS :: #{nrf_location => NrfLocation},
+		NrfLocation :: string().
+%% @doc Prepaid SLP event CODEC for Elastic Stack logs.
+%%
+%% 	Formats call detail events for consumption by
+%% 	Elastic Stack by providing a JSON format aligned with The Elastic
+%% 	Common Schema (ECS).
+%%
+%% 	Service Logic Processing Programs (SLP) may use this CODEC function
+%%% 	with the {@link //cse/cse_log. cse_log} logging functions and the
+%% 	{@link //cse/cse_log:log_option(). cse_log:log_option()}
+%% 	`{codec, {{@module}, codec_prepaid_ecs}}'.
+%%
+%% 	The `StartTime' should be when the call began and `StopTime' when
+%% 	the call ended. The values are milliseconds since the epoch
+%% 	(e.g. `erlang:system_time(millisecond)'). A duration will be
+%% 	calculated and `event.start', `event.stop' and `event.duration'
+%% 	will be included in the log event.
+%%
+codec_prepaid_ecs({Start, Stop, ServiceName,
+		State, Subscriber, Call, Network, OCS} = _Term) ->
+	StartTime = cse_log:iso8601(Start),
+	StopTime = cse_log:iso8601(Stop),
+	Duration = integer_to_list((Stop - Start) * 1000000),
+	#{imsi := IMSI, msisdn := MSISDN} = Subscriber,
+	Outcome = case State of
+		exception ->
+			"failure";
+		_ ->
+			"success"
+	end,
+	[${,
+			ecs_base(StartTime), $,,
+			ecs_network("ro", "diameter"), $,,
+			ecs_service("sigscale-cse", "slp"), $,,
+			ecs_user(MSISDN, IMSI, []), $,,
+			ecs_event(StartTime, StopTime, Duration,
+					"event", "session", "end", Outcome), $}].
 
 -spec ecs_base(Timestamp) -> iodata()
 	when
@@ -264,6 +321,19 @@ ecs_event(Start, Stop, Duration, Kind, Category, Type, Outcome) ->
 			Estart, $,, Estop, $,, Eduration, $,,
 			Ekind, $,, Ecategory, $,, Etype, $,,
 			Eoutcome, $}].
+
+-spec ecs_user(Name, Id, Domain) -> iodata()
+	when
+		Name :: string(),
+		Id :: string(),
+		Domain :: string().
+%% @doc Elastic Common Schema (ECS): User attributes.
+ecs_user(Name, Id, Domain) ->
+	Uname = [$", "name", $", $:, $", Name, $"],
+	Uid = [$", "id", $", $:, $", Id, $"],
+	Udomain = [$", "domain", $", $:, $", Domain, $"],
+	[$", "user", $", $:, ${,
+			Uname, $,, Uid, $,, Udomain, $}].
 
 -spec subscriber_id(SubscriptionId) -> Result
 	when
