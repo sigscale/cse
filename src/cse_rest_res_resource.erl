@@ -383,8 +383,14 @@ add_resource1(#resource{specification
 		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}} = Resource) ->
 	add_resource_prefix_table(Resource);
 add_resource1(#resource{specification
+		= #resource_spec_ref{id = ?PREFIX_RANGE_TABLE_SPEC}} = Resource) ->
+	add_resource_prefix_table(Resource);
+add_resource1(#resource{specification
 		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource) ->
 	add_resource_prefix_row(Resource);
+add_resource1(#resource{specification
+		= #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC}} = Resource) ->
+	add_resource_range_row(Resource);
 add_resource1(#resource{specification
 		= #resource_spec_ref{id = SpecId}} = Resource) ->
 	add_resource2(Resource, cse:find_resource_spec(SpecId)).
@@ -396,11 +402,17 @@ add_resource2(_Resource, {error, _Reason}) ->
 	{error, 400}.
 %% @hidden
 add_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
+	add_resource_prefix_table(Resource);
+add_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC, rel_type = "based"} | _]) ->
+	add_resource_prefix_table(Resource);
+add_resource3(Resource,
 		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
 	add_resource_prefix_row(Resource);
 add_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
-	add_resource_prefix_table(Resource);
+		[#resource_spec_rel{id = ?PREFIX_RANGE_ROW_SPEC, rel_type = "based"} | _]) ->
+	add_resource_range_row(Resource);
 add_resource3(Resource, [_ | T]) ->
 	add_resource3(Resource, T);
 add_resource3(Resource, []) ->
@@ -429,11 +441,47 @@ add_resource_prefix_row(#resource{related = Related} = Resource) ->
 			add_resource_prefix_row(Table, Resource);
 		false ->
 			{error, 400}
-	end.
+	end;
+add_resource_prefix_row(_Resource) ->
+	{error, 400}.
 %% @hidden
-add_resource_prefix_row(Table, #resource{
-		specification = #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC},
-		characteristic = Chars} = Resource) ->
+add_resource_prefix_row(Table,
+		#resource{characteristic = Chars} = Resource) ->
+	{Prefix, Value} = case lists:keyfind("prefix",
+			#resource_char.name, Chars) of
+		#resource_char{value = P} ->
+			case lists:keyfind("value",
+					#resource_char.name, Chars) of
+				#resource_char{value = V} ->
+					{P, V};
+				false ->
+					{error, 400}
+			end;
+		false ->
+			{error, 400}
+	end,
+	case cse_gtt:insert(Table, Prefix, Value) of
+		{ok, #gtt{}} ->
+			add_resource_result(cse:add_resource(Resource));
+		{error, already_exists} ->
+			{error, 409};
+		{error, _Reason} ->
+			{error, 400}
+	end.
+
+%% @hidden
+add_resource_range_row(#resource{related = Related} = Resource) ->
+	case lists:keyfind("contained", #resource_rel.rel_type, Related) of
+		#resource_rel{name = Table} ->
+			add_resource_range_row(Table, Resource);
+		false ->
+			{error, 400}
+	end;
+add_resource_range_row(_Resource) ->
+	{error, 400}.
+%% @hidden
+add_resource_range_row(Table,
+		#resource{characteristic = Chars} = Resource) ->
 	{Start, End, Value} = case lists:keyfind("start",
 			#resource_char.name, Chars) of
 		#resource_char{value = S} ->
@@ -457,29 +505,6 @@ add_resource_prefix_row(Table, #resource{
 		ok ->
 			add_resource_result(cse:add_resource(Resource));
 		{error, conflict} ->
-			{error, 409};
-		{error, _Reason} ->
-			{error, 400}
-	end;
-add_resource_prefix_row(Table,
-		#resource{characteristic = Chars} = Resource) ->
-	{Prefix, Value} = case lists:keyfind("prefix",
-			#resource_char.name, Chars) of
-		#resource_char{value = P} ->
-			case lists:keyfind("value",
-					#resource_char.name, Chars) of
-				#resource_char{value = V} ->
-					{P, V};
-				false ->
-					{error, 400}
-			end;
-		false ->
-			{error, 400}
-	end,
-	case cse_gtt:insert(Table, Prefix, Value) of
-		{ok, #gtt{}} ->
-			add_resource_result(cse:add_resource(Resource));
-		{error, already_exists} ->
 			{error, 409};
 		{error, _Reason} ->
 			{error, 400}
