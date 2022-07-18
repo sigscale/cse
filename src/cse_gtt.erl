@@ -80,8 +80,8 @@ new(Table, Options) when is_list(Options) ->
 		Options :: [{Copies, Nodes}],
 		Copies :: disc_copies | disc_only_copies | ram_copies,
 		Nodes :: [atom()],
-		Items :: [{Number, Value}],
-		Number :: string() | integer(),
+		Items :: [{Address, Value}],
+		Address :: string(),
 		Value :: term().
 %% @doc Create a new table and populate it from the supplied list of items.
 %% 	This is the quickest way to build a new table as it performs
@@ -100,13 +100,11 @@ new(Table, Options, Items) when is_list(Options), is_list(Items) ->
 			[{attributes, record_info(fields, gtt)},
 			{record_name, gtt}]),
 	Threshold = mnesia:system_info(dump_log_write_threshold) - 1,
-	Ftran = fun(F, [{Number, Value} | T], N) when is_integer(Number) ->
-				F(F, [{integer_to_list(Number), Value} | T], N);
-			(F, [{Number, _Value} | _T] = L, N) when length(Number) > N ->
+	Ftran = fun(F, [{Address, _Value} | _T] = L, N) when length(Address) > N ->
 				mnesia:dump_log(),
 				F(F, L, Threshold);
-			(F, [{Number, Value} | T], N) ->
-				{Writes, _} = insert(Table, Number, Value, []),
+			(F, [{Address, Value} | T], N) ->
+				{Writes, _} = insert(Table, Address, Value, []),
 				F(F, T, N - Writes);
 			(_F, [], _N) ->
 				ok
@@ -123,23 +121,23 @@ new(Table, Options, Items) when is_list(Options), is_list(Items) ->
 			mnesia:sync_dirty(Ftran, [Ftran, Items, Threshold])
 	end.
 
--spec insert(Table, Number, Value) -> Result
+-spec insert(Table, Address, Value) -> Result
 	when
 		Table :: atom() | string(),
-		Number :: string(),
+		Address :: string(),
 		Value :: term(),
 		Result :: {ok, #gtt{}}.
 %% @doc Insert a table entry.
 %%
-insert(Table, Number, Value) when is_list(Table) ->
-	insert(list_to_existing_atom(Table), Number, Value);
-insert(Table, Number, Value) when is_atom(Table), is_list(Number) ->
+insert(Table, Address, Value) when is_list(Table) ->
+	insert(list_to_existing_atom(Table), Address, Value);
+insert(Table, Address, Value) when is_atom(Table), is_list(Address) ->
 	F = fun() ->
-			case mnesia:read(Table, Number) of
+			case mnesia:read(Table, Address) of
 				[#gtt{}] ->
 					mnesia:abort(already_exists);
 				[] ->
-					insert(Table, Number, Value, [])
+					insert(Table, Address, Value, [])
 			end
 	end,
 	case mnesia:transaction(F) of
@@ -152,8 +150,8 @@ insert(Table, Number, Value) when is_atom(Table), is_list(Number) ->
 -spec insert(Table, Items) -> ok
 	when
 		Table :: atom() | string(),
-		Items :: [{Number, Value}],
-		Number :: string(),
+		Items :: [{Address, Value}],
+		Address :: string(),
 		Value :: term().
 %% @doc Insert a list of table entries.
 %% 	The entries are inserted as a transaction, either all entries
@@ -163,7 +161,7 @@ insert(Table, Number, Value) when is_atom(Table), is_list(Number) ->
 insert(Table, Items) when is_list(Table) ->
 	insert(list_to_existing_atom(Table), Items);
 insert(Table, Items) when is_atom(Table), is_list(Items)  ->
-	InsFun = fun({Number, Value}) -> insert(Table, Number, Value) end,
+	InsFun = fun({Address, Value}) -> insert(Table, Address, Value) end,
 	TransFun = fun() -> lists:foreach(InsFun, Items) end,
 	case mnesia:transaction(TransFun) of
 		{atomic, ok} ->
@@ -172,19 +170,19 @@ insert(Table, Items) when is_atom(Table), is_list(Items)  ->
 			exit(Reason)
 	end.
 
--spec delete(Table, Number) -> ok
+-spec delete(Table, Address) -> ok
 	when
 		Table :: atom() | string(),
-		Number :: string().
+		Address :: string().
 %% @doc Delete a table entry.
 %%
-delete(Table, Number) when is_list(Table) ->
-	delete(list_to_existing_atom(Table), Number);
-delete(Table, Number) when is_atom(Table), is_list(Number) ->
+delete(Table, Address) when is_list(Table) ->
+	delete(list_to_existing_atom(Table), Address);
+delete(Table, Address) when is_atom(Table), is_list(Address) ->
 	Fun = fun() ->
-			case mnesia:read(Table, Number) of
+			case mnesia:read(Table, Address) of
 				[#gtt{} = Gtt] ->
-					{mnesia:delete(Table, Number, write), Gtt};
+					{mnesia:delete(Table, Address, write), Gtt};
 				[] ->
 					mnesia:abort(not_found)
 			end
@@ -196,15 +194,15 @@ delete(Table, Number) when is_atom(Table), is_list(Number) ->
 			exit(Reason)
 	end.
 
--spec lookup_first(Table, Number) -> Value
+-spec lookup_first(Table, Address) -> Value
 	when
 		Table :: atom() | string(),
-		Number :: string(),
+		Address :: string(),
 		Value :: term().
 %% @doc Lookup the value of the first matching table entry.
 %%
-lookup_first(Table, Number) when is_list(Table) ->
-	lookup_first(list_to_existing_atom(Table), Number);
+lookup_first(Table, Address) when is_list(Table) ->
+	lookup_first(list_to_existing_atom(Table), Address);
 lookup_first(Table, [Digit | Rest]) when is_atom(Table) ->
 	Fun1 = fun(F, [H | T], [#gtt{num = Prefix, value = undefined}]) ->
 				F(F, T, mnesia:read(Table, Prefix ++ [H], read));
@@ -216,16 +214,16 @@ lookup_first(Table, [Digit | Rest]) when is_atom(Table) ->
 	Fun2 = fun() -> Fun1(Fun1, Rest, mnesia:read(Table, [Digit], read)) end,
 	mnesia:ets(Fun2).
 
--spec lookup_last(Table, Number) -> Value
+-spec lookup_last(Table, Address) -> Value
 	when
 		Table :: atom() | string(),
-		Number :: string(),
+		Address :: string(),
 		Value :: term().
 %% @doc Lookup the value of the longest matching table entry.
 %%
-lookup_last(Table, Number) when is_list(Table) ->
-	lookup_last(list_to_existing_atom(Table), Number);
-lookup_last(Table, Number) when is_atom(Table), is_list(Number) ->
+lookup_last(Table, Address) when is_list(Table) ->
+	lookup_last(list_to_existing_atom(Table), Address);
+lookup_last(Table, Address) when is_atom(Table), is_list(Address) ->
 	Fun1 = fun(F, [_ | T], []) ->
 				F(F, T, mnesia:read(Table, lists:reverse(T), read));
 			(F, [_ | T], [#gtt{value = undefined}]) ->
@@ -236,19 +234,19 @@ lookup_last(Table, Number) when is_atom(Table), is_list(Number) ->
 				undefined
 	end,
 	Fun2 = fun() ->
-				Fun1(Fun1, lists:reverse(Number), mnesia:read(Table, Number, read))
+				Fun1(Fun1, lists:reverse(Address), mnesia:read(Table, Address, read))
 	end,
 	mnesia:ets(Fun2).
 
--spec lookup_all(Table, Number) -> Value
+-spec lookup_all(Table, Address) -> Value
 	when
 		Table :: atom() | string(),
-		Number :: string(),
+		Address :: string(),
 		Value :: term().
 %% @doc Lookup the values of matching table entries.
 %%
-lookup_all(Table, Number) when is_list(Table) ->
-	lookup_all(list_to_existing_atom(Table), Number);
+lookup_all(Table, Address) when is_list(Table) ->
+	lookup_all(list_to_existing_atom(Table), Address);
 lookup_all(Table, [Digit | Rest]) when is_atom(Table) ->
 	Fun1 = fun(F, [H | T], [#gtt{num = Prefix, value = undefined}], Acc) ->
 				F(F, T, mnesia:read(Table, Prefix ++ [H], read), Acc);
@@ -269,8 +267,6 @@ lookup_all(Table, [Digit | Rest]) when is_atom(Table) ->
 %%
 backup([H | _] = Tables, File) when is_list(H) ->
 	backup([list_to_existing_atom(T) || T <- Tables], File);
-backup(Tables, File) when is_list(Tables), is_integer(hd(Tables)) ->
-	backup(list_to_existing_atom(Tables), File);
 backup(Tables, File) when is_atom(Tables) ->
 	backup([Tables], File);
 backup(Tables, File) when is_list(Tables), is_list(File) ->
@@ -371,14 +367,12 @@ clear_table(Table) when is_atom(Table) ->
 -spec add_range(Table, Start, End, Value) -> Result
 	when
 		Table :: atom() | string(),
-		Start :: [$0..$9] | integer(),
-		End :: [$0..$9] | integer(),
+		Start :: [$0..$9],
+		End :: [$0..$9],
 		Value :: any(),
 		Result :: ok | {error, Reason},
 		Reason :: conflict | term().
 %% @doc Add prefixes to cover range.
-add_range(Table, Start, End, Value) when is_integer(Start), is_integer(End) ->
-	add_range(Table, integer_to_list(Start), integer_to_list(End), Value);
 add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =< End ->
 	case catch range(Start, End) of
 		[] ->
@@ -397,13 +391,11 @@ add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =<
 -spec delete_range(Table, Start, End) -> Result
 	when
 		Table :: atom() | string(),
-		Start :: [$0..$9] | integer(),
-		End :: [$0..$9] | integer(),
+		Start :: [$0..$9],
+		End :: [$0..$9],
 		Result :: ok | {error, Reason},
 		Reason :: term().
 %% @doc Delete prefixes covering the range.
-delete_range(Table, Start, End) when is_integer(Start), is_integer(End) ->
-	delete_range(Table, integer_to_list(Start), integer_to_list(End));
 delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End ->
 	case catch range(Start, End) of
 	[] ->
@@ -418,32 +410,30 @@ delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec insert(Table, Number, Value, []) -> {NumWrites, #gtt{}}
+-spec insert(Table, Address, Value, []) -> {NumWrites, #gtt{}}
 	when
 		Table :: atom(),
-		Number :: list() | integer(),
+		Address :: list(),
 		Value :: term(),
 		NumWrites :: integer().
 %% @hidden
 %%
-insert(Table, Number, Value, []) when is_integer(Number) ->
-	insert(Table, integer_to_list(Number), Value, 0, []);
-insert(Table, Number, Value, []) ->
-	insert(Table, Number, Value, 0, []).
+insert(Table, Address, Value, []) ->
+	insert(Table, Address, Value, 0, []).
 %% @hidden
 insert(Table, [H | []], Value, NumWrites, Acc) ->
-	Number =  Acc ++ [H],
-	Gtt = #gtt{num = Number, value = Value},
+	Address =  Acc ++ [H],
+	Gtt = #gtt{num = Address, value = Value},
 	mnesia:write(Table, Gtt, write),
 	{NumWrites + 1, Gtt};
 insert(Table, [H | T], Value, NumWrites, Acc) ->
-	Number =  Acc ++ [H],
-	case mnesia:read(Table, Number, write) of
+	Address =  Acc ++ [H],
+	case mnesia:read(Table, Address, write) of
 		[#gtt{}] ->
-			insert(Table, T, Value, NumWrites, Number);
+			insert(Table, T, Value, NumWrites, Address);
 		[] ->
-			mnesia:write(Table, #gtt{num = Number}, write),
-			insert(Table, T, Value, NumWrites + 1, Number)
+			mnesia:write(Table, #gtt{num = Address}, write),
+			insert(Table, T, Value, NumWrites + 1, Address)
 	end.
 
 -spec range(Start, End) -> Prefixes
