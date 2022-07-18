@@ -591,7 +591,7 @@ static_spec(?PREFIX_TABLE_SPEC = SpecId) ->
 		href = ?specPath ++ SpecId,
 		name = "PrefixTable",
 		description = "Prefix table specification",
-		version = "1.r",
+		version = "1.0",
 		last_modified = LM,
 		category = "PrefixTable"
 	};
