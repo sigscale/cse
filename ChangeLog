@@ -1,9 +1,11 @@
 2022-07-18  Vance Shipley <vances@sigscale.org>
 
-	 * handle specifications based on prefix range specification
-	 * cse_gtt:insert/2,3 return error, not exit
-	 * remove integer support from gtt
-	 * typo in version number of prefix table spec
+	* remove unreached clauses
+	* cse_codec:ims_uri/1 returns record, not map
+	* handle specifications based on prefix range specification
+	* cse_gtt:insert/2,3 return error, not exit
+	* remove integer support from gtt
+	* typo in version number of prefix table spec
 
 2022-07-17  Vance Shipley <vances@sigscale.org>
 
