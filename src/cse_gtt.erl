@@ -126,7 +126,8 @@ new(Table, Options, Items) when is_list(Options), is_list(Items) ->
 		Table :: atom() | string(),
 		Address :: string(),
 		Value :: term(),
-		Result :: {ok, #gtt{}}.
+		Result :: {ok, #gtt{}} | {error, Reason},
+		Reason :: already_exists | term().
 %% @doc Insert a table entry.
 %%
 insert(Table, Address, Value) when is_list(Table) ->
@@ -144,15 +145,17 @@ insert(Table, Address, Value) when is_atom(Table), is_list(Address) ->
 		{atomic, {_NumWrites, Gtt}} ->
 			{ok, Gtt};
 		{aborted, Reason} ->
-			exit(Reason)
+			{error, Reason}
 	end.
 
--spec insert(Table, Items) -> ok
+-spec insert(Table, Items) -> Result
 	when
 		Table :: atom() | string(),
 		Items :: [{Address, Value}],
 		Address :: string(),
-		Value :: term().
+		Value :: term(),
+		Result :: ok | {error, Reason},
+		Reason :: already_exists | term().
 %% @doc Insert a list of table entries.
 %% 	The entries are inserted as a transaction, either all entries
 %% 	are added to the table or, if an entry insertion fails, none at
@@ -161,13 +164,22 @@ insert(Table, Address, Value) when is_atom(Table), is_list(Address) ->
 insert(Table, Items) when is_list(Table) ->
 	insert(list_to_existing_atom(Table), Items);
 insert(Table, Items) when is_atom(Table), is_list(Items)  ->
-	InsFun = fun({Address, Value}) -> insert(Table, Address, Value) end,
-	TransFun = fun() -> lists:foreach(InsFun, Items) end,
+	InsFun = fun({Address, Value}) ->
+			case mnesia:read(Table, Address) of
+				[#gtt{}] ->
+					mnesia:abort(already_exists);
+				[] ->
+					insert(Table, Address, Value, [])
+			end
+	end,
+	TransFun = fun() ->
+				lists:foreach(InsFun, Items)
+	end,
 	case mnesia:transaction(TransFun) of
 		{atomic, ok} ->
 			ok;
 		{aborted, Reason} ->
-			exit(Reason)
+			{error, Reason}
 	end.
 
 -spec delete(Table, Address) -> ok
@@ -378,10 +390,10 @@ add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =<
 		[] ->
 			[];
 		Seq when length(Seq) > 0 ->
-			case catch insert(Table, [{X, Value} || X <- Seq]) of
+			case insert(Table, [{X, Value} || X <- Seq]) of
 				ok ->
 					ok;
-				{'EXIT', already_exists} ->
+				{error, already_exists} ->
 					{error, conflict}
 			end;
 		{'EXIT', Reason} ->
@@ -398,12 +410,12 @@ add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =<
 %% @doc Delete prefixes covering the range.
 delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End ->
 	case catch range(Start, End) of
-	[] ->
-		[];
-	Seq when length(Seq) > 0 ->
-		[delete(Table, X) || X <- Seq];
-	{'EXIT', Reason} ->
-		{error, Reason}
+		[] ->
+			[];
+		Seq when length(Seq) > 0 ->
+			[delete(Table, X) || X <- Seq];
+		{'EXIT', Reason} ->
+			{error, Reason}
 	end.
 
 %%----------------------------------------------------------------------
@@ -413,7 +425,7 @@ delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End
 -spec insert(Table, Address, Value, []) -> {NumWrites, #gtt{}}
 	when
 		Table :: atom(),
-		Address :: list(),
+		Address :: string(),
 		Value :: term(),
 		NumWrites :: integer().
 %% @hidden
@@ -438,9 +450,9 @@ insert(Table, [H | T], Value, NumWrites, Acc) ->
 
 -spec range(Start, End) -> Prefixes
 	when
-		Start :: string(),
-		End :: string(),
-		Prefixes :: [string()].
+		Start :: [$0..$9],
+		End :: [$0..$9],
+		Prefixes :: [[$0..$9]].
 %% @doc Find prefixes covering range.
 range(Start, End) when is_list(Start), is_list(End),
 		length(Start) =:= length(End), Start =< End ->

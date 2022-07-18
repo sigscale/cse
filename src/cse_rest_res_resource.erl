@@ -375,7 +375,7 @@ add_resource(RequestBody) ->
 		#resource{} = Resource ->
 			add_resource1(Resource)
 	catch
-		_:_Reason ->
+		_Error:_Reason ->
 			{error, 400}
 	end.
 %% @hidden
@@ -434,15 +434,26 @@ add_resource_prefix_row(#resource{related = Related} = Resource) ->
 add_resource_prefix_row(Table, #resource{
 		specification = #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC},
 		characteristic = Chars} = Resource) ->
-	F = fun(CharName) ->
-			case lists:keyfind(CharName, #resource_char.name, Chars) of
-				#resource_char{value = Value} ->
-					Value;
+	{Start, End, Value} = case lists:keyfind("start",
+			#resource_char.name, Chars) of
+		#resource_char{value = S} ->
+			case lists:keyfind("end",
+					#resource_char.name, Chars) of
+				#resource_char{value = E} ->
+					case lists:keyfind("value",
+							#resource_char.name, Chars) of
+						#resource_char{value = V} ->
+							{S, E, V};
+						false ->
+							{error, 400}
+					end;
 				false ->
 					{error, 400}
-			end
+			end;
+		false ->
+			{error, 400}
 	end,
-	case cse_gtt:add_range(Table, F("start"), F("end"), F("value")) of
+	case cse_gtt:add_range(Table, Start, End, Value) of
 		ok ->
 			add_resource_result(cse:add_resource(Resource));
 		{error, conflict} ->
@@ -452,17 +463,27 @@ add_resource_prefix_row(Table, #resource{
 	end;
 add_resource_prefix_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
-	F = fun(CharName) ->
-				case lists:keyfind(CharName, #resource_char.name, Chars) of
-					#resource_char{value = Value} ->
-						Value;
-					false ->
-						{error, 400}
-				end
+	{Prefix, Value} = case lists:keyfind("prefix",
+			#resource_char.name, Chars) of
+		#resource_char{value = P} ->
+			case lists:keyfind("value",
+					#resource_char.name, Chars) of
+				#resource_char{value = V} ->
+					{P, V};
+				false ->
+					{error, 400}
+			end;
+		false ->
+			{error, 400}
 	end,
-	Prefix = F("prefix"),
-	{ok, #gtt{}} = cse_gtt:insert(Table, Prefix, F("value")),
-	add_resource_result(cse:add_resource(Resource)).
+	case cse_gtt:insert(Table, Prefix, Value) of
+		{ok, #gtt{}} ->
+			add_resource_result(cse:add_resource(Resource));
+		{error, already_exists} ->
+			{error, 409};
+		{error, _Reason} ->
+			{error, 400}
+	end.
 
 %% @hidden
 add_resource_result({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
