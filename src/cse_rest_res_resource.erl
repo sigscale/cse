@@ -441,9 +441,7 @@ add_resource_prefix_row(#resource{related = Related} = Resource) ->
 			add_resource_prefix_row(Table, Resource);
 		false ->
 			{error, 400}
-	end;
-add_resource_prefix_row(_Resource) ->
-	{error, 400}.
+	end.
 %% @hidden
 add_resource_prefix_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
@@ -476,9 +474,7 @@ add_resource_range_row(#resource{related = Related} = Resource) ->
 			add_resource_range_row(Table, Resource);
 		false ->
 			{error, 400}
-	end;
-add_resource_range_row(_Resource) ->
-	{error, 400}.
+	end.
 %% @hidden
 add_resource_range_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
