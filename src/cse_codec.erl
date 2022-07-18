@@ -372,11 +372,11 @@ ims_uri(URIString) when is_list(URIString) ->
 %% @hidden
 ims_uri1(#{scheme := "tel", path := Path}) ->
 	[Subscriber | Params] = string:lexemes(Path, [$;]),
-	#{scheme => tel, user => Subscriber, user_params => params(Params)};
+	#ims_uri{scheme = tel, user = Subscriber, user_params = params(Params)};
 ims_uri1(#{scheme := "sip", path := Path}) ->
-	ims_uri2(Path, #{scheme => sip});
+	ims_uri2(Path, #ims_uri{scheme = sip});
 ims_uri1(#{scheme := "sips", path := Path}) ->
-	ims_uri2(Path, #{scheme => sips});
+	ims_uri2(Path, #ims_uri{scheme = sips});
 ims_uri1({error, Reason, _}) ->
 	{error, Reason}.
 %% @hidden
@@ -389,11 +389,10 @@ ims_uri2(Path, Acc) ->
 	ims_uri3(lists:splitwith(Pred, Path), Acc).
 %% @hidden
 ims_uri3({Rest, []}, Acc) ->
-	NewAcc = Acc#{user => [], user_params => #{}},
-	ims_uri4(Rest, NewAcc);
+	ims_uri4(Rest, Acc);
 ims_uri3({User, Rest}, Acc) ->
 	[Subscriber | Params] = string:lexemes(User, [$;]),
-	NewAcc = Acc#{user => Subscriber, user_params => params(Params)},
+	NewAcc = Acc#ims_uri{user = Subscriber, user_params = params(Params)},
 	ims_uri4(tl(Rest), NewAcc).
 %% @hidden
 ims_uri4(Rest, Acc) ->
@@ -406,11 +405,11 @@ ims_uri4(Rest, Acc) ->
 %% @hidden
 ims_uri5({Rest, []}, Acc) ->
 	[Host | Params] = string:lexemes(Rest, [$;]),
-	Acc#{host => Host, uri_params => params(Params)};
+	Acc#ims_uri{host = Host, uri_params = params(Params)};
 ims_uri5({Host, Rest}, Acc) ->
 	[Port | Params] = string:lexemes(tl(Rest), [$;]),
-	Acc#{host => Host, port => list_to_integer(Port),
-			uri_params => params(Params)}.
+	Acc#ims_uri{host = Host, port = list_to_integer(Port),
+			uri_params = params(Params)}.
 
 %%----------------------------------------------------------------------
 %%  internal functions

@@ -74,9 +74,9 @@
 %% 3GPP TS 23.228 4.3
 -record(ims_uri,
 		{scheme :: sip | sips | tel,
-		user :: string(),
-		user_params :: map(),
-		host :: string(),
-		port :: pos_integer(),
-		uri_params :: map()}).
+		user = [] :: string(),
+		user_params = #{} :: map(),
+		host = [] :: string(),
+		port :: pos_integer() | undefined,
+		uri_params = #{} :: map()}).
 

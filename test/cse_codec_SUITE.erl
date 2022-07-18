@@ -248,21 +248,15 @@ ims_sip() ->
 
 ims_sip(_Config) ->
 	URIString1 = "sip:+14165551234;npdi;rn=+14162220000@ims.mnc001.mcc001.3gppnetwork.org:5060;user=phone",
-	URIMap1 = cse_codec:ims_uri(URIString1),
-	sip = map_get(scheme, URIMap1),
-	"+14165551234" = map_get(user, URIMap1),
-	UserParams = map_get(user_params, URIMap1),
+	#ims_uri{scheme = sip, user = "+14165551234", uri_params = UriParams1,
+		host = "ims.mnc001.mcc001.3gppnetwork.org", port = 5060,
+		user_params = UserParams} = cse_codec:ims_uri(URIString1),
 	true = map_get("npdi", UserParams),
 	"+14162220000"= map_get("rn", UserParams),
-	"ims.mnc001.mcc001.3gppnetwork.org" = map_get(host, URIMap1),
-	5060 = map_get(port, URIMap1),
-	UriParams1 = map_get(uri_params, URIMap1),
 	"phone" = map_get("user", UriParams1),
 	URIString2 = "sips:+14165559876@ims.mnc001.mcc001.3gppnetwork.org;user=phone",
-	URIMap2 = cse_codec:ims_uri(URIString2),
-	sips = map_get(scheme, URIMap2),
-	"ims.mnc001.mcc001.3gppnetwork.org" = map_get(host, URIMap2),
-	UriParams2 = map_get(uri_params, URIMap2),
+	#ims_uri{scheme = sips, user = "+14165559876", uri_params = UriParams2,
+		host = "ims.mnc001.mcc001.3gppnetwork.org"} = cse_codec:ims_uri(URIString2),
 	"phone" = map_get("user", UriParams2).
 
 ims_tel() ->
@@ -270,15 +264,12 @@ ims_tel() ->
 
 ims_tel(_Config) ->
 	URIString1 = "tel:+14165551234;npdi;rn=+14162220000",
-	URIMap1 = cse_codec:ims_uri(URIString1),
-	tel = map_get(scheme, URIMap1),
-	"+14165551234" = map_get(user, URIMap1),
-	UserParams = map_get(user_params, URIMap1),
+	#ims_uri{scheme = tel, user = "+14165551234",
+			user_params = UserParams} = cse_codec:ims_uri(URIString1),
 	true = map_get("npdi", UserParams),
 	"+14162220000"= map_get("rn", UserParams),
 	URIString2 = "tel:+14165559876",
-	URIMap2 = cse_codec:ims_uri(URIString2),
-	"+14165559876" = map_get(user, URIMap2).
+	#ims_uri{user = "+14165559876"} = cse_codec:ims_uri(URIString2).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
