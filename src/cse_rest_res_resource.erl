@@ -24,8 +24,8 @@
 % export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1,
-		delete_resource_spec/1, resource_spec/1]).
--export([get_resource/1, get_resource/2, add_resource/1, delete_resource/1,
+		delete_resource_spec/2, resource_spec/1]).
+-export([get_resource/1, get_resource/2, add_resource/1, delete_resource/2,
 		resource/1]).
 % export cse_rest_res_resource private API
 -export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1,
@@ -167,22 +167,28 @@ add_resource_spec2({ok, #resource_spec{href = Href,
 add_resource_spec2({error, _Reason}) ->
 	{error, 400}.
 
--spec delete_resource_spec(Id) -> Result
+-spec delete_resource_spec(Id, Query) -> Result
 	when
 		Id :: string(),
+		Query :: [{unicode:chardata(), unicode:chardata() | true}],
 		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
 				| {error, ErrorCode :: integer()} .
-%% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
-%%    request to remove a table entry.
-delete_resource_spec(Id) when Id == ?PREFIX_TABLE_SPEC;
-		Id == ?PREFIX_ROW_SPEC ->
-	{error, 400};
-delete_resource_spec(Id) ->
+%% @doc Respond to `DELETE /resourceCatalogyManagement/v4/resourceSpecification/{id}'
+%%    request to remove a Resource Specification.
+delete_resource_spec(Id, _Query)
+		when Id == ?PREFIX_TABLE_SPEC;
+		Id == ?PREFIX_ROW_SPEC;
+		Id == ?PREFIX_RANGE_TABLE_SPEC;
+		Id == ?PREFIX_RANGE_ROW_SPEC ->
+	{error, 405};
+delete_resource_spec(Id, []) ->
 	case cse:delete_resource_spec(Id) of
 		ok ->
 			{ok, [], []};
+		{error, not_found} ->
+			{error, 404};
 		{error, _Reason} ->
-			{error, 400}
+			{error, 500}
 	end.
 
 -spec get_resource(Id) -> Result
@@ -516,14 +522,15 @@ add_resource_result({error, _Reason}) ->
 % @todo problem report
 	{error, 400}.
 
--spec delete_resource(Id) -> Result
+-spec delete_resource(Id, Query) -> Result
    when
       Id :: string(),
+		Query :: [{unicode:chardata(), unicode:chardata() | true}],
       Result :: {ok, Headers :: [tuple()], Body :: iolist()}
             | {error, ErrorCode :: integer()} .
 %% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
 %%    request to remove a table row.
-delete_resource(Id) ->
+delete_resource(Id, []) ->
 	try
 		delete_resource1(cse:find_resource(Id))
 	catch

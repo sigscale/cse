@@ -64,16 +64,6 @@
 
 -include_lib("inets/include/httpd.hrl").
 
--ifdef(OTP_RELEASE).
-	-if(?OTP_RELEASE > 23).
-		-define(URI_DECODE(URI), uri_string:percent_decode(URI)).
-	-else.
-		-define(URI_DECODE(URI), http_uri:decode(URI)).
-	-endif.
--else.
-	-define(URI_DECODE(URI), http_uri:decode(URI)).
--endif.
-
 -spec do(ModData) -> Result when
 	ModData :: #mod{},
 	Result :: {proceed, OldData} | {proceed, NewData} | {break, NewData} | done,
@@ -97,8 +87,7 @@
 	Fun :: fun((Arg) -> sent| close | Body),
 	Arg :: [term()].
 %% @doc Erlang web server API callback function.
-do(#mod{method = Method, parsed_header = RequestHeaders, request_uri = Uri,
-		entity_body = Body, data = Data} = ModData) ->
+do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 	case Method of
 		"PATCH" ->
 			case proplists:get_value(status, Data) of
@@ -107,12 +96,8 @@ do(#mod{method = Method, parsed_header = RequestHeaders, request_uri = Uri,
 				undefined ->
 					case proplists:get_value(response, Data) of
 						undefined ->
-							Path = ?URI_DECODE(Uri),
 							{_, Resource} = lists:keyfind(resource, 1, Data),
-							{_, ContentType} = lists:keyfind(content_type, 1, Data),
-							Etag = get_etag(RequestHeaders),
-							do_patch(ContentType, Body, Resource,
-									ModData, Etag, string:tokens(Path, "/"));
+							parse_query(Resource, ModData, uri_string:parse(Uri));
 						_Response ->
 							{proceed,  Data}
 					end
@@ -121,17 +106,38 @@ do(#mod{method = Method, parsed_header = RequestHeaders, request_uri = Uri,
 			{proceed, Data}
 	end.
 
-get_etag(Headers) ->
-	case lists:keyfind("if-match", 1, Headers) of
-		{_, Etag} ->
-			Etag;
-		false ->
-			undefined
-	end.
+%% @hidden
+parse_query(Resource,
+		#mod{parsed_header = RequestHeaders} = ModData,
+		#{path := Path, query := Query}) ->
+	do_patch(Resource, ModData,
+			get_etag(RequestHeaders),
+			string:lexemes(Path, [$/]),
+			uri_string:dissect_query(Query));
+parse_query(Resource,
+		#mod{parsed_header = RequestHeaders} = ModData,
+		#{path := Path}) ->
+	do_patch(Resource, ModData,
+			get_etag(RequestHeaders),
+			string:lexemes(Path, [$/]), []);
+parse_query(_, #mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, _) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
+					"rfc7231#section-6.5.4",
+			title => "Not Found",
+			detail => "No resource exists at the path provided",
+			code => "", status => 404},
+	{ContentType, ResponseBody}
+			= cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 404, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 404, Size}} | Data]}.
 
 %% @hidden
-do_patch(#mod{parsed_header = RequestHeaders,
-		data = Data} = ModData, _, _, _, _, _) ->
+do_patch(_Resource,
+		#mod{parsed_header = RequestHeaders, data = Data} = ModData,
+		_Etag, _Path, _Query) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
 			title => "Not Found",
 			detail => "No resource exists at the path provided",
@@ -253,4 +259,13 @@ send(#mod{socket = Socket, socket_type = SocketType} = Info,
 		StatusCode, Headers, ResponseBody) ->
 	httpd_response:send_header(Info, StatusCode, Headers),
 	httpd_socket:deliver(SocketType, Socket, ResponseBody).
+
+%% @hidden
+get_etag(Headers) ->
+	case lists:keyfind("if-match", 1, Headers) of
+		{_, Etag} ->
+			Etag;
+		false ->
+			undefined
+	end.
 

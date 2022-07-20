@@ -138,8 +138,7 @@
 	Fun :: fun((Arg) -> sent| close | Body),
 	Arg :: [term()].
 %% @doc Erlang web server API callback function.
-do(#mod{method = Method, parsed_header = _Headers,
-		request_uri = Uri, data = Data} = ModData) ->
+do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 	case Method of
 		"GET" ->
 			case proplists:get_value(status, Data) of
@@ -153,30 +152,24 @@ do(#mod{method = Method, parsed_header = _Headers,
 									{proceed, Data};
 								{_, Resource} ->
 									parse_query(Resource, ModData,
-											httpd_util:split_path(Uri))
+											uri_string:parse(Uri))
 							end;
 						_Response ->
 							{proceed,  Data}
 					end
 			end;
-		_ ->
+		_Other ->
 			{proceed, Data}
 	end.
 
 %% @hidden
-parse_query(Resource, ModData, {Path, []})
-		when is_list(Path) ->
-	do_get(Resource, ModData, string:tokens(Path, "/"), []);
-parse_query(Resource, ModData, {Path, "?" ++ Query})
-		when is_list(Path), is_list(Query) ->
-	do_get(Resource, ModData, string:tokens(Path, "/"),
-		cse_rest:parse_query(Query));
-parse_query(Resource, ModData, {Path, Query})
-		when is_list(Path), is_list(Query) ->
-	do_get(Resource, ModData, string:tokens(Path, "/"),
-		cse_rest:parse_query(Query));
+parse_query(Resource, ModData, #{path := Path, query := Query}) ->
+	do_get(Resource, ModData, string:lexemes(Path, [$/]),
+			uri_string:dissect_query(Query));
+parse_query(Resource, ModData, #{path := Path}) ->
+	do_get(Resource, ModData, string:lexemes(Path, [$/]), []);
 parse_query(_, #mod{parsed_header = RequestHeaders,
-		data = Data} = ModData, _) ->
+		data = Data} = ModData, _UriMap) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.4",
 			title => "Not Found",
@@ -202,7 +195,8 @@ do_get(Resource, ModData, ["resourceInventoryManagement",
 do_get(Resource, #mod{parsed_header = Headers} = ModData,
 		["resourceInventoryManagement", "v4", "resource"], Query) ->
 	do_response(ModData, Resource:get_resource(Query, Headers));
-do_get(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _, _) ->
+do_get(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData,
+		_Path, _Query) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.4",
 			title => "Not Found",
@@ -240,7 +234,7 @@ do_response(#mod{parsed_header = RequestHeaders,
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.3",
 			title => "Forbidden",
-			detail => "the server understood the"
+			detail => "The server understood the"
 					" request but refuses to authorize it.",
 			code => "", status => 403},
 	{ContentType, ResponseBody}
@@ -262,6 +256,19 @@ do_response(#mod{parsed_header = RequestHeaders,
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
 	send(ModData, 404, ResponseHeaders, ResponseBody),
 	{proceed, [{response, {already_sent, 404, Size}} | Data]};
+do_response(#mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, {error, 405}) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
+					"rfc7231#section-6.5.4",
+			title => "Method Not Allowed",
+			detail => "The resource does not support the method",
+			code => "", status => 405},
+	{ContentType, ResponseBody}
+			= cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 405, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 405, Size}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 412}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"

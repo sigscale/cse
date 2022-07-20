@@ -200,7 +200,7 @@ resource_spec_delete_static(Config) ->
 	TableId = cse_rest_res_resource:prefix_table_spec_id(),
 	Request = {Host ++ ?specPath ++ TableId, [Accept]},
 	{ok, Result} = httpc:request(delete, Request, [], []),
-	{{"HTTP/1.1", 400, _BadRequest}, _Headers, _Body} = Result.
+	{{"HTTP/1.1", 405, _BadRequest}, _Headers, _Body} = Result.
 
 resource_spec_delete_dynamic() ->
 	[{userdata, [{doc,"Delete Dynamic Resource Specification"}]}].

@@ -62,16 +62,6 @@
 
 -include_lib("inets/include/httpd.hrl").
 
--ifdef(OTP_RELEASE).
-	-if(?OTP_RELEASE > 23).
-		-define(URI_DECODE(URI), uri_string:percent_decode(URI)).
-	-else.
-		-define(URI_DECODE(URI), http_uri:decode(URI)).
-	-endif.
--else.
-	-define(URI_DECODE(URI), http_uri:decode(URI)).
--endif.
-
 -spec do(ModData) -> Result when
 	ModData :: #mod{},
 	Result :: {proceed, OldData} | {proceed, NewData} | {break, NewData} | done,
@@ -105,8 +95,7 @@ do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 					case proplists:get_value(response, Data) of
 						undefined ->
 							{_, Resource} = lists:keyfind(resource, 1, Data),
-							Path = ?URI_DECODE(Uri),
-							do_delete(Resource, ModData, string:tokens(Path, "/"));
+							parse_query(Resource, ModData, uri_string:parse(Uri));
 						_Response ->
 							{proceed,  Data}
 					end
@@ -116,13 +105,40 @@ do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 	end.
 
 %% @hidden
+parse_query(Resource, ModData, #{path := Path, query := Query}) ->
+	do_delete(Resource, ModData, string:lexemes(Path, [$/]),
+			uri_string:dissect_query(Query));
+parse_query(Resource, ModData, #{path := Path}) ->
+	do_delete(Resource, ModData, string:lexemes(Path, [$/]), []);
+parse_query(_, #mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, _) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
+					"rfc7231#section-6.5.4",
+			title => "Not Found",
+			detail => "No resource exists at the path provided",
+			code => "", status => 404},
+	{ContentType, ResponseBody}
+			= cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 404, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 404, Size}} | Data]}.
+
+%% @hidden
 do_delete(Resource, ModData,
-		["resourceInventoryManagement", "v4", "resource", Id]) ->
-	do_response(ModData, Resource:delete_resource(Id));
+		["resourceInventoryManagement", "v4", "resource", Id], []) ->
+	do_response(ModData, Resource:delete_resource(Id, []));
 do_delete(Resource, ModData,
-		["resourceCatalogManagement", "v4", "resourceSpecification", Id]) ->
-	do_response(ModData, Resource:delete_resource_spec(Id));
-do_delete(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _) ->
+		["resourceInventoryManagement", "v4", "resource"], Query) ->
+	do_response(ModData, Resource:delete_resource([], Query));
+do_delete(Resource, ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification", Id], []) ->
+	do_response(ModData, Resource:delete_resource_spec(Id, []));
+do_delete(Resource, ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification"], Query) ->
+	do_response(ModData, Resource:delete_resource_spec([], Query));
+do_delete(_Resource, #mod{parsed_header = RequestHeaders, data = Data} = ModData,
+		_Path, _Query) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
 			title => "Not Found",
 			detail => "No resource exists at the path provided",
@@ -173,6 +189,19 @@ do_response(#mod{parsed_header = RequestHeaders,
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
 	send(ModData, 404, ResponseHeaders, ResponseBody),
 	{proceed, [{response, {already_sent, 404, Size}} | Data]};
+do_response(#mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, {error, 405}) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
+					"rfc7231#section-6.5.4",
+			title => "Method Not Allowed",
+			detail => "The resource does not support the method",
+			code => "", status => 405},
+	{ContentType, ResponseBody}
+			= cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 405, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 405, Size}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 412}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7232#section-4.2",
