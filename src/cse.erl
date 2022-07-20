@@ -513,7 +513,7 @@ find_resource(ID) when is_list(ID) ->
 	when
 		ID :: string(),
 		Result :: ok | {error, Reason},
-		Reason :: term().
+		Reason :: not_found | term().
 %% @doc Delete an entry from the Resource Specification table.
 delete_resource_spec(ID) when is_list(ID) ->
 	F = fun() ->
@@ -535,7 +535,7 @@ delete_resource_spec(ID) when is_list(ID) ->
 	when
 		ID :: string(),
 		Result :: ok | {error, Reason},
-		Reason :: term().
+		Reason :: not_found | term().
 %% @doc Delete an entry from the Resource table.
 delete_resource(ID) when is_list(ID) ->
 	F = fun() ->
