@@ -1,5 +1,6 @@
 {suites, ".",
 		[cse_api_SUITE,
+		cse_query_parse_SUITE,
 		cse_rest_api_SUITE,
 		cse_log_SUITE,
 		cse_codec_SUITE,
