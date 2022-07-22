@@ -29,6 +29,7 @@ modhtml = cse.html \
 		cse_log_codec_ecs.html \
 		cse_gtt.html \
 		cse_rest.html \
+		cse_mib.html \
 		mod_cse_rest_accepted_content.html \
 		mod_cse_rest_get.html \
 		mod_cse_rest_post.html \
@@ -42,7 +43,9 @@ modhtml = cse.html \
 		diameter_gen_ietf.html \
 		diameter_gen_etsi.html \
 		diameter_gen_3gpp.html \
-		cse_mib.html
+		diameter_gen_3gpp_ro_application.html \
+		diameter_gen_cc_application_rfc4006.html \
+		diameter_gen_nas_application_rfc7155.html
 
 doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \
@@ -83,5 +86,5 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
 
-CLEANFILES = $(doc_DATA) $(modhtml)
+CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 
