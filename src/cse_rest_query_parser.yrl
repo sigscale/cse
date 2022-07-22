@@ -51,9 +51,9 @@ Header
 "%%%    <li><tt>Start = End = integer() | undefined</tt></li>"
 "%%%    <li><tt>Filter = {filter, BooleanExpression}</tt></li>"
 "%%%    <li><tt>Script = {script, BooleanExpression}</tt></li>"
-"%%%    <li><tt>BooleanExpression = {Operator, Operand [, Operand]}</tt></li>"
-"%%%    <li><tt>Operator = exact | notexact | lt | lte | gt | gte
-"%%%        | regex | min | max | avg | stddev | len | band | bor</tt></li>"
+"%%%    <li><tt>BooleanExpression = {Operator, Operand [,Operand]}</tt></li>"
+"%%%    <li><tt>Operator = exact | notexact | lt | lte | gt | gte"
+"%%%        | regex | min | max | avg | stddev | len | 'band' | 'bor'</tt></li>"
 "%%%  </ul></p>"
 "%%%  </div>"
 "%%%  <p>Parse the input <tt>Tokens</tt> according to the grammar"
@@ -103,15 +103,15 @@ scriptexpression -> '(' booleanexpression ')' : {script, '$2'}.
 filterexpression -> '?' '(' booleanexpression ')' : {filter, '$3'}.
 booleanexpression -> element : '$1'.
 booleanexpression -> value : '$1'.
-booleanexpression -> booleanexpression exact value : {exact, '$1', '$3'}.
-booleanexpression -> booleanexpression notexact value : {notexact, '$1', '$3'}.
-booleanexpression -> booleanexpression lt value : {lt, '$1', '$3'}.
-booleanexpression -> booleanexpression lte value : {lte, '$1', '$3'}.
-booleanexpression -> booleanexpression gt value : {gt, '$1', '$3'}.
-booleanexpression -> booleanexpression gte value : {gte, '$1', '$3'}.
-booleanexpression -> booleanexpression regex value : {regex, '$1', '$3'}.
-booleanexpression -> booleanexpression functionexpression : {'$2', '$1'}.
 booleanexpression -> scriptexpression : '$1'.
+booleanexpression -> element exact value : {exact, '$1', '$3'}.
+booleanexpression -> element notexact value : {notexact, '$1', '$3'}.
+booleanexpression -> element lt value : {lt, '$1', '$3'}.
+booleanexpression -> element lte value : {lte, '$1', '$3'}.
+booleanexpression -> element gt value : {gt, '$1', '$3'}.
+booleanexpression -> element gte value : {gte, '$1', '$3'}.
+booleanexpression -> element regex value : {regex, '$1', '$3'}.
+booleanexpression -> element functionexpression : {'$2', '$1'}.
 booleanexpression -> negate booleanexpression : {negate, '$2'}.
 booleanexpression -> booleanexpression 'band' booleanexpression : {'band', '$1', '$3'}.
 booleanexpression -> booleanexpression 'bor' booleanexpression : {'bor', '$1', '$3'}.
