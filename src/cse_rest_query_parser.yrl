@@ -73,7 +73,7 @@ Terminals
 Rootsymbol param.
 
 Nonassoc 100 exact notexact lt lte gt gte regex negate 'band' 'bor'
-		plus minus like notlike min max avg stddev len.
+		plus minus min max avg stddev len.
 
 param -> '$' steps : {'$', '$2'}.
 param -> steps : {'$', '$1'}.
