@@ -15,16 +15,19 @@ Header
 "%%% See the License for the specific language governing permissions and"
 "%%% limitations under the License."
 "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
-"%%% @doc This library module implements a parser for TM Forum REST API"
-"%%% 	Advanced Attribute Filtering Pattern query format in the"
-"%%% 	{@link //cse. cse} application."
+"%%% @doc This library module implements a parser for JSONPath,"
+"%%%  as described in TMF630 REST API Design Guidelines - Part 6,"
+"%%% 	in the {@link //cse. cse} application."
 "%%%"
 "%%% 	This module is generated with {@link //parsetools/yecc. yecc}"
 "%%% 	from `{@module}.yrl'."
 "%%%"
 "%%% @author Vance Shipley <vances@sigscale.org>"
-"%%% @reference Advanced Attribute Filtering Pattern for REST APIs"
-"%%% (<a href=\"https://projects.tmforum.org/jira/browse/AP-832\">AP-832</a>)."
+"%%% @reference <a href=\"https://www.tmforum.org/resources/specification/tmf630-rest-api-design-guidelines-4-2-0/\">"
+"%%% 	TMF630</a> REST API Design Guidelines - Part 6 JSONPath Extension"
+"%%% @reference <a href=\"https://tools.ietf.org/id/draft-goessner-dispatch-jsonpath-00.html\">"
+"%%% 	JSONPath</a> XPath for JSON"
+"%%%"
 "%%%  <h2><a name=\"functions\">Function Details</a></h2>"
 "%%%"
 "%%%  <h3 class=\"function\"><a name=\"parse-1\">parse/1</a></h3>"
@@ -37,101 +40,94 @@ Header
 "%%%    <li><tt>Category = word</tt></li>"
 "%%%    <li><tt>Symbol = '\"' | '[' | ']' | '{' | '}' | '.' | ','"
 "%%%        | Operator</tt></li>"
-"%%%    <li><tt>Result = {ok, Filters}"
+"%%%    <li><tt>Result = {ok, JSONPath}"
 "%%%        | {error, {LineNumber, Module, Message}}</tt></li>"
-"%%%    <li><tt>Filters = [Filter]</tt></li>"
-"%%%    <li><tt>Filter = Simple | Complex | Array</tt></li>"
-"%%%    <li><tt>Simple = {LHS, Operator, RHS}</tt></li>"
-"%%%    <li><tt>LHS = string()</tt></li>"
-"%%%    <li><tt>Operator = exact | notexact | lt | lte | gt | gte"
-"%%%        | regex | like | notlike | in | notin"
-"%%%        | contains | notcontain | containsall</tt></li>"
-"%%%    <li><tt>RHS = integer() | string() | boolean()"
-"%%%        | Complex | Filters</tt></li>"
-"%%%    <li><tt>Complex = {complex, Filters}</tt></li>"
-"%%%    <li><tt>Array = {array, Filters}</tt></li>"
-"%%%    <li><tt>LineNumber = integer()</tt></li>"
-"%%%    <li><tt>Module = atom()</tt></li>"
-"%%%    <li><tt>Message = term()</tt></li>"
+"%%%    <li><tt>JSONPath = {Root, Steps}</tt></li>"
+"%%%    <li><tt>Root = '$'</tt></li>"
+"%%%    <li><tt>Steps = [Step]</tt></li>"
+"%%%    <li><tt>step = {'.', Children} | {'..', Descendents}</tt></li>"
+"%%%    <li><tt>Children = Descendents = Slice | Filter | Script</tt></li>"
+"%%%    <li><tt>Slice = {slice, Start, End}</tt></li>"
+"%%%    <li><tt>Start = End = integer() | undefined</tt></li>"
+"%%%    <li><tt>Filter = {filter, BooleanExpression}</tt></li>"
+"%%%    <li><tt>Script = {script, BooleanExpression}</tt></li>"
+"%%%    <li><tt>BooleanExpression = {Operator, Operand [, Operand]}</tt></li>"
+"%%%    <li><tt>Operator = exact | notexact | lt | lte | gt | gte
+"%%%        | regex | min | max | avg | stddev | len | band | bor</tt></li>"
 "%%%  </ul></p>"
 "%%%  </div>"
 "%%%  <p>Parse the input <tt>Tokens</tt> according to the grammar"
-"%%%  of the advanced attribute filtering pattern.</p>"
+"%%%  of JSON Path expressions.</p>"
 "%%%"
 .
 
-Nonterminals param filters filter array complex field value values simple.
+Nonterminals param step steps slice start end attributename
+		valueexpression valueexpressions filterexpression scriptexpression
+		booleanexpression functionexpression element value.
 
-Terminals '"' '[' ']' '{' '}' ',' '.' word
-	exact notexact lt lte gt gte regex like notlike
-	in notin contains notcontain containsall.
+Terminals 
+		'$' '..' '.' '[' ']' '*' ',' ':' '@' '?' '(' ')'
+		string word integer float boolean min max avg stddev len
+		exact notexact lt lte gt gte regex negate 'band' 'bor' plus minus.
 
 Rootsymbol param.
 
-Nonassoc 100 exact notexact lt lte gt gte regex like notlike
-	in notin contains notcontain containsall.
+Nonassoc 100 exact notexact lt lte gt gte regex negate 'band' 'bor'
+		plus minus like notlike min max avg stddev len.
 
-param -> '"' filters '"' :
-	'$2'.
-
-filters -> filter :
-	['$1'].
-filters -> filter ',' filters :
-	['$1' | '$3'].
-
-filter -> simple :
-	'$1'.
-filter -> array :
-	'$1'.
-filter -> complex :
-	'$1'.
-
-simple -> field exact value :
-	{'$1', exact, '$3'}.
-simple -> field notexact value :
-	{'$1', exact, '$3'}.
-simple -> field lt value :
-	{'$1', lt, '$3'}.
-simple -> field lte value :
-	{'$1', lte, '$3'}.
-simple -> field gt value :
-	{'$1', gt, '$3'}.
-simple -> field gte value :
-	{'$1', gte, '$3'}.
-simple -> field regex value :
-	{'$1', regex, '$3'}.
-simple -> field like '[' values ']' :
-	{'$1', like, '$4'}.
-simple -> field notlike '[' values ']' :
-	{'$1', notlike, '$4'}.
-simple -> field in '[' values ']' :
-	{'$1', in, '$4'}.
-simple -> field notin '[' values ']' :
-	{'$1', notin, '$4'}.
-simple -> field contains '[' filters ']' :
-	{'$1', contains, '$4'}.
-simple -> field notcontain '[' filters ']' :
-	{'$1', notcontain, '$4'}.
-simple -> field containsall '[' filters ']' :
-	{'$1', containsall, '$4'}.
-
-array -> '[' filters ']' :
-	{array, '$2'}.
-complex -> '{' filters '}' :
-	{complex, '$2'}.
-
-field -> word :
-	element(3, '$1').
-field -> word '.' field :
-	element(3, '$1') ++ "." ++ '$3'.
-
-value -> word :
-	element(3, '$1').
-value -> word '.' value :
-	element(3, '$1') ++ "." ++ '$3'.
-
-values -> value :
-	['$1'].
-values -> value ',' values :
-	['$1' | '$3'].
+param -> '$' steps : {'$', '$2'}.
+param -> steps : {'$', '$1'}.
+steps -> step : ['$1'].
+steps -> step steps : ['$1' | '$2'].
+step -> '..' attributename : {'..', ['$2']}.
+step -> '.' attributename : {'.', ['$2']}.
+step -> attributename : {'.', ['$1']}.
+step -> '[' slice ']' : {'.', '$2'}.
+step -> '[' valueexpressions ']' : {'.', '$2'}.
+valueexpressions -> valueexpression : ['$1'].
+valueexpressions -> valueexpression ',' valueexpressions : ['$1' | '$3'].
+valueexpression -> attributename : '$1'.
+valueexpression -> scriptexpression : '$1'.
+valueexpression -> filterexpression : '$1'.
+% slice -> start ':' end ':' step.
+slice -> start ':' end : {slice, '$1', '$3'}.
+slice -> start ':' : {slice, '$1', undefined}.
+slice -> ':' end : {slice, undefined, '$2'}.
+start -> integer : element(3, '$1').
+start -> minus integer : - element(3, '$2').
+end -> integer : element(3, '$1').
+end -> minus integer : - element(3, '$2').
+attributename -> word : element(3, '$1').
+attributename -> '*' : '_'.  % wildcard.
+scriptexpression -> '(' booleanexpression ')' : {script, '$2'}.
+filterexpression -> '?' '(' booleanexpression ')' : {filter, '$3'}.
+booleanexpression -> element : '$1'.
+booleanexpression -> value : '$1'.
+booleanexpression -> booleanexpression exact value : {exact, '$1', '$3'}.
+booleanexpression -> booleanexpression notexact value : {notexact, '$1', '$3'}.
+booleanexpression -> booleanexpression lt value : {lt, '$1', '$3'}.
+booleanexpression -> booleanexpression lte value : {lte, '$1', '$3'}.
+booleanexpression -> booleanexpression gt value : {gt, '$1', '$3'}.
+booleanexpression -> booleanexpression gte value : {gte, '$1', '$3'}.
+booleanexpression -> booleanexpression regex value : {regex, '$1', '$3'}.
+booleanexpression -> booleanexpression functionexpression : {'$2', '$1'}.
+booleanexpression -> scriptexpression : '$1'.
+booleanexpression -> negate booleanexpression : {negate, '$2'}.
+booleanexpression -> booleanexpression 'band' booleanexpression : {'band', '$1', '$3'}.
+booleanexpression -> booleanexpression 'bor' booleanexpression : {'bor', '$1', '$3'}.
+element -> '@' '.' word : {'@', '.', element(3, '$3')}.
+element -> '$' '.' word : {'$', '.', element(3, '$3')}.
+value -> string : element(3, '$1').
+value -> minus integer : - element(3, '$1').
+value -> plus integer : element(3, '$1').
+value -> integer : element(3, '$1').
+value -> minus float : - element(3, '$1').
+value -> plus float : element(3, '$1').
+value -> float : element(3, '$1').
+value -> boolean : list_to_existing_atom(element(3, '$1')).
+functionexpression -> '.' min : min.
+functionexpression -> '.' max : max.
+functionexpression -> '.' avg : avg.
+functionexpression -> '.' stddev : stddev.
+functionexpression -> '.' len : len.
 
