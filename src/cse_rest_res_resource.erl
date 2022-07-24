@@ -36,8 +36,8 @@
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
 -define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
--define(PREFIX_TABLE_SPEC, "1647577955926-50").
--define(PREFIX_ROW_SPEC,   "1647577957914-66").
+-define(PREFIX_TABLE_SPEC,       "1647577955926-50").
+-define(PREFIX_ROW_SPEC,         "1647577957914-66").
 -define(PREFIX_RANGE_TABLE_SPEC, "1651055414682-258").
 -define(PREFIX_RANGE_ROW_SPEC,   "1651057291061-274").
 
@@ -92,31 +92,30 @@ get_resource_spec(ID) ->
 %% 	Retrieve all Resource Specifications.
 get_resource_specs(Query, Headers) ->
 	try
-		case lists:keytake("filter", 1, Query) of
-			{value, {_, String}, Query1} ->
-				{ok, Tokens, _} = cse_rest_query_scanner:string(String),
-				{ok, [{array, [{complex, Complex}]}]}
-						= cse_rest_query_parser:parse(Tokens),
-				MatchId = match("id", Complex, Query),
-				MatchName = match("name", Complex, Query),
-				MatchRelId = match("resourceSpecRelationship.id", Complex, Query),
-				MatchRelType = match("resourceSpecRelationship.relationshipType",
-						Complex, Query),
-				{Query1, [MatchId, MatchName, MatchRelId, MatchRelType]};
+		{Query1, MatchId} = get_param("id", Query, '_'),
+		{Query2, MatchName} = get_param("name", Query1, '_'),
+		case lists:keytake("filter", 1, Query2) of
+			{value, {_, String}, Query3} ->
+				{ok, Tokens, 1} = cse_rest_query_scanner:string(String),
+				{ok, {'$', Steps}} = cse_rest_query_parser:parse(Tokens),
+				case Steps of
+					[{'.', ["resourceSpecRelationship"]}, {'.', Children}] ->
+						{Children1, MatchRelId} = get_child({'@', ["id"]}, Children, '_'),
+						{[], MatchRelType} = get_child({'@', ["relationshipType"]},
+								Children1, '_'),
+						{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]}
+				end;
 			false ->
-					MatchId = match("id", [], Query),
-					MatchName = match("name", [], Query),
-					MatchRelId = match("resourceSpecRelationship.id", [], Query),
-					MatchRelType = match("resourceSpecRelationship.relationshipType",
-						[], Query),
-					{Query, [MatchId, MatchName, MatchRelId, MatchRelType]}
+				MatchRelId = '_',
+				MatchRelType = '_',
+				{Query2, [MatchId, MatchName, MatchRelId, MatchRelType]}
 		end
 	of
-		{Query2, Args} ->
+		{Query4, Args} ->
 			Codec = fun resource_spec/1,
-			query_filter({cse, query_resource_spec, Args}, Codec, Query2, Headers)
+			query_filter({cse, query_resource_spec, Args}, Codec, Query4, Headers)
 	catch
-		_ ->
+		_Error:_Reason ->
 			{error, 400}
 	end.
 
@@ -224,29 +223,29 @@ get_resource(Id) ->
 %% 	requests.
 get_resource(Query, Headers) ->
 	try
-		case lists:keytake("filter", 1, Query) of
-			{value, {_, String}, Query1} ->
-				{ok, Tokens, _} = cse_rest_query_scanner:string(String),
-				case cse_rest_query_parser:parse(Tokens) of
-					{ok, [{array, [{complex, Complex}]}]} ->
-						MatchId = match("id", Complex, Query),
-						MatchCategory = match("category", Complex, Query),
-						{Query1, [MatchId, MatchCategory]}
+		{Query1, MatchId} = get_param("id", Query, '_'),
+		{Query2, MatchCategory} = get_param("category", Query1, '_'),
+		{Query3, MatchSpecId} = get_param("resourceSpecification.id", Query2, '_'),
+		case lists:keytake("filter", 1, Query3) of
+			{value, {_, String}, Query4} ->
+				{ok, Tokens, 1} = cse_rest_query_scanner:string(String),
+				{ok, {'$', Steps}} = cse_rest_query_parser:parse(Tokens),
+				case Steps of
+					[{'.', ["resourceRelationship"]}, {'.', Children}] ->
+						{[], MatchRelName} = get_child({'@', ["resource", "name"]},
+								Children, '_'),
+						{Query4, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
 				end;
 			false ->
-					MatchId = match("id", [], Query),
-					MatchCategory = match("category", [], Query),
-					MatchSpecId = match("resourceSpecification.id", [], Query),
-					MatchRelName
-							= match("resourceRelationship.resource.name", [], Query),
-					{Query, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
+				MatchRelName = '_',
+				{Query3, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
 		end
 	of
-		{Query2, Args} ->
+		{Query5, Args} ->
 			Codec = fun resource/1,
-			query_filter({cse, query_resource, Args}, Codec, Query2, Headers)
+			query_filter({cse, query_resource, Args}, Codec, Query5, Headers)
 	catch
-		_ ->
+		_Error:_Reason ->
 			{error, 400}
 	end.
 
@@ -976,22 +975,6 @@ resource_spec_ref([_ | T], R, Acc) ->
 resource_spec_ref([], _, Acc) ->
 	Acc.
 
-%% @hidden
-match(Key, Complex, Query) ->
-	case lists:keyfind(Key, 1, Complex) of
-		{_, like, [Value]} ->
-			{like, Value};
-		{_, exact, [Value]} ->
-			{exact, Value};
-		false ->
-			case lists:keyfind(Key, 1, Query) of
-				{_, Value} ->
-					{exact, Value};
-				false ->
-					'_'
-			end
-	end.
-
 -spec resource_spec(ResourceSpecification) -> ResourceSpecification
 	when
 		ResourceSpecification :: resource_spec() | map().
@@ -1623,4 +1606,51 @@ party_rel([_ | T], R, Acc) ->
 	party_rel(T, R, Acc);
 party_rel([], _, Acc) ->
 	Acc.
+
+-spec get_param(Key, Query, Default) -> Result
+	when
+		Key :: string(),
+		Query :: [{Key, Value}],
+		Default :: '_' | string() | number() | boolean(),
+		Value :: string() | number() | boolean(),
+		Result :: {Remaining, Match},
+		Remaining :: [{Key, Value}],
+		Match :: {Operator, Value} | Default,
+		Operator :: exact.
+%% @doc Take `Key' from `Query'.
+%% @hidden
+get_param(Key, Query, Default) ->
+	case lists:keytake(Key, 1, Query) of
+		{value, {_, Value}, Remaining} ->
+			{Remaining, {exact, Value}};
+		false ->
+			{Query,  Default}
+	end.
+
+-spec get_child(Element, Children, Default) -> Result
+	when
+		Path :: [string()],
+		Children :: [{filter, Filter}],
+		Filter :: {Operator, Element, Operand},
+		Operator :: exact,
+		Element :: {'@', Path},
+		Path :: [string()],
+		Operand :: string() | number() | boolean(),
+		Default :: '_' | string() | number() | boolean(),
+		Result :: {Remaining, Match},
+		Remaining :: [{filter, Filter}],
+		Match :: {Operator, Value} | Default,
+		Operator :: exact,
+		Value :: string() | number() | boolean().
+%% @doc Take `Element' from `Children'.
+%% @hidden
+get_child(Element, Children, Default) ->
+	get_child(Element, Children, Default, []).
+%% @hidden
+get_child(Element, [{filter, {exact, Element, Value}} | T], _Default, Acc) ->
+	{lists:reverse(Acc) ++ T, {exact, Value}};
+get_child(Element, [H | T], Default, Acc) ->
+	get_child(Element, T, Default, [H | Acc]);
+get_child(_Element, [], Default, Acc) ->
+	{lists:reverse(Acc), Default}.
 

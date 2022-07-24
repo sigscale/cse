@@ -48,6 +48,16 @@
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
 -define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
+-ifdef(OTP_RELEASE).
+	-if(?OTP_RELEASE >= 25).
+		-define(QUOTE(Data), uri_string:quote(Data)).
+	-else.
+		-define(QUOTE(Data), http_uri:encode(Data)).
+	-endif.
+-else.
+	-define(QUOTE(Data), http_uri:encode(Data)).
+-endif.
+
 %%---------------------------------------------------------------------
 %%  Test server callback functions
 %%---------------------------------------------------------------------
@@ -228,8 +238,9 @@ resource_spec_query_based(Config) ->
 	ResRowSpec = row_resource_spec("DynamicRowSpec3", TableId, TableName),
 	{ok, #resource_spec{}} = cse:add_resource_spec(ResRowSpec),
 	Accept = {"accept", "application/json"},
-	Query = "?resourceSpecRelationship.relationshipType=based",
-	Request = {Host ++ lists:droplast(?specPath) ++ Query, [Accept]},
+	Filter = "resourceSpecRelationship[?(@.relationshipType=='based')]",
+	Request = {Host ++ lists:droplast(?specPath)
+			++ "?filter=" ++ ?QUOTE(Filter), [Accept]},
 	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -401,8 +412,9 @@ query_resource(Config) ->
 	{ok, #resource{}} = cse:add_resource(PrefixRow2),
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
 	Accept = {"accept", "application/json"},
-	Query = "?resourceRelationship.resource.name=" ++ TableName
-			++ "&resourceSpecification.id=" ++ SpecId,
+	Filter = "resourceRelationship[?(@.resource.name=='" ++ TableName ++ "')]",
+	Query = "?resourceSpecification.id=" ++ SpecId
+			++ "&filter=" ++ ?QUOTE(Filter),
 	Request = {Host ++ lists:droplast(?inventoryPath) ++ Query, [Accept]},
 	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
