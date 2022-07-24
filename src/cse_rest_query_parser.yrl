@@ -54,6 +54,10 @@ Header
 "%%%    <li><tt>BooleanExpression = {Operator, Operand [,Operand]}</tt></li>"
 "%%%    <li><tt>Operator = exact | notexact | lt | lte | gt | gte"
 "%%%        | regex | min | max | avg | stddev | len | 'band' | 'bor'</tt></li>"
+"%%%    <li><tt>Operaand = Element | Value | BooleanExpression</tt></li>"
+"%%%    <li><tt>Element = {'@', Path} | {'$'. Path}</tt></li>"
+"%%%    <li><tt>Path = [string()]</tt></li>"
+"%%%    <li><tt> Value  string() | number() | boolean()</tt></li>"
 "%%%  </ul></p>"
 "%%%  </div>"
 "%%%  <p>Parse the input <tt>Tokens</tt> according to the grammar"
@@ -63,17 +67,18 @@ Header
 
 Nonterminals param step steps slice start end attributename
 		valueexpression valueexpressions filterexpression scriptexpression
-		booleanexpression functionexpression element value.
+		booleanexpression element path value.
 
 Terminals 
 		'$' '..' '.' '[' ']' '*' ',' ':' '@' '?' '(' ')'
 		string word integer float boolean min max avg stddev len
-		exact notexact lt lte gt gte regex negate 'band' 'bor' plus minus.
+		exact notexact lt lte gt gte regex negate band bor plus minus.
 
 Rootsymbol param.
 
-Nonassoc 100 exact notexact lt lte gt gte regex negate 'band' 'bor'
-		plus minus min max avg stddev len.
+Left 100 band bor.
+Nonassoc 200 exact notexact lt lte gt gte regex.
+Unary 300 minus plus.
 
 param -> '$' steps : {'$', '$2'}.
 param -> steps : {'$', '$1'}.
@@ -104,19 +109,25 @@ filterexpression -> '?' '(' booleanexpression ')' : {filter, '$3'}.
 booleanexpression -> element : '$1'.
 booleanexpression -> value : '$1'.
 booleanexpression -> scriptexpression : '$1'.
-booleanexpression -> element exact value : {exact, '$1', '$3'}.
-booleanexpression -> element notexact value : {notexact, '$1', '$3'}.
-booleanexpression -> element lt value : {lt, '$1', '$3'}.
-booleanexpression -> element lte value : {lte, '$1', '$3'}.
-booleanexpression -> element gt value : {gt, '$1', '$3'}.
-booleanexpression -> element gte value : {gte, '$1', '$3'}.
-booleanexpression -> element regex value : {regex, '$1', '$3'}.
-booleanexpression -> element functionexpression : {'$2', '$1'}.
+booleanexpression -> booleanexpression exact booleanexpression: {exact, '$1', '$3'}.
+booleanexpression -> booleanexpression notexact booleanexpression: {notexact, '$1', '$3'}.
+booleanexpression -> booleanexpression lt booleanexpression: {lt, '$1', '$3'}.
+booleanexpression -> booleanexpression lte booleanexpression: {lte, '$1', '$3'}.
+booleanexpression -> booleanexpression gt booleanexpression: {gt, '$1', '$3'}.
+booleanexpression -> booleanexpression gte booleanexpression: {gte, '$1', '$3'}.
+booleanexpression -> booleanexpression regex booleanexpression: {regex, '$1', '$3'}.
+booleanexpression -> booleanexpression band booleanexpression: {'band', '$1', '$3'}.
+booleanexpression -> booleanexpression bor booleanexpression: {'bor', '$1', '$3'}.
 booleanexpression -> negate booleanexpression : {negate, '$2'}.
-booleanexpression -> booleanexpression 'band' booleanexpression : {'band', '$1', '$3'}.
-booleanexpression -> booleanexpression 'bor' booleanexpression : {'bor', '$1', '$3'}.
-element -> '@' '.' word : {'@', '.', element(3, '$3')}.
-element -> '$' '.' word : {'$', '.', element(3, '$3')}.
+booleanexpression -> booleanexpression '.' min : {min, '$1'}.
+booleanexpression -> booleanexpression '.' max : {max, '$1'}.
+booleanexpression -> booleanexpression '.' avg : {avg, '$1'}.
+booleanexpression -> booleanexpression '.' stddev : {stddev, '$1'}.
+booleanexpression -> booleanexpression '.' len : {len, '$1'}.
+path -> '.' attributename : ['$2'].
+path -> '.' attributename path : ['$2' | '$3'].
+element -> '@' path : {'@', '$2'}.
+element -> '$' path : {'$', '$2'}.
 value -> string : element(3, '$1').
 value -> minus integer : - element(3, '$1').
 value -> plus integer : element(3, '$1').
@@ -125,9 +136,4 @@ value -> minus float : - element(3, '$1').
 value -> plus float : element(3, '$1').
 value -> float : element(3, '$1').
 value -> boolean : list_to_existing_atom(element(3, '$1')).
-functionexpression -> '.' min : min.
-functionexpression -> '.' max : max.
-functionexpression -> '.' avg : avg.
-functionexpression -> '.' stddev : stddev.
-functionexpression -> '.' len : len.
 
