@@ -357,10 +357,8 @@ add_dynamic_row_resource(Config) ->
 	{ok, #{} = ResourceMap} = zj:decode(ResponseBody),
 	true = is_resource(ResourceMap),
 	Chars = Resource#resource.characteristic,
-	#resource_char{value = Prefix}
-			= lists:keyfind("prefix", #resource_char.name, Chars),
-	#resource_char{value = Value}
-			= lists:keyfind("value", #resource_char.name, Chars),
+	{ok, #characteristic{value = Prefix}} = maps:find("prefix", Chars),
+	{ok, #characteristic{value = Value}} = maps:find("value", Chars),
 	Value = cse_gtt:lookup_first(TableName, Prefix).
 
 get_resource() ->
@@ -406,9 +404,10 @@ query_resource(Config) ->
 	Accept = {"accept", "application/json"},
 	{ok, #resource{}} = cse:add_resource(static_prefix_row(TableId, TableName)),
 	Res = static_prefix_row(TableId, TableName),
+	Column1 = #characteristic{name = "prefix", value = "14736"},
+	Column2 = #characteristic{name = "value", value = "testing"},
 	PrefixRow2 = Res#resource{name = "testPrefixRow",
-			characteristic = [#resource_char{name = "prefix", value = "14736"},
-					#resource_char{name = "value", value = "testing"}]},
+			characteristic = #{"prefix" => Column1, "value" => Column2}},
 	{ok, #resource{}} = cse:add_resource(PrefixRow2),
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
 	Accept = {"accept", "application/json"},
@@ -514,8 +513,7 @@ delete_row_resource(Config) ->
 	{ok, Result3} = httpc:request(get, Request2, [], []),
 	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers3, _Response} = Result3,
 	Chars = PrefixRow#resource.characteristic,
-	#resource_char{value = Prefix}
-			= lists:keyfind("prefix", #resource_char.name, Chars),
+	{ok, #characteristic{value = Prefix}} = maps:find("prefix", Chars),
 	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
 add_range_row_resource() ->
@@ -634,6 +632,8 @@ static_prefix_row(TableId, TableName) ->
 	static_prefix_row("examplePrefixRow", TableId, TableName).
 static_prefix_row(Name, TableId, TableName) ->
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
+	Column1 = #characteristic{name = "prefix", value = "15796"},
+	Column2 = #characteristic{name = "value", value = "hello world"},
 	#resource{name = Name, description = "Prefix Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
@@ -643,8 +643,7 @@ static_prefix_row(Name, TableId, TableName) ->
 					href = "/resourceCatalogManagement/v2/resourceSpecification/"
 							++ SpecId,
 					name = "PrefixRow"},
-			characteristic = [#resource_char{name = "prefix", value = "15796"},
-					#resource_char{name = "value", value = "hello world"}]}.
+			characteristic = #{"prefix" => Column1, "value" => Column2}}.
 
 dynamic_prefix_row(Name, TableId, TableName) ->
 	TableSpecName = "tempDynamicResSpec",
@@ -654,6 +653,8 @@ dynamic_prefix_row(Name, TableId, TableName) ->
 	SpecName = "sampleDynamicRowResSpec",
 	Spec = row_resource_spec(SpecName, TableSpecId, TableSpecName),
 	{ok, #resource_spec{id = SpecId}} = cse:add_resource_spec(Spec),
+	Column1 = #characteristic{name = "prefix", value = "46892"},
+	Column2 = #characteristic{name = "value", value = 64},
 	#resource{name = Name, description = "Prefix Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
@@ -663,12 +664,14 @@ dynamic_prefix_row(Name, TableId, TableName) ->
 					href = "/resourceCatalogManagement/v2/resourceSpecification/"
 							++ SpecId,
 					name = SpecName},
-			characteristic = [#resource_char{name = "prefix", value = "46892"},
-					#resource_char{name = "value", value = 64}]}.
+			characteristic = #{"prefix" => Column1, "value" => Column2}}.
 
 %% @hidden
 range_row(Name, TableId, TableName, Start, End) ->
 	SpecId = cse_rest_res_resource:prefix_range_row_spec_id(),
+	Column1 = #characteristic{name = "start", value = Start},
+	Column2 = #characteristic{name = "end", value = End},
+	Column3 = #characteristic{name = "value", value = "hello range"},
 	#resource{name = Name, description = "Range Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
 			related = [#resource_rel{id = TableId,
@@ -678,12 +681,17 @@ range_row(Name, TableId, TableName, Start, End) ->
 					href = "/resourceCatalogManagement/v2/resourceSpecification/"
 							++ SpecId,
 					name = "PrefixRangeRow"},
-			characteristic = [#resource_char{name = "start", value = Start},
-					#resource_char{name = "end", value = End},
-					#resource_char{name = "value", value = "hello range"}]}.
+			characteristic = #{"start" => Column1,
+					"end" => Column2, "value" => Column3}}.
 
 row_resource_spec(Name, TableId, TableName) ->
 	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),
+	Column1 = #resource_spec_char{name = "prefix",
+			description = "Prefix to match",
+			value_type = "String"},
+	Column2 = #resource_spec_char{name = "value",
+			description = "Value returned from prefix match",
+			value_type = "Integer"},
 	#resource_spec{name = Name,
 			description = "Dynamic table row specification",
 			version = "1.1",
@@ -695,12 +703,7 @@ row_resource_spec(Name, TableId, TableName) ->
 				#resource_spec_rel{id = StaticRowId,
 					href = ?specPath ++ StaticRowId,
 					name = "PrefixRow", rel_type = "based"}],
-			characteristic = [#resource_spec_char{name = "prefix",
-					description = "Prefix to match",
-					value_type = "String"},
-				#resource_spec_char{name = "value",
-					description = "Value returned from prefix match",
-					value_type = "Integer"}]}.
+			characteristic = [Column1, Column2]}.
 
 table_resource_spec(Name) ->
 	TableId = cse_rest_res_resource:prefix_table_spec_id(),

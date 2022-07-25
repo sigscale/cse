@@ -437,17 +437,15 @@ add_resource_prefix_row(#resource{related = Related} = Resource) ->
 %% @hidden
 add_resource_prefix_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
-	{Prefix, Value} = case lists:keyfind("prefix",
-			#resource_char.name, Chars) of
-		#resource_char{value = P} ->
-			case lists:keyfind("value",
-					#resource_char.name, Chars) of
-				#resource_char{value = V} ->
+	{Prefix, Value} = case maps:find("prefix", Chars) of
+		{ok, #characteristic{name = "prefix", value = P}} ->
+			case maps:find("value", Chars) of
+				{ok, #characteristic{name = "value", value = V}} ->
 					{P, V};
-				false ->
+				error ->
 					{error, 400}
 			end;
-		false ->
+		error ->
 			{error, 400}
 	end,
 	case cse_gtt:insert(Table, Prefix, Value) of
@@ -470,23 +468,20 @@ add_resource_range_row(#resource{related = Related} = Resource) ->
 %% @hidden
 add_resource_range_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
-	{Start, End, Value} = case lists:keyfind("start",
-			#resource_char.name, Chars) of
-		#resource_char{value = S} ->
-			case lists:keyfind("end",
-					#resource_char.name, Chars) of
-				#resource_char{value = E} ->
-					case lists:keyfind("value",
-							#resource_char.name, Chars) of
-						#resource_char{value = V} ->
+	{Start, End, Value} = case maps:find("start", Chars) of
+		{ok, #characteristic{name = "start", value = S}} ->
+			case maps:find("end", Chars) of
+				{ok, #characteristic{name = "end", value = E}} ->
+					case maps:find("value", Chars) of
+						{ok, #characteristic{name = "value", value = V}} ->
 							{S, E, V};
-						false ->
+						error ->
 							{error, 400}
 					end;
-				false ->
+				error ->
 					{error, 400}
 			end;
-		false ->
+		error ->
 			{error, 400}
 	end,
 	case cse_gtt:add_range(Table, Start, End, Value) of
@@ -563,11 +558,11 @@ delete_resource_row(#resource{related = Related} = Resource) ->
 %% @hidden
 delete_resource_row(Table, #resource{id = Id, characteristic = Chars}) ->
 	TableName = list_to_existing_atom(Table),
-	case lists:keyfind("prefix", #resource_char.name, Chars) of
-		#resource_char{value = Prefix} ->
+	case maps:find("prefix", Chars) of
+		{ok, #characteristic{name = "prefix", value = Prefix}} ->
 			ok = cse_gtt:delete(TableName, Prefix),
 			delete_resource_result(cse:delete_resource(Id));
-		false ->
+		error ->
 			{error, 400}
 	end.
 
@@ -838,7 +833,7 @@ resource([specification | T], #{"resourceSpecification" := SpecRef} = M, Acc)
 		when is_map(SpecRef) ->
 	resource(T, M, Acc#resource{specification = resource_spec_ref(SpecRef)});
 resource([characteristic | T], #resource{characteristic = ResChar} = R, Acc)
-		when is_list(ResChar), length(ResChar) > 0 ->
+		when is_map(ResChar), map_size(ResChar) > 0 ->
 	resource(T, R, Acc#{"resourceCharacteristic" => characteristic(ResChar)});
 resource([characteristic | T], #{"resourceCharacteristic" := ResChar} = M, Acc)
 		when is_list(ResChar) ->
@@ -893,29 +888,62 @@ resource_rel([_ | T], R, Acc) ->
 resource_rel([], _, Acc) ->
 	Acc.
 
--spec characteristic(Characteristic) -> Characteristic
+-spec characteristic(Characteristics) -> Characteristics
 	when
-		Characteristic :: [resource_char()] | [map()].
+		Characteristics :: characteristics() | [map()].
 %% @doc CODEC for `Characteristic'.
-characteristic([#resource_char{} | _] = List) ->
-	Fields = record_info(fields, resource_char),
-	[characteristic(Fields, R, #{}) || R <- List];
-characteristic([#{} | _] = List) ->
-	Fields = record_info(fields, resource_char),
-	[characteristic(Fields, M, #resource_char{}) || M <- List];
+characteristic(#{} = Characteristics) ->
+	Fields = record_info(fields, characteristic),
+	[characteristic(Fields, R, #{})
+			|| R <- maps:values(Characteristics)];
+characteristic([#{} | _] = Characteristics) ->
+	Fields = record_info(fields, characteristic),
+	Records = [characteristic(Fields, M, #characteristic{})
+			|| M <- Characteristics],
+	maps:from_list([{R#characteristic.name, R} || R <- Records]);
 characteristic([]) ->
-	[].
+	#{}.
 %% @hidden
-characteristic([name | T], #resource_char{name = Name} = R, Acc)
+characteristic([id | T], #characteristic{id = Id} = R, Acc)
+		when is_list(Id) ->
+	characteristic(T, R, Acc#{"id" => Id});
+characteristic([id | T], #{"id" := Id} = R, Acc)
+		when is_list(Id) ->
+	characteristic(T, R, Acc#characteristic{id = Id});
+characteristic([name | T], #characteristic{name = Name} = R, Acc)
 		when is_list(Name) ->
 	characteristic(T, R, Acc#{"name" => Name});
 characteristic([name | T], #{"name" := Name} = M, Acc)
 		when is_list(Name) ->
-	characteristic(T, M, Acc#resource_char{name = Name});
-characteristic([value | T], #resource_char{value = Value} = R, Acc) ->
+	characteristic(T, M, Acc#characteristic{name = Name});
+characteristic([class_type | T], #characteristic{class_type = Type} = R, Acc)
+		when is_list(Type) ->
+	characteristic(T, R, Acc#{"@type" => Type});
+characteristic([class_type | T], #{"@type" := Type} = M, Acc)
+		when is_list(Type) ->
+	characteristic(T, M, Acc#characteristic{class_type = Type});
+characteristic([base_type | T], #characteristic{base_type = Type} = R, Acc)
+		when is_list(Type) ->
+	characteristic(T, R, Acc#{"@baseType" => Type});
+characteristic([base_type | T], #{"@baseType" := Type} = M, Acc)
+		when is_list(Type) ->
+	characteristic(T, M, Acc#characteristic{base_type = Type});
+characteristic([schema | T], #characteristic{schema = Schema} = R, Acc)
+		when is_list(Schema) ->
+	characteristic(T, R, Acc#{"@schemaLocation" => Schema});
+characteristic([schema | T], #{"@schemaLocation" := Schema} = M, Acc)
+		when is_list(Schema) ->
+	characteristic(T, M, Acc#characteristic{schema = Schema});
+characteristic([value_type | T], #characteristic{value_type = Type} = R, Acc)
+		when is_list(Type) ->
+	characteristic(T, R, Acc#{"valueType" => Type});
+characteristic([base_type | T], #{"valueType" := Type} = M, Acc)
+		when is_list(Type) ->
+	characteristic(T, M, Acc#characteristic{value_type = Type});
+characteristic([value | T], #characteristic{value = Value} = R, Acc) ->
 	characteristic(T, R, Acc#{"value" => Value});
 characteristic([value | T], #{"value" := Value} = M, Acc) ->
-	characteristic(T, M, Acc#resource_char{value = Value});
+	characteristic(T, M, Acc#characteristic{value = Value});
 characteristic([_ | T], R, Acc) ->
 	characteristic(T, R, Acc);
 characteristic([], _, Acc) ->
