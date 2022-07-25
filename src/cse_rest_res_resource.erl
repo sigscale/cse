@@ -94,21 +94,14 @@ get_resource_specs(Query, Headers) ->
 	try
 		{Query1, MatchId} = get_param("id", Query, '_'),
 		{Query2, MatchName} = get_param("name", Query1, '_'),
-		case lists:keytake("filter", 1, Query2) of
-			{value, {_, String}, Query3} ->
-				{ok, Tokens, 1} = cse_rest_query_scanner:string(String),
-				{ok, {'$', Steps}} = cse_rest_query_parser:parse(Tokens),
-				case Steps of
-					[{'.', ["resourceSpecRelationship"]}, {'.', Children}] ->
-						{Children1, MatchRelId} = get_child({'@', ["id"]}, Children, '_'),
-						{[], MatchRelType} = get_child({'@', ["relationshipType"]},
-								Children1, '_'),
-						{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]}
-				end;
-			false ->
+		case get_filters(Query2) of
+			{Query3, []} ->
 				MatchRelId = '_',
 				MatchRelType = '_',
-				{Query2, [MatchId, MatchName, MatchRelId, MatchRelType]}
+				{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]};
+			{Query3, Filters} ->
+				{ok, MatchRelId, MatchRelType} = match_filters("resourceSpecRelationship", Filters),
+				{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]}
 		end
 	of
 		{Query4, Args} ->
@@ -226,19 +219,13 @@ get_resource(Query, Headers) ->
 		{Query1, MatchId} = get_param("id", Query, '_'),
 		{Query2, MatchCategory} = get_param("category", Query1, '_'),
 		{Query3, MatchSpecId} = get_param("resourceSpecification.id", Query2, '_'),
-		case lists:keytake("filter", 1, Query3) of
-			{value, {_, String}, Query4} ->
-				{ok, Tokens, 1} = cse_rest_query_scanner:string(String),
-				{ok, {'$', Steps}} = cse_rest_query_parser:parse(Tokens),
-				case Steps of
-					[{'.', ["resourceRelationship"]}, {'.', Children}] ->
-						{[], MatchRelName} = get_child({'@', ["resource", "name"]},
-								Children, '_'),
-						{Query4, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
-				end;
-			false ->
+		case get_filters(Query3) of
+			{Query4, []} ->
 				MatchRelName = '_',
-				{Query3, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
+				{Query4, [MatchId, MatchCategory, MatchSpecId, MatchRelName]};
+			{Query4, Filters} ->
+				{ok, MatchRelName} = match_filters("resourceRelationship", Filters),
+				{Query4, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
 		end
 	of
 		{Query5, Args} ->
@@ -1653,4 +1640,52 @@ get_child(Element, [H | T], Default, Acc) ->
 	get_child(Element, T, Default, [H | Acc]);
 get_child(_Element, [], Default, Acc) ->
 	{lists:reverse(Acc), Default}.
+
+-spec get_filters(Query) -> Result
+	when
+		Query :: [{Key, Value}],
+		Key :: string(),
+		Value :: string() | number() | boolean(),
+		Result :: {Remaining, [Steps]},
+		Remaining :: [{Key, Value}],
+		Steps :: list().
+%% @doc Find all `filter' attributes and gather the `Step' lists.
+%% @hidden
+get_filters(Query) ->
+	get_filters(Query, [], []).
+%% @hidden
+get_filters([{"filter", String} | T], Acc1, Acc2) ->
+	{ok, Tokens, 1} = cse_rest_query_scanner:string(String),
+	{ok, {'$', Steps}} = cse_rest_query_parser:parse(Tokens),
+	get_filters(T, Acc1, [Steps | Acc2]);
+get_filters([H | T], Acc1, Acc2) ->
+	get_filters(T, [H | Acc1], Acc2);
+get_filters([], Acc1, Acc2) ->
+	{lists:reverse(Acc1), lists:reverse(Acc2)}.
+
+-spec match_filters(AttributeName, Steps) -> Result
+	when
+		AttributeName :: string(),
+		Steps :: [Step],
+		Step :: [{'.', Children}],
+		Children :: list(),
+		Result :: {ok, MatchRelId, MatchRelType} | {ok, MatchRelName} | {error, not_found},
+		MatchRelId :: {exact, Value} | '_',
+		MatchRelType :: {exact, Value} | '_',
+		MatchRelName :: {exact, Value} | '_',
+		Value :: string().
+%% @doc Get specific `Match' from `Steps'.
+match_filters("resourceSpecRelationship",
+		[[{'.', ["resourceSpecRelationship"]}, {'.', Children}] | _] = _Steps) ->
+	{Children1, MatchRelId} = get_child({'@', ["id"]}, Children, '_'),
+	{[], MatchRelType} = get_child({'@', ["relationshipType"]}, Children1, '_'),
+	{ok, MatchRelId, MatchRelType};
+match_filters("resourceRelationship",
+		[[{'.', ["resourceRelationship"]}, {'.', Children}] | _]) ->
+	{[], MatchRelName} = get_child({'@', ["resource", "name"]}, Children, '_'),
+	{ok, MatchRelName};
+match_filters([_ | T], Steps) ->
+	match_filters(T, Steps);
+match_filters([], _Steps) ->
+	{error, not_found}.
 
