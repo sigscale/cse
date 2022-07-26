@@ -90,7 +90,6 @@ handle_error(ReqId, Other, UserData) ->
 %% @doc Called when a message is received from an unknown agent.
 handle_agent(_Domain, {IpAddress, Port} = _Address, Type,
 		{Enteprise, Generic, Spec, Timestamp, Varbinds}, UserData) ->
-erlang:display({?MODULE, ?LINE}),
 	error_logger:error_report(["SNMP Manager: Unknown Agent",
 			{address, IpAddress}, {port, Port}, {type, Type},
 			{enterprise, Enteprise}, {generic, Generic}, {spec, Spec},
@@ -100,7 +99,6 @@ erlang:display({?MODULE, ?LINE}),
     ignore;
 handle_agent(_Domain, {IpAddress, Port} = _Address, Type,
 		{Status, Index, Varbinds} = _SnmpInfo, UserData) ->
-erlang:display({?MODULE, ?LINE}),
 	error_logger:error_report(["SNMP Manager: Unknown Agent",
 			{address, IpAddress}, {port, Port}, {type, Type},
 			{status, Status}, {index, Index}, {varbinds, Varbinds},
