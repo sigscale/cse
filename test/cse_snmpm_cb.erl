@@ -51,7 +51,7 @@ handle_error(ReqId,
 			{reqid, ReqId}, {error, unexpected_pdu},
 			{status, Status}, {index, Index},
 			{varbinds, Varbinds}, {userdata, UserData}]),
-	UserData ! {error, Reason}; 
+	UserData ! {error, Reason};
 handle_error(ReqId,
 		{invalid_sec_info, SecurityInfo, {Status, Index, Varbinds}} = Reason, UserData) ->
 	error_logger:error_report(["SNMP Manager: Error",
@@ -59,18 +59,18 @@ handle_error(ReqId,
 			{sec_info, SecurityInfo}, {status, Status},
 			{index, Index}, {varbinds, Varbinds},
 			{userdata, UserData}]),
-	UserData ! {error, Reason}; 
+	UserData ! {error, Reason};
 handle_error(ReqId, {empty_message, Address, Port} = Reason, UserData) ->
 	error_logger:error_report(["SNMP Manager: Error",
 			{reqid, ReqId}, {error, empty_message},
 			{address, Address}, {port, Port},
 			{userdata, UserData}]),
-	UserData ! {error, Reason}; 
+	UserData ! {error, Reason};
 handle_error(ReqId, Other, UserData) ->
 	error_logger:error_report(["SNMP Manager: Error",
 			{reqid, ReqId}, {error, Other},
 			{userdata, UserData}]),
-	UserData ! {error, Other}. 
+	UserData ! {error, Other}.
 
 -spec handle_agent(Domain, Address, Type, SnmpInfo, UserData) -> Reply
 	when
