@@ -45,7 +45,7 @@ Header
 "%%%    <li><tt>JSONPath = {Root, Steps}</tt></li>"
 "%%%    <li><tt>Root = '$'</tt></li>"
 "%%%    <li><tt>Steps = [Step]</tt></li>"
-"%%%    <li><tt>step = {'.', Children} | {'..', Descendents}</tt></li>"
+"%%%    <li><tt>Step = {'.', Children} | {'..', Descendents}</tt></li>"
 "%%%    <li><tt>Children = Descendents = Slice | Filter | Script</tt></li>"
 "%%%    <li><tt>Slice = {slice, Start, End}</tt></li>"
 "%%%    <li><tt>Start = End = integer() | undefined</tt></li>"
