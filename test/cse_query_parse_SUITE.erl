@@ -128,21 +128,20 @@ select_child() ->
 	[{userdata, [{doc, "Child path selection"}]}].
 
 select_child(_Config) ->
-	Query = "$.resourceCharacteristic.name",
+	Query = "$.resourceSpecification",
 	Root = '$',
-	Step1 = {'.', ["resourceCharacteristic"]},
-	Step2 = {'.', ["name"]},
-	Steps = [Step1, Step2],
+	Step1 = {'.', ["resourceSpecification"]},
+	Steps = [Step1],
 	{Root, Steps} = parse(Query).
 
 select_children() ->
 	[{userdata, [{doc, "Children path selection"}]}].
 
 select_children(_Config) ->
-	Query = "$.resourceCharacteristic[name,description]",
+	Query = "$.resourceSpecification[id,href]",
 	Root = '$',
-	Step1 = {'.', ["resourceCharacteristic"]},
-	Step2 = {'.', ["name", "description"]},
+	Step1 = {'.', ["resourceSpecification"]},
+	Step2 = {'.', ["id", "href"]},
 	Steps = [Step1, Step2],
 	{Root, Steps} = parse(Query).
 
