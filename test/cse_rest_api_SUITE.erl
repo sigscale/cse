@@ -411,7 +411,8 @@ query_resource(Config) ->
 	{ok, #resource{}} = cse:add_resource(PrefixRow2),
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
 	Accept = {"accept", "application/json"},
-	Filter = "resourceRelationship[?(@.resource.name=='" ++ TableName ++ "')]",
+	Filter = "resourceRelationship[?(@.relationshipType=='contained'"
+			"&&@.resource.name=='" ++ TableName ++ "')]",
 	Query = "?resourceSpecification.id=" ++ SpecId
 			++ "&filter=" ++ ?QUOTE(Filter),
 	Request = {Host ++ lists:droplast(?inventoryPath) ++ Query, [Accept]},
@@ -601,48 +602,61 @@ is_resource_char(_) ->
 
 static_prefix_table(Name) ->
 	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = "/resourceCatalogManagement/v4/resourceSpecification/"
+			++ SpecId, name = "PrefixTable"},
 	#resource{name = Name, description = "Prefix Table", category = "Prefix",
 			base_type = "Resource", version = "1.0",
-			specification = #resource_spec_ref{id = SpecId,
-					href = "/resourceCatalogManagement/v4/resourceSpecification/"
-							++ SpecId,
-					name = "PrefixTable"}}.
+			specification = SpecRef}.
 
 dynamic_prefix_table(Name) ->
 	SpecName = "sampleDynamicResSpec",
 	Spec = table_resource_spec(SpecName),
 	{ok, #resource_spec{id = SpecId}} = cse:add_resource_spec(Spec),
-	#resource{name = Name, description = "Prefix Table", category = "Prefix",
-			base_type = "Resource", version = "1.0",
-			specification = #resource_spec_ref{id = SpecId,
-					href = "/resourceCatalogManagement/v4/resourceSpecification/"
-							++ SpecId,
-					name = SpecName}}.
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = "/resourceCatalogManagement/v4/resourceSpecification/"
+			++ SpecId, name = SpecName},
+	#resource{name = Name,
+			description = "Prefix Table",
+			category = "Prefix",
+			base_type = "Resource",
+			version = "1.0",
+			specification = SpecRef}.
 
 range_table(Name) ->
 	SpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
-	#resource{name = Name, description = "Range Table", category = "Prefix",
-			base_type = "Resource", version = "1.0",
-			specification = #resource_spec_ref{id = SpecId,
-					href = "/resourceCatalogManagement/v4/resourceSpecification/"
-							++ SpecId,
-					name = "PrefixRangeTable"}}.
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = "/resourceCatalogManagement/v4/resourceSpecification/"
+			++ SpecId, name = "PrefixRangeTable"},
+	#resource{name = Name,
+			description = "Range Table",
+			category = "Prefix",
+			base_type = "Resource",
+			version = "1.0",
+			specification = SpecRef}.
 
 static_prefix_row(TableId, TableName) ->
 	static_prefix_row("examplePrefixRow", TableId, TableName).
 static_prefix_row(Name, TableId, TableName) ->
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = "/resourceCatalogManagement/v2/resourceSpecification/"
+			++ SpecId, name = "PrefixRow"},
+	ResourceRef = #resource_ref{name = TableName,
+			id = TableId,
+			href = "/resourceInventoryManagement/v4/resource/"
+			++ TableId},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
 	Column1 = #characteristic{name = "prefix", value = "15796"},
 	Column2 = #characteristic{name = "value", value = "hello world"},
-	#resource{name = Name, description = "Prefix Row",
-			category = "Prefix", base_type = "Resource", version = "1.0",
-			related = [#resource_rel{id = TableId,
-					href = "/resourceInventoryManagement/v4/resource/"
-					++ TableId, name = TableName, rel_type = "contained"}],
-			specification = #resource_spec_ref{id = SpecId,
-					href = "/resourceCatalogManagement/v2/resourceSpecification/"
-							++ SpecId,
-					name = "PrefixRow"},
+	#resource{name = Name,
+			description = "Prefix Row",
+			category = "Prefix",
+			base_type = "Resource",
+			version = "1.0",
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
 			characteristic = #{"prefix" => Column1, "value" => Column2}}.
 
 dynamic_prefix_row(Name, TableId, TableName) ->
@@ -653,39 +667,55 @@ dynamic_prefix_row(Name, TableId, TableName) ->
 	SpecName = "sampleDynamicRowResSpec",
 	Spec = row_resource_spec(SpecName, TableSpecId, TableSpecName),
 	{ok, #resource_spec{id = SpecId}} = cse:add_resource_spec(Spec),
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = "/resourceCatalogManagement/v2/resourceSpecification/"
+			++ SpecId, name = SpecName},
+	ResourceRef = #resource_ref{name = TableName,
+			id = TableId,
+			href = "/resourceInventoryManagement/v4/resource/"
+			++ TableId},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
 	Column1 = #characteristic{name = "prefix", value = "46892"},
 	Column2 = #characteristic{name = "value", value = 64},
 	#resource{name = Name, description = "Prefix Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
-			related = [#resource_rel{id = TableId,
-					href = "/resourceInventoryManagement/v4/resource/"
-					++ TableId, name = TableName, rel_type = "contained"}],
-			specification = #resource_spec_ref{id = SpecId,
-					href = "/resourceCatalogManagement/v2/resourceSpecification/"
-							++ SpecId,
-					name = SpecName},
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
 			characteristic = #{"prefix" => Column1, "value" => Column2}}.
 
 %% @hidden
 range_row(Name, TableId, TableName, Start, End) ->
 	SpecId = cse_rest_res_resource:prefix_range_row_spec_id(),
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = "/resourceCatalogManagement/v2/resourceSpecification/"
+			++ SpecId, name = "PrefixRangeRow"},
+	ResourceRef = #resource_ref{name = TableName,
+			id = TableId,
+			href = "/resourceInventoryManagement/v4/resource/"
+			++ TableId},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
 	Column1 = #characteristic{name = "start", value = Start},
 	Column2 = #characteristic{name = "end", value = End},
 	Column3 = #characteristic{name = "value", value = "hello range"},
 	#resource{name = Name, description = "Range Row",
 			category = "Prefix", base_type = "Resource", version = "1.0",
-			related = [#resource_rel{id = TableId,
-					href = "/resourceInventoryManagement/v4/resource/"
-					++ TableId, name = TableName, rel_type = "contained"}],
-			specification = #resource_spec_ref{id = SpecId,
-					href = "/resourceCatalogManagement/v2/resourceSpecification/"
-							++ SpecId,
-					name = "PrefixRangeRow"},
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
 			characteristic = #{"start" => Column1,
 					"end" => Column2, "value" => Column3}}.
 
 row_resource_spec(Name, TableId, TableName) ->
 	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),
+	SpecRel1 = #resource_spec_rel{id = TableId,
+			href = ?specPath ++ TableId,
+			name = TableName,
+			rel_type = "contained"},
+	SpecRel2 = #resource_spec_rel{id = StaticRowId,
+			href = ?specPath ++ StaticRowId,
+			name = "PrefixRow",
+			rel_type = "based"},
 	Column1 = #resource_spec_char{name = "prefix",
 			description = "Prefix to match",
 			value_type = "String"},
@@ -697,24 +727,21 @@ row_resource_spec(Name, TableId, TableName) ->
 			version = "1.1",
 			status = "active",
 			category = "DynamicPrefixRow",
-			related = [#resource_spec_rel{id = TableId,
-					href = ?specPath ++ TableId, name = TableName,
-					rel_type = "contained"},
-				#resource_spec_rel{id = StaticRowId,
-					href = ?specPath ++ StaticRowId,
-					name = "PrefixRow", rel_type = "based"}],
+			related = [SpecRel1, SpecRel2],
 			characteristic = [Column1, Column2]}.
 
 table_resource_spec(Name) ->
 	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = TableId,
+			href = ?specPath ++ TableId,
+			name = "PrefixTable",
+			rel_type = "based"},
 	#resource_spec{name = Name,
 			description = "Dynamic table specification",
 			version = "1.1",
 			status = "active",
 			category = "DynamicPrefixTable",
-			related = [#resource_spec_rel{id = TableId,
-					href = ?specPath ++ TableId,
-					name = "PrefixTable", rel_type = "based"}]}.
+			related = [SpecRel]}.
 
 is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
 		"description" := Description, "version" := Version,

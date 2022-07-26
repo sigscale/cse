@@ -16,7 +16,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 
--type characteristics() :: #{Name :: string() => characteristic()}.
+-type characteristics() :: #{CharName :: string() => characteristic()}.
+-type related_resources() :: #{RelType :: string() => resource_rel()}.
 
 -record(gtt,
 		{num :: string() | '_' | '$1',
@@ -64,9 +65,6 @@
 		href :: string() | undefined | '_',
 		name :: string() | undefined | '_',
 		description :: string() | undefined | '_',
-		class_type :: string() | undefined | '_',
-		base_type :: string() | undefined | '_',
-		schema :: string() | undefined | '_',
 		version :: string() | undefined | '_',
 		start_date :: pos_integer() | undefined | '_',
 		end_date :: pos_integer() | undefined | '_',
@@ -79,16 +77,33 @@
 		status :: string() | undefined | '_',
 		party = [] :: [party_rel()] | undefined | '_',
 		feature = [] :: [] | '_',
-		related = [] :: [resource_rel()] | '_',
 		specification :: resource_spec_ref() | undefined | '_',
-		characteristic = #{} :: characteristics() | '_'}).
+		related = #{} :: related_resources() | '_',
+		characteristic = #{} :: characteristics() | '_',
+		class_type :: string() | undefined | '_',
+		base_type :: string() | undefined | '_',
+		schema :: string() | undefined | '_',
+		attributes :: map() | undefined | '_'}).
 -type resource() :: #resource{}.
 
--record(resource_rel,
+-record(resource_ref,
 		{id :: string() | undefined | '_',
 		href :: string() | undefined | '_',
 		name :: string() | undefined | '_',
-		rel_type :: string() | undefined | '_'}).
+		ref_type :: string() | undefined | '_',
+		class_type :: string() | undefined | '_',
+		base_type :: string() | undefined | '_',
+		schema :: string() | undefined | '_',
+		attributes :: map() | undefined | '_'}).
+-type resource_ref() :: #resource_ref{}.
+
+-record(resource_rel,
+		{rel_type :: string() | undefined | '_',
+		resource :: resource_ref() | undefined | '_',
+		class_type :: string() | undefined | '_',
+		base_type :: string() | undefined | '_',
+		schema :: string() | undefined | '_',
+		attributes :: map() | undefined | '_'}).
 -type resource_rel() :: #resource_rel{}.
 
 -record(resource_spec_ref,
@@ -142,23 +157,23 @@
 
 -record(char_rel,
 		{id :: string() | undefined | '_',
+		rel_type :: string() | undefined | '_',
 		class_type :: string() | undefined | '_',
 		schema :: string() | undefined | '_',
 		base_type :: string() | undefined | '_',
-		rel_type :: string() | undefined | '_',
 		attributes :: map() | undefined | '_'}).
 -type char_rel() :: #char_rel{}.
 
 -record(characteristic,
 		{id :: string() | undefined | '_',
 		name :: string() | undefined | '_',
+		related = [] :: [char_rel()] | '_',
+		value_type :: string() | undefined | '_',
+		value :: term() | undefined | '_',
 		class_type :: string() | undefined | '_',
 		schema :: string() | undefined | '_',
 		base_type :: string() | undefined | '_',
-		attributes :: map() | undefined | '_',
-		related = [] :: [char_rel()] | '_',
-		value_type :: string() | undefined | '_',
-		value :: term() | undefined | '_'}).
+		attributes :: map() | undefined | '_'}).
 -type characteristic() :: #characteristic{}.
 
 -record(target_res_schema,

@@ -655,90 +655,79 @@ query_resource_spec5({Resources, Cont}) ->
 query_resource_spec5('$end_of_table') ->
 	{eof, []}.
 
--spec query_resource(Cont, MatchId, MatchName,
-		MatchResSpecId, MatchRelName) -> Result
+-spec query_resource(Cont, MatchName, MatchResSpecId,
+		MatchRelType, MatchRelName) -> Result
 	when
 		Cont :: start | any(),
-		MatchId :: Match,
-		MatchName :: Match,
-		MatchResSpecId :: Match,
-		MatchRelName :: Match,
-		Match :: {exact, string()} | {like, string()} | '_',
+		MatchName :: {exact, string()} | {like, string()} | '_',
+		MatchResSpecId :: {exact, string()} | '_',
+		MatchRelType :: {exact, string()} | '_',
+		MatchRelName :: {exact, string()} | '_',
 		Result :: {Cont1, [#resource{}]} | {error, Reason},
 		Cont1 :: eof | any(),
 		Reason :: term().
 %% @doc Query the Resource table.
-query_resource(Cont, '_', MatchName, MatchResSpecId, MatchRelName) ->
+query_resource(Cont, '_' = _MatchName, MatchResSpecId,
+		MatchRelType, MatchRelName) ->
 	MatchHead = #resource{_ = '_'},
-	query_resource1(Cont, MatchHead, MatchName,
-			MatchResSpecId, MatchRelName);
-query_resource(Cont, {Op, String}, MatchName, MatchResSpecId, MatchRelName)
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead = case lists:last(String) of
+	query_resource1(Cont, MatchHead, MatchResSpecId,
+			MatchRelType, MatchRelName);
+query_resource(Cont, {Op, Name} = _MatchName, MatchResSpecId,
+		MatchRelType, MatchRelName)
+		when is_list(Name), ((Op == exact) orelse (Op == like)) ->
+	MatchHead = case lists:last(Name) of
 		$% when Op == like ->
-			#resource{id = lists:droplast(String) ++ '_', _ = '_'};
+			#resource{name = lists:droplast(Name) ++ '_', _ = '_'};
 		_ ->
-			#resource{id = String, _ = '_'}
+			#resource{id = Name, _ = '_'}
 	end,
-	query_resource1(Cont, MatchHead, MatchName,
-			MatchResSpecId, MatchRelName).
+	query_resource1(Cont, MatchHead, MatchResSpecId,
+			MatchRelType, MatchRelName).
 %% @hidden
-query_resource1(Cont, MatchHead, '_', MatchResSpecId, MatchRelName) ->
-	query_resource2(Cont, MatchHead, MatchResSpecId, MatchRelName);
-query_resource1(Cont, MatchHead1, {Op, String}, MatchResSpecId, MatchRelName)
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead2 = case lists:last(String) of
-		$% when Op == like ->
-			MatchHead1#resource{name = lists:droplast(String) ++ '_'};
-		_ ->
-			MatchHead1#resource{name = String}
-	end,
-	query_resource2(Cont, MatchHead2, MatchResSpecId, MatchRelName).
+query_resource1(Cont, MatchHead, '_' = _MatchResSpecId,
+		MatchRelType, MatchRelName) ->
+	query_resource2(Cont, MatchHead,
+			MatchRelType, MatchRelName);
+query_resource1(Cont, MatchHead1, {exact, SpecId} = _MatchResSpecId,
+		MatchRelType, MatchRelName) when is_list(SpecId) ->
+	ResourceSpecRef = #resource_spec_ref{id = SpecId, _ = '_'},
+	MatchHead2 = MatchHead1#resource{specification = ResourceSpecRef},
+	query_resource2(Cont, MatchHead2,
+			MatchRelType, MatchRelName).
 %% @hidden
-query_resource2(Cont, MatchHead, '_', MatchRelName) ->
-	query_resource3(Cont, MatchHead, MatchRelName);
-query_resource2(Cont, MatchHead1, {Op, String}, MatchRelName)
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead2 = case lists:last(String) of
-		$% when Op == like ->
-			MatchHead1#resource{specification = #resource_spec_ref{id
-					= lists:droplast(String) ++ '_', _ = '_'}};
-		_ ->
-			MatchHead1#resource{specification
-					= #resource_spec_ref{id = String, _ = '_'}}
-	end,
-	query_resource3(Cont, MatchHead2, MatchRelName).
-%% @hidden
-query_resource3(Cont, MatchHead, '_') ->
+query_resource2(Cont, MatchHead, '_', '_') ->
 	MatchSpec = [{MatchHead, [], ['$_']}],
-	query_resource4(Cont, MatchSpec);
-query_resource3(Cont, MatchHead1, {Op, String})
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead2 = case lists:last(String) of
-		$% when Op == like ->
-			MatchHead1#resource{related = [#resource_rel{name
-					= lists:droplast(String) ++ '_', _ = '_'}]};
-		_ ->
-			MatchHead1#resource{related
-					= [#resource_rel{name = String, _ = '_'}]}
-	end,
+	query_resource3(Cont, MatchSpec);
+query_resource2(Cont, MatchHead1, {exact, RelType}, '_')
+		when is_list(RelType) ->
+	ResourceRel = #resource_rel{_ = '_'},
+	Related = #{RelType => ResourceRel},
+	MatchHead2 = MatchHead1#resource{related = Related},
 	MatchSpec = [{MatchHead2, [], ['$_']}],
-	query_resource4(Cont, MatchSpec).
+	query_resource3(Cont, MatchSpec);
+query_resource2(Cont, MatchHead1, {exact, RelType}, {exact, RelName})
+		when is_list(RelType), is_list(RelName) ->
+	ResourceRef = #resource_ref{name = RelName, _ = '_'},
+	ResourceRel = #resource_rel{resource = ResourceRef, _ = '_'},
+	Related = #{RelType => ResourceRel},
+	MatchHead2 = MatchHead1#resource{related = Related},
+	MatchSpec = [{MatchHead2, [], ['$_']}],
+	query_resource3(Cont, MatchSpec).
 %% @hidden
-query_resource4(start, MatchSpec) ->
+query_resource3(start, MatchSpec) ->
 	F = fun() ->
 			mnesia:select(resource, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	query_resource5(mnesia:ets(F));
-query_resource4(Cont, _MatchSpec) ->
+	query_resource4(mnesia:ets(F));
+query_resource3(Cont, _MatchSpec) ->
 	F = fun() ->
 			mnesia:select(Cont)
 	end,
-	query_resource5(mnesia:ets(F)).
+	query_resource4(mnesia:ets(F)).
 %% @hidden
-query_resource5({Resources, Cont}) ->
+query_resource4({Resources, Cont}) ->
 	{Cont, Resources};
-query_resource5('$end_of_table') ->
+query_resource4('$end_of_table') ->
 	{eof, []}.
 
 -type event_type() :: collected_info | analysed_info | route_fail

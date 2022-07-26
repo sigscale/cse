@@ -216,21 +216,22 @@ get_resource(Id) ->
 %% 	requests.
 get_resource(Query, Headers) ->
 	try
-		{Query1, MatchId} = get_param("id", Query, '_'),
-		{Query2, MatchCategory} = get_param("category", Query1, '_'),
-		{Query3, MatchSpecId} = get_param("resourceSpecification.id", Query2, '_'),
-		case get_filters(Query3) of
-			{Query4, []} ->
+		{Query1, MatchName} = get_param("name", Query, '_'),
+		{Query2, MatchSpecId} = get_param("resourceSpecification.id", Query1, '_'),
+		case get_filters(Query2) of
+			{Query3, []} ->
+				MatchRelType= '_',
 				MatchRelName = '_',
-				{Query4, [MatchId, MatchCategory, MatchSpecId, MatchRelName]};
-			{Query4, Filters} ->
-				{ok, MatchRelName} = match_filters("resourceRelationship", Filters),
-				{Query4, [MatchId, MatchCategory, MatchSpecId, MatchRelName]}
+				{Query3, [MatchName, MatchSpecId, MatchRelType, MatchRelName]};
+			{Query3, Filters} ->
+				{ok, MatchRelType, MatchRelName}
+						= match_filters("resourceRelationship", Filters),
+				{Query3, [MatchName, MatchSpecId, MatchRelType, MatchRelName]}
 		end
 	of
-		{Query5, Args} ->
+		{Query4, Args} ->
 			Codec = fun resource/1,
-			query_filter({cse, query_resource, Args}, Codec, Query5, Headers)
+			query_filter({cse, query_resource, Args}, Codec, Query4, Headers)
 	catch
 		_Error:_Reason ->
 			{error, 400}
@@ -428,10 +429,11 @@ add_resource_prefix_table(#resource{name = Name} = Resource) ->
 
 %% @hidden
 add_resource_prefix_row(#resource{related = Related} = Resource) ->
-	case lists:keyfind("contained", #resource_rel.rel_type, Related) of
-		#resource_rel{name = Table} ->
+	case maps:find("contained", Related) of
+		{ok, #resource_rel{rel_type = "contained",
+				resource = #resource_ref{name = Table}}} ->
 			add_resource_prefix_row(Table, Resource);
-		false ->
+		error ->
 			{error, 400}
 	end.
 %% @hidden
@@ -459,10 +461,11 @@ add_resource_prefix_row(Table,
 
 %% @hidden
 add_resource_range_row(#resource{related = Related} = Resource) ->
-	case lists:keyfind("contained", #resource_rel.rel_type, Related) of
-		#resource_rel{name = Table} ->
+	case maps:find("contained", Related) of
+		{ok, #resource_rel{rel_type = "contained",
+				resource = #resource_ref{name = Table}}} ->
 			add_resource_range_row(Table, Resource);
-		false ->
+		error ->
 			{error, 400}
 	end.
 %% @hidden
@@ -549,10 +552,11 @@ delete_resource3(#resource{id = Id}, []) ->
 
 %% @hidden
 delete_resource_row(#resource{related = Related} = Resource) ->
-	case lists:keyfind("contained", #resource_rel.rel_type, Related) of
-		#resource_rel{name = Table} ->
+	case maps:find("contained", Related) of
+		{ok, #resource_rel{rel_type = "contained",
+				resource = #resource_ref{name = Table}}} ->
 			delete_resource_row(Table, Resource);
-		false ->
+		error ->
 			{error, 400}
 	end.
 %% @hidden
@@ -821,7 +825,7 @@ resource([usage_state | T], #{"usageState" := State} = M, Acc)
 		when is_list(State) ->
 	resource(T, M, Acc#resource{usage_state = State});
 resource([related | T], #resource{related = ResRel} = R, Acc)
-		when is_list(ResRel), length(ResRel) > 0 ->
+		when is_map(ResRel), map_size(ResRel) > 0 ->
 	resource(T, R, Acc#{"resourceRelationship" => resource_rel(ResRel)});
 resource([related | T], #{"resourceRelationship" := ResRel} = M, Acc)
 		when is_list(ResRel) ->
@@ -845,47 +849,111 @@ resource([], _, Acc) ->
 
 -spec resource_rel(ResourceRelationship) -> ResourceRelationship
 	when
-		ResourceRelationship :: [resource_rel()] | [map()].
+		ResourceRelationship :: map() | [map()].
 %% @doc CODEC for `ResourceRelationship'.
-%%
-%% Internally we condense `ResourceRefOrValue' with one record.
-%%
-resource_rel([#resource_rel{} | _] = List) ->
+resource_rel(#{} = ResourceRelationship) ->
 	Fields = record_info(fields, resource_rel),
-	[resource_rel(Fields, R, #{}) || R <- List];
-resource_rel([#{} | _] = List) ->
+	[resource_rel(Fields, R, #{})
+			|| R <- maps:values(ResourceRelationship)];
+resource_rel([#{} | _] = ResourceRelationship) ->
 	Fields = record_info(fields, resource_rel),
-	[resource_rel(Fields, M, #resource_rel{}) || M <- List];
+	Records = [resource_rel(Fields, M, #resource_rel{})
+			|| M <- ResourceRelationship],
+	maps:from_list([{R#resource_rel.rel_type, R} || R <- Records]);
 resource_rel([]) ->
-	[].
+	#{}.
 %% @hidden
-resource_rel([id | T], #resource_rel{id = Id} = R, Acc)
-		when is_list(Id) ->
-	resource_rel(T, R, Acc#{"resource" => #{"id" => Id}});
-resource_rel([id | T], #{"resource" := #{"id" := Id}} = M, Acc)
-		when is_list(Id) ->
-	resource_rel(T, M, Acc#resource_rel{id = Id});
-resource_rel([href | T], #resource_rel{href = Href} = R,
-		#{"resource" := Res} = Acc) when is_list(Href) ->
-	resource_rel(T, R, Acc#{"resource" => Res#{"href" => Href}});
-resource_rel([href | T], #{"resource" := #{"href" := Href}} = M, Acc)
-		when is_list(Href) ->
-	resource_rel(T, M, Acc#resource_rel{href = Href});
-resource_rel([name | T], #resource_rel{name = Name} = R,
-		#{"resource" := Res} = Acc) when is_list(Name) ->
-	resource_rel(T, R, Acc#{"resource" => Res#{"name" => Name}});
-resource_rel([name | T], #{"resource" := #{"name" := Name}} = M, Acc)
-		when is_list(Name) ->
-	resource_rel(T, M, Acc#resource_rel{name = Name});
 resource_rel([rel_type | T], #resource_rel{rel_type = Type} = R,
 		Acc) when is_list(Type) ->
 	resource_rel(T, R, Acc#{"relationshipType" => Type});
 resource_rel([rel_type | T], #{"relationshipType" := Type} = M,
 		Acc) when is_list(Type) ->
 	resource_rel(T, M, Acc#resource_rel{rel_type = Type});
+resource_rel([resource | T], #resource_rel{resource = ResourceRef} = R,
+		Acc) when is_record(ResourceRef, resource_ref) ->
+	resource_rel(T, R, Acc#{"resource" => resource_ref(ResourceRef)});
+resource_rel([resource | T], #{"resource" := ResourceRef} = M,
+		Acc) when is_map(ResourceRef) ->
+	resource_rel(T, M, Acc#resource_rel{resource = resource_ref(ResourceRef)});
+resource_rel([class_type | T], #resource_rel{class_type = Type} = R,
+		Acc) when is_list(Type) ->
+	resource_rel(T, R, Acc#{"@type" => Type});
+resource_rel([class_type | T], #{"@type" := Type} = M,
+		Acc) when is_list(Type) ->
+	resource_rel(T, M, Acc#resource_rel{class_type = Type});
+resource_rel([base_type | T], #resource_rel{base_type = Type} = R,
+		Acc) when is_list(Type) ->
+	resource_rel(T, R, Acc#{"@baseType" => Type});
+resource_rel([base_type | T], #{"@baseType" := Type} = M,
+		Acc) when is_list(Type) ->
+	resource_rel(T, M, Acc#resource_rel{base_type = Type});
+resource_rel([schema | T], #resource_rel{schema = Schema} = R,
+		Acc) when is_list(Schema) ->
+	resource_rel(T, R, Acc#{"@schemaLocation" => Schema});
+resource_rel([schema | T], #{"@schemaLocation" := Schema} = M,
+		Acc) when is_list(Schema) ->
+	resource_rel(T, M, Acc#resource_rel{schema = Schema});
 resource_rel([_ | T], R, Acc) ->
 	resource_rel(T, R, Acc);
 resource_rel([], _, Acc) ->
+	Acc.
+
+-spec resource_ref(ResourceRef) -> ResourceRef
+	when
+		ResourceRef :: #resource_ref{} | map().
+%% @doc CODEC for `ResourceRef'.
+resource_ref(#{} = ResourceRef) ->
+	Fields = record_info(fields, resource_ref),
+	resource_ref(Fields, ResourceRef, #resource_ref{});
+resource_ref(#resource_ref{} = ResourceRef) ->
+	Fields = record_info(fields, resource_ref),
+	resource_ref(Fields, ResourceRef, #{}).
+%% @hidden
+resource_ref([id | T], #resource_ref{id = Id} = R,
+		Acc) when is_list(Id) ->
+	resource_ref(T, R, Acc#{"id" => Id});
+resource_ref([id | T], #{"id" := Id} = M,
+		Acc) when is_list(Id) ->
+	resource_ref(T, M, Acc#resource_ref{id = Id});
+resource_ref([href | T], #resource_ref{href = Href} = R,
+		Acc) when is_list(Href) ->
+	resource_ref(T, R, Acc#{"href" => Href});
+resource_ref([href | T], #{"href" := Href} = M,
+		Acc) when is_list(Href) ->
+	resource_ref(T, M, Acc#resource_ref{href = Href});
+resource_ref([name | T], #resource_ref{name = Name} = R,
+		Acc) when is_list(Name) ->
+	resource_ref(T, R, Acc#{"name" => Name});
+resource_ref([name | T], #{"name" := Name} = M,
+		Acc) when is_list(Name) ->
+	resource_ref(T, M, Acc#resource_ref{name = Name});
+resource_ref([ref_type | T], #resource_ref{ref_type = Type} = R,
+		Acc) when is_list(Type) ->
+	resource_ref(T, R, Acc#{"@referredType" => Type});
+resource_ref([name | T], #{"@referredType" := Type} = M,
+		Acc) when is_list(Type) ->
+	resource_ref(T, M, Acc#resource_ref{ref_type = Type});
+resource_ref([class_type | T], #resource_ref{class_type = Type} = R,
+		Acc) when is_list(Type) ->
+	resource_ref(T, R, Acc#{"@type" => Type});
+resource_ref([class_type | T], #{"@type" := Type} = M,
+		Acc) when is_list(Type) ->
+	resource_ref(T, M, Acc#resource_ref{class_type = Type});
+resource_ref([base_type | T], #resource_ref{base_type = Type} = R,
+		Acc) when is_list(Type) ->
+	resource_ref(T, R, Acc#{"@baseType" => Type});
+resource_ref([base_type | T], #{"@baseType" := Type} = M,
+		Acc) when is_list(Type) ->
+	resource_ref(T, M, Acc#resource_ref{base_type = Type});
+resource_ref([schema | T], #resource_ref{schema = Schema} = R,
+		Acc) when is_list(Schema) ->
+	resource_ref(T, R, Acc#{"@schemaLocation" => Schema});
+resource_ref([schema | T], #{"@schemaLocation" := Schema} = M,
+		Acc) when is_list(Schema) ->
+	resource_ref(T, M, Acc#resource_ref{schema = Schema});
+resource_ref([_| T], R, Acc) ->
+	resource_ref(T, R, Acc);
+resource_ref([], _, Acc) ->
 	Acc.
 
 -spec characteristic(Characteristics) -> Characteristics
@@ -1652,22 +1720,25 @@ get_param(Key, Query, Default) ->
 		Path :: [string()],
 		Operand :: string() | number() | boolean(),
 		Default :: '_' | string() | number() | boolean(),
-		Result :: {Remaining, Match},
-		Remaining :: [{filter, Filter}],
+		Result :: Match,
 		Match :: {Operator, Value} | Default,
 		Operator :: exact,
 		Value :: string() | number() | boolean().
 %% @doc Take `Element' from `Children'.
 %% @hidden
-get_child(Element, Children, Default) ->
-	get_child(Element, Children, Default, []).
-%% @hidden
-get_child(Element, [{filter, {exact, Element, Value}} | T], _Default, Acc) ->
-	{lists:reverse(Acc) ++ T, {exact, Value}};
-get_child(Element, [H | T], Default, Acc) ->
-	get_child(Element, T, Default, [H | Acc]);
-get_child(_Element, [], Default, Acc) ->
-	{lists:reverse(Acc), Default}.
+get_child(Element, [{filter, {exact, Element, Value}} | _] = _Children,
+		_Default) ->
+	{exact, Value};
+get_child(Element, [{filter, {'band', {exact, Element, Value}, _}} | _],
+		_Default) ->
+	{exact, Value};
+get_child(Element, [{filter, {'band', _, {exact, Element, Value}}} | _],
+		 _Default) ->
+	{exact, Value};
+get_child(Element, [_H | T], Default) ->
+	get_child(Element, T, Default);
+get_child(_Element, [], Default) ->
+	Default.
 
 -spec get_filters(Query) -> Result
 	when
@@ -1704,14 +1775,16 @@ get_filters([], Acc1, Acc2) ->
 		Value :: string().
 %% @doc Get specific `Match' from `Steps'.
 match_filters("resourceSpecRelationship",
-		[[{'.', ["resourceSpecRelationship"]}, {'.', Children}] | _] = _Steps) ->
-	{Children1, MatchRelId} = get_child({'@', ["id"]}, Children, '_'),
-	{[], MatchRelType} = get_child({'@', ["relationshipType"]}, Children1, '_'),
+		[[{'.', ["resourceSpecRelationship"]},
+		{'.', Children}] | _] = _Steps) ->
+	MatchRelId = get_child({'@', ["id"]}, Children, '_'),
+	MatchRelType = get_child({'@', ["relationshipType"]}, Children, '_'),
 	{ok, MatchRelId, MatchRelType};
 match_filters("resourceRelationship",
 		[[{'.', ["resourceRelationship"]}, {'.', Children}] | _]) ->
-	{[], MatchRelName} = get_child({'@', ["resource", "name"]}, Children, '_'),
-	{ok, MatchRelName};
+	MatchRelType = get_child({'@', ["relationshipType"]}, Children, '_'),
+	MatchRelName = get_child({'@', ["resource", "name"]}, Children, '_'),
+	{ok, MatchRelType, MatchRelName};
 match_filters([_ | T], Steps) ->
 	match_filters(T, Steps);
 match_filters([], _Steps) ->
