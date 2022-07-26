@@ -1,3 +1,19 @@
+2022-07-26  Vance Shipley <vances@sigscale.org>
+
+	* refactor resource relationships as map
+	* refactor resource characteristics as map
+	* handle multiple filter query attributes
+	* refactor rest queries with tmf630 part 6 jsonpath
+	* refactor rest query parser for embedded paths
+	* test cases for jsonpath filter selection
+	* add generated modules to doc makefile
+	* jsonpath operator first operand is element
+	* remove unused terminals in yecc parser
+	* test suite for query scanner/parser
+	* rewrite rest scanner/parser for json path (in-101)
+	* modernize httpd module uri and query parsing
+	* improve result type specification in api function
+
 2022-07-18  Vance Shipley <vances@sigscale.org>
 
 	* remove unreached clauses
