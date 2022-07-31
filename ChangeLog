@@ -1,3 +1,9 @@
+2022-07-31  Vance Shipley <vances@sigscale.org>
+
+	* advanced query pattern support of resource characteristics
+	* refactor rest test suite for reuse
+	* test case example improvement
+
 2022-07-26  Vance Shipley <vances@sigscale.org>
 
 	* refactor resource relationships as map
