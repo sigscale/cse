@@ -28,7 +28,7 @@
 -export([add_resource_spec/1, get_resource_specs/0, find_resource_spec/1,
 		delete_resource_spec/1, query_resource_spec/5]).
 -export([add_resource/1, get_resources/0, find_resource/1, delete_resource/1,
-		query_resource/5]).
+		query_resource/6]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
 -export([add_service/3, find_service/1, get_services/0, delete_service/1]).
@@ -656,24 +656,27 @@ query_resource_spec5('$end_of_table') ->
 	{eof, []}.
 
 -spec query_resource(Cont, MatchName, MatchResSpecId,
-		MatchRelType, MatchRelName) -> Result
+		MatchRelType, MatchRelName, MatchChars) -> Result
 	when
 		Cont :: start | any(),
 		MatchName :: {exact, string()} | {like, string()} | '_',
 		MatchResSpecId :: {exact, string()} | '_',
 		MatchRelType :: {exact, string()} | '_',
 		MatchRelName :: {exact, string()} | '_',
+		MatchChars :: [{{exact, CharName}, {exact, CharValue}}] | '_',
+		CharName :: string(),
+		CharValue :: string(),
 		Result :: {Cont1, [#resource{}]} | {error, Reason},
 		Cont1 :: eof | any(),
 		Reason :: term().
 %% @doc Query the Resource table.
 query_resource(Cont, '_' = _MatchName, MatchResSpecId,
-		MatchRelType, MatchRelName) ->
+		MatchRelType, MatchRelName, MatchChars) ->
 	MatchHead = #resource{_ = '_'},
 	query_resource1(Cont, MatchHead, MatchResSpecId,
-			MatchRelType, MatchRelName);
+			MatchRelType, MatchRelName, MatchChars);
 query_resource(Cont, {Op, Name} = _MatchName, MatchResSpecId,
-		MatchRelType, MatchRelName)
+		MatchRelType, MatchRelName, MatchChars)
 		when is_list(Name), ((Op == exact) orelse (Op == like)) ->
 	MatchHead = case lists:last(Name) of
 		$% when Op == like ->
@@ -682,52 +685,64 @@ query_resource(Cont, {Op, Name} = _MatchName, MatchResSpecId,
 			#resource{id = Name, _ = '_'}
 	end,
 	query_resource1(Cont, MatchHead, MatchResSpecId,
-			MatchRelType, MatchRelName).
+			MatchRelType, MatchRelName, MatchChars).
 %% @hidden
 query_resource1(Cont, MatchHead, '_' = _MatchResSpecId,
-		MatchRelType, MatchRelName) ->
+		MatchRelType, MatchRelName, MatchChars) ->
 	query_resource2(Cont, MatchHead,
-			MatchRelType, MatchRelName);
+			MatchRelType, MatchRelName, MatchChars);
 query_resource1(Cont, MatchHead1, {exact, SpecId} = _MatchResSpecId,
-		MatchRelType, MatchRelName) when is_list(SpecId) ->
+		MatchRelType, MatchRelName, MatchChars) when is_list(SpecId) ->
 	ResourceSpecRef = #resource_spec_ref{id = SpecId, _ = '_'},
 	MatchHead2 = MatchHead1#resource{specification = ResourceSpecRef},
 	query_resource2(Cont, MatchHead2,
-			MatchRelType, MatchRelName).
+			MatchRelType, MatchRelName, MatchChars).
 %% @hidden
-query_resource2(Cont, MatchHead, '_', '_') ->
-	MatchSpec = [{MatchHead, [], ['$_']}],
-	query_resource3(Cont, MatchSpec);
-query_resource2(Cont, MatchHead1, {exact, RelType}, '_')
+query_resource2(Cont, MatchHead, '_', '_', MatchChars) ->
+	query_resource3(Cont, MatchHead, MatchChars);
+query_resource2(Cont, MatchHead1, {exact, RelType}, '_', MatchChars)
 		when is_list(RelType) ->
 	ResourceRel = #resource_rel{_ = '_'},
 	Related = #{RelType => ResourceRel},
 	MatchHead2 = MatchHead1#resource{related = Related},
-	MatchSpec = [{MatchHead2, [], ['$_']}],
-	query_resource3(Cont, MatchSpec);
-query_resource2(Cont, MatchHead1, {exact, RelType}, {exact, RelName})
-		when is_list(RelType), is_list(RelName) ->
+	query_resource3(Cont, MatchHead2, MatchChars);
+query_resource2(Cont, MatchHead1, {exact, RelType}, {exact, RelName},
+		MatchChars) when is_list(RelType), is_list(RelName) ->
 	ResourceRef = #resource_ref{name = RelName, _ = '_'},
 	ResourceRel = #resource_rel{resource = ResourceRef, _ = '_'},
 	Related = #{RelType => ResourceRel},
 	MatchHead2 = MatchHead1#resource{related = Related},
-	MatchSpec = [{MatchHead2, [], ['$_']}],
-	query_resource3(Cont, MatchSpec).
+	query_resource3(Cont, MatchHead2, MatchChars).
 %% @hidden
-query_resource3(start, MatchSpec) ->
+query_resource3(Cont, MatchHead, '_' = _MatchChars) ->
+	MatchSpec = [{MatchHead, [], ['$_']}],
+	query_resource4(Cont, MatchSpec);
+query_resource3(Cont, MatchHead1,
+		[{{exact, CharName}, {exact, CharValue}} | T]  = _MatchChars)
+		when is_list(CharName), is_list(CharValue) ->
+	Characteristic = #characteristic{name = CharName,
+			value = CharValue, _ = '_'},
+	Characteristics = #{CharName => Characteristic},
+	MatchHead2 = MatchHead1#resource{characteristic = Characteristics},
+	query_resource3(Cont, MatchHead2, T);
+query_resource3(Cont, MatchHead, [] = _MatchChars) ->
+	MatchSpec = [{MatchHead, [], ['$_']}],
+	query_resource4(Cont, MatchSpec).
+%% @hidden
+query_resource4(start, MatchSpec) ->
 	F = fun() ->
 			mnesia:select(resource, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	query_resource4(mnesia:ets(F));
-query_resource3(Cont, _MatchSpec) ->
+	query_resource5(mnesia:ets(F));
+query_resource4(Cont, _MatchSpec) ->
 	F = fun() ->
 			mnesia:select(Cont)
 	end,
-	query_resource4(mnesia:ets(F)).
+	query_resource5(mnesia:ets(F)).
 %% @hidden
-query_resource4({Resources, Cont}) ->
+query_resource5({Resources, Cont}) ->
 	{Cont, Resources};
-query_resource4('$end_of_table') ->
+query_resource5('$end_of_table') ->
 	{eof, []}.
 
 -type event_type() :: collected_info | analysed_info | route_fail

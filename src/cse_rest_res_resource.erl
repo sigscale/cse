@@ -100,8 +100,12 @@ get_resource_specs(Query, Headers) ->
 				MatchRelType = '_',
 				{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]};
 			{Query3, Filters} ->
-				{ok, MatchRelId, MatchRelType} = match_filters("resourceSpecRelationship", Filters),
-				{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]}
+				case match_filters("resourceSpecRelationship", Filters) of
+					{ok, MatchRelId, MatchRelType} ->
+						{Query3, [MatchId, MatchName, MatchRelId, MatchRelType]};
+					{error, not_found} ->
+						{Query3, [MatchId, MatchName, '_', '_']}
+				end
 		end
 	of
 		{Query4, Args} ->
@@ -222,11 +226,29 @@ get_resource(Query, Headers) ->
 			{Query3, []} ->
 				MatchRelType= '_',
 				MatchRelName = '_',
-				{Query3, [MatchName, MatchSpecId, MatchRelType, MatchRelName]};
+				MatchChars = '_',
+				{Query3, [MatchName, MatchSpecId,
+						MatchRelType, MatchRelName, MatchChars]};
 			{Query3, Filters} ->
-				{ok, MatchRelType, MatchRelName}
-						= match_filters("resourceRelationship", Filters),
-				{Query3, [MatchName, MatchSpecId, MatchRelType, MatchRelName]}
+				{MatchRelType, MatchRelName}
+						= case match_filters("resourceRelationship", Filters) of
+					{ok, RelType, RelName} ->
+						{RelType, RelName};
+					{error, not_found} ->
+						{'_', '_'}
+				end,
+				case match_filters("resourceCharacteristic", Filters) of
+					{ok, '_', '_'} ->
+						{Query3, [MatchName, MatchSpecId,
+								MatchRelType, MatchRelName, '_']};
+					{ok, MatchCharName, MatchCharValue} ->
+						MatchChars = [{MatchCharName, MatchCharValue}],
+						{Query3, [MatchName, MatchSpecId,
+								MatchRelType, MatchRelName, MatchChars]};
+					{error, not_found} ->
+						{Query3, [MatchName, MatchSpecId,
+								MatchRelType, MatchRelName, '_']}
+				end
 		end
 	of
 		{Query4, Args} ->
@@ -416,8 +438,8 @@ add_resource_prefix_table(#resource{name = Name} = Resource) ->
 	F = fun F(eof, Acc) ->
 				lists:flatten(Acc);
 			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1, '_', {exact, Name},
-						{exact, ?PREFIX_TABLE_SPEC}, '_'),
+				{Cont2, L} = cse:query_resource(Cont1, {exact, Name},
+						{exact, ?PREFIX_TABLE_SPEC}, '_', '_', '_'),
 				F(Cont2, [L | Acc])
 	end,
 	case F(start, []) of
@@ -1785,6 +1807,11 @@ match_filters("resourceRelationship",
 	MatchRelType = get_child({'@', ["relationshipType"]}, Children, '_'),
 	MatchRelName = get_child({'@', ["resource", "name"]}, Children, '_'),
 	{ok, MatchRelType, MatchRelName};
+match_filters("resourceCharacteristic",
+		[[{'.', ["resourceCharacteristic"]}, {'.', Children}] | _]) ->
+	MatchCharName = get_child({'@', ["name"]}, Children, '_'),
+	MatchCharValue = get_child({'@', ["value"]}, Children, '_'),
+	{ok, MatchCharName, MatchCharValue};
 match_filters([_ | T], Steps) ->
 	match_filters(T, Steps);
 match_filters([], _Steps) ->
