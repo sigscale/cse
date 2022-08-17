@@ -43,7 +43,7 @@
 		Start :: pos_integer(),
 		Stop :: pos_integer(),
 		ServiceName :: diameter:service_name(),
-		Peer :: diameter:peer(),
+		Peer :: diameter_app:peer(),
 		Request :: diameter:message(),
 		Reply :: {reply,  diameter:message()}
 				| {answer_message, 3000..3999 | 5000..5999}.
@@ -94,19 +94,18 @@ codec_diameter_ecs2(#'3gpp_ro_CCR'{
 		'Origin-Realm' = OriginRealm,
 		'Destination-Realm' = DestinationRealm,
 		'Auth-Application-Id' = _ApplicationId,
-		'Service-Context-Id' = _ServiceContextId,
 		'User-Name' = UserName,
-		'Subscription-Id' = SubscriptionId} = _Request,
+		'Subscription-Id' = SubscriptionId} = Request,
 		Reply, Start, Stop, Duration, Acc) ->
 	EventType = case RequestType of
 		1 ->  % INITIAL_REQUEST
-			"start";
+			["protocol", "start"];
 		2 ->  % UPDATE_REQUEST
-			"info";
+			["protocol"];
 		3 ->  % TERMINATION_REQUEST
-			"end";
+			["protocol", "end"];
 		4 ->  % EVENT_REQUEST
-			"info"
+			["protocol"]
 	end,
 	UserIds = subscriber_id(SubscriptionId),
 	NewAcc = [Acc, $,,
@@ -114,35 +113,56 @@ codec_diameter_ecs2(#'3gpp_ro_CCR'{
 			ecs_source(OriginHost, OriginHost, OriginRealm,
 					UserName, UserIds), $,,
 			ecs_destination(DestinationRealm)],
-	codec_diameter_ecs3(Reply, EventType, Start, Stop, Duration, NewAcc).
+	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc).
 %% @hidden
-codec_diameter_ecs3({reply, #'3gpp_ro_CCA'{
-		'Result-Code' = ResultCode}} = _Reply,
-		EventType, Start, Stop, Duration, Acc) ->
-	Outcome = case ResultCode of
-		RC when RC >= 1000, RC < 2000 ->
-			"unknown";
-		RC when RC >= 2000, RC < 3000 ->
-			"success";
-		RC when RC >= 3000 ->
-			"failure"
-	end,
+codec_diameter_ecs3(CCR,
+		{reply, #'3gpp_ro_CCA'{'Result-Code' = ResultCode} = CCA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
-					"event", "session", EventType, Outcome), $}];
-codec_diameter_ecs3({answer_message, ResultCode},
-		EventType, Start, Stop, Duration, Acc) ->
-	Outcome = case ResultCode of
-		RC when RC >= 1000, RC < 2000 ->
-			"unknown";
-		RC when RC >= 2000, RC < 3000 ->
-			"success";
-		RC when RC >= 3000 ->
-			"failure"
-	end,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_ro(CCR, CCA), $}];
+codec_diameter_ecs3(CCR,
+		{reply, #'3gpp_ro_CCA'{'Result-Code' = ResultCode} = CCA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
-					"event", "session", EventType, Outcome), $}].
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_ro(CCR, CCA), $}];
+codec_diameter_ecs3(CCR,
+		{reply, #'3gpp_ro_CCA'{'Result-Code' = ResultCode} = CCA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_ro(CCR, CCA), $}];
+codec_diameter_ecs3(CCR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}];
+codec_diameter_ecs3(CCR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}];
+codec_diameter_ecs3(CCR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}].
 
 -spec codec_prepaid_ecs(Term) -> iodata()
 	when
@@ -199,7 +219,7 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 			ecs_service("sigscale-cse", "slp"), $,,
 			ecs_user(MSISDN, IMSI, []), $,,
 			ecs_event(StartTime, StopTime, Duration,
-					"event", "session", "end", Outcome), $}].
+					"event", "session", ["end"], Outcome), $}].
 
 -spec ecs_base(Timestamp) -> iodata()
 	when
@@ -229,7 +249,8 @@ ecs_server(Address, Domain, IP, Port) when is_tuple(IP) ->
 	ecs_server(Address, Domain, inet:ntoa(IP), Port);
 ecs_server(Address, Domain, IP, Port) when is_integer(Port) ->
 	ecs_server(Address, Domain, IP, integer_to_list(Port));
-ecs_server(Address, Domain, IP, Port) ->
+ecs_server(Address, Domain, IP, Port)
+		when is_list(Address), is_list(Domain) ->
 	Saddress = [$", "address", $", $:, $", Address, $"],
 	Sdomain = [$", "domain", $", $:, $", Domain, $"],
 	Sip = [$", "ip", $", $:, $", IP, $"],
@@ -241,7 +262,8 @@ ecs_server(Address, Domain, IP, Port) ->
 		Address :: binary() | string(),
 		Domain :: binary() | string().
 %% @doc Elastic Common Schema (ECS): Client attributes.
-ecs_client(Address, Domain) ->
+ecs_client(Address, Domain)
+		when is_list(Address), is_list(Domain) ->
 	Caddress = [$", "address", $", $:, $", Address, $"],
 	Cdomain = [$", "domain", $", $:, $", Domain, $"],
 	[$", "client", $", $:, ${, Caddress, $,, Cdomain, $}].
@@ -306,7 +328,7 @@ ecs_service(Name, Type) ->
 		Duration :: string(),
 		Kind :: string(),
 		Category :: string(),
-		Type :: string(),
+		Type :: [string()],
 		Outcome :: string().
 %% @doc Elastic Common Schema (ECS): Event attributes.
 ecs_event(Start, Stop, Duration, Kind, Category, Type, Outcome) ->
@@ -315,7 +337,13 @@ ecs_event(Start, Stop, Duration, Kind, Category, Type, Outcome) ->
 	Eduration = [$", "duration", $", $:, $", Duration, $"],
 	Ekind = [$", "kind", $", $:, $", Kind, $"],
 	Ecategory = [$", "category", $", $:, $", Category, $"],
-	Etype = [$", "type", $", $:, $", Type, $"],
+	Etypes = case Type of
+		[H] ->
+			[$", H, $"];
+		[H | T] ->
+			[$", H, $" | [[$,, $", E, $"] || E <- T]]
+	end,
+	Etype = [$", "type", $", $:, $[, Etypes, $]],
 	Eoutcome  = [$", "outcome", $", $:, $", Outcome, $"],
 	[$", "event", $", $:, ${,
 			Estart, $,, Estop, $,, Eduration, $,,
@@ -364,4 +392,19 @@ subscriber_id([], Acc) ->
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
+
+%% @hidden
+ecs_3gpp_ro(#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+			'CC-Request-Type' = RequestType,
+			'CC-Request-Number' = RequestNumber,
+			'Auth-Application-Id' = _ApplicationId,
+			'Service-Context-Id' = ServiceContextId,
+			'Service-Information' = _ServiceInfo},
+		#'3gpp_ro_CCA'{'Result-Code' = ResultCode}) ->
+	[$", "3gpp_ro", $", $:, ${,
+			$", "session_id", $", $:, $", SessionId, $", $,,
+			$", "cc_request_type", $", $:, integer_to_list(RequestType), $,,
+			$", "cc_request_number", $", $:, integer_to_list(RequestNumber), $,,
+			$", "service_context_id", $", $:, $", ServiceContextId, $", $,,
+			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
 
