@@ -1,3 +1,9 @@
+2022-08-17  Vance Shipley <vances@sigscale.org>
+
+	* refactor ecs 3gpp_ro log
+	* test suite for ecs codec api
+	* test library utility for generating directory numbers
+
 2022-07-31  Vance Shipley <vances@sigscale.org>
 
 	* advanced query pattern support of resource characteristics
