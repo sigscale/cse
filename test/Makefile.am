@@ -7,6 +7,7 @@ testmods = cse_api_SUITE \
 		cse_query_parse_SUITE \
 		cse_rest_api_SUITE \
 		cse_log_SUITE \
+		cse_log_codec_ecs_SUITE \
 		cse_cap_SUITE \
 		cse_inap_SUITE \
 		cse_codec_SUITE \
