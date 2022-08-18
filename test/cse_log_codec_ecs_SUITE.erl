@@ -27,7 +27,8 @@
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 %% export test cases
--export([diameter_ccr_initial/0, diameter_ccr_initial/1]).
+-export([diameter_ccr_initial/0, diameter_ccr_initial/1,
+		prepaid_originating/0, prepaid_originating/1]).
 
 -include("diameter_gen_3gpp_ro_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -77,7 +78,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[diameter_ccr_initial].
+	[diameter_ccr_initial, prepaid_originating].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -138,6 +139,32 @@ diameter_ccr_initial(_Config) ->
 		'CC-Request-Number' = RequestNumber},
 	Event = {Start, Stop, ServiceName, Peer, Request, {reply, Reply}},
 	JSON = cse_log_codec_ecs:codec_diameter_ecs(Event),
+	{ok, ECS} = zj:decode(JSON).
+
+prepaid_originating() ->
+	[{userdata, [{doc, "Encode preiad originating call event"}]}].
+
+prepaid_originating(_Config) ->
+	Start = erlang:system_time(millisecond),
+	Stop = Start + rand:uniform(100),
+	ServiceName = atom_to_list(?MODULE),
+	State = o_active,
+	Realm = "ims.mnc001.mcc001.3gppnetwork.org",
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(),
+	SIPURI = "sip:+" ++ MSISDN ++ "@" ++ Realm,
+	Subscriber = #{imsi => IMSI, msisdn => MSISDN, sip_uri => SIPURI},
+	Direction = originating,
+	Calling = MSISDN,
+	Called = cse_test_lib:rand_dn(),
+	Call = #{direction => Direction, calling => Calling, called => Called},
+	ContextId = "32260@3gpp.org",
+	SessionId = session_id("ct"),
+	Network = #{context => ContextId, session_id => SessionId},
+	NrfUri = "http://localhost:8080/nrf-rating/v1/ratingdata/42",
+	OCS = #{nrf_location => NrfUri},
+	Event = {Start, Stop, ServiceName, State, Subscriber, Call, Network, OCS},
+	JSON = cse_log_codec_ecs:codec_prepaid_ecs(Event),
 	{ok, ECS} = zj:decode(JSON).
 
 %%---------------------------------------------------------------------
