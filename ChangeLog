@@ -1,3 +1,8 @@
+2022-08-18  Vance Shipley <vances@sigscale.org>
+
+	* refactor prepaid ecs log; ecs url codec api function
+	* prepaid call log codec test case
+
 2022-08-17  Vance Shipley <vances@sigscale.org>
 
 	* refactor ecs 3gpp_ro log
