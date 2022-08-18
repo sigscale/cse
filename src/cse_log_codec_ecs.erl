@@ -26,7 +26,8 @@
 %% export the cse_log_codec_ecs  public API
 -export([codec_diameter_ecs/1, codec_prepaid_ecs/1]).
 -export([ecs_base/1, ecs_server/4, ecs_client/2, ecs_network/2,
-		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7]).
+		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7,
+		ecs_url/1]).
 -export([subscriber_id/1]).
 
 -include("diameter_gen_3gpp_ro_application.hrl").
@@ -93,7 +94,6 @@ codec_diameter_ecs2(#'3gpp_ro_CCR'{
 		'Origin-Host' = OriginHost,
 		'Origin-Realm' = OriginRealm,
 		'Destination-Realm' = DestinationRealm,
-		'Auth-Application-Id' = _ApplicationId,
 		'User-Name' = UserName,
 		'Subscription-Id' = SubscriptionId} = Request,
 		Reply, Start, Stop, Duration, Acc) ->
@@ -215,11 +215,12 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 	end,
 	[${,
 			ecs_base(StartTime), $,,
-			ecs_network("ro", "diameter"), $,,
-			ecs_service("sigscale-cse", "slp"), $,,
-			ecs_user(MSISDN, IMSI, []), $,,
+			ecs_service(ServiceName, "slp"), $,,
+			ecs_network("nrf", "http"), $,,
+			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
 			ecs_event(StartTime, StopTime, Duration,
-					"event", "session", ["end"], Outcome), $}].
+					"event", "session", ["protocol", "end"], Outcome), $,,
+			ecs_url(map_get(nrf_location, OCS)), $}].
 
 -spec ecs_base(Timestamp) -> iodata()
 	when
@@ -388,6 +389,62 @@ subscriber_id([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Type' = 4,
 	subscriber_id(T, ["private-" ++ binary_to_list(PRIVATE) | Acc]);
 subscriber_id([], Acc) ->
 	lists:reverse(Acc).
+
+-spec ecs_url(URL) -> iodata()
+	when
+		URL :: uri_string:uri_string() | uri_string:uri_map().
+%% @doc Elastic Common Schema (ECS): URL attributes.
+ecs_url(URL) when is_list(URL) ->
+	ecs_url(uri_string:parse(URL));
+ecs_url(URL) when is_map(URL) ->
+	Acc1 = case maps:get(host, URL, undefined)  of
+		undefined ->
+			[];
+		Host ->
+			[[$", "domain", $", $:, $", Host, $"]]
+	end,
+	Acc2 = case maps:get(port, URL, undefined) of
+		undefined ->
+			Acc1;
+		Port ->
+			[[$", "port", $", $:, integer_to_list(Port)] | Acc1]
+	end,
+	Acc3 = case maps:get(path, URL, undefined) of
+		undefined ->
+			Acc2;
+		Path ->
+			[[$", "path", $", $:, $", Path, $"] | Acc2]
+	end,
+	Acc4 = case maps:get(query, URL, undefined) of
+		undefined ->
+			Acc3;
+		Query ->
+			[[$", "query", $", $:, $", Query, $"] | Acc3]
+	end,
+	Acc5 = case maps:get(scheme, URL, undefined) of
+		undefined ->
+			Acc4;
+		Scheme ->
+			[[$", "scheme", $", $:, $", Scheme, $"] | Acc4]
+	end,
+	Acc6 = case maps:get(fragment, URL, undefined) of
+		undefined ->
+			Acc5;
+		Fragment ->
+			[[$", "scheme", $", $:, $", Fragment, $"] | Acc5]
+	end,
+	Acc7 = case maps:get(userinfo, URL, undefined) of
+		undefined ->
+			Acc6;
+		Userinfo ->
+			[[$", "username", $", $:, $", Userinfo, $"] | Acc6]
+	end,
+	case Acc7 of
+		[H] ->
+			[$", "url", $", $:, ${, H, $}];
+		[H | T] ->
+			[[$", "url", $", $:, ${, H | [[$,, E] || E <- T]], $}]
+	end.
 
 %%----------------------------------------------------------------------
 %%  internal functions
