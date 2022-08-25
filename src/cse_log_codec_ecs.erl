@@ -251,7 +251,8 @@ ecs_server(Address, Domain, IP, Port) when is_tuple(IP) ->
 ecs_server(Address, Domain, IP, Port) when is_integer(Port) ->
 	ecs_server(Address, Domain, IP, integer_to_list(Port));
 ecs_server(Address, Domain, IP, Port)
-		when is_list(Address), is_list(Domain) ->
+		when (is_list(Address) or is_binary(Address)),
+		(is_list(Domain) or is_binary(Domain)) ->
 	Saddress = [$", "address", $", $:, $", Address, $"],
 	Sdomain = [$", "domain", $", $:, $", Domain, $"],
 	Sip = [$", "ip", $", $:, $", IP, $"],
@@ -264,7 +265,8 @@ ecs_server(Address, Domain, IP, Port)
 		Domain :: binary() | string().
 %% @doc Elastic Common Schema (ECS): Client attributes.
 ecs_client(Address, Domain)
-		when is_list(Address), is_list(Domain) ->
+		when (is_list(Address) or is_binary(Address)),
+		(is_list(Domain) or is_binary(Domain)) ->
 	Caddress = [$", "address", $", $:, $", Address, $"],
 	Cdomain = [$", "domain", $", $:, $", Domain, $"],
 	[$", "client", $", $:, ${, Caddress, $,, Cdomain, $}].
