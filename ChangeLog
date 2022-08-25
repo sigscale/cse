@@ -1,5 +1,6 @@
 2022-08-18  Vance Shipley <vances@sigscale.org>
 
+	* allow binary address/domain in ecs codec
 	* refactor prepaid ecs log; ecs url codec api function
 	* prepaid call log codec test case
 
