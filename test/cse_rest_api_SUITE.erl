@@ -40,6 +40,7 @@
 		delete_static_table_resource/0, delete_static_table_resource/1,
 		delete_dynamic_table_resource/0, delete_dynamic_table_resource/1,
 		delete_row_resource/0, delete_row_resource/1,
+		delete_row_query/0, delete_row_query/1,
 		add_range_row_resource/0, add_range_row_resource/1,
 		query_table_row/0, query_table_row/1]).
 
@@ -128,7 +129,7 @@ all() ->
 			add_static_row_resource, add_dynamic_row_resource,
 			get_resource, query_resource, delete_static_table_resource,
 			delete_dynamic_table_resource, delete_row_resource,
-			add_range_row_resource, query_table_row].
+			delete_row_query, add_range_row_resource, query_table_row].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -504,7 +505,7 @@ delete_dynamic_table_resource(Config) ->
 	0 = mnesia:table_info('tempDynamicTable', size).
 
 delete_row_resource() ->
-	[{userdata, [{doc,"Delete Resource by its id"}]}].
+	[{userdata, [{doc,"Delete row Resource by its id"}]}].
 
 delete_row_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -512,7 +513,7 @@ delete_row_resource(Config) ->
 	TableT = static_prefix_table(TableName),
 	{ok, Table} = cse:add_resource(TableT),
 	RowName = cse_test_lib:rand_name(8),
-	Prefix = cse_test_lib:rand_name(6),
+	Prefix = cse_test_lib:rand_dn(10),
 	Value = cse_test_lib:rand_name(20),
 	RowT = static_prefix_row(RowName, Table, Prefix, Value),
 	{ok, #resource{id = Id, href = URI}} = cse:add_resource(RowT),
@@ -522,6 +523,47 @@ delete_row_resource(Config) ->
 	{ok, Result} = httpc:request(delete, Request, [], []),
 	{{"HTTP/1.1", 204, _NoContent}, _Headers, []} = Result,
 	{error, not_found} = cse:find_resource(Id),
+	undefined = cse_gtt:lookup_first(TableName, Prefix).
+
+delete_row_query() ->
+	[{userdata, [{doc,"Delete row by query on column value"}]}].
+
+delete_row_query(Config) ->
+	TableName = cse_test_lib:rand_name(8),
+	TotalRows =  rand:uniform(100) + 10,
+	ok = cse_gtt:new(TableName, []),
+	TableSpecName = cse_test_lib:rand_name(8),
+	TableSpecT = dynamic_prefix_table_spec(TableSpecName),
+	{ok, TableSpec} = cse:add_resource_spec(TableSpecT),
+	TableT = dynamic_prefix_table(TableName, TableSpec),
+	{ok, Table} = cse:add_resource(TableT),
+	RowSpecName = cse_test_lib:rand_name(8),
+	RowSpecT = dynamic_prefix_row_spec(RowSpecName, TableSpec),
+	{ok, RowSpec} = cse:add_resource_spec(RowSpecT),
+	Fill = fun F(0, Acc) ->
+				Acc;
+			F(N, Acc) ->
+				RowName = cse_test_lib:rand_name(6),
+				Prefix = cse_test_lib:rand_dn(10),
+				Value = cse_test_lib:rand_name(20),
+				RowT = dynamic_prefix_row(RowName,
+						RowSpec, Table, Prefix, Value),
+				{ok, #resource{id = RowId}} = cse:add_resource(RowT),
+				{ok, _} = cse_gtt:insert(TableName, Prefix, Value),
+				F(N - 1, [{RowId, Prefix} | Acc])
+	end,
+	Rows = Fill(TotalRows, []),
+	{RowId, Prefix} = lists:nth(rand:uniform(length(Rows)), Rows),
+	Host = ?config(host, Config),
+	Filter = "resourceCharacteristic[?(@.name=='prefix' && @.value=='"
+			++ Prefix ++ "')]",
+	Query = "?resourceSpecification.id=" ++ RowSpec#resource_spec.id
+			++ "&filter=" ++ ?QUOTE(Filter),
+	URI =  Host ++ lists:droplast(?inventoryPath) ++ Query,
+	Request = {URI, []},
+	{ok, Result} = httpc:request(delete, Request, [], []),
+	{{"HTTP/1.1", 204, _NoContent}, _Headers, []} = Result,
+	{error, not_found} = cse:find_resource(RowId),
 	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
 add_range_row_resource() ->

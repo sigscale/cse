@@ -536,11 +536,34 @@ add_resource_result({error, _Reason}) ->
             | {error, ErrorCode :: integer()} .
 %% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
 %%    request to remove a table row.
+%%
+%% 	A `Query' may be used on the Collection path to select the
+%% 	resource when `id' is empty.
+%%
 delete_resource(Id, []) ->
 	try
 		delete_resource1(cse:find_resource(Id))
 	catch
 		_:_ ->
+			{error, 400}
+	end;
+delete_resource([], Query) ->
+	try
+		{Query1, MatchSpecId} = get_param("resourceSpecification.id", Query, '_'),
+		{_Query2, Filters} = get_filters(Query1),
+		case match_filters("resourceCharacteristic", Filters) of
+			{ok, {exact, CharName}, {exact, CharValue}} ->
+				MatchChars = [{{exact, CharName}, {exact, CharValue}}],
+				delete_resource1(delete_resource_query(start, MatchSpecId, MatchChars));
+			{ok, _, _} ->
+				throw(400);
+			{error, not_found} ->
+				throw(404)
+		end
+	catch
+		throw:Reason->
+			{error, Reason};
+		_Class:_Reason ->
 			{error, 400}
 	end.
 %% @hidden
@@ -554,7 +577,9 @@ delete_resource1({ok, #resource{specification
 		= #resource_spec_ref{id = SpecId}} = Resource}) ->
 	delete_resource2(Resource, cse:find_resource_spec(SpecId));
 delete_resource1({error, not_found}) ->
-	{error, 404}.
+	{error, 404};
+delete_resource1({error, Reason}) ->
+	{error, Reason}.
 %% @hidden
 delete_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
 	delete_resource3(Resource, Related);
@@ -596,6 +621,22 @@ delete_resource_row(Table, #resource{id = Id, characteristic = Chars}) ->
 delete_resource_result(ok) ->
 	{ok, [], []};
 delete_resource_result({error, _Reason}) ->
+	{error, 400}.
+
+%% @hidden
+delete_resource_query(Cont, {exact, SpecId} = MatchSpecId, MatchChars)
+		when is_list(SpecId), is_list(MatchChars) ->
+	case cse:query_resource(Cont, '_', MatchSpecId, '_', '_', MatchChars) of
+		{_, [#resource{} = Resource]} ->
+			{ok, Resource};
+		{eof, []} ->
+			{error, 404};
+		{error, _Reason} ->
+			{error, 500};
+		{Cont1, []} ->
+			delete_resource_query(Cont1, MatchSpecId, MatchChars)
+	end;
+delete_resource_query(_Cont, _, _) ->
 	{error, 400}.
 
 %%----------------------------------------------------------------------
@@ -1790,10 +1831,8 @@ get_filters([], Acc1, Acc2) ->
 		Steps :: [Step],
 		Step :: [{'.', Children}],
 		Children :: list(),
-		Result :: {ok, MatchRelId, MatchRelType} | {ok, MatchRelName} | {error, not_found},
-		MatchRelId :: {exact, Value} | '_',
-		MatchRelType :: {exact, Value} | '_',
-		MatchRelName :: {exact, Value} | '_',
+		Result :: {ok, Match, Match} | {ok, Match} | {error, not_found},
+		Match :: {exact, Value} | '_',
 		Value :: string().
 %% @doc Get specific `Match' from `Steps'.
 match_filters("resourceSpecRelationship",
