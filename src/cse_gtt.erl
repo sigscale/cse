@@ -96,9 +96,16 @@ new(Table, [], Items) ->
 new(Table, Options, Items) when is_list(Table) ->
 	new(list_to_atom(Table), Options, Items);
 new(Table, Options, Items) when is_list(Options), is_list(Items) ->
-	mnesia:create_table(Table, Options ++
+	case mnesia:create_table(Table, Options ++
 			[{attributes, record_info(fields, gtt)},
-			{record_name, gtt}]),
+			{record_name, gtt}]) of
+		{atomic, ok} ->
+			new1(Table, Options, Items);
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+%% @hidden
+new1(Table, Options, Items) ->
 	Threshold = mnesia:system_info(dump_log_write_threshold) - 1,
 	Ftran = fun(F, [{Address, _Value} | _T] = L, N) when length(Address) > N ->
 				mnesia:dump_log(),
