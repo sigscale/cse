@@ -1,3 +1,8 @@
+2022-09-01  Vance Shipley <vances@sigscale.org>
+
+	* handle mnesia table creation error
+	* support delete table row with query
+
 2022-08-18  Vance Shipley <vances@sigscale.org>
 
 	* allow binary address/domain in ecs codec
