@@ -1,3 +1,9 @@
+2022-09-05  Vance Shipley <vances@sigscale.org>
+
+	* handle delete dynamic row specs and range rows
+	* refactor gtt delete range for atomic operation
+	* get write lock on gtt prefix before delete
+
 2022-09-01  Vance Shipley <vances@sigscale.org>
 
 	* handle mnesia table creation error
