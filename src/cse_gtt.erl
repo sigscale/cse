@@ -199,7 +199,7 @@ delete(Table, Address) when is_list(Table) ->
 	delete(list_to_existing_atom(Table), Address);
 delete(Table, Address) when is_atom(Table), is_list(Address) ->
 	Fun = fun() ->
-			case mnesia:read(Table, Address) of
+			case mnesia:read(Table, Address, write) of
 				[#gtt{} = Gtt] ->
 					{mnesia:delete(Table, Address, write), Gtt};
 				[] ->
