@@ -513,9 +513,7 @@ add_resource_range_row(Table,
 		ok ->
 			add_resource_result(cse:add_resource(Resource));
 		{error, conflict} ->
-			{error, 409};
-		{error, _Reason} ->
-			{error, 400}
+			{error, 409}
 	end.
 
 %% @hidden
@@ -544,7 +542,7 @@ delete_resource(Id, []) ->
 	try
 		delete_resource1(cse:find_resource(Id))
 	catch
-		_:_ ->
+		_Class:_Reason:_Stack ->
 			{error, 400}
 	end;
 delete_resource([], Query) ->
@@ -570,9 +568,15 @@ delete_resource([], Query) ->
 delete_resource1({ok, #resource{id = Id, specification
 		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}) ->
 	delete_resource_result(cse:delete_resource(Id));
+delete_resource1({ok, #resource{id = Id, specification
+		= #resource_spec_ref{id = ?PREFIX_RANGE_TABLE_SPEC}}}) ->
+	delete_resource_result(cse:delete_resource(Id));
 delete_resource1({ok, #resource{specification
 		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource}) ->
-	delete_resource_row(Resource);
+	delete_resource_row(?PREFIX_ROW_SPEC, Resource);
+delete_resource1({ok, #resource{specification
+		= #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC}} = Resource}) ->
+	delete_resource_row(?PREFIX_RANGE_ROW_SPEC, Resource);
 delete_resource1({ok, #resource{specification
 		= #resource_spec_ref{id = SpecId}} = Resource}) ->
 	delete_resource2(Resource, cse:find_resource_spec(SpecId));
@@ -583,44 +587,46 @@ delete_resource1({error, Reason}) ->
 %% @hidden
 delete_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
 	delete_resource3(Resource, Related);
-delete_resource2(_Resource, {error, _Reason}) ->
-	{error, 400}.
-%% @hidden
-delete_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
-	delete_resource_row(Resource);
+delete_resource2(_Resource, {error, Reason}) ->
+	{error, Reason}.
+%%  @hidden
 delete_resource3(#resource{id = Id},
 		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
 	delete_resource_result(cse:delete_resource(Id));
+delete_resource3(#resource{id = Id},
+		[#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC, rel_type = "based"} | _]) ->
+	delete_resource_result(cse:delete_resource(Id));
+delete_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
+	delete_resource_row(?PREFIX_ROW_SPEC, Resource);
+delete_resource3(Resource,
+		[#resource_spec_rel{id = ?PREFIX_RANGE_ROW_SPEC, rel_type = "based"} | _]) ->
+	delete_resource_row(?PREFIX_RANGE_ROW_SPEC, Resource);
 delete_resource3(Resource, [_ | T]) ->
 	delete_resource3(Resource, T);
 delete_resource3(#resource{id = Id}, []) ->
 	delete_resource_result(cse:delete_resource(Id)).
 
 %% @hidden
-delete_resource_row(#resource{related = Related} = Resource) ->
-	case maps:find("contained", Related) of
-		{ok, #resource_rel{rel_type = "contained",
-				resource = #resource_ref{name = Table}}} ->
-			delete_resource_row(Table, Resource);
-		error ->
-			{error, 400}
-	end.
+delete_resource_row(Based,
+		#resource{related = #{"contained" := #resource_rel{
+		resource = #resource_ref{name = Table}}}} = Resource) ->
+	delete_resource_row(Based, Table, Resource);
+delete_resource_row(_Based, _Resource) ->
+	{error, 400}.
 %% @hidden
-delete_resource_row(Table, #resource{id = Id, characteristic = Chars}) ->
+delete_resource_row(?PREFIX_ROW_SPEC, Table, #resource{id = Id,
+		characteristic = #{"prefix" := #characteristic{value = Prefix}}}) ->
 	TableName = list_to_existing_atom(Table),
-	case maps:find("prefix", Chars) of
-		{ok, #characteristic{name = "prefix", value = Prefix}} ->
-			ok = cse_gtt:delete(TableName, Prefix),
-			delete_resource_result(cse:delete_resource(Id));
-		error ->
-			{error, 400}
-	end.
-
-%% @hidden
-delete_resource_result(ok) ->
-	{ok, [], []};
-delete_resource_result({error, _Reason}) ->
+	ok = cse_gtt:delete(TableName, Prefix),
+	delete_resource_result(cse:delete_resource(Id));
+delete_resource_row(?PREFIX_RANGE_ROW_SPEC, Table, #resource{id = Id,
+		characteristic = #{"start" := #characteristic{value = Start},
+		"end" := #characteristic{value = End}}}) ->
+	TableName = list_to_existing_atom(Table),
+	ok = cse_gtt:delete_range(TableName, Start, End),
+	delete_resource_result(cse:delete_resource(Id));
+delete_resource_row(_Based, _Table, _Resource) ->
 	{error, 400}.
 
 %% @hidden
@@ -637,6 +643,12 @@ delete_resource_query(Cont, {exact, SpecId} = MatchSpecId, MatchChars)
 			delete_resource_query(Cont1, MatchSpecId, MatchChars)
 	end;
 delete_resource_query(_Cont, _, _) ->
+	{error, 400}.
+
+%% @hidden
+delete_resource_result(ok) ->
+	{ok, [], []};
+delete_resource_result({error, _Reason}) ->
 	{error, 400}.
 
 %%----------------------------------------------------------------------

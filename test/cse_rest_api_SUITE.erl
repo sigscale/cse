@@ -41,6 +41,7 @@
 		delete_dynamic_table_resource/0, delete_dynamic_table_resource/1,
 		delete_row_resource/0, delete_row_resource/1,
 		delete_row_query/0, delete_row_query/1,
+		delete_range_row/0, delete_range_row/1,
 		add_range_row_resource/0, add_range_row_resource/1,
 		query_table_row/0, query_table_row/1]).
 
@@ -129,7 +130,8 @@ all() ->
 			add_static_row_resource, add_dynamic_row_resource,
 			get_resource, query_resource, delete_static_table_resource,
 			delete_dynamic_table_resource, delete_row_resource,
-			delete_row_query, add_range_row_resource, query_table_row].
+			delete_range_row, delete_row_query, add_range_row_resource,
+			query_table_row].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -525,6 +527,43 @@ delete_row_resource(Config) ->
 	{error, not_found} = cse:find_resource(Id),
 	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
+delete_range_row() ->
+	[{userdata, [{doc,"Delete static range row resource"}]}].
+
+delete_range_row(Config) ->
+	TableNameS = cse_test_lib:rand_name(8),
+	TableNameA = list_to_atom(TableNameS),
+	ok = cse_gtt:new(TableNameA, []),
+	TableT = static_range_table(TableNameS),
+	{ok, Table} = cse:add_resource(TableT),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	RowName = cse_test_lib:rand_name(8),
+	Prefix = cse_test_lib:rand_dn(4),
+	Start = Prefix ++ "00",
+	End = Prefix ++ "99",
+	Value = cse_test_lib:rand_name(20),
+	Resource = static_range_row(RowName, Table, Start, End, Value),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
+	Request1 = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result1} = httpc:request(post, Request1, [], []),
+	{{"HTTP/1.1", 201, _Created}, _Headers, ResponseBody} = Result1,
+	{ok, #{"id" := RowId, "href" := Href}} = zj:decode(ResponseBody),
+	Request2 = {Host ++ Href, []},
+	{ok, Result2} = httpc:request(delete, Request2, [], []),
+	{{"HTTP/1.1", 204, _NoContent}, _, _} = Result2,
+	{error, not_found} = cse:find_resource(RowId),
+	Fall = fun(RangePrefix) ->
+			case cse_gtt:lookup_last(TableNameA, RangePrefix) of
+				undefined ->
+					true;
+				_ ->
+					false
+			end
+	end,
+	true = lists:all(Fall, cse_gtt:range(Start, End)).
+
 delete_row_query() ->
 	[{userdata, [{doc,"Delete row by query on column value"}]}].
 
@@ -579,7 +618,7 @@ add_range_row_resource(Config) ->
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
 	RowName = cse_test_lib:rand_name(8),
-	Prefix = cse_test_lib:rand_name(4),
+	Prefix = cse_test_lib:rand_dn(4),
 	Start = Prefix ++ "00",
 	End = Prefix ++ "99",
 	Value = cse_test_lib:rand_name(20),
