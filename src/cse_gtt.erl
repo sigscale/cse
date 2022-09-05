@@ -393,36 +393,39 @@ clear_table(Table) when is_atom(Table) ->
 		Reason :: conflict | term().
 %% @doc Add prefixes to cover range.
 add_range(Table, Start, End, Value) when length(Start) =:= length(End), Start =< End ->
-	case catch range(Start, End) of
-		[] ->
-			[];
-		Seq when length(Seq) > 0 ->
-			case insert(Table, [{X, Value} || X <- Seq]) of
-				ok ->
-					ok;
-				{error, already_exists} ->
-					{error, conflict}
-			end;
-		{'EXIT', Reason} ->
-			{error, Reason}
+	case insert(Table, [{X, Value} || X <- range(Start, End)]) of
+		ok ->
+			ok;
+		{error, already_exists} ->
+			{error, conflict}
 	end.
 
--spec delete_range(Table, Start, End) -> Result
+-spec delete_range(Table, Start, End) -> ok
 	when
 		Table :: atom() | string(),
 		Start :: [$0..$9],
-		End :: [$0..$9],
-		Result :: ok | {error, Reason},
-		Reason :: term().
+		End :: [$0..$9].
 %% @doc Delete prefixes covering the range.
-delete_range(Table, Start, End) when length(Start) =:= length(End), Start =< End ->
-	case catch range(Start, End) of
-		[] ->
-			[];
-		Seq when length(Seq) > 0 ->
-			[delete(Table, X) || X <- Seq];
-		{'EXIT', Reason} ->
-			{error, Reason}
+delete_range(Table, Start, End)
+		when length(Start) =:= length(End),
+		length(Start) > 0,
+		Start =< End ->
+	Fun = fun F([H | T]) ->
+				case mnesia:read(Table, H, write) of
+					[#gtt{}] ->
+						ok = mnesia:delete(Table, H, write),
+						F(T);
+					[] ->
+						mnesia:abort(not_found)
+				end;
+			F([]) ->
+				ok
+	end,
+	case mnesia:transaction(Fun, [range(Start, End)]) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
 	end.
 
 %%----------------------------------------------------------------------
