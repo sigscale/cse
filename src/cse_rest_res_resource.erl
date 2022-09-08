@@ -128,19 +128,22 @@ add_resource_spec(RequestBody) ->
 		{ok, ResSpecMap} = zj:decode(RequestBody),
 		resource_spec(ResSpecMap)
 	of
-		#resource_spec{} = ResourceSpec ->
-			add_resource_spec1(ResourceSpec)
+		#resource_spec{related = Related} = ResourceSpec ->
+			add_resource_spec1(ResourceSpec, Related)
 	catch
 		_:_Reason ->
 			{error, 400}
 	end.
 %% @hidden
-add_resource_spec1(#resource_spec{name = Name,
-		related = [#resource_spec_rel{id = ?PREFIX_TABLE_SPEC,
-		rel_type = "based"} | _]} = ResourceSpec) ->
+add_resource_spec1(#resource_spec{name = Name} = ResourceSpec,
+		[#resource_spec_rel{id = SpecId, rel_type = "based"} | _]) when
+		SpecId == ?PREFIX_TABLE_SPEC;
+		SpecId == ?PREFIX_RANGE_TABLE_SPEC ->
 	add_resource_spec2(ResourceSpec, Name,
 			cse:query_resource_spec(start, '_', {exact, Name}, '_', '_'));
-add_resource_spec1(#resource_spec{} = ResourceSpec) ->
+add_resource_spec1(ResourceSpec, [_ | T]) ->
+	add_resource_spec1(ResourceSpec, T);
+add_resource_spec1(ResourceSpec, []) ->
 	add_resource_spec3(cse:add_resource_spec(ResourceSpec)).
 %% @hidden
 add_resource_spec2(ResourceSpec, _Name, {eof, []}) ->

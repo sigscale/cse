@@ -160,7 +160,7 @@ resource_spec_add(Config) ->
 	true = is_resource_spec(ResourceSpecMap).
 
 resource_spec_exists() ->
-	[{userdata, [{doc, "Add Resource Specification which already exists"}]}].
+	[{userdata, [{doc, "Existing table spec with same name is a conflict"}]}].
 
 resource_spec_exists(Config) ->
 	HostUrl = ?config(host, Config),
