@@ -341,20 +341,6 @@ query_page(Codec, PageServer, Etag, Query, _Filters, Start, End) ->
 					{etag, Etag}, {accept_ranges, "items"},
 					{content_range, ContentRange}],
 			{ok, Headers, Body};
-		{[#gtt{} | _] = Result, ContentRange} ->
-			case lists:keyfind("resourceRelationship.resource.name", 1,
-					Query) of
-				{_, Table} ->
-					Objects = [gtt(Table, {Prefix, Value})
-							|| #gtt{num = Prefix, value = Value} <- Result],
-					Body = zj:encode(Objects),
-					Headers = [{content_type, "application/json"},
-							{etag, Etag}, {accept_ranges, "items"},
-							{content_range, ContentRange}],
-					{ok, Headers, Body};
-				false ->
-					{error, 400}
-			end;
 		{Result, ContentRange} ->
 			JsonObj = lists:map(Codec, Result),
 			Body = zj:encode(JsonObj),
@@ -772,25 +758,6 @@ static_spec(?PREFIX_RANGE_ROW_SPEC = SpecId) ->
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
-
--spec gtt(Table, Gtt) -> Gtt
-	when
-		Table :: string(),
-		Gtt :: {Prefix, Value} | map(),
-		Prefix :: string(),
-		Value :: term().
-%% @doc CODEC for gtt.
-%% @private
-gtt(Table, {Prefix, Value} = _Gtt) ->
-	Id = Table ++ "-" ++ Prefix,
-	Specification = ?PREFIX_ROW_SPEC,
-	#{"id" => Id, "href" => ?inventoryPath ++ Id,
-			"resourceSpecification" => #{"id" => Specification,
-					"href" => ?specPath ++ Specification,
-					"name" => "PrefixTableRow"},
-			"resourceCharacteristic" => [
-					#{"name" => "prefix", "value" => Prefix},
-					#{"name" => "value", "value" => Value}]}.
 
 -spec resource(Resource) -> Resource
 	when
