@@ -27,6 +27,7 @@
 
 %% export test cases
 -export([resource_spec_add/0, resource_spec_add/1,
+		resource_spec_exists/0, resource_spec_exists/1,
 		resource_spec_retrieve_static/0, resource_spec_retrieve_static/1,
 		resource_spec_retrieve_dynamic/0, resource_spec_retrieve_dynamic/1,
 		resource_spec_delete_static/0, resource_spec_delete_static/1,
@@ -123,7 +124,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[resource_spec_add, resource_spec_retrieve_static,
+	[resource_spec_add, resource_spec_exists, resource_spec_retrieve_static,
 			resource_spec_retrieve_dynamic, resource_spec_delete_static,
 			resource_spec_delete_dynamic, resource_spec_query_based,
 			add_static_table_resource, add_dynamic_table_resource,
@@ -157,6 +158,31 @@ resource_spec_add(Config) ->
 	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
 	{ok, #{} = ResourceSpecMap} = zj:decode(ResponseBody),
 	true = is_resource_spec(ResourceSpecMap).
+
+resource_spec_exists() ->
+	[{userdata, [{doc, "Add Resource Specification which already exists"}]}].
+
+resource_spec_exists(Config) ->
+	HostUrl = ?config(host, Config),
+	Fill = fun F(0, Acc) ->
+				Acc;
+			F(N, Acc) ->
+				SpecName1 = cse_test_lib:rand_name(8),
+				SpecT1 = dynamic_prefix_table_spec(SpecName1),
+				{ok, _} = cse:add_resource_spec(SpecT1),
+				F(N - 1, [SpecName1 | Acc])
+	end,
+	SpecNames = Fill(1000, []),
+	SpecName2 = lists:nth(rand:uniform(length(SpecNames)), SpecNames),
+	SpecT2 = dynamic_prefix_table_spec(SpecName2),
+	SpecM = cse_rest_res_resource:resource_spec(SpecT2),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	RequestBody = zj:encode(SpecM),
+	Request = {HostUrl ++ ?specPath,
+			[Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 409, "Conflict"}, _Headers, _Body} = Result.
 
 resource_spec_retrieve_static() ->
 	[{userdata, [{doc, "Retrieve Static Resource Specifications"}]}].
