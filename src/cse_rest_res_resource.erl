@@ -138,29 +138,28 @@ add_resource_spec(RequestBody) ->
 add_resource_spec1(#resource_spec{name = Name,
 		related = [#resource_spec_rel{id = ?PREFIX_TABLE_SPEC,
 		rel_type = "based"} | _]} = ResourceSpec) ->
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource_spec(Cont1,
-						'_', {exact, Name}, '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	case F(start, []) of
-		[] ->
-			add_resource_spec2(cse:add_resource_spec(ResourceSpec));
-		[#resource_spec{} | _] ->
-			{error, 400}
-	end;
+	add_resource_spec2(ResourceSpec, Name,
+			cse:query_resource_spec(start, '_', {exact, Name}, '_', '_'));
 add_resource_spec1(#resource_spec{} = ResourceSpec) ->
-	add_resource_spec2(cse:add_resource_spec(ResourceSpec)).
+	add_resource_spec3(cse:add_resource_spec(ResourceSpec)).
 %% @hidden
-add_resource_spec2({ok, #resource_spec{href = Href,
+add_resource_spec2(ResourceSpec, _Name, {eof, []}) ->
+	add_resource_spec3(cse:add_resource_spec(ResourceSpec));
+add_resource_spec2(ResourceSpec, Name, {Cont, []}) ->
+	add_resource_spec2(ResourceSpec, Name,
+			cse:query_resource_spec(Cont, '_', {exact, Name}, '_', '_'));
+add_resource_spec2(_ResourceSpec, _Name, {_Cont_, [_H | _T]}) ->
+	{error, 409};
+add_resource_spec2(_ResourceSpec, _Name, {error, _Reason}) ->
+	{error, 500}.
+%% @hidden
+add_resource_spec3({ok, #resource_spec{href = Href,
 		last_modified = LM} = NewResSpec}) ->
 	Body = zj:encode(resource_spec(NewResSpec)),
 	Headers = [{location, Href}, {etag, cse_rest:etag(LM)},
 			{content_type, "application/json"}],
 	{ok, Headers, Body};
-add_resource_spec2({error, _Reason}) ->
+add_resource_spec3({error, _Reason}) ->
 	{error, 400}.
 
 -spec delete_resource_spec(Id, Query) -> Result
