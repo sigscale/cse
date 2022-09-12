@@ -128,42 +128,23 @@ add_resource_spec(RequestBody) ->
 		{ok, ResSpecMap} = zj:decode(RequestBody),
 		resource_spec(ResSpecMap)
 	of
-		#resource_spec{related = Related} = ResourceSpec ->
-			add_resource_spec1(ResourceSpec, Related)
+		#resource_spec{} = ResourceSpec1 ->
+			case cse:add_resource_spec(ResourceSpec1) of
+				{ok, #resource_spec{href = Href,
+						last_modified = LM} = ResourceSpec2} ->
+					Body = zj:encode(resource_spec(ResourceSpec2)),
+					Headers = [{location, Href}, {etag, cse_rest:etag(LM)},
+							{content_type, "application/json"}],
+					{ok, Headers, Body};
+				{error, table_exists} ->
+					{error, 409};
+				{error, _Reason} ->
+					{error, 500}
+			end
 	catch
 		_:_Reason ->
 			{error, 400}
 	end.
-%% @hidden
-add_resource_spec1(#resource_spec{name = Name} = ResourceSpec,
-		[#resource_spec_rel{id = SpecId, rel_type = "based"} | _]) when
-		SpecId == ?PREFIX_TABLE_SPEC;
-		SpecId == ?PREFIX_RANGE_TABLE_SPEC ->
-	add_resource_spec2(ResourceSpec, Name,
-			cse:query_resource_spec(start, '_', {exact, Name}, '_', '_'));
-add_resource_spec1(ResourceSpec, [_ | T]) ->
-	add_resource_spec1(ResourceSpec, T);
-add_resource_spec1(ResourceSpec, []) ->
-	add_resource_spec3(cse:add_resource_spec(ResourceSpec)).
-%% @hidden
-add_resource_spec2(ResourceSpec, _Name, {eof, []}) ->
-	add_resource_spec3(cse:add_resource_spec(ResourceSpec));
-add_resource_spec2(ResourceSpec, Name, {Cont, []}) ->
-	add_resource_spec2(ResourceSpec, Name,
-			cse:query_resource_spec(Cont, '_', {exact, Name}, '_', '_'));
-add_resource_spec2(_ResourceSpec, _Name, {_Cont_, [_H | _T]}) ->
-	{error, 409};
-add_resource_spec2(_ResourceSpec, _Name, {error, _Reason}) ->
-	{error, 500}.
-%% @hidden
-add_resource_spec3({ok, #resource_spec{href = Href,
-		last_modified = LM} = NewResSpec}) ->
-	Body = zj:encode(resource_spec(NewResSpec)),
-	Headers = [{location, Href}, {etag, cse_rest:etag(LM)},
-			{content_type, "application/json"}],
-	{ok, Headers, Body};
-add_resource_spec3({error, _Reason}) ->
-	{error, 400}.
 
 -spec delete_resource_spec(Id, Query) -> Result
 	when

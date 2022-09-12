@@ -337,33 +337,53 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 	when
 		Specification :: #resource_spec{},
 		Result :: {ok, Specification} | {error, Reason},
-		Reason :: term().
+		Reason :: table_exists | term().
 %% @doc Add an entry in the Resource Specification table.
 add_resource_spec(#resource_spec{name = Name, id = undefined,
 		href = undefined, last_modified = undefined, related = Rels}
-		= ResourceSpecification) when is_list(Name) ->
+		= ResourceSpec1) when is_list(Name) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
 	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
-	NewSpec = case lists:keytake("based", #resource_spec_rel.rel_type, Rels) of
-		{value, BasedRel, Rest} ->
-			ResourceSpecification#resource_spec{id = Id,
-					href = Href, last_modified = LM, related = [BasedRel | Rest]};
+	PrefixTableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	RangeTableSpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
+	case lists:keytake("based", #resource_spec_rel.rel_type, Rels) of
+		{value, #resource_spec_rel{id = SpecId} = BasedRel, Rest} when
+				SpecId == PrefixTableSpecId;
+				SpecId == RangeTableSpecId ->
+			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
+					href = Href, last_modified = LM,
+					related = [BasedRel | Rest]},
+			add_resource_spec1(ResourceSpec2, Name,
+					cse:query_resource_spec(start, '_', {exact, Name}, '_', '_'));
 		false ->
-			ResourceSpecification#resource_spec{id = Id,
-					href = Href, last_modified = LM}
-	end,
-	F = fun() ->
-			mnesia:write(NewSpec)
-	end,
-	add_resource_spec1(mnesia:transaction(F), NewSpec).
+			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
+					href = Href, last_modified = LM},
+			add_resource_spec2(ResourceSpec2)
+	end.
 %% @hidden
-add_resource_spec1({atomic, ok}, #resource_spec{} = NewSpecification) ->
-	{ok, NewSpecification};
-add_resource_spec1({aborted, Reason}, _NewSpecification) ->
+add_resource_spec1(ResourceSpec, _Name, {eof, []}) ->
+	add_resource_spec2(ResourceSpec);
+add_resource_spec1(ResourceSpec, Name, {Cont, []}) ->
+	add_resource_spec1(ResourceSpec, Name,
+			cse:query_resource_spec(Cont, '_', {exact, Name}, '_', '_'));
+add_resource_spec1(_ResourceSpec, _Name, {_Cont_, [_H | _T]}) ->
+	{error, table_exists};
+add_resource_spec1(_ResourceSpec, _Name, {error, Reason}) ->
 	{error, Reason}.
+%% @hidden
+add_resource_spec2(ResourceSpec) ->
+	F = fun() ->
+			mnesia:write(ResourceSpec)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			{ok, ResourceSpec};
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
 
 -spec add_resource(Resource) -> Result
 	when
