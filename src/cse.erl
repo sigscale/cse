@@ -801,13 +801,13 @@ delete_resource(ID) when is_list(ID) ->
 				specification = #resource_spec_ref{id = ?RANGE_TABLE_SPEC}}}} ->
 			cse_gtt:clear_table(Name);
 		{atomic, {ok, #resource{specification = #resource_spec_ref{
-				id = ?INDEX_ROW_SPEC} = Resource2}}} ->
+				id = ?INDEX_ROW_SPEC}} = Resource2}} ->
 			delete_resource_row(?INDEX_ROW_SPEC, Resource2);
 		{atomic, {ok, #resource{specification = #resource_spec_ref{
-				id = ?PREFIX_ROW_SPEC} = Resource2}}} ->
+				id = ?PREFIX_ROW_SPEC}} = Resource2}} ->
 			delete_resource_row(?PREFIX_ROW_SPEC, Resource2);
 		{atomic, {ok, #resource{specification = #resource_spec_ref{
-				id = ?RANGE_ROW_SPEC} = Resource2}}} ->
+				id = ?RANGE_ROW_SPEC}} = Resource2}} ->
 			delete_resource_row(?RANGE_ROW_SPEC, Resource2);
 		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = SpecId}} = Resource2}} ->
