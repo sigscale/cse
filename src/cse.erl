@@ -776,8 +776,8 @@ delete_resource_spec(ID) when is_list(ID) ->
 delete_resource(ID) when is_list(ID) ->
 	F = fun() ->
 			case mnesia:read(resource, ID, write) of
-				[#resource{id = ID} = Resource] ->
-					{mnesia:delete(resource, ID, write), Resource};
+				[#resource{id = ID} = Resource1] ->
+					{mnesia:delete(resource, ID, write), Resource1};
 				[] ->
 					mnesia:abort(not_found)
 			end
@@ -786,30 +786,92 @@ delete_resource(ID) when is_list(ID) ->
 		{aborted, Reason} ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
+				specification = #resource_spec_ref{id = ?INDEX_TABLE_SPEC}}}} ->
+			TableName = list_to_existing_atom(Name),
+			case mnesia:clear_table(TableName) of
+				{atomic, ok} ->
+					ok;
+				{aborted, Reason} ->
+					{error, Reason}
+			end;
+		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}} ->
 			cse_gtt:clear_table(Name);
 		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = ?RANGE_TABLE_SPEC}}}} ->
 			cse_gtt:clear_table(Name);
+		{atomic, {ok, #resource{specification = #resource_spec_ref{
+				id = ?INDEX_ROW_SPEC} = Resource2}}} ->
+			delete_resource_row(?INDEX_ROW_SPEC, Resource2);
+		{atomic, {ok, #resource{specification = #resource_spec_ref{
+				id = ?PREFIX_ROW_SPEC} = Resource2}}} ->
+			delete_resource_row(?PREFIX_ROW_SPEC, Resource2);
+		{atomic, {ok, #resource{specification = #resource_spec_ref{
+				id = ?RANGE_ROW_SPEC} = Resource2}}} ->
+			delete_resource_row(?RANGE_ROW_SPEC, Resource2);
 		{atomic, {ok, #resource{name = Name,
-				specification = #resource_spec_ref{id = SpecId}}}} ->
+				specification = #resource_spec_ref{id = SpecId}} = Resource2}} ->
 			case cse:find_resource_spec(SpecId) of
 				{ok, #resource_spec{related = Related}} ->
 					case lists:keyfind("based",
 							#resource_spec_rel.rel_type, Related) of
+						#resource_spec_rel{id = ?INDEX_TABLE_SPEC, rel_type = "based"} ->
+							TableName = list_to_existing_atom(Name),
+							case mnesia:clear_table(TableName) of
+								{atomic, ok} ->
+									ok;
+								{aborted, Reason} ->
+									{error, Reason}
+							end;
 						#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} ->
 							cse_gtt:clear_table(Name);
 						#resource_spec_rel{id = ?RANGE_TABLE_SPEC, rel_type = "based"} ->
 							cse_gtt:clear_table(Name);
-						#resource_spec_rel{} ->
-							ok;
-						false ->
+						#resource_spec_rel{id = ?INDEX_ROW_SPEC, rel_type = "based"} ->
+							delete_resource_row(?INDEX_ROW_SPEC, Resource2);
+						#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} ->
+							delete_resource_row(?PREFIX_ROW_SPEC, Resource2);
+						#resource_spec_rel{id = ?RANGE_ROW_SPEC, rel_type = "based"} ->
+							delete_resource_row(?RANGE_ROW_SPEC, Resource2);
+						_ ->
 							ok
 					end;
 				{error, Reason} ->
 					{error, Reason}
 			end
 	end.
+
+%% @hidden
+delete_resource_row(Based,
+		#resource{related = #{"contained" := #resource_rel{
+		resource = #resource_ref{name = Table}}}} = Resource) ->
+	delete_resource_row(Based, Table, Resource);
+delete_resource_row(_Based, _Resource) ->
+	{error, table_not_found}.
+%% @hidden
+delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{
+		characteristic = #{"key" := #characteristic{value = Key}}}) ->
+	TableName = list_to_existing_atom(Table),
+	F = fun()  ->
+			mnesia:delete(TableName, Key, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			{error, Reason}
+	end;
+delete_resource_row(?PREFIX_ROW_SPEC, Table, #resource{
+		characteristic = #{"prefix" := #characteristic{value = Prefix}}}) ->
+	TableName = list_to_existing_atom(Table),
+	cse_gtt:delete(TableName, Prefix);
+delete_resource_row(?RANGE_ROW_SPEC, Table, #resource{
+		characteristic = #{"start" := #characteristic{value = Start},
+		"end" := #characteristic{value = End}}}) ->
+	TableName = list_to_existing_atom(Table),
+	cse_gtt:delete_range(TableName, Start, End);
+delete_resource_row(_Based, _Table, _Resource) ->
+	{error, table_not_found}.
 
 -spec query_resource_spec(Cont, MatchId,
 		MatchName, MatchRelId, MatchRelType) -> Result

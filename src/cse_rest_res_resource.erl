@@ -400,7 +400,7 @@ add_resource(RequestBody) ->
 %%
 delete_resource(Id, []) ->
 	try
-		delete_resource1(cse:find_resource(Id))
+		delete_resource_result(cse:delete_resource(Id))
 	catch
 		_Class:_Reason:_Stack ->
 			{error, 400}
@@ -425,75 +425,12 @@ delete_resource([], Query) ->
 			{error, 400}
 	end.
 %% @hidden
-delete_resource1({ok, #resource{id = Id, specification
-		= #resource_spec_ref{id = SpecId}}}) when
-		SpecId == ?INDEX_TABLE_SPEC;
-		SpecId == ?PREFIX_TABLE_SPEC;
-		SpecId == ?RANGE_TABLE_SPEC ->
+delete_resource1({ok, #resource{id = Id}}) ->
 	delete_resource_result(cse:delete_resource(Id));
-delete_resource1({ok, #resource{id = Id, specification
-		= #resource_spec_ref{id = SpecId}} = Resource}) when
-		SpecId == ?INDEX_ROW_SPEC;
-		SpecId == ?PREFIX_ROW_SPEC;
-		SpecId == ?RANGE_ROW_SPEC ->
-	delete_resource_row(Id, Resource);
-delete_resource1({ok, #resource{specification
-		= #resource_spec_ref{id = SpecId}} = Resource}) ->
-	delete_resource2(Resource, cse:find_resource_spec(SpecId));
 delete_resource1({error, not_found}) ->
 	{error, 404};
 delete_resource1({error, Reason}) ->
 	{error, Reason}.
-%% @hidden
-delete_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
-	delete_resource3(Resource, Related);
-delete_resource2(_Resource, {error, Reason}) ->
-	{error, Reason}.
-%%  @hidden
-delete_resource3(Resource,
-		[#resource_spec_rel{id = SpecId, rel_type = "based"} | _]) when
-		SpecId == ?INDEX_ROW_SPEC;
-		SpecId == ?PREFIX_ROW_SPEC;
-		SpecId == ?RANGE_ROW_SPEC ->
-	delete_resource_row(SpecId, Resource);
-delete_resource3(Resource, [_ | T]) ->
-	delete_resource3(Resource, T);
-delete_resource3(#resource{id = Id}, []) ->
-	delete_resource_result(cse:delete_resource(Id)).
-
-%% @hidden
-delete_resource_row(Based,
-		#resource{related = #{"contained" := #resource_rel{
-		resource = #resource_ref{name = Table}}}} = Resource) ->
-	delete_resource_row(Based, Table, Resource);
-delete_resource_row(_Based, _Resource) ->
-	{error, 400}.
-%% @hidden
-delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{id = Id,
-		characteristic = #{"key" := #characteristic{value = Key}}}) ->
-	TableName = list_to_existing_atom(Table),
-	F = fun() ->
-			mnesia:delete(TableName, Key, write)
-	end,
-	case mnesia:transaction(F) of
-		{atomic, ok} ->
-			delete_resource_result(cse:delete_resource(Id));
-		{aborted, Reason} ->
-			{error, Reason}
-	end;
-delete_resource_row(?PREFIX_ROW_SPEC, Table, #resource{id = Id,
-		characteristic = #{"prefix" := #characteristic{value = Prefix}}}) ->
-	TableName = list_to_existing_atom(Table),
-	ok = cse_gtt:delete(TableName, Prefix),
-	delete_resource_result(cse:delete_resource(Id));
-delete_resource_row(?RANGE_ROW_SPEC, Table, #resource{id = Id,
-		characteristic = #{"start" := #characteristic{value = Start},
-		"end" := #characteristic{value = End}}}) ->
-	TableName = list_to_existing_atom(Table),
-	ok = cse_gtt:delete_range(TableName, Start, End),
-	delete_resource_result(cse:delete_resource(Id));
-delete_resource_row(_Based, _Table, _Resource) ->
-	{error, 400}.
 
 %% @hidden
 delete_resource_query(Cont, {exact, SpecId} = MatchSpecId, MatchChars)
