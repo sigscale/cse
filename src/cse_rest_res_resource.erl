@@ -419,16 +419,14 @@ delete_resource([], Query) ->
 				throw(404)
 		end
 	catch
-		throw:Reason->
+		throw:Reason ->
 			{error, Reason};
-		_Class:_Reason ->
+		_Class:_Reason:_Stack ->
 			{error, 400}
 	end.
 %% @hidden
 delete_resource1({ok, #resource{id = Id}}) ->
 	delete_resource_result(cse:delete_resource(Id));
-delete_resource1({error, not_found}) ->
-	{error, 404};
 delete_resource1({error, Reason}) ->
 	{error, Reason}.
 
