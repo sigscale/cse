@@ -1,3 +1,16 @@
+2022-09-13  Vance Shipley <vances@sigscale.org>
+
+	* move gtt delete from rest to api module
+	* add index table type
+	* rest test suite: no gtt insert
+	* test cases for table api
+	* move add resource validation and gtt to api module
+	* move add resource specification validation to api module
+	* remove deprecated gtt codec
+	* exhaustive search for related specification
+	* test case for add existing resource specification name
+	* refactor existing res spec test as lazy, return 409
+
 2022-09-05  Vance Shipley <vances@sigscale.org>
 
 	* handle delete dynamic row specs and range rows

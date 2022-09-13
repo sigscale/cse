@@ -1,3 +1,8 @@
+September 13, 2022
+------------------
+	- Refactor table APIs
+	- Index table type
+
 August 17, 2022
 ---------------
 	- Elastic Stack log additional detail for DIAMETER Ro
