@@ -33,9 +33,20 @@
 		delete_service/0, delete_service/1,
 		no_service/0, no_service/1]).
 -export([announce/0, announce/1]).
+-export([add_prefix_table_spec/0, add_prefix_table_spec/1,
+		add_range_table_spec/0, add_range_table_spec/1,
+		get_prefix_table_spec/0, get_prefix_table_spec/1,
+		get_range_table_spec/0, get_range_table_spec/1,
+		add_prefix_table/0, add_prefix_table/1,
+		add_range_table/0, add_range_table/1,
+		get_prefix_table/0, get_prefix_table/1,
+		get_range_table/0, get_range_table/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
+
+-define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
+-define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
 %%---------------------------------------------------------------------
 %%  Test server callback functions
@@ -93,7 +104,11 @@ sequences() ->
 %%
 all() ->
 	[start_cse, stop_cse, add_service, find_service, get_services,
-			delete_service, no_service, announce].
+			delete_service, no_service, announce,
+			add_prefix_table_spec, add_range_table_spec,
+			get_prefix_table_spec, get_range_table_spec,
+			add_prefix_table, add_range_table,
+			get_prefix_table, get_range_table].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -173,6 +188,86 @@ announce(_Config) ->
 	end,
 	lists:all(F, cse:announce(Amount)).
 
+add_prefix_table_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for a prefix table"}]}].
+
+add_prefix_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_prefix_table_spec(Name),
+	{ok, #resource_spec{name = Name}} = cse:add_resource_spec(Specification).
+
+add_range_table_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for a prefix range table"}]}].
+
+add_range_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_range_table_spec(Name),
+	{ok, #resource_spec{name = Name}} = cse:add_resource_spec(Specification).
+
+get_prefix_table_spec() ->
+	[{userdata, [{doc, "Get a dynamic prefix table Resource Specification"}]}].
+
+get_prefix_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_prefix_table_spec(Name),
+	{ok, #resource_spec{id = Id} = RS} = cse:add_resource_spec(Specification),
+	{ok, RS} = cse:find_resource_spec(Id).
+
+get_range_table_spec() ->
+	[{userdata, [{doc, "Get a dynamic prefix range table Resource Specification"}]}].
+
+get_range_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_range_table_spec(Name),
+	{ok, #resource_spec{id = Id} = RS} = cse:add_resource_spec(Specification),
+	{ok, RS} = cse:find_resource_spec(Id).
+
+add_prefix_table() ->
+	[{userdata, [{doc, "Add a Resource for a prefix table"}]}].
+
+add_prefix_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	ok = cse_gtt:new(Name, []),
+	SpecificationT = dynamic_prefix_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_prefix_table(Name, SpecificationR),
+	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+
+add_range_table() ->
+	[{userdata, [{doc, "Add a Resource for a prefix range table"}]}].
+
+add_range_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	ok = cse_gtt:new(Name, []),
+	SpecificationT = dynamic_range_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_range_table(Name, SpecificationR),
+	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+
+get_prefix_table() ->
+	[{userdata, [{doc, "Get a Resource for a prefix table"}]}].
+
+get_prefix_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	ok = cse_gtt:new(Name, []),
+	SpecificationT = dynamic_prefix_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_prefix_table(Name, SpecificationR),
+	{ok, #resource{id = Id} = ResourceR} = cse:add_resource(ResourceT),
+	{ok, ResourceR} = cse:find_resource(Id).
+
+get_range_table() ->
+	[{userdata, [{doc, "Get a Resource for a prefix range table"}]}].
+
+get_range_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	ok = cse_gtt:new(Name, []),
+	SpecificationT = dynamic_range_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_range_table(Name, SpecificationR),
+	{ok, #resource{id = Id} = ResourceR} = cse:add_resource(ResourceT),
+	{ok, ResourceR} = cse:find_resource(Id).
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -185,4 +280,54 @@ edp() ->
 			disconnect2 => interrupted,
 			no_answer => interrupted,
 			route_fail => interrupted}.
+
+dynamic_prefix_table_spec(Name) ->
+	PrefixSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = PrefixSpecId,
+			href = ?specPath ++ PrefixSpecId,
+			name = "PrefixTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic prefix table specification",
+			category = "PrefixTable",
+			version = "1.0",
+			related = [SpecRel]}.
+
+dynamic_range_table_spec(Name) ->
+	RangeSpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = RangeSpecId,
+			href = ?specPath ++ RangeSpecId,
+			name = "PrefixRangeTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic prefix range table specification",
+			category = "PrefixTable",
+			version = "1.0",
+			related = [SpecRel]}.
+
+dynamic_prefix_table(Name,
+		#resource_spec{id = SpecId,
+				href = SpecHref,
+				name = SpecName}) ->
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = SpecHref,
+			name = SpecName},
+	#resource{name = Name,
+			description = "Dynamic prefix table",
+			category = "Prefix",
+			version = "1.0",
+			specification = SpecRef}.
+
+dynamic_range_table(Name,
+		#resource_spec{id = SpecId,
+				href = SpecHref,
+				name = SpecName}) ->
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = SpecHref,
+			name = SpecName},
+	#resource{name = Name,
+			description = "Dynamic prefix range table",
+			category = "Prefix",
+			version = "1.0",
+			specification = SpecRef}.
 
