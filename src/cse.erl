@@ -43,6 +43,8 @@
 
 -define(PathCatalog,       "/resourceCatalogManagement/v4/").
 -define(PathInventory,     "/resourceInventoryManagement/v4/").
+-define(INDEX_TABLE_SPEC,  "1662614478074-19").
+-define(INDEX_ROW_SPEC,    "1662614480005-35").
 -define(PREFIX_TABLE_SPEC, "1647577955926-50").
 -define(PREFIX_ROW_SPEC,   "1647577957914-66").
 -define(RANGE_TABLE_SPEC,  "1651055414682-258").
@@ -353,6 +355,7 @@ add_resource_spec(#resource_spec{name = Name, id = undefined,
 	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
 	case lists:keytake("based", #resource_spec_rel.rel_type, Rels) of
 		{value, #resource_spec_rel{id = SpecId} = BasedRel, Rest} when
+				SpecId == ?INDEX_TABLE_SPEC;
 				SpecId == ?PREFIX_TABLE_SPEC;
 				SpecId == ?RANGE_TABLE_SPEC ->
 			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
@@ -360,7 +363,7 @@ add_resource_spec(#resource_spec{name = Name, id = undefined,
 					related = [BasedRel | Rest]},
 			add_resource_spec1(ResourceSpec2, Name,
 					cse:query_resource_spec(start, '_', {exact, Name}, '_', '_'));
-		false ->
+		_ ->
 			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
 					href = Href, last_modified = LM},
 			add_resource_spec2(ResourceSpec2)
@@ -408,11 +411,17 @@ add_resource(#resource{id = undefined,
 	add_resource1(NewResource).
 %% @hidden
 add_resource1(#resource{specification = #resource_spec_ref{
+		id = ?INDEX_TABLE_SPEC}} = Resource) ->
+	add_resource_index_table(Resource);
+add_resource1(#resource{specification = #resource_spec_ref{
 		id = ?PREFIX_TABLE_SPEC}} = Resource) ->
 	add_resource_prefix_table(Resource);
 add_resource1(#resource{specification = #resource_spec_ref{
 		id = ?RANGE_TABLE_SPEC}} = Resource) ->
 	add_resource_prefix_table(Resource);
+add_resource1(#resource{specification = #resource_spec_ref{
+		id = ?INDEX_ROW_SPEC}} = Resource) ->
+	add_resource_index_row(Resource);
 add_resource1(#resource{specification = #resource_spec_ref{
 		id = ?PREFIX_ROW_SPEC}} = Resource) ->
 	add_resource_prefix_row(Resource);
@@ -431,15 +440,15 @@ add_resource3(_Resource, {error, Reason}) ->
 	{error, Reason}.
 %% @hidden
 add_resource4(Resource, Related) ->
-	case lists:keyfind(?PREFIX_TABLE_SPEC, #resource_spec_rel.id, Related) of
+	case lists:keyfind(?INDEX_TABLE_SPEC, #resource_spec_rel.id, Related) of
 		#resource_spec_rel{rel_type = "based"} ->
-			add_resource_prefix_table(Resource);
+			add_resource_index_table(Resource);
 		_ ->
 			add_resource5(Resource, Related)
 	end.
 %% @hidden
 add_resource5(Resource, Related) ->
-	case lists:keyfind(?RANGE_TABLE_SPEC, #resource_spec_rel.id, Related) of
+	case lists:keyfind(?PREFIX_TABLE_SPEC, #resource_spec_rel.id, Related) of
 		#resource_spec_rel{rel_type = "based"} ->
 			add_resource_prefix_table(Resource);
 		_ ->
@@ -447,23 +456,92 @@ add_resource5(Resource, Related) ->
 	end.
 %% @hidden
 add_resource6(Resource, Related) ->
-	case lists:keyfind(?PREFIX_ROW_SPEC, #resource_spec_rel.id, Related) of
+	case lists:keyfind(?RANGE_TABLE_SPEC, #resource_spec_rel.id, Related) of
 		#resource_spec_rel{rel_type = "based"} ->
-			add_resource_prefix_row(Resource);
+			add_resource_prefix_table(Resource);
 		_ ->
 			add_resource7(Resource, Related)
 	end.
 %% @hidden
 add_resource7(Resource, Related) ->
+	case lists:keyfind(?INDEX_ROW_SPEC, #resource_spec_rel.id, Related) of
+		#resource_spec_rel{rel_type = "based"} ->
+			add_resource_index_row(Resource);
+		_ ->
+			add_resource8(Resource, Related)
+	end.
+%% @hidden
+add_resource8(Resource, Related) ->
+	case lists:keyfind(?PREFIX_ROW_SPEC, #resource_spec_rel.id, Related) of
+		#resource_spec_rel{rel_type = "based"} ->
+			add_resource_prefix_row(Resource);
+		_ ->
+			add_resource9(Resource, Related)
+	end.
+%% @hidden
+add_resource9(Resource, Related) ->
 	case lists:keyfind(?RANGE_ROW_SPEC, #resource_spec_rel.id, Related) of
 		#resource_spec_rel{rel_type = "based"} ->
 			add_resource_range_row(Resource);
 		_ ->
-			add_resource8(Resource)
+			add_resource10(Resource)
 	end.
 %% @hidden
-add_resource8(Resource) ->
+add_resource10(Resource) ->
 	F = fun() ->
+			mnesia:write(Resource)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			{ok, Resource};
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
+
+%% @hidden
+add_resource_index_table(#resource{name = Name} = Resource) ->
+	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
+		[key, value] ->
+			F = fun() ->
+					mnesia:write(Resource)
+			end,
+			case mnesia:transaction(F) of
+				{atomic, ok} ->
+					{ok, Resource};
+				{aborted, Reason} ->
+					{error, Reason}
+			end;
+		_ ->
+			{error, table_not_found}
+	end.
+
+%% @hidden
+add_resource_index_row(#resource{related = Related} = Resource) ->
+	case maps:find("contained", Related) of
+		{ok, #resource_rel{rel_type = "contained",
+				resource = #resource_ref{name = Table}}} ->
+			add_resource_index_row(Table, Resource);
+		error ->
+			{error, table_not_found}
+	end.
+%% @hidden
+add_resource_index_row(Table,
+		#resource{characteristic = Chars} = Resource) ->
+	case maps:find("key", Chars) of
+		{ok, #characteristic{name = "key", value = Key}} ->
+			case maps:find("value", Chars) of
+				{ok, #characteristic{name = "value", value = Value}} ->
+					add_resource_index_row(Table, Resource, Key, Value);
+				error ->
+					{error, missing_chars}
+			end;
+		error ->
+			{error, missing_chars}
+	end.
+%% @hidden
+add_resource_index_row(Table, Resource, Key, Value) ->
+	F = fun() ->
+			mnesia:write({Table, Key, Value}),
 			mnesia:write(Resource)
 	end,
 	case mnesia:transaction(F) of

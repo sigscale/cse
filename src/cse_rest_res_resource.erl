@@ -28,7 +28,8 @@
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/2,
 		resource/1]).
 % export cse_rest_res_resource private API
--export([prefix_table_spec_id/0, prefix_row_spec_id/0, static_spec/1,
+-export([static_spec/1, index_table_spec_id/0, index_row_spec_id/0,
+		prefix_table_spec_id/0, prefix_row_spec_id/0,
 		prefix_range_table_spec_id/0, prefix_range_row_spec_id/0]).
 
 -include("cse.hrl").
@@ -36,10 +37,12 @@
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
 -define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
--define(PREFIX_TABLE_SPEC,       "1647577955926-50").
--define(PREFIX_ROW_SPEC,         "1647577957914-66").
--define(PREFIX_RANGE_TABLE_SPEC, "1651055414682-258").
--define(PREFIX_RANGE_ROW_SPEC,   "1651057291061-274").
+-define(INDEX_TABLE_SPEC,  "1662614478074-19").
+-define(INDEX_ROW_SPEC,    "1662614480005-35").
+-define(PREFIX_TABLE_SPEC, "1647577955926-50").
+-define(PREFIX_ROW_SPEC,   "1647577957914-66").
+-define(RANGE_TABLE_SPEC,  "1651055414682-258").
+-define(RANGE_ROW_SPEC,    "1651057291061-274").
 
 %%----------------------------------------------------------------------
 %%  cse_rest_res_resource public API functions
@@ -155,10 +158,12 @@ add_resource_spec(RequestBody) ->
 %% @doc Respond to `DELETE /resourceCatalogyManagement/v4/resourceSpecification/{id}'
 %%    request to remove a Resource Specification.
 delete_resource_spec(Id, _Query)
-		when Id == ?PREFIX_TABLE_SPEC;
+		when Id == ?INDEX_TABLE_SPEC;
+		Id == ?INDEX_ROW_SPEC;
+		Id == ?PREFIX_TABLE_SPEC;
 		Id == ?PREFIX_ROW_SPEC;
-		Id == ?PREFIX_RANGE_TABLE_SPEC;
-		Id == ?PREFIX_RANGE_ROW_SPEC ->
+		Id == ?RANGE_TABLE_SPEC;
+		Id == ?RANGE_ROW_SPEC ->
 	{error, 405};
 delete_resource_spec(Id, []) ->
 	case cse:delete_resource_spec(Id) of
@@ -421,17 +426,17 @@ delete_resource([], Query) ->
 	end.
 %% @hidden
 delete_resource1({ok, #resource{id = Id, specification
-		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}) ->
+		= #resource_spec_ref{id = SpecId}}}) when
+		SpecId == ?INDEX_TABLE_SPEC;
+		SpecId == ?PREFIX_TABLE_SPEC;
+		SpecId == ?RANGE_TABLE_SPEC ->
 	delete_resource_result(cse:delete_resource(Id));
 delete_resource1({ok, #resource{id = Id, specification
-		= #resource_spec_ref{id = ?PREFIX_RANGE_TABLE_SPEC}}}) ->
-	delete_resource_result(cse:delete_resource(Id));
-delete_resource1({ok, #resource{specification
-		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource}) ->
-	delete_resource_row(?PREFIX_ROW_SPEC, Resource);
-delete_resource1({ok, #resource{specification
-		= #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC}} = Resource}) ->
-	delete_resource_row(?PREFIX_RANGE_ROW_SPEC, Resource);
+		= #resource_spec_ref{id = SpecId}} = Resource}) when
+		SpecId == ?INDEX_ROW_SPEC;
+		SpecId == ?PREFIX_ROW_SPEC;
+		SpecId == ?RANGE_ROW_SPEC ->
+	delete_resource_row(Id, Resource);
 delete_resource1({ok, #resource{specification
 		= #resource_spec_ref{id = SpecId}} = Resource}) ->
 	delete_resource2(Resource, cse:find_resource_spec(SpecId));
@@ -445,18 +450,12 @@ delete_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
 delete_resource2(_Resource, {error, Reason}) ->
 	{error, Reason}.
 %%  @hidden
-delete_resource3(#resource{id = Id},
-		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
-	delete_resource_result(cse:delete_resource(Id));
-delete_resource3(#resource{id = Id},
-		[#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC, rel_type = "based"} | _]) ->
-	delete_resource_result(cse:delete_resource(Id));
 delete_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
-	delete_resource_row(?PREFIX_ROW_SPEC, Resource);
-delete_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_RANGE_ROW_SPEC, rel_type = "based"} | _]) ->
-	delete_resource_row(?PREFIX_RANGE_ROW_SPEC, Resource);
+		[#resource_spec_rel{id = SpecId, rel_type = "based"} | _]) when
+		SpecId == ?INDEX_ROW_SPEC;
+		SpecId == ?PREFIX_ROW_SPEC;
+		SpecId == ?RANGE_ROW_SPEC ->
+	delete_resource_row(SpecId, Resource);
 delete_resource3(Resource, [_ | T]) ->
 	delete_resource3(Resource, T);
 delete_resource3(#resource{id = Id}, []) ->
@@ -470,12 +469,24 @@ delete_resource_row(Based,
 delete_resource_row(_Based, _Resource) ->
 	{error, 400}.
 %% @hidden
+delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{id = Id,
+		characteristic = #{"key" := #characteristic{value = Key}}}) ->
+	TableName = list_to_existing_atom(Table),
+	F = fun() ->
+			mnesia:delete(TableName, Key, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			delete_resource_result(cse:delete_resource(Id));
+		{aborted, Reason} ->
+			{error, Reason}
+	end;
 delete_resource_row(?PREFIX_ROW_SPEC, Table, #resource{id = Id,
 		characteristic = #{"prefix" := #characteristic{value = Prefix}}}) ->
 	TableName = list_to_existing_atom(Table),
 	ok = cse_gtt:delete(TableName, Prefix),
 	delete_resource_result(cse:delete_resource(Id));
-delete_resource_row(?PREFIX_RANGE_ROW_SPEC, Table, #resource{id = Id,
+delete_resource_row(?RANGE_ROW_SPEC, Table, #resource{id = Id,
 		characteristic = #{"start" := #characteristic{value = Start},
 		"end" := #characteristic{value = End}}}) ->
 	TableName = list_to_existing_atom(Table),
@@ -510,6 +521,22 @@ delete_resource_result({error, _Reason}) ->
 %%  cse_rest_res_resource private API functions
 %%----------------------------------------------------------------------
 
+-spec index_table_spec_id() -> SpecId
+	when
+		SpecId :: string().
+%% @doc Get the identifier of the index table Resource Specification.
+%% @private
+index_table_spec_id() ->
+	?INDEX_TABLE_SPEC.
+
+-spec index_row_spec_id() -> SpecId
+	when
+		SpecId :: string().
+%% @doc Get the identifier of the index table row Resource Specification.
+%% @private
+index_row_spec_id() ->
+	?INDEX_ROW_SPEC.
+
 -spec prefix_table_spec_id() -> SpecId
 	when
 		SpecId :: string().
@@ -521,7 +548,7 @@ prefix_table_spec_id() ->
 -spec prefix_row_spec_id() -> SpecId
 	when
 		SpecId :: string().
-%% @doc Get the identifier of the prefix row Resource Specification.
+%% @doc Get the identifier of the prefix table row Resource Specification.
 %% @private
 prefix_row_spec_id() ->
 	?PREFIX_ROW_SPEC.
@@ -532,15 +559,15 @@ prefix_row_spec_id() ->
 %% @doc Get the identifier of the prefix range table Resource Specification.
 %% @private
 prefix_range_table_spec_id() ->
-	?PREFIX_RANGE_TABLE_SPEC.
+	?RANGE_TABLE_SPEC.
 
 -spec prefix_range_row_spec_id() -> SpecId
 	when
 		SpecId :: string().
-%% @doc Get the identifier of the prefix range row Resource Specification.
+%% @doc Get the identifier of the prefix range table row Resource Specification.
 %% @private
 prefix_range_row_spec_id() ->
-	?PREFIX_RANGE_ROW_SPEC.
+	?RANGE_ROW_SPEC.
 
 -spec static_spec(SpecId) -> Specification
 	when
@@ -548,6 +575,37 @@ prefix_range_row_spec_id() ->
 		Specification :: #resource_spec{}.
 %% @doc Get a statically defined Resource Specification.
 %% @private
+static_spec(?INDEX_TABLE_SPEC = SpecId) ->
+	[TS, N] = string:split(SpecId, "-"),
+	LM = {list_to_integer(TS), list_to_integer(N)},
+	#resource_spec{id = SpecId,
+		href = ?specPath ++ SpecId,
+		name = "IndexTable",
+		description = "Index table specification",
+		version = "1.0",
+		last_modified = LM,
+		category = "IndexTable"
+	};
+static_spec(?INDEX_ROW_SPEC = SpecId) ->
+	[TS, N] = string:split(SpecId, "-"),
+	LM = {list_to_integer(TS), list_to_integer(N)},
+	#resource_spec{id = SpecId,
+		href = ?specPath ++ SpecId,
+		name = "IndexRow",
+		description = "Index table row specification",
+		version = "1.0",
+		last_modified = LM,
+		category = "IndexRow",
+		related = [#resource_spec_rel{id = ?INDEX_TABLE_SPEC,
+				href = ?specPath ++ ?INDEX_TABLE_SPEC,
+				name = "IndexTable",
+				rel_type = "contained"}],
+		characteristic = [#resource_spec_char{name = "key",
+				description = "Indexed key",
+				value_type = "String"},
+			#resource_spec_char{name = "value",
+				description = "Value for key"}]
+	};
 static_spec(?PREFIX_TABLE_SPEC = SpecId) ->
 	[TS, N] = string:split(SpecId, "-"),
 	LM = {list_to_integer(TS), list_to_integer(N)},
@@ -579,7 +637,7 @@ static_spec(?PREFIX_ROW_SPEC = SpecId) ->
 			#resource_spec_char{name = "value",
 				description = "Value returned from prefix match"}]
 	};
-static_spec(?PREFIX_RANGE_TABLE_SPEC = SpecId) ->
+static_spec(?RANGE_TABLE_SPEC = SpecId) ->
 	[TS, N] = string:split(SpecId, "-"),
 	LM = {list_to_integer(TS), list_to_integer(N)},
 	#resource_spec{id = SpecId,
@@ -594,7 +652,7 @@ static_spec(?PREFIX_RANGE_TABLE_SPEC = SpecId) ->
 				name = "PrefixTable",
 				rel_type = "based"}]
 	};
-static_spec(?PREFIX_RANGE_ROW_SPEC = SpecId) ->
+static_spec(?RANGE_ROW_SPEC = SpecId) ->
 	[TS, N] = string:split(SpecId, "-"),
 	LM = {list_to_integer(TS), list_to_integer(N)},
 	#resource_spec{id = SpecId,
@@ -608,8 +666,8 @@ static_spec(?PREFIX_RANGE_ROW_SPEC = SpecId) ->
 				href = ?specPath ++ ?PREFIX_ROW_SPEC,
 				name = "PrefixRow",
 				rel_type = "based"},
-			#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC,
-				href = ?specPath ++ ?PREFIX_RANGE_TABLE_SPEC,
+			#resource_spec_rel{id = ?RANGE_TABLE_SPEC,
+				href = ?specPath ++ ?RANGE_TABLE_SPEC,
 				name = "PrefixRangeTable",
 				rel_type = "contained"}],
 		characteristic = [#resource_spec_char{name = "start",

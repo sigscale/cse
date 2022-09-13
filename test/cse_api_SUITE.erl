@@ -33,7 +33,8 @@
 		delete_service/0, delete_service/1,
 		no_service/0, no_service/1]).
 -export([announce/0, announce/1]).
--export([add_prefix_table_spec/0, add_prefix_table_spec/1,
+-export([add_index_table_spec/0, add_index_table_spec/1,
+		add_prefix_table_spec/0, add_prefix_table_spec/1,
 		add_range_table_spec/0, add_range_table_spec/1,
 		get_prefix_table_spec/0, get_prefix_table_spec/1,
 		get_range_table_spec/0, get_range_table_spec/1,
@@ -268,6 +269,14 @@ get_range_table(_Config) ->
 	{ok, #resource{id = Id} = ResourceR} = cse:add_resource(ResourceT),
 	{ok, ResourceR} = cse:find_resource(Id).
 
+add_index_table_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for an index table"}]}].
+
+add_index_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_index_table_spec(Name),
+	{ok, _} = cse:add_resource_spec(Specification).
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -302,6 +311,18 @@ dynamic_range_table_spec(Name) ->
 	#resource_spec{name = Name,
 			description = "Dynamic prefix range table specification",
 			category = "PrefixTable",
+			version = "1.0",
+			related = [SpecRel]}.
+
+dynamic_index_table_spec(Name) ->
+	IndexSpecId = cse_rest_res_resource:index_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = IndexSpecId,
+			href = ?specPath ++ IndexSpecId,
+			name = "IndexTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic index table specification",
+			category = "IndexTable",
 			version = "1.0",
 			related = [SpecRel]}.
 
