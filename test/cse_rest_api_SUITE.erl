@@ -545,7 +545,6 @@ delete_row_resource(Config) ->
 	Value = cse_test_lib:rand_name(20),
 	RowT = static_prefix_row(RowName, Table, Prefix, Value),
 	{ok, #resource{id = Id, href = URI}} = cse:add_resource(RowT),
-	{ok, _} = cse_gtt:insert(TableName, Prefix, Value),
 	Host = ?config(host, Config),
 	Request = {Host ++ URI, []},
 	{ok, Result} = httpc:request(delete, Request, [], []),
@@ -614,7 +613,6 @@ delete_row_query(Config) ->
 				RowT = dynamic_prefix_row(RowName,
 						RowSpec, Table, Prefix, Value),
 				{ok, #resource{id = RowId}} = cse:add_resource(RowT),
-				{ok, _} = cse_gtt:insert(TableName, Prefix, Value),
 				F(N - 1, [{RowId, Prefix} | Acc])
 	end,
 	Rows = Fill(TotalRows, []),
@@ -696,7 +694,6 @@ query_table_row(Config) ->
 				Row = dynamic_prefix_row(RowName,
 						RowSpec, Table, Prefix, Value),
 				{ok, #resource{id = RowId}} = cse:add_resource(Row),
-				{ok, _} = cse_gtt:insert(TableName, Prefix, Value),
 				F(N - 1, [{RowId, Prefix} | Acc])
 	end,
 	Rows = Fill(1000, []),
