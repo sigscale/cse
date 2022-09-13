@@ -356,144 +356,30 @@ add_resource(RequestBody) ->
 		{ok, ResMap} = zj:decode(RequestBody),
 		resource(ResMap)
 	of
-		#resource{} = Resource ->
-			add_resource1(Resource)
+		#resource{} = Resource1 ->
+			case cse:add_resource(Resource1) of
+				{ok, #resource{href = Href, last_modified = LM} = Resource2} ->
+					Headers = [{content_type, "application/json"},
+							{location, Href}, {etag, cse_rest:etag(LM)}],
+					Body = zj:encode(resource(Resource2)),
+					{ok, Headers, Body};
+				{error, Reason} when
+						Reason == spec_not_found;
+						Reason == table_not_found;
+						Reason == missing_chars ->
+					% @todo problem report
+					{error, 400};
+				{error, Reason} when
+						Reason == name_in_use;
+						Reason == already_exists ->
+					{error, 409};
+				{error, _Reason} ->
+					{error, 500}
+			end
 	catch
 		_Error:_Reason ->
 			{error, 400}
 	end.
-%% @hidden
-add_resource1(#resource{specification
-		= #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}} = Resource) ->
-	add_resource_prefix_table(Resource);
-add_resource1(#resource{specification
-		= #resource_spec_ref{id = ?PREFIX_RANGE_TABLE_SPEC}} = Resource) ->
-	add_resource_prefix_table(Resource);
-add_resource1(#resource{specification
-		= #resource_spec_ref{id = ?PREFIX_ROW_SPEC}} = Resource) ->
-	add_resource_prefix_row(Resource);
-add_resource1(#resource{specification
-		= #resource_spec_ref{id = ?PREFIX_RANGE_ROW_SPEC}} = Resource) ->
-	add_resource_range_row(Resource);
-add_resource1(#resource{specification
-		= #resource_spec_ref{id = SpecId}} = Resource) ->
-	add_resource2(Resource, cse:find_resource_spec(SpecId)).
-%% @hidden
-add_resource2(Resource, {ok, #resource_spec{related = Related}}) ->
-	add_resource3(Resource, Related);
-add_resource2(_Resource, {error, _Reason}) ->
-% @todo problem report
-	{error, 400}.
-%% @hidden
-add_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} | _]) ->
-	add_resource_prefix_table(Resource);
-add_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_RANGE_TABLE_SPEC, rel_type = "based"} | _]) ->
-	add_resource_prefix_table(Resource);
-add_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} | _]) ->
-	add_resource_prefix_row(Resource);
-add_resource3(Resource,
-		[#resource_spec_rel{id = ?PREFIX_RANGE_ROW_SPEC, rel_type = "based"} | _]) ->
-	add_resource_range_row(Resource);
-add_resource3(Resource, [_ | T]) ->
-	add_resource3(Resource, T);
-add_resource3(Resource, []) ->
-	add_resource_result(cse:add_resource(Resource)).
-
-%% @hidden
-add_resource_prefix_table(#resource{name = Name} = Resource) ->
-	F = fun F(eof, Acc) ->
-				lists:flatten(Acc);
-			F(Cont1, Acc) ->
-				{Cont2, L} = cse:query_resource(Cont1, {exact, Name},
-						{exact, ?PREFIX_TABLE_SPEC}, '_', '_', '_'),
-				F(Cont2, [L | Acc])
-	end,
-	case F(start, []) of
-		[] ->
-			add_resource_result(cse:add_resource(Resource));
-		[#resource{} | _] ->
-			{error, 400}
-	end.
-
-%% @hidden
-add_resource_prefix_row(#resource{related = Related} = Resource) ->
-	case maps:find("contained", Related) of
-		{ok, #resource_rel{rel_type = "contained",
-				resource = #resource_ref{name = Table}}} ->
-			add_resource_prefix_row(Table, Resource);
-		error ->
-			{error, 400}
-	end.
-%% @hidden
-add_resource_prefix_row(Table,
-		#resource{characteristic = Chars} = Resource) ->
-	{Prefix, Value} = case maps:find("prefix", Chars) of
-		{ok, #characteristic{name = "prefix", value = P}} ->
-			case maps:find("value", Chars) of
-				{ok, #characteristic{name = "value", value = V}} ->
-					{P, V};
-				error ->
-					{error, 400}
-			end;
-		error ->
-			{error, 400}
-	end,
-	case cse_gtt:insert(Table, Prefix, Value) of
-		{ok, #gtt{}} ->
-			add_resource_result(cse:add_resource(Resource));
-		{error, already_exists} ->
-			{error, 409};
-		{error, _Reason} ->
-			{error, 400}
-	end.
-
-%% @hidden
-add_resource_range_row(#resource{related = Related} = Resource) ->
-	case maps:find("contained", Related) of
-		{ok, #resource_rel{rel_type = "contained",
-				resource = #resource_ref{name = Table}}} ->
-			add_resource_range_row(Table, Resource);
-		error ->
-			{error, 400}
-	end.
-%% @hidden
-add_resource_range_row(Table,
-		#resource{characteristic = Chars} = Resource) ->
-	{Start, End, Value} = case maps:find("start", Chars) of
-		{ok, #characteristic{name = "start", value = S}} ->
-			case maps:find("end", Chars) of
-				{ok, #characteristic{name = "end", value = E}} ->
-					case maps:find("value", Chars) of
-						{ok, #characteristic{name = "value", value = V}} ->
-							{S, E, V};
-						error ->
-							{error, 400}
-					end;
-				error ->
-					{error, 400}
-			end;
-		error ->
-			{error, 400}
-	end,
-	case cse_gtt:add_range(Table, Start, End, Value) of
-		ok ->
-			add_resource_result(cse:add_resource(Resource));
-		{error, conflict} ->
-			{error, 409}
-	end.
-
-%% @hidden
-add_resource_result({ok, #resource{href = Href, last_modified = LM} = Resource}) ->
-	Headers = [{content_type, "application/json"},
-			{location, Href}, {etag, cse_rest:etag(LM)}],
-	Body = zj:encode(resource(Resource)),
-	{ok, Headers, Body};
-add_resource_result({error, _Reason}) ->
-% @todo problem report
-	{error, 400}.
 
 -spec delete_resource(Id, Query) -> Result
    when

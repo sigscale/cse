@@ -41,9 +41,13 @@
 -include("cse.hrl").
 -include_lib("inets/include/mod_auth.hrl").
 
--define(PathCatalog, "/resourceCatalogManagement/v4/").
--define(PathInventory, "/resourceInventoryManagement/v4/").
--define(CHUNKSIZE, 100).
+-define(PathCatalog,       "/resourceCatalogManagement/v4/").
+-define(PathInventory,     "/resourceInventoryManagement/v4/").
+-define(PREFIX_TABLE_SPEC, "1647577955926-50").
+-define(PREFIX_ROW_SPEC,   "1647577957914-66").
+-define(RANGE_TABLE_SPEC,  "1651055414682-258").
+-define(RANGE_ROW_SPEC,    "1651057291061-274").
+-define(CHUNKSIZE,         100).
 
 %%----------------------------------------------------------------------
 %%  The cse public API
@@ -347,12 +351,10 @@ add_resource_spec(#resource_spec{name = Name, id = undefined,
 	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
 	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
-	PrefixTableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
-	RangeTableSpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
 	case lists:keytake("based", #resource_spec_rel.rel_type, Rels) of
 		{value, #resource_spec_rel{id = SpecId} = BasedRel, Rest} when
-				SpecId == PrefixTableSpecId;
-				SpecId == RangeTableSpecId ->
+				SpecId == ?PREFIX_TABLE_SPEC;
+				SpecId == ?RANGE_TABLE_SPEC ->
 			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
 					href = Href, last_modified = LM,
 					related = [BasedRel | Rest]},
@@ -389,39 +391,13 @@ add_resource_spec2(ResourceSpec) ->
 	when
 		Resource :: #resource{},
 		Result :: {ok, Resource} | {error, Reason},
-		Reason :: term().
+		Reason :: spec_not_found | table_not_found
+				| name_in_use | missing_chars
+				| already_exists | term().
 %% @doc Add an entry in the Resource table.
 add_resource(#resource{id = undefined,
-		name = Name, last_modified = undefined,
-		specification = #resource_spec_ref{id = SpecId}} = Resource)
+		name = Name, last_modified = undefined} = Resource)
 		when is_list(Name) ->
-	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
-	case SpecId of
-		TableSpecId ->
-			add_resource1(Resource);
-		Other ->
-			case cse:find_resource_spec(Other) of
-				{ok, #resource_spec{related = Related}} ->
-					case lists:keyfind(TableSpecId, #resource_spec_rel.id, Related) of
-						#resource_spec_rel{rel_type = "based"} ->
-							add_resource1(Resource);
-						_ ->
-							add_resource2(Resource)
-					end;
-				{error, Reason} ->
-					{error, Reason}
-			end
-	end.
-%% @hidden
-add_resource1(#resource{name = Name} = Resource) ->
-	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
-		[num, value] ->
-			add_resource2(Resource);
-		_ ->
-			{error, table_not_found}
-	end.
-%% @hidden
-add_resource2(#resource{} = Resource) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
@@ -429,15 +405,177 @@ add_resource2(#resource{} = Resource) ->
 	Href = ?PathInventory ++ "resource/" ++ Id,
 	NewResource = Resource#resource{id = Id,
 			href = Href, last_modified = LM},
-	F = fun() ->
-			mnesia:write(NewResource)
-	end,
-	add_resource3(mnesia:transaction(F), NewResource).
+	add_resource1(NewResource).
 %% @hidden
-add_resource3({atomic, ok}, #resource{} = NewResource) ->
-	{ok, NewResource};
-add_resource3({aborted, Reason}, _NewResource) ->
+add_resource1(#resource{specification = #resource_spec_ref{
+		id = ?PREFIX_TABLE_SPEC}} = Resource) ->
+	add_resource_prefix_table(Resource);
+add_resource1(#resource{specification = #resource_spec_ref{
+		id = ?RANGE_TABLE_SPEC}} = Resource) ->
+	add_resource_prefix_table(Resource);
+add_resource1(#resource{specification = #resource_spec_ref{
+		id = ?PREFIX_ROW_SPEC}} = Resource) ->
+	add_resource_prefix_row(Resource);
+add_resource1(#resource{specification = #resource_spec_ref{
+		id = ?RANGE_ROW_SPEC}} = Resource) ->
+	add_resource_range_row(Resource);
+add_resource1(#resource{specification = #resource_spec_ref{
+		id = Other}} = Resource) ->
+	add_resource3(Resource, cse:find_resource_spec(Other)).
+%% @hidden
+add_resource3(Resource, {ok, #resource_spec{related = Related}}) ->
+	add_resource4(Resource, Related);
+add_resource3(_Resource, {error, not_found}) ->
+	{error, spec_not_found};
+add_resource3(_Resource, {error, Reason}) ->
 	{error, Reason}.
+%% @hidden
+add_resource4(Resource, Related) ->
+	case lists:keyfind(?PREFIX_TABLE_SPEC, #resource_spec_rel.id, Related) of
+		#resource_spec_rel{rel_type = "based"} ->
+			add_resource_prefix_table(Resource);
+		_ ->
+			add_resource5(Resource, Related)
+	end.
+%% @hidden
+add_resource5(Resource, Related) ->
+	case lists:keyfind(?RANGE_TABLE_SPEC, #resource_spec_rel.id, Related) of
+		#resource_spec_rel{rel_type = "based"} ->
+			add_resource_prefix_table(Resource);
+		_ ->
+			add_resource6(Resource, Related)
+	end.
+%% @hidden
+add_resource6(Resource, Related) ->
+	case lists:keyfind(?PREFIX_ROW_SPEC, #resource_spec_rel.id, Related) of
+		#resource_spec_rel{rel_type = "based"} ->
+			add_resource_prefix_row(Resource);
+		_ ->
+			add_resource7(Resource, Related)
+	end.
+%% @hidden
+add_resource7(Resource, Related) ->
+	case lists:keyfind(?RANGE_ROW_SPEC, #resource_spec_rel.id, Related) of
+		#resource_spec_rel{rel_type = "based"} ->
+			add_resource_range_row(Resource);
+		_ ->
+			add_resource8(Resource)
+	end.
+%% @hidden
+add_resource8(Resource) ->
+	F = fun() ->
+			mnesia:write(Resource)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			{ok, Resource};
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
+
+%% @hidden
+add_resource_prefix_table(#resource{name = Name} = Resource) ->
+	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
+		[num, value] ->
+			F = fun() ->
+					mnesia:write(Resource)
+			end,
+			case mnesia:transaction(F) of
+				{atomic, ok} ->
+					{ok, Resource};
+				{aborted, Reason} ->
+					{error, Reason}
+			end;
+		_ ->
+			{error, table_not_found}
+	end.
+
+%% @hidden
+add_resource_prefix_row(#resource{related = Related} = Resource) ->
+	case maps:find("contained", Related) of
+		{ok, #resource_rel{rel_type = "contained",
+				resource = #resource_ref{name = Table}}} ->
+			add_resource_prefix_row(Table, Resource);
+		error ->
+			{error, table_not_found}
+	end.
+%% @hidden
+add_resource_prefix_row(Table,
+		#resource{characteristic = Chars} = Resource) ->
+	case maps:find("prefix", Chars) of
+		{ok, #characteristic{name = "prefix", value = Prefix}} ->
+			case maps:find("value", Chars) of
+				{ok, #characteristic{name = "value", value = Value}} ->
+					add_resource_prefix_row(Table, Resource, Prefix, Value);
+				error ->
+					{error, missing_chars}
+			end;
+		error ->
+			{error, missing_chars}
+	end.
+%% @hidden
+add_resource_prefix_row(Table, Resource, Prefix, Value) ->
+	case cse_gtt:insert(Table, Prefix, Value) of
+		{ok, #gtt{}} ->
+			F = fun() ->
+					mnesia:write(Resource)
+			end,
+			case mnesia:transaction(F) of
+				{atomic, ok} ->
+					{ok, Resource};
+				{aborted, Reason} ->
+					{error, Reason}
+			end;
+		{error, already_exists} ->
+			{error, already_exists};
+		{error, Reason} ->
+			{error, Reason}
+	end.
+
+%% @hidden
+add_resource_range_row(#resource{related = Related} = Resource) ->
+	case maps:find("contained", Related) of
+		{ok, #resource_rel{rel_type = "contained",
+				resource = #resource_ref{name = Table}}} ->
+			add_resource_range_row(Table, Resource);
+		error ->
+			{error, table_not_found}
+	end.
+%% @hidden
+add_resource_range_row(Table,
+		#resource{characteristic = Chars} = Resource) ->
+	case maps:find("start", Chars) of
+		{ok, #characteristic{name = "start", value = Start}} ->
+			case maps:find("end", Chars) of
+				{ok, #characteristic{name = "end", value = End}} ->
+					case maps:find("value", Chars) of
+						{ok, #characteristic{name = "value", value = Value}} ->
+							add_resource_range_row(Table, Resource, Start, End, Value);
+						error ->
+							{error, missing_chars}
+					end;
+				error ->
+					{error, missing_chars}
+			end;
+		error ->
+			{error, missing_chars}
+	end.
+%% @hidden
+add_resource_range_row(Table, Resource, Start, End, Value) ->
+	case cse_gtt:add_range(Table, Start, End, Value) of
+		ok ->
+			F = fun() ->
+					mnesia:write(Resource)
+			end,
+			case mnesia:transaction(F) of
+				{atomic, ok} ->
+					{ok, Resource};
+				{aborted, Reason} ->
+					{error, Reason}
+			end;
+		{error, conflict} ->
+			{error, already_exists}
+	end.
 
 -spec get_resource_specs() -> Result
 	when
@@ -566,12 +704,14 @@ delete_resource(ID) when is_list(ID) ->
 					mnesia:abort(not_found)
 			end
 	end,
-	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	case mnesia:transaction(F) of
 		{aborted, Reason} ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
-				specification = #resource_spec_ref{id = TableSpecId}}}} ->
+				specification = #resource_spec_ref{id = ?PREFIX_TABLE_SPEC}}}} ->
+			cse_gtt:clear_table(Name);
+		{atomic, {ok, #resource{name = Name,
+				specification = #resource_spec_ref{id = ?RANGE_TABLE_SPEC}}}} ->
 			cse_gtt:clear_table(Name);
 		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = SpecId}}}} ->
@@ -579,7 +719,9 @@ delete_resource(ID) when is_list(ID) ->
 				{ok, #resource_spec{related = Related}} ->
 					case lists:keyfind("based",
 							#resource_spec_rel.rel_type, Related) of
-						#resource_spec_rel{id = TableSpecId, rel_type = "based"} ->
+						#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} ->
+							cse_gtt:clear_table(Name);
+						#resource_spec_rel{id = ?RANGE_TABLE_SPEC, rel_type = "based"} ->
 							cse_gtt:clear_table(Name);
 						#resource_spec_rel{} ->
 							ok;
