@@ -36,12 +36,39 @@
 -export([add_index_table_spec/0, add_index_table_spec/1,
 		add_prefix_table_spec/0, add_prefix_table_spec/1,
 		add_range_table_spec/0, add_range_table_spec/1,
+		get_index_table_spec/0, get_index_table_spec/1,
 		get_prefix_table_spec/0, get_prefix_table_spec/1,
 		get_range_table_spec/0, get_range_table_spec/1,
+		delete_index_table_spec/0, delete_index_table_spec/1,
+		delete_prefix_table_spec/0, delete_prefix_table_spec/1,
+		delete_range_table_spec/0, delete_range_table_spec/1,
+		add_index_table/0, add_index_table/1,
 		add_prefix_table/0, add_prefix_table/1,
 		add_range_table/0, add_range_table/1,
+		get_index_table/0, get_index_table/1,
 		get_prefix_table/0, get_prefix_table/1,
-		get_range_table/0, get_range_table/1]).
+		get_range_table/0, get_range_table/1,
+		delete_index_table/0, delete_index_table/1,
+		delete_prefix_table/0, delete_prefix_table/1,
+		delete_range_table/0, delete_range_table/1,
+		add_index_row_spec/0, add_index_row_spec/1,
+		add_prefix_row_spec/0, add_prefix_row_spec/1,
+		add_range_row_spec/0, add_range_row_spec/1,
+		get_index_row_spec/0, get_index_row_spec/1,
+		get_prefix_row_spec/0, get_prefix_row_spec/1,
+		get_range_row_spec/0, get_range_row_spec/1,
+		delete_index_row_spec/0, delete_index_row_spec/1,
+		delete_prefix_row_spec/0, delete_prefix_row_spec/1,
+		delete_range_row_spec/0, delete_range_row_spec/1,
+		add_index_row/0, add_index_row/1,
+		add_prefix_row/0, add_prefix_row/1,
+		add_range_row/0, add_range_row/1,
+		get_index_row/0, get_index_row/1,
+		get_prefix_row/0, get_prefix_row/1,
+		get_range_row/0, get_range_row/1,
+		delete_index_row/0, delete_index_row/1,
+		delete_prefix_row/0, delete_prefix_row/1,
+		delete_range_row/0, delete_range_row/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -106,10 +133,18 @@ sequences() ->
 all() ->
 	[start_cse, stop_cse, add_service, find_service, get_services,
 			delete_service, no_service, announce,
-			add_prefix_table_spec, add_range_table_spec,
-			get_prefix_table_spec, get_range_table_spec,
-			add_prefix_table, add_range_table,
-			get_prefix_table, get_range_table].
+			add_index_table_spec, add_prefix_table_spec, add_range_table_spec,
+			get_index_table_spec, get_prefix_table_spec, get_range_table_spec,
+			delete_index_table_spec, delete_prefix_table_spec, delete_range_table_spec,
+			add_index_table, add_prefix_table, add_range_table,
+			get_index_table, get_prefix_table, get_range_table,
+			delete_index_table, delete_prefix_table, delete_range_table,
+			add_index_row_spec, add_prefix_row_spec, add_range_row_spec,
+			get_index_row_spec, get_prefix_row_spec, get_range_row_spec,
+			delete_index_row_spec, delete_prefix_row_spec, delete_range_row_spec,
+			add_index_row, add_prefix_row, add_range_row,
+			get_index_row, get_prefix_row, get_range_row,
+			delete_index_row, delete_prefix_row, delete_range_row].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -189,6 +224,14 @@ announce(_Config) ->
 	end,
 	lists:all(F, cse:announce(Amount)).
 
+add_index_table_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for an index table"}]}].
+
+add_index_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_index_table_spec(Name),
+	{ok, _} = cse:add_resource_spec(Specification).
+
 add_prefix_table_spec() ->
 	[{userdata, [{doc, "Add a Resource Specification for a prefix table"}]}].
 
@@ -204,6 +247,15 @@ add_range_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
 	Specification = dynamic_range_table_spec(Name),
 	{ok, #resource_spec{name = Name}} = cse:add_resource_spec(Specification).
+
+get_index_table_spec() ->
+	[{userdata, [{doc, "Get a dynamic index table Resource Specification"}]}].
+
+get_index_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_index_table_spec(Name),
+	{ok, #resource_spec{id = Id} = RS} = cse:add_resource_spec(Specification),
+	{ok, RS} = cse:find_resource_spec(Id).
 
 get_prefix_table_spec() ->
 	[{userdata, [{doc, "Get a dynamic prefix table Resource Specification"}]}].
@@ -223,15 +275,56 @@ get_range_table_spec(_Config) ->
 	{ok, #resource_spec{id = Id} = RS} = cse:add_resource_spec(Specification),
 	{ok, RS} = cse:find_resource_spec(Id).
 
+delete_index_table_spec() ->
+	[{userdata, [{doc, "Delete a dynamic index table Resource Specification"}]}].
+
+delete_index_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_index_table_spec(Name),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(Specification),
+	ok = cse:delete_resource_spec(Id),
+	{error, not_found} = cse:find_resource_spec(Id).
+
+delete_prefix_table_spec() ->
+	[{userdata, [{doc, "Delete a dynamic prefix table Resource Specification"}]}].
+
+delete_prefix_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_prefix_table_spec(Name),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(Specification),
+	ok = cse:delete_resource_spec(Id),
+	{error, not_found} = cse:find_resource_spec(Id).
+
+delete_range_table_spec() ->
+	[{userdata, [{doc, "Delete a dynamic prefix range table Resource Specification"}]}].
+
+delete_range_table_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Specification = dynamic_range_table_spec(Name),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(Specification),
+	ok = cse:delete_resource_spec(Id),
+	{error, not_found} = cse:find_resource_spec(Id).
+
+add_index_table() ->
+	[{userdata, [{doc, "Add a Resource for an index table"}]}].
+
+add_index_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	SpecificationT = dynamic_index_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_index_table(Name, SpecificationR),
+	ok = new_index_table(Name, []),
+	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+
 add_prefix_table() ->
 	[{userdata, [{doc, "Add a Resource for a prefix table"}]}].
 
 add_prefix_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
-	ok = cse_gtt:new(Name, []),
 	SpecificationT = dynamic_prefix_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_prefix_table(Name, SpecificationR),
+	ok = cse_gtt:new(Name, []),
 	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
 
 add_range_table() ->
@@ -239,21 +332,33 @@ add_range_table() ->
 
 add_range_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
-	ok = cse_gtt:new(Name, []),
 	SpecificationT = dynamic_range_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_range_table(Name, SpecificationR),
+	ok = cse_gtt:new(Name, []),
 	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+
+get_index_table() ->
+	[{userdata, [{doc, "Get a Resource for an index table"}]}].
+
+get_index_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	SpecificationT = dynamic_index_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_index_table(Name, SpecificationR),
+	ok = new_index_table(Name, []),
+	{ok, #resource{id = Id} = ResourceR} = cse:add_resource(ResourceT),
+	{ok, ResourceR} = cse:find_resource(Id).
 
 get_prefix_table() ->
 	[{userdata, [{doc, "Get a Resource for a prefix table"}]}].
 
 get_prefix_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
-	ok = cse_gtt:new(Name, []),
 	SpecificationT = dynamic_prefix_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_prefix_table(Name, SpecificationR),
+	ok = cse_gtt:new(Name, []),
 	{ok, #resource{id = Id} = ResourceR} = cse:add_resource(ResourceT),
 	{ok, ResourceR} = cse:find_resource(Id).
 
@@ -262,20 +367,318 @@ get_range_table() ->
 
 get_range_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
-	ok = cse_gtt:new(Name, []),
 	SpecificationT = dynamic_range_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_range_table(Name, SpecificationR),
+	ok = cse_gtt:new(Name, []),
 	{ok, #resource{id = Id} = ResourceR} = cse:add_resource(ResourceT),
 	{ok, ResourceR} = cse:find_resource(Id).
 
-add_index_table_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for an index table"}]}].
+delete_index_table() ->
+	[{userdata, [{doc, "Delete a Resource for an index table"}]}].
 
-add_index_table_spec(_Config) ->
+delete_index_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
-	Specification = dynamic_index_table_spec(Name),
-	{ok, _} = cse:add_resource_spec(Specification).
+	SpecificationT = dynamic_index_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_index_table(Name, SpecificationR),
+	ok = new_index_table(Name, []),
+	{ok, #resource{id = Id}} = cse:add_resource(ResourceT),
+	ok = cse:delete_resource(Id),
+	{error, not_found} = cse:find_resource(Id).
+
+delete_prefix_table() ->
+	[{userdata, [{doc, "Delete a Resource for a prefix table"}]}].
+
+delete_prefix_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	SpecificationT = dynamic_prefix_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_prefix_table(Name, SpecificationR),
+	ok = cse_gtt:new(Name, []),
+	{ok, #resource{id = Id}} = cse:add_resource(ResourceT),
+	ok = cse:delete_resource(Id),
+	{error, not_found} = cse:find_resource(Id).
+
+delete_range_table() ->
+	[{userdata, [{doc, "Delete a Resource for a prefix range table"}]}].
+
+delete_range_table(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	SpecificationT = dynamic_range_table_spec(Name),
+	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
+	ResourceT = dynamic_range_table(Name, SpecificationR),
+	ok = cse_gtt:new(Name, []),
+	{ok, #resource{id = Id}} = cse:add_resource(ResourceT),
+	ok = cse:delete_resource(Id),
+	{error, not_found} = cse:find_resource(Id).
+
+add_index_row_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for an index table row"}]}].
+
+add_index_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, _RowSpecR} = cse:add_resource_spec(RowSpecT).
+
+add_prefix_row_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for a prefix table row"}]}].
+
+add_prefix_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_prefix_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_prefix_row_spec(Name, TableSpecR),
+	{ok, _RowSpecR} = cse:add_resource_spec(RowSpecT).
+
+add_range_row_spec() ->
+	[{userdata, [{doc, "Add a Resource Specification for a prefix range table row"}]}].
+
+add_range_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_range_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_range_row_spec(Name, TableSpecR),
+	{ok, _RowSpecR} = cse:add_resource_spec(RowSpecT).
+
+get_index_row_spec() ->
+	[{userdata, [{doc, "Get a Resource Specification for an index table row"}]}].
+
+get_index_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, #resource_spec{id = Id} = RowSpecR} = cse:add_resource_spec(RowSpecT),
+	{ok, RowSpecR} = cse:find_resource_spec(Id).
+
+get_prefix_row_spec() ->
+	[{userdata, [{doc, "Get a Resource Specification for a prefix table row"}]}].
+
+get_prefix_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_prefix_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_prefix_row_spec(Name, TableSpecR),
+	{ok, #resource_spec{id = Id} = RowSpecR} = cse:add_resource_spec(RowSpecT),
+	{ok, RowSpecR} = cse:find_resource_spec(Id).
+
+get_range_row_spec() ->
+	[{userdata, [{doc, "Get a Resource Specification for a prefix range table row"}]}].
+
+get_range_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_range_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_range_row_spec(Name, TableSpecR),
+	{ok, #resource_spec{id = Id} = RowSpecR} = cse:add_resource_spec(RowSpecT),
+	{ok, RowSpecR} = cse:find_resource_spec(Id).
+
+delete_index_row_spec() ->
+	[{userdata, [{doc, "Delete a Resource Specification for an index table row"}]}].
+
+delete_index_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(RowSpecT),
+	ok = cse:delete_resource_spec(Id),
+	{error, not_found} = cse:find_resource_spec(Id).
+
+delete_prefix_row_spec() ->
+	[{userdata, [{doc, "Delete a Resource Specification for a prefix table row"}]}].
+
+delete_prefix_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_prefix_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_prefix_row_spec(Name, TableSpecR),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(RowSpecT),
+	ok = cse:delete_resource_spec(Id),
+	{error, not_found} = cse:find_resource_spec(Id).
+
+delete_range_row_spec() ->
+	[{userdata, [{doc, "Delete a Resource Specification for a prefix range table row"}]}].
+
+delete_range_row_spec(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	TableSpecT = dynamic_range_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_range_row_spec(Name, TableSpecR),
+	{ok, #resource_spec{id = Id}} = cse:add_resource_spec(RowSpecT),
+	ok = cse:delete_resource_spec(Id),
+	{error, not_found} = cse:find_resource_spec(Id).
+
+add_index_row() ->
+	[{userdata, [{doc, "Add a Resource for an index table row"}]}].
+
+add_index_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Key = cse_test_lib:rand_dn(10),
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_index_table(Name, TableSpecR),
+	ok = new_index_table(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_index_row(Name, RowSpecR, TableR, Key, Value),
+	{ok, _RowR} = cse:add_resource(RowT).
+
+add_prefix_row() ->
+	[{userdata, [{doc, "Add a Resource for a prefix table row"}]}].
+
+add_prefix_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Prefix = cse_test_lib:rand_dn(8),
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_prefix_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_prefix_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_prefix_table(Name, TableSpecR),
+	ok = cse_gtt:new(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_prefix_row(Name, RowSpecR, TableR, Prefix, Value),
+	{ok, _RowR} = cse:add_resource(RowT).
+
+add_range_row() ->
+	[{userdata, [{doc, "Add a Resource for a prefix range table row"}]}].
+
+add_range_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Prefix = cse_test_lib:rand_dn(6),
+	Start = Prefix ++ "000",
+	End =  Prefix ++ "999",
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_range_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_range_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_range_table(Name, TableSpecR),
+	ok = cse_gtt:new(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_range_row(Name, RowSpecR, TableR, Start, End, Value),
+	{ok, _RowR} = cse:add_resource(RowT).
+
+get_index_row() ->
+	[{userdata, [{doc, "Get a Resource for an index table row"}]}].
+
+get_index_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Key = cse_test_lib:rand_dn(10),
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_index_table(Name, TableSpecR),
+	ok = new_index_table(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_index_row(Name, RowSpecR, TableR, Key, Value),
+	{ok, #resource{id = Id} = RowR} = cse:add_resource(RowT),
+	{ok, RowR} = cse:find_resource(Id).
+
+get_prefix_row() ->
+	[{userdata, [{doc, "Get a Resource for a prefix table row"}]}].
+
+get_prefix_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Prefix = cse_test_lib:rand_dn(8),
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_prefix_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_prefix_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_prefix_table(Name, TableSpecR),
+	ok = cse_gtt:new(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_prefix_row(Name, RowSpecR, TableR, Prefix, Value),
+	{ok, #resource{id = Id} = RowR} = cse:add_resource(RowT),
+	{ok, RowR} = cse:find_resource(Id).
+
+get_range_row() ->
+	[{userdata, [{doc, "Get a Resource for a prefix range table row"}]}].
+
+get_range_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Prefix = cse_test_lib:rand_dn(6),
+	Start = Prefix ++ "000",
+	End =  Prefix ++ "999",
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_range_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_range_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_range_table(Name, TableSpecR),
+	ok = cse_gtt:new(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_range_row(Name, RowSpecR, TableR, Start, End, Value),
+	{ok, #resource{id = Id} = RowR} = cse:add_resource(RowT),
+	{ok, RowR} = cse:find_resource(Id).
+
+delete_index_row() ->
+	[{userdata, [{doc, "Delete a Resource for an index table row"}]}].
+
+delete_index_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Key = cse_test_lib:rand_dn(10),
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_index_table(Name, TableSpecR),
+	ok = new_index_table(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_index_row(Name, RowSpecR, TableR, Key, Value),
+	{ok, #resource{id = Id}} = cse:add_resource(RowT),
+	ok = cse:delete_resource(Id),
+	{error, not_found} = cse:find_resource(Id).
+
+delete_prefix_row() ->
+	[{userdata, [{doc, "Delete a Resource for a prefix table row"}]}].
+
+delete_prefix_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Prefix = cse_test_lib:rand_dn(8),
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_prefix_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_prefix_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_prefix_table(Name, TableSpecR),
+	ok = cse_gtt:new(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_prefix_row(Name, RowSpecR, TableR, Prefix, Value),
+	{ok, #resource{id = Id}} = cse:add_resource(RowT),
+	ok = cse:delete_resource(Id),
+	{error, not_found} = cse:find_resource(Id).
+
+delete_range_row() ->
+	[{userdata, [{doc, "Delete a Resource for a prefix range table row"}]}].
+
+delete_range_row(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Prefix = cse_test_lib:rand_dn(6),
+	Start = Prefix ++ "000",
+	End =  Prefix ++ "999",
+	Value = cse_test_lib:rand_name(20),
+	TableSpecT = dynamic_range_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_range_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_range_table(Name, TableSpecR),
+	ok = cse_gtt:new(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_range_row(Name, RowSpecR, TableR, Start, End, Value),
+	{ok, #resource{id = Id}} = cse:add_resource(RowT),
+	ok = cse:delete_resource(Id),
+	{error, not_found} = cse:find_resource(Id).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
@@ -290,34 +693,10 @@ edp() ->
 			no_answer => interrupted,
 			route_fail => interrupted}.
 
-dynamic_prefix_table_spec(Name) ->
-	PrefixSpecId = cse_rest_res_resource:prefix_table_spec_id(),
-	SpecRel = #resource_spec_rel{id = PrefixSpecId,
-			href = ?specPath ++ PrefixSpecId,
-			name = "PrefixTable",
-			rel_type = "based"},
-	#resource_spec{name = Name,
-			description = "Dynamic prefix table specification",
-			category = "PrefixTable",
-			version = "1.0",
-			related = [SpecRel]}.
-
-dynamic_range_table_spec(Name) ->
-	RangeSpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
-	SpecRel = #resource_spec_rel{id = RangeSpecId,
-			href = ?specPath ++ RangeSpecId,
-			name = "PrefixRangeTable",
-			rel_type = "based"},
-	#resource_spec{name = Name,
-			description = "Dynamic prefix range table specification",
-			category = "PrefixTable",
-			version = "1.0",
-			related = [SpecRel]}.
-
 dynamic_index_table_spec(Name) ->
-	IndexSpecId = cse_rest_res_resource:index_table_spec_id(),
-	SpecRel = #resource_spec_rel{id = IndexSpecId,
-			href = ?specPath ++ IndexSpecId,
+	SpecId = cse_rest_res_resource:index_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = SpecId,
+			href = ?specPath ++ SpecId,
 			name = "IndexTable",
 			rel_type = "based"},
 	#resource_spec{name = Name,
@@ -326,29 +705,173 @@ dynamic_index_table_spec(Name) ->
 			version = "1.0",
 			related = [SpecRel]}.
 
-dynamic_prefix_table(Name,
-		#resource_spec{id = SpecId,
-				href = SpecHref,
-				name = SpecName}) ->
-	SpecRef = #resource_spec_ref{id = SpecId,
-			href = SpecHref,
-			name = SpecName},
+dynamic_index_row_spec(Name, TableSpec) ->
+	SpecId = cse_rest_res_resource:index_row_spec_id(),
+	SpecRel1 = #resource_spec_rel{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "IndexRow",
+			rel_type = "based"},
+	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name,
+			rel_type = "contained"},
+	#resource_spec{name = Name,
+			description = "Dynamic index table row specification",
+			category = "IndexRow",
+			version = "1.0",
+			related = [SpecRel1, SpecRel2]}.
+
+dynamic_prefix_table_spec(Name) ->
+	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "PrefixTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic prefix table specification",
+			category = "PrefixTable",
+			version = "1.0",
+			related = [SpecRel]}.
+
+dynamic_prefix_row_spec(Name, TableSpec) ->
+	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
+	SpecRel1 = #resource_spec_rel{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "PrefixTable",
+			rel_type = "based"},
+	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name,
+			rel_type = "contained"},
+	#resource_spec{name = Name,
+			description = "Dynamic prefix table row specification",
+			category = "PrefixRow",
+			version = "1.0",
+			related = [SpecRel1, SpecRel2]}.
+
+dynamic_range_table_spec(Name) ->
+	SpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "RangeTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic prefix range table specification",
+			category = "RangeTable",
+			version = "1.0",
+			related = [SpecRel]}.
+
+dynamic_range_row_spec(Name, TableSpec) ->
+	SpecId = cse_rest_res_resource:prefix_range_row_spec_id(),
+	SpecRel1 = #resource_spec_rel{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "RangeTable",
+			rel_type = "based"},
+	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name,
+			rel_type = "contained"},
+	#resource_spec{name = Name,
+			description = "Dynamic prefix range table row specification",
+			category = "RangeRow",
+			version = "1.0",
+			related = [SpecRel1, SpecRel2]}.
+
+dynamic_index_table(Name, TableSpec) ->
+	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name},
 	#resource{name = Name,
-			description = "Dynamic prefix table",
-			category = "Prefix",
+			description = "Dynamic index table",
+			category = "IndexTable",
 			version = "1.0",
 			specification = SpecRef}.
 
-dynamic_range_table(Name,
-		#resource_spec{id = SpecId,
-				href = SpecHref,
-				name = SpecName}) ->
-	SpecRef = #resource_spec_ref{id = SpecId,
-			href = SpecHref,
-			name = SpecName},
+dynamic_index_row(Name, RowSpec, Table, Key, Value) ->
+	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
+			href = RowSpec#resource_spec.href,
+			name = RowSpec#resource_spec.name},
+	ResourceRef = #resource_ref{id = Table#resource.id,
+			href = Table#resource.href,
+			name = Table#resource.name},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
+	Column1 = #characteristic{name = "key", value = Key},
+	Column2 = #characteristic{name = "value", value = Value},
 	#resource{name = Name,
-			description = "Dynamic prefix range table",
-			category = "Prefix",
+			description = "Dynamic index table row",
+			category = "IndexRow",
+			version = "1.0",
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
+			characteristic = #{"key" => Column1, "value" => Column2}}.
+
+dynamic_prefix_table(Name, TableSpec) ->
+	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name},
+	#resource{name = Name,
+			description = "Dynamic prefix table",
+			category = "PrefixTable",
 			version = "1.0",
 			specification = SpecRef}.
+
+dynamic_prefix_row(Name, RowSpec, Table, Prefix, Value) ->
+	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
+			href = RowSpec#resource_spec.href,
+			name = RowSpec#resource_spec.name},
+	ResourceRef = #resource_ref{id = Table#resource.id,
+			href = Table#resource.href,
+			name = Table#resource.name},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
+	Column1 = #characteristic{name = "prefix", value = Prefix},
+	Column2 = #characteristic{name = "value", value = Value},
+	#resource{name = Name,
+			description = "Dynamic prefix table row",
+			category = "PrefixRow",
+			version = "1.0",
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
+			characteristic = #{"prefix" => Column1, "value" => Column2}}.
+
+dynamic_range_table(Name, TableSpec) ->
+	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name},
+	#resource{name = Name,
+			description = "Dynamic prefix range table",
+			category = "RangeTable",
+			version = "1.0",
+			specification = SpecRef}.
+
+dynamic_range_row(Name, RowSpec, Table, Start, End, Value) ->
+	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
+			href = RowSpec#resource_spec.href,
+			name = RowSpec#resource_spec.name},
+	ResourceRef = #resource_ref{id = Table#resource.id,
+			href = Table#resource.href,
+			name = Table#resource.name},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
+	Column1 = #characteristic{name = "start", value = Start},
+	Column2 = #characteristic{name = "end", value = End},
+	Column3 = #characteristic{name = "value", value = Value},
+	#resource{name = Name,
+			description = "Dynamic prefix range table row",
+			category = "RangeRow",
+			version = "1.0",
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
+			characteristic = #{"start" => Column1,
+					"end" => Column2, "value" => Column3}}.
+
+new_index_table(Name, Options) when is_list(Name) ->
+	case mnesia:create_table(list_to_atom(Name),
+			[{attributes, [key, value]} | Options]) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
 
