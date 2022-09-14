@@ -539,9 +539,10 @@ add_resource_index_row(Table,
 			{error, missing_chars}
 	end.
 %% @hidden
-add_resource_index_row(Table, Resource, Key, Value) ->
+add_resource_index_row(TableS, Resource, Key, Value) ->
+	TableA = list_to_existing_atom(TableS),
 	F = fun() ->
-			mnesia:write({Table, Key, Value}),
+			mnesia:write({TableA, Key, Value}),
 			mnesia:write(Resource)
 	end,
 	case mnesia:transaction(F) of
