@@ -325,16 +325,16 @@ service_options(Options) ->
 		false ->
 			[{'Origin-Host', "cse." ++ Realm} | Options1]
 	end,
-	BaseApplications = [{application, [{alias, ?BASE_APPLICATION},
+	BaseApps = [{application, [{alias, ?BASE_APPLICATION},
 				{dictionary, ?BASE_APPLICATION_DICT},
 				{module, ?BASE_APPLICATION_CALLBACK},
 				{request_errors, callback}]}],
-	{NewApps, Options3} = case lists:keytake(application, 1, Options2) of
-		false ->
-			{BaseApplications, Options2};
-		{value, DiameterApplications, Opts} ->
-			{BaseApplications ++ [DiameterApplications], Opts}
+	Fold = fun({application, App}, {Apps, Opts}) ->
+				{[App | Apps], Opts};
+			(Opt, {Apps, Opts}) ->
+				{Apps, [Opt | Opts]}
 	end,
+	{NewApps, Options3} = lists:foldl(Fold, BaseApps, Options2),
 	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
 		false ->
 			{[?IANA_PEN_3GPP], Options3};
