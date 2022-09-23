@@ -334,7 +334,7 @@ service_options(Options) ->
 			(Opt, {Apps, Opts}) ->
 				{Apps, [Opt | Opts]}
 	end,
-	{NewApps, Options3} = lists:foldl(Fold, BaseApps, Options2),
+	{NewApps, Options3} = lists:foldl(Fold, {BaseApps, []}, Options2),
 	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
 		false ->
 			{[?IANA_PEN_3GPP], Options3};
