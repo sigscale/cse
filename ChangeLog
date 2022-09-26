@@ -1,3 +1,7 @@
+2022-09-26  Vance Shipley <vances@sigscale.org>
+
+	* support multiple diameter applications in a service
+
 2022-09-14  Vance Shipley <vances@sigscale.org>
 
 	* test cases for all table/row types in api suite
