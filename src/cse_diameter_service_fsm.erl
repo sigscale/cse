@@ -329,12 +329,12 @@ service_options(Options) ->
 				{dictionary, ?BASE_APPLICATION_DICT},
 				{module, ?BASE_APPLICATION_CALLBACK},
 				{request_errors, callback}]}],
-	Fold = fun({application, App}, {Apps, Opts}) ->
+	Fold = fun({application, _} = App, {Apps, Opts}) ->
 				{[App | Apps], Opts};
 			(Opt, {Apps, Opts}) ->
 				{Apps, [Opt | Opts]}
 	end,
-	{NewApps, Options3} = lists:foldl(Fold, {BaseApps, []}, Options2),
+	{LocalApps, Options3} = lists:foldl(Fold, {BaseApps, []}, Options2),
 	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
 		false ->
 			{[?IANA_PEN_3GPP], Options3};
@@ -349,7 +349,7 @@ service_options(Options) ->
 		{'Supported-Vendor-Id', SVendorIds},
 		{restrict_connections, false},
 		{string_decode, false}],
-	BaseOptions ++ Options4 ++ NewApps.
+	BaseOptions ++ Options4 ++ LocalApps.
 
 -spec transport_options(Options, Address, Port) -> Result
 	when
