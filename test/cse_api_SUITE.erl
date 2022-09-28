@@ -867,8 +867,7 @@ dynamic_range_row(Name, RowSpec, Table, Start, End, Value) ->
 					"end" => Column2, "value" => Column3}}.
 
 new_index_table(Name, Options) when is_list(Name) ->
-	case mnesia:create_table(list_to_atom(Name),
-			[{attributes, [key, value]} | Options]) of
+	case mnesia:create_table(list_to_atom(Name), Options) of
 		{atomic, ok} ->
 			ok;
 		{aborted, Reason} ->

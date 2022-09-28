@@ -501,7 +501,7 @@ add_resource10(Resource) ->
 %% @hidden
 add_resource_index_table(#resource{name = Name} = Resource) ->
 	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
-		[key, value] ->
+		[key, val] ->
 			F = fun() ->
 					mnesia:write(Resource)
 			end,
@@ -541,8 +541,9 @@ add_resource_index_row(Table,
 %% @hidden
 add_resource_index_row(TableS, Resource, Key, Value) ->
 	TableA = list_to_existing_atom(TableS),
+	Record = {TableA, Key, Value},
 	F = fun() ->
-			mnesia:write({TableA, Key, Value}),
+			mnesia:write(TableA, Record, write),
 			mnesia:write(Resource)
 	end,
 	case mnesia:transaction(F) of
