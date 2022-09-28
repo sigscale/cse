@@ -43,6 +43,7 @@
 		delete_row_resource/0, delete_row_resource/1,
 		delete_row_query/0, delete_row_query/1,
 		delete_range_row/0, delete_range_row/1,
+		add_index_row_resource/0, add_index_row_resource/1,
 		add_range_row_resource/0, add_range_row_resource/1,
 		query_table_row/0, query_table_row/1]).
 
@@ -131,8 +132,8 @@ all() ->
 			add_static_row_resource, add_dynamic_row_resource,
 			get_resource, query_resource, delete_static_table_resource,
 			delete_dynamic_table_resource, delete_row_resource,
-			delete_range_row, delete_row_query, add_range_row_resource,
-			query_table_row].
+			delete_range_row, delete_row_query, query_table_row,
+			add_index_row_resource, add_range_row_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -671,6 +672,36 @@ add_range_row_resource(Config) ->
 	end,
 	true = lists:all(F2, Prefixes).
 
+add_index_row_resource() ->
+	[{userdata, [{doc,"Add static index row resource"}]}].
+
+add_index_row_resource(Config) ->
+	TableNameS = cse_test_lib:rand_name(8),
+	TableNameA = list_to_atom(TableNameS),
+	{atomic, ok} = mnesia:create_table(TableNameA, []),
+	TableT = static_index_table(TableNameS),
+	{ok, TableR} = cse:add_resource(TableT),
+	Host = ?config(host, Config),
+	ContentType = "application/json",
+	Accept = {"accept", "application/json"},
+	RowName = cse_test_lib:rand_name(8),
+	Key = cse_test_lib:rand_name(6),
+	Value = cse_test_lib:rand_name(20),
+	ResourceT = static_index_row(RowName, TableR, Key, Value),
+	RequestBody = zj:encode(cse_rest_res_resource:resource(ResourceT)),
+	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	{ok, Result} = httpc:request(post, Request, [], []),
+	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	ContentLength = integer_to_list(length(ResponseBody)),
+	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
+	{ok, #{"id" := RowId} = _ResourceM} = zj:decode(ResponseBody),
+	{ok, #resource{name = RowName} = _ResourceR} = cse:find_resource(RowId),
+	F = fun() ->
+			mnesia:read(TableNameA, Key, read)
+	end,
+	{atomic, [{TableNameA, Key, Value}]} = mnesia:transaction(F).
+
 query_table_row() ->
 	[{userdata, [{doc,"Query Resource Characteristics"}]}].
 
@@ -754,6 +785,27 @@ is_resource_char(#{"name" := Name}) when is_list(Name) ->
 is_resource_char(_) ->
 	false.
 
+static_index_table(Name) ->
+	SpecId = cse_rest_res_resource:index_table_spec_id(),
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "IndexTable"},
+	#resource{name = Name,
+			description = "Index Table",
+			category = "Index",
+			version = "1.0",
+			specification = SpecRef}.
+
+dynamic_index_table(Name, TableSpec) ->
+	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name},
+	#resource{name = Name,
+			description = "Index Table",
+			category = "Index",
+			version = "1.0",
+			specification = SpecRef}.
+
 static_prefix_table(Name) ->
 	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
@@ -785,6 +837,45 @@ static_range_table(Name) ->
 			category = "Prefix",
 			version = "1.0",
 			specification = SpecRef}.
+
+static_index_row(Name, Table, Key, Value) ->
+	SpecId = cse_rest_res_resource:index_row_spec_id(),
+	SpecRef = #resource_spec_ref{id = SpecId,
+			href = ?specPath ++ SpecId,
+			name = "IndexRow"},
+	ResourceRef = #resource_ref{id = Table#resource.id,
+			href = Table#resource.href,
+			name = Table#resource.name},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
+	Column1 = #characteristic{name = "key", value = Key},
+	Column2 = #characteristic{name = "value", value = Value},
+	#resource{name = Name,
+			description = "Index Row",
+			category = "Index",
+			version = "1.0",
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
+			characteristic = #{"key" => Column1, "value" => Column2}}.
+
+dynamic_index_row(Name, RowSpec, Table, Key, Value) ->
+	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
+			href = RowSpec#resource_spec.href,
+			name = RowSpec#resource_spec.name},
+	ResourceRef = #resource_ref{id = Table#resource.id,
+			href = Table#resource.href,
+			name = Table#resource.name},
+	ResourceRel = #resource_rel{rel_type = "contained",
+			resource = ResourceRef},
+	Column1 = #characteristic{name = "index", value = Key},
+	Column2 = #characteristic{name = "value", value = Value},
+	#resource{name = Name,
+			description = "Index Row",
+			category = "Index",
+			version = "1.0",
+			related = #{"contained" => ResourceRel},
+			specification = SpecRef,
+			characteristic = #{"key" => Column1, "value" => Column2}}.
 
 static_prefix_row(Name, Table, Prefix, Value) ->
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
@@ -847,6 +938,51 @@ static_range_row(Name, Table, Start, End, Value) ->
 			characteristic = #{"start" => Column1,
 					"end" => Column2, "value" => Column3}}.
 
+dynamic_index_table_spec(Name) ->
+	TableId = cse_rest_res_resource:index_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = TableId,
+			href = ?specPath ++ TableId,
+			name = "IndexTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic index table specification",
+			category = "IndexTable",
+			version = "1.1",
+			related = [SpecRel]}.
+
+dynamic_index_row_spec(Name, TableSpec) ->
+	StaticRowId = cse_rest_res_resource:index_row_spec_id(),
+	SpecRel1 = #resource_spec_rel{id = StaticRowId,
+			href = ?specPath ++ StaticRowId,
+			name = "IndexRow",
+			rel_type = "based"},
+	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
+			href = TableSpec#resource_spec.href,
+			name = TableSpec#resource_spec.name,
+			rel_type = "contained"},
+	Column1 = #resource_spec_char{name = "key",
+			description = "Indexed key"},
+	Column2 = #resource_spec_char{name = "value",
+			description = "Value for key"},
+	#resource_spec{name = Name,
+			description = "Dynamic index table row specification",
+			category = "IndexRow",
+			version = "1.1",
+			related = [SpecRel1, SpecRel2],
+			characteristic = [Column1, Column2]}.
+
+dynamic_prefix_table_spec(Name) ->
+	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	SpecRel = #resource_spec_rel{id = TableId,
+			href = ?specPath ++ TableId,
+			name = "PrefixTable",
+			rel_type = "based"},
+	#resource_spec{name = Name,
+			description = "Dynamic table specification",
+			category = "PrefixTable",
+			version = "1.1",
+			related = [SpecRel]}.
+
 dynamic_prefix_row_spec(Name, TableSpec) ->
 	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),
 	SpecRel1 = #resource_spec_rel{id = StaticRowId,
@@ -869,18 +1005,6 @@ dynamic_prefix_row_spec(Name, TableSpec) ->
 			version = "1.1",
 			related = [SpecRel1, SpecRel2],
 			characteristic = [Column1, Column2]}.
-
-dynamic_prefix_table_spec(Name) ->
-	TableId = cse_rest_res_resource:prefix_table_spec_id(),
-	SpecRel = #resource_spec_rel{id = TableId,
-			href = ?specPath ++ TableId,
-			name = "PrefixTable",
-			rel_type = "based"},
-	#resource_spec{name = Name,
-			description = "Dynamic table specification",
-			category = "PrefixTable",
-			version = "1.1",
-			related = [SpecRel]}.
 
 is_resource_spec(#{"id" := Id, "href" := Href, "name" := Name,
 		"description" := Description, "version" := Version,
