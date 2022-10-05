@@ -40,8 +40,9 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([null/3, authorize_origination_attempt/3, analyse_information/3,
-		collect_information/3, routing/3, o_active/3, o_alerting/3, exception/3]).
+-export([null/3, authorize_origination_attempt/3,
+		collect_information/3, analyse_information/3,
+		routing/3, o_alerting/3, o_active/3, exception/3]).
 %% export the private api
 -export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
@@ -59,9 +60,9 @@
 -define(LOGNAME, prepaid).
 -define(SERVICENAME, "Prepaid").
 
--type state() :: null | collect_information | authorize_origination_attempt |
-		analyse_information | collect_information | routing | o_active |
-		o_alerting| exception.
+-type state() :: null | authorize_origination_attempt
+		| collect_information | analyse_information
+		| routing | o_alerting | o_active | exception.
 
 -type statedata() :: #{start := pos_integer(),
 		nrf_profile => atom() | undefined,
@@ -250,86 +251,6 @@ authorize_origination_attempt(cast,
 			{next_state, exception, NewData, Actions2}
 	end.
 
--spec analyse_information(EventType, EventContent, Data) -> Result
-	when
-		EventType :: gen_statem:event_type(),
-		EventContent :: term(),
-		Data :: statedata(),
-		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>analyse_information</em> state.
-%% @private
-analyse_information(enter, _EventContent, _Data) ->
-	keep_state_and_data;
-analyse_information({call, From},
-		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = RequestType,
-				'CC-Request-Number' = RequestNum,
-				'Multiple-Services-Credit-Control' = MSCC,
-				'Service-Information' = _ServiceInformation} = _EventContent,
-		#{session_id := SessionId} = Data)
-		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST';
-		RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST' ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => RequestType},
-	case usu_postive(MSCC) of
-		true ->
-			{next_state, o_active, NewData, postpone};
-		false ->
-			{next_state, routing, NewData, postpone}
-	end;
-analyse_information({call, From},
-		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-				'CC-Request-Number' = RequestNum,
-				'Multiple-Services-Credit-Control' = MSCC,
-				'Service-Information' = _ServiceInformation} = _EventContent,
-		#{session_id := SessionId} = Data) ->
-	NewData = Data#{from => From, mscc => MSCC,
-			session_id => SessionId, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
-	nrf_release(NewData);
-analyse_information(cast,
-		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId,
-				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId,
-				req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
-	case zj:decode(Body) of
-		{ok, #{"serviceRating" := ServiceRating}} ->
-			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
-				{next_state, null, NewData, Actions}
-			catch
-				_:Reason ->
-					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
-							{profile, Profile}, {uri, URI}, {slpi, self()},
-							{origin_host, OHost}, {origin_realm, ORealm},
-							{type, final}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
-					{next_state, exception, NewData, Actions1}
-			end;
-		{error, Partial, Remaining} ->
-			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
-					{profile, Profile}, {uri, URI}, {slpi, self()},
-					{partial, Partial}, {remaining, Remaining},
-					{origin_host, OHost}, {origin_realm, ORealm}, {type, final}]),
-			Reply2 = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
-			Actions2 = [{reply, From, Reply2}],
-			{next_state, exception, NewData, Actions2}
-	end.
-
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
 		EventType :: gen_statem:event_type(),
@@ -408,6 +329,86 @@ collect_information({call, From},
 			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
 	nrf_release(NewData);
 collect_information(cast,
+		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId,
+				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId,
+				req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				Container = build_container(MSCC),
+				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				{next_state, null, NewData, Actions}
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+							{profile, Profile}, {uri, URI}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{type, final}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, exception, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {slpi, self()},
+					{partial, Partial}, {remaining, Remaining},
+					{origin_host, OHost}, {origin_realm, ORealm}, {type, final}]),
+			Reply2 = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions2 = [{reply, From, Reply2}],
+			{next_state, exception, NewData, Actions2}
+	end.
+
+-spec analyse_information(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>analyse_information</em> state.
+%% @private
+analyse_information(enter, _EventContent, _Data) ->
+	keep_state_and_data;
+analyse_information({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC,
+				'Service-Information' = _ServiceInformation} = _EventContent,
+		#{session_id := SessionId} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST';
+		RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST' ->
+	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
+			req_type => RequestType},
+	case usu_postive(MSCC) of
+		true ->
+			{next_state, o_active, NewData, postpone};
+		false ->
+			{next_state, routing, NewData, postpone}
+	end;
+analyse_information({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC,
+				'Service-Information' = _ServiceInformation} = _EventContent,
+		#{session_id := SessionId} = Data) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			session_id => SessionId, reqno => RequestNum,
+			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+	nrf_release(NewData);
+analyse_information(cast,
 		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId,
 				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
@@ -567,6 +568,17 @@ routing(cast,
 			Actions2 = [{reply, From, Reply2}],
 			{next_state, exception, NewData, Actions2}
 	end.
+
+-spec o_alerting(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>o_alerting</em> state.
+%% @private
+o_alerting(_EventType, _EventContent,  _Data)->
+	keep_state_and_data.
 
 -spec o_active(EventType, EventContent, Data) -> Result
 	when
@@ -758,17 +770,6 @@ exception(cast,
 			Actions2 = [{reply, From, Reply2}],
 			{next_state, null, NewData, Actions2}
 	end.
-
--spec o_alerting(EventType, EventContent, Data) -> Result
-	when
-		EventType :: gen_statem:event_type(),
-		EventContent :: term(),
-		Data :: statedata(),
-		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>o_alerting</em> state.
-%% @private
-o_alerting(_EventType, _EventContent,  _Data)->
-	keep_state_and_data.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
