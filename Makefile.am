@@ -4,6 +4,11 @@
 
 SUBDIRS = include src ebin doc test priv mibs
 
+if HAVE_SYSTEMD
+systemdsystemunit_DATA = scripts/cse.service
+env_DATA = scripts/cse
+endif
+
 .PHONY: release
 release: $(PACKAGE_VERSION).tar.gz
 
