@@ -7,9 +7,9 @@ After=epmd.service epmd.socket
 User=otp
 Group=otp
 WorkingDirectory=/home/otp
-RuntimeDirectory=ocs
+RuntimeDirectory=cse
 RuntimeDirectoryMode=0750
-EnvironmentFile=/etc/default/ocs
+EnvironmentFile=/etc/default/cse
 ExecStart=/usr/lib/erlang/bin/run_erl -daemon /run/cse/ log \
                 'ERL_LIBS=lib exec ${ROOTDIR}/bin/start_erl ${ROOTDIR} releases \
                 ${START_ERL_DATA} -boot_var OTPHOME . +K true +A 32 +Bi -sname ${NODENAME}'
