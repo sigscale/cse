@@ -63,6 +63,7 @@ reldir=$ERLANG_INSTALL_LIB_DIR/../releases
 schemadir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/schema
 emibdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/mibs
 mibsdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/mibs
+envdir=/etc/default
 AC_SUBST(appdir)
 AC_SUBST(erldir)
 AC_SUBST(beamdir)
@@ -72,6 +73,7 @@ AC_SUBST(privdir)
 AC_SUBST(schemadir)
 AC_SUBST(emibdir)
 AC_SUBST(mibsdir)
+AC_SUBST(envdir)
 
 
 ##
