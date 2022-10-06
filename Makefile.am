@@ -22,6 +22,13 @@ $(PACKAGE_VERSION).tar.gz: $(PACKAGE_NAME).rel sys.config
 install-data-hook: $(PACKAGE_VERSION).tar.gz
 	$(MKDIR_P) $(DESTDIR)/$(reldir)
 	$(INSTALL_DATA) $< $(DESTDIR)/$(reldir)
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/db
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/log
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/tls
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/log/http
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/log/slp
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/conf
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/db
 
 EXTRA_DIST = $(PACKAGE_VERSION).tar.gz
 
