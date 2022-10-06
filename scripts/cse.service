@@ -1,0 +1,22 @@
+[Unit]
+Description="Custom Service Environment (CSE)"
+Documentation="https://github.com/sigscale/cse"
+After=epmd.service epmd.socket
+
+[Service]
+User=otp
+Group=otp
+WorkingDirectory=/home/otp
+RuntimeDirectory=ocs
+RuntimeDirectoryMode=0750
+EnvironmentFile=/etc/default/ocs
+ExecStart=/usr/lib/erlang/bin/run_erl -daemon /run/cse/ log \
+                'ERL_LIBS=lib exec ${ROOTDIR}/bin/start_erl ${ROOTDIR} releases \
+                ${START_ERL_DATA} -boot_var OTPHOME . +K true +A 32 +Bi -sname ${NODENAME}'
+GuessMainPID=no
+Type=forking
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
