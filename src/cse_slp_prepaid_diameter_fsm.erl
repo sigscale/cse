@@ -221,7 +221,7 @@ authorize_origination_attempt(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {rsu_postive(MSCC), Called} of
+				case {rsu_positive(MSCC), Called} of
 					{true, Destination} when is_list(Destination) ->
 						{next_state, analyse_information, NewData1, Actions};
 					{false, undefined} ->
@@ -288,7 +288,7 @@ collect_information(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {rsu_postive(MSCC), Called} of
+				case {rsu_positive(MSCC), Called} of
 					{true, Destination} when is_list(Destination) ->
 						{next_state, analyse_information, NewData, Actions};
 					{false, undefined} ->
@@ -391,7 +391,7 @@ analyse_information({call, From},
 		RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST' ->
 	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
 			req_type => RequestType},
-	case usu_postive(MSCC) of
+	case usu_positive(MSCC) of
 		true ->
 			{next_state, o_active, NewData, postpone};
 		false ->
@@ -487,7 +487,7 @@ routing(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case usu_postive(MSCC) of
+				case usu_positive(MSCC) of
 					true ->
 						{next_state, o_active, NewData, Actions};
 					false ->
@@ -1019,16 +1019,16 @@ rg(_) ->
 	undefined.
 
 %% @hidden
-rsu_postive([H | T]) ->
+rsu_positive([H | T]) ->
 	case rsu(H) of
 		#{} ->
 			true;
 		[] ->
 			true;
 		undefined ->
-			rsu_postive(T)
+			rsu_positive(T)
 	end;
-rsu_postive([]) ->
+rsu_positive([]) ->
 	false.
 
 %% @hidden
@@ -1062,14 +1062,14 @@ rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{}) ->
 	undefined.
 
 %% @hidden
-usu_postive([H | T]) ->
+usu_positive([H | T]) ->
 	case usu(H) of
 		#{} ->
 			true;
 		undefined ->
-			usu_postive(T)
+			usu_positive(T)
 	end;
-usu_postive([]) ->
+usu_positive([]) ->
 	false.
 
 usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
