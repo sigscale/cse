@@ -1,3 +1,15 @@
+2022-10-07  Vance Shipley <vances@sigscale.org>
+
+	* diameter terminating call handling
+	* tls directory for certs/keys
+	* install empty directories
+	* correct path in systemd unit
+	* configure default environment
+	* configure systemd build
+	* install systemd unit and environment files
+	* systemd service unit configuration
+	* reorder state clauses in logical order of events
+
 2022-09-28  Vance Shipley <vances@sigscale.org>
 
 	* rest api test case for index row
