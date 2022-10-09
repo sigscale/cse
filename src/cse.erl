@@ -27,16 +27,17 @@
 -export([start_diameter/3]).
 -export([add_resource_spec/1, get_resource_specs/0, find_resource_spec/1,
 		delete_resource_spec/1, query_resource_spec/5]).
--export([add_resource/1, get_resources/0, find_resource/1, delete_resource/1,
-		query_resource/6]).
--export([add_user/3, list_users/0, get_user/1, delete_user/1,
-		query_users/3, update_user/3]).
--export([add_service/3, get_service/1, find_service/1, get_services/0,
-		delete_service/1]).
--export([add_context/4, get_context/1, find_context/1, get_contexts/0,
-		delete_context/1]).
+-export([add_resource/1, delete_resource/1,
+		get_resources/0, find_resource/1, query_resource/6]).
+-export([add_user/3, delete_user/1,
+		get_user/1, query_users/3, update_user/3, list_users/0]).
+-export([add_service/3, delete_service/1,
+		get_service/1, find_service/1, get_services/0]).
+-export([add_context/4, delete_context/1,
+		get_context/1, find_context/1, get_contexts/0]).
+-export([add_session/2, delete_session/1,
+		get_session/1, find_session/1, get_sessions/0]).
 -export([announce/1]).
--export([add_session/2, get_session/1, get_sessions/0, delete_session/1]).
 
 -export_type([characteristics/0, related_resources/0, resource_spec/0,
 		resource_spec_rel/0, resource/0, resource_ref/0, resource_rel/0,
@@ -1099,7 +1100,7 @@ add_service(Key, Module, EDP) when is_integer(Key),
 		true ->
 			Service = #in_service{key = Key, module = Module, edp = EDP},
 			F = fun() ->
-					mnesia:write(Service)
+					mnesia:write(cse_service, Service, write)
 			end,
 			case mnesia:transaction(F) of
 				{atomic, ok} ->
@@ -1118,7 +1119,7 @@ add_service(Key, Module, EDP) when is_integer(Key),
 %% @doc Get the IN SLP registered with `Key'.
 get_service(Key) when is_integer(Key) ->
 	F = fun() ->
-			mnesia:read(in_service, Key)
+			mnesia:read(cse_service, Key, read)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, [#in_service{} = Service]} ->
@@ -1137,7 +1138,7 @@ get_service(Key) when is_integer(Key) ->
 %% @doc Find an IN SLP registered with `Key'.
 find_service(Key) when is_integer(Key) ->
 	F = fun() ->
-			mnesia:read(in_service, Key)
+			mnesia:read(cse_service, Key, read)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, [#in_service{} = Service]} ->
@@ -1155,7 +1156,7 @@ find_service(Key) when is_integer(Key) ->
 get_services() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-				F(mnesia:select(in_service,
+				F(mnesia:select(cse_service,
 						MatchSpec, ?CHUNKSIZE, read), Acc);
 			F('$end_of_table', Acc) ->
 				{ok, Acc};
@@ -1177,7 +1178,7 @@ get_services() ->
 %% @doc Delete an IN SLP registration.
 delete_service(Key) when is_integer(Key) ->
 	F = fun() ->
-		mnesia:delete(in_service, Key, write)
+		mnesia:delete(cse_service, Key, write)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, ok} ->
@@ -1205,7 +1206,7 @@ add_context(ContextId, Module, Args, Opts)
 	Context = #diameter_context{id = iolist_to_binary(ContextId),
 			module = Module, args = Args, opts = Opts},
 	F = fun() ->
-			mnesia:write(diameter_context, Context, write)
+			mnesia:write(cse_context, Context, write)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, ok} ->
@@ -1230,7 +1231,7 @@ get_context(ContextId)
 %% @hidden
 get_context1(ContextId) ->
 	F = fun() ->
-			mnesia:read(diameter_context, ContextId, read)
+			mnesia:read(cse_context, ContextId, read)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, [#diameter_context{} = Context]} ->
@@ -1258,7 +1259,7 @@ find_context(ContextId)
 %% @hidden
 find_context1(ContextId) ->
 	F = fun() ->
-			mnesia:read(diameter_context, ContextId, read)
+			mnesia:read(cse_context, ContextId, read)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, [#diameter_context{} = Service]} ->
@@ -1276,7 +1277,7 @@ find_context1(ContextId) ->
 get_contexts() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-				F(mnesia:select(diameter_context,
+				F(mnesia:select(cse_context,
 						MatchSpec, ?CHUNKSIZE, read), Acc);
 			F('$end_of_table', Acc) ->
 				{ok, Acc};
@@ -1307,7 +1308,7 @@ delete_context(ContextId)
 %% @hidden
 delete_context1(ContextId) ->
 	F = fun() ->
-		mnesia:delete(diameter_context, ContextId, write)
+		mnesia:delete(cse_context, ContextId, write)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, ok} ->
@@ -1315,6 +1316,67 @@ delete_context1(ContextId) ->
 		{aborted, Reason} ->
 			exit(Reason)
 	end.
+
+-spec add_session(SessionId, SLPI) -> ok
+	when
+		SessionId :: binary(),
+		SLPI :: pid().
+%% @doc Register a DIAMETER SLP instance (SLPI).
+%%
+%% 	The DIAMETER `Session-Id' AVP is registered with
+%% 	the `pid()' of an SLPI handling the session.
+%%
+add_session(SessionId, SLPI)
+		when is_binary(SessionId), is_pid(SLPI) ->
+	ets:insert(cse_session, {SessionId, SLPI}),
+	ok.
+
+-spec get_session(SessionId) -> SLPI
+	when
+		SessionId :: binary(),
+		SLPI :: pid().
+%% @doc Get the SLPI registered with `SessionId'.
+get_session(SessionId)
+		when is_binary(SessionId) ->
+	[{_, SLPI}] = ets:lookup(cse_session, SessionId),
+	SLPI.
+
+-spec find_session(SessionId) -> Result
+	when
+		SessionId :: binary(),
+		Result :: {ok, SLPI} | {error, Reason},
+		SLPI :: pid(),
+		Reason :: not_found | term().
+%% @doc Find an SLPI registered with `SessionId'.
+find_session(SessionId)
+		when is_binary(SessionId) ->
+	case catch ets:lookup(cse_session, SessionId) of
+		[] ->
+			{error, not_found};
+		{'EXIT', Reason} ->
+			{error, Reason};
+		[{_, SLPI}] ->
+			{ok, SLPI}
+	end.
+
+-spec get_sessions() -> Sessions
+	when
+		Sessions :: [Session],
+		Session :: {SessionId, SLPI},
+		SessionId :: binary(),
+		SLPI :: pid().
+%% @doc Get all registered SLPI.
+get_sessions() ->
+	ets:tab2list(cse_session).
+
+-spec delete_session(SessionId) -> ok
+	when
+		SessionId :: binary().
+%% @doc Delete an SLPI registration.
+delete_session(SessionId)
+		when is_binary(SessionId) ->
+	ets:delete(cse_session, SessionId),
+	ok.
 
 -type word() :: zero |one | two | three | four | five | six
 				| seven | eight | nine | ten | eleven | twelve
@@ -1456,73 +1518,6 @@ announce1(1, Acc) ->
 	Acc ++ [one];
 announce1(0, Acc) ->
 	Acc.
-
--spec add_session(SessionId, PID) -> Result
-	when
-		SessionId :: binary(),
-		PID :: pid(),
-		Result :: {ok, {SessionId, PID}} | {error, Reason},
-		Reason :: term().
-%% @doc Add a Session Table Entry
-%%
-%% 	The `SessionId' identifies a Diameter session.
-%% 	The `PID' identifies a SLIP process.
-%%
-add_session(SessionId, PID) when is_binary(SessionId),
-		is_pid(PID) ->
-	Service = {SessionId, PID},
-	case catch ets:insert(session, Service) of
-		true ->
-			{ok, Service};
-		{'EXIT', Reason} ->
-			{error, Reason}
-	end.
-
--spec get_session(SessionId) -> Result
-	when
-		SessionId :: binary(),
-		Result :: {ok, {SessionId, PID}} | {error, Reason},
-		PID :: pid(),
-		Reason :: not_found | term().
-%% @doc Get a Session by SessionId.
-get_session(SessionId) when is_binary(SessionId) ->
-	case catch ets:lookup(session, SessionId) of
-		[] ->
-			{error, not_found};
-		{'EXIT', Reason} ->
-			{error, Reason};
-		[{SessionId, PID}] ->
-			{ok, {SessionId, PID}}
-	end.
-
--spec get_sessions() -> Result
-	when
-		Result :: Sessions | {error, Reason},
-		Sessions :: [Session],
-		Session :: {SessionId, PID},
-		SessionId :: binary(),
-		PID :: pid(),
-		Reason :: term().
-%% @doc Get all entries from the Session table.
-get_sessions() ->
-	case catch ets:tab2list(session) of
-		Sessions when length(Sessions) > 0 ->
-			Sessions;
-		{'EXIT', Reason} ->
-			{error, Reason}
-	end.
-
--spec delete_session(SessionId) -> ok
-	when
-		SessionId :: binary().
-%% @doc Delete an entry from the session table.
-delete_session(SessionId) when is_binary(SessionId) ->
-	case catch ets:delete(session, SessionId) of
-		true ->
-			ok;
-		{'EXIT', Reason} ->
-			exit(Reason)
-	end.
 
 %%----------------------------------------------------------------------
 %%  internal functions
