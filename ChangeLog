@@ -1,5 +1,8 @@
 2022-10-09  Vance Shipley <vances@sigscale.org>
 
+	* use registry to get diameter slpi
+	* refactor session api, update registry table names
+	* rename registry tables with cse_ prefix
 	* diameter ccr context lookup slp
 	* export types from cse api module
 

@@ -1,6 +1,7 @@
 October 9, 2022
 ---------------
-	- rename IN service key table
+	- rename registry tables
+	- refactor session registry api
 	- add diameter context table
 
 October 7, 2022
