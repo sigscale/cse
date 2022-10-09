@@ -24,7 +24,7 @@ init_tables([m3ua | T]) ->
 init_tables([gtt | T]) ->
 	init_tables([gtt_ep, gtt_as, gtt_pc], gtt_app, T);
 init_tables([cse | T]) ->
-	init_tables([resource, service], cse_app, T);
+	init_tables([resource, in_service, diameter_context], cse_app, T);
 init_tables([]) ->
 	ok.
 %% @hidden

@@ -131,7 +131,7 @@ null(cast, {'TC', 'INVOKE', indication,
 				serviceKey = ServiceKey} = InitialDPArg}
 				when is_integer(ServiceKey) ->
 			case cse:find_service(ServiceKey) of
-				{ok, #service{key = ServiceKey, module = CbModule, edp = EDP}}
+				{ok, #in_service{key = ServiceKey, module = CbModule, edp = EDP}}
 						when is_atom(CbModule), is_map(EDP) ->
 					NewData = Data#{edp => EDP},
 					Actions = [{push_callback_module, CbModule},

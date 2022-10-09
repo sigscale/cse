@@ -173,8 +173,14 @@
 		role :: string() | undefined | '_',
 		ref_type :: string() | undefined | '_'}).
 
--record(service,
+-record(in_service,
 		{key :: 0..2147483647,
 		module :: atom(),
 		edp :: #{cse:event_type() => cse:monitor_mode()}}).
+
+-record(diameter_context,
+		{id :: binary(),
+		module :: atom(),
+		args  = [] :: [term()],
+		opts = [] :: [term()]}).
 

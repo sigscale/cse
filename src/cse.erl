@@ -31,7 +31,10 @@
 		query_resource/6]).
 -export([add_user/3, list_users/0, get_user/1, delete_user/1,
 		query_users/3, update_user/3]).
--export([add_service/3, find_service/1, get_services/0, delete_service/1]).
+-export([add_service/3, get_service/1, find_service/1, get_services/0,
+		delete_service/1]).
+-export([add_context/4, get_context/1, find_context/1, get_contexts/0,
+		delete_context/1]).
 -export([announce/1]).
 -export([add_session/2, get_session/1, get_sessions/0, delete_session/1]).
 
@@ -39,7 +42,7 @@
 		resource_spec_rel/0, resource/0, resource_ref/0, resource_rel/0,
 		resource_spec_ref/0, resource_spec_char/0, resource_spec_char_rel/0,
 		resource_spec_char_val/0, char_rel/0, characteristic/0,
-		target_res_schema/0, party_rel/0, service/0, diameter_context/0]).
+		target_res_schema/0, party_rel/0, in_service/0, diameter_context/0]).
 
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
@@ -72,7 +75,7 @@
 -type characteristic() :: #characteristic{}.
 -type target_res_schema() :: #target_res_schema{}.
 -type party_rel() :: #party_rel{}.
--type service() :: #service{}.
+-type in_service() :: #in_service{}.
 -type diameter_context() :: #diameter_context{}.
 
 %%----------------------------------------------------------------------
@@ -1078,14 +1081,12 @@ query_resource5('$end_of_table') ->
 		| abandon | term_attempt.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
 
--spec add_service(Key, Module, EDP) -> Result
+-spec add_service(Key, Module, EDP) -> ok
 	when
 		Key :: 0..2147483647,
 		Module :: atom(),
-		EDP :: #{event_type() => monitor_mode()},
-		Result :: {ok, #service{}} | {error, Reason},
-		Reason :: term().
-%% @doc Add a Service Logic Processing Program (SLP).
+		EDP :: #{event_type() => monitor_mode()}.
+%% @doc Register an IN Service Logic Processing Program (SLP).
 %%
 %% 	The `serviceKey' of an `InitialDP' identifies the IN service
 %% 	logic which should be provided for the call.  An SLP is
@@ -1096,33 +1097,50 @@ add_service(Key, Module, EDP) when is_integer(Key),
 		is_atom(Module), is_map(EDP)  ->
 	case is_edp(EDP) of
 		true ->
-			Service = #service{key = Key, module = Module, edp = EDP},
+			Service = #in_service{key = Key, module = Module, edp = EDP},
 			F = fun() ->
 					mnesia:write(Service)
 			end,
-			add_service(mnesia:transaction(F), Service);
+			case mnesia:transaction(F) of
+				{atomic, ok} ->
+					ok;
+				{aborted, Reason} ->
+					exit(Reason)
+			end;
 		false ->
-			{error, bad_arg}
+			error(function_clause, [Key, Module, EDP])
 	end.
-%% @hidden
-add_service({atomic, ok}, Service) ->
-	{ok, Service};
-add_service({aborted, Reason}, _S) ->
-	{error, Reason}.
+
+-spec get_service(Key) -> Result
+	when
+		Key :: 0..2147483647,
+		Result :: in_service().
+%% @doc Get the IN SLP registered with `Key'.
+get_service(Key) when is_integer(Key) ->
+	F = fun() ->
+			mnesia:read(in_service, Key)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, [#in_service{} = Service]} ->
+			Service;
+		{atomic, []} ->
+			exit(not_found);
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
 
 -spec find_service(Key) -> Result
 	when
 		Key :: 0..2147483647,
-		Result :: {ok, #service{}} | {error, Reason},
+		Result :: {ok, in_service()} | {error, Reason},
 		Reason :: not_found | term().
-%% @doc Find a service by key.
-%%
+%% @doc Find an IN SLP registered with `Key'.
 find_service(Key) when is_integer(Key) ->
 	F = fun() ->
-			mnesia:read(service, Key)
+			mnesia:read(in_service, Key)
 	end,
 	case mnesia:transaction(F) of
-		{atomic, [#service{} = Service]} ->
+		{atomic, [#in_service{} = Service]} ->
 			{ok, Service};
 		{atomic, []} ->
 			{error, not_found};
@@ -1132,12 +1150,13 @@ find_service(Key) when is_integer(Key) ->
 
 -spec get_services() -> Services
 	when
-		Services :: [#service{}].
-%% @doc Get all service records.
+		Services :: [in_service()].
+%% @doc Get all registered IN SLPs.
 get_services() ->
 	MatchSpec = [{'_', [], ['$_']}],
 	F = fun F(start, Acc) ->
-				F(mnesia:select(service, MatchSpec, ?CHUNKSIZE, read), Acc);
+				F(mnesia:select(in_service,
+						MatchSpec, ?CHUNKSIZE, read), Acc);
 			F('$end_of_table', Acc) ->
 				{ok, Acc};
 			F({error, Reason}, _Acc) ->
@@ -1155,13 +1174,143 @@ get_services() ->
 -spec delete_service(Key) -> ok
 	when
 		Key :: 0..2147483647.
-%% @doc Delete an entry from the service table.
+%% @doc Delete an IN SLP registration.
 delete_service(Key) when is_integer(Key) ->
 	F = fun() ->
-		mnesia:delete(service, Key, write)
+		mnesia:delete(in_service, Key, write)
 	end,
 	case mnesia:transaction(F) of
-		{atomic, _} ->
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec add_context(ContextId, Module, Args, Opts) -> ok
+	when
+		ContextId :: diameter:'UTF8String'(),
+		Module :: atom(),
+		Args :: [term()],
+		Opts :: [term()].
+%% @doc Register a DIAMETER Service Logic Processing Program (SLP).
+%%
+%% 	The `Service-Context-Id' of a `Credit-Control-Request'
+%% 	identifies the service logic logic which should be
+%% 	provided for the call.  An SLP is implemented in a
+%% 	`Module'.
+%%
+add_context(ContextId, Module, Args, Opts)
+		when (is_list(ContextId) or is_binary(ContextId)),
+		is_atom(Module), is_list(Args), is_list(Opts) ->
+	Context = #diameter_context{id = iolist_to_binary(ContextId),
+			module = Module, args = Args, opts = Opts},
+	F = fun() ->
+			mnesia:write(diameter_context, Context, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec get_context(ContextId) -> Result
+	when
+		ContextId :: diameter:'UTF8String'(),
+		Result :: diameter_context().
+%% @doc Get the IN SLP registered with `ContextId'.
+get_context(ContextId)
+		when is_list(ContextId); is_binary(ContextId) ->
+	case catch iolist_to_binary(ContextId) of
+		ContextId1 when is_binary(ContextId1) ->
+			get_context1(ContextId1);
+		{'EXIT', _} ->
+			error(function_clause, [ContextId])
+	end.
+%% @hidden
+get_context1(ContextId) ->
+	F = fun() ->
+			mnesia:read(diameter_context, ContextId, read)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, [#diameter_context{} = Context]} ->
+			Context;
+		{atomic, []} ->
+			exit(not_found);
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec find_context(ContextId) -> Result
+	when
+		ContextId :: diameter:'UTF8String'(),
+		Result :: {ok, diameter_context()} | {error, Reason},
+		Reason :: not_found | term().
+%% @doc Find a DIAMETER SLP registered with `Key'.
+find_context(ContextId)
+		when is_list(ContextId); is_binary(ContextId) ->
+	case catch iolist_to_binary(ContextId) of
+		ContextId1 when is_binary(ContextId1) ->
+			find_context1(ContextId1);
+		{'EXIT', _} ->
+			error(function_clause, [ContextId])
+	end.
+%% @hidden
+find_context1(ContextId) ->
+	F = fun() ->
+			mnesia:read(diameter_context, ContextId, read)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, [#diameter_context{} = Service]} ->
+			{ok, Service};
+		{atomic, []} ->
+			{error, not_found};
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
+
+-spec get_contexts() -> Contexts
+	when
+		Contexts :: [diameter_context()].
+%% @doc Get all registered DIAMETER SLPs.
+get_contexts() ->
+	MatchSpec = [{'_', [], ['$_']}],
+	F = fun F(start, Acc) ->
+				F(mnesia:select(diameter_context,
+						MatchSpec, ?CHUNKSIZE, read), Acc);
+			F('$end_of_table', Acc) ->
+				{ok, Acc};
+			F({error, Reason}, _Acc) ->
+				{error, Reason};
+			F({L, Cont}, Acc) ->
+				F(mnesia:select(Cont), [L| Acc])
+	end,
+	case mnesia:ets(F, [start, []]) of
+		{ok, Acc} when is_list(Acc) ->
+			lists:flatten(lists:reverse(Acc));
+		{error, Reason} ->
+			exit(Reason)
+	end.
+
+-spec delete_context(ContextId) -> ok
+	when
+		ContextId :: diameter:'UTF8String'().
+%% @doc Delete a DIAMETER SLP registration.
+delete_context(ContextId)
+		when is_list(ContextId); is_binary(ContextId) ->
+	case catch iolist_to_binary(ContextId) of
+		ContextId1 when is_binary(ContextId1) ->
+			delete_context1(ContextId1);
+		{'EXIT', _} ->
+			error(function_clause, [ContextId])
+	end.
+%% @hidden
+delete_context1(ContextId) ->
+	F = fun() ->
+		mnesia:delete(diameter_context, ContextId, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
 			ok;
 		{aborted, Reason} ->
 			exit(Reason)

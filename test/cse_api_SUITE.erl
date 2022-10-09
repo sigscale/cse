@@ -28,9 +28,15 @@
 %% export test cases
 -export([start_cse/0, start_cse/1, stop_cse/0, stop_cse/1]).
 -export([add_service/0, add_service/1,
+		get_service/0, get_service/1,
 		find_service/0, find_service/1,
 		get_services/0, get_services/1,
 		delete_service/0, delete_service/1,
+		add_context/0, add_context/1,
+		get_context/0, get_context/1,
+		find_context/0, find_context/1,
+		get_contexts/0, get_contexts/1,
+		delete_context/0, delete_context/1,
 		no_service/0, no_service/1]).
 -export([announce/0, announce/1]).
 -export([add_index_table_spec/0, add_index_table_spec/1,
@@ -132,7 +138,8 @@ sequences() ->
 %%
 all() ->
 	[start_cse, stop_cse, add_service, find_service, get_services,
-			delete_service, no_service, announce,
+			delete_service, add_context, get_context, find_context,
+			get_contexts, delete_context, no_service, announce,
 			add_index_table_spec, add_prefix_table_spec, add_range_table_spec,
 			get_index_table_spec, get_prefix_table_spec, get_range_table_spec,
 			delete_index_table_spec, delete_prefix_table_spec, delete_range_table_spec,
@@ -169,8 +176,18 @@ add_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	Module = cse_slp_prepaid_cap_fsm,
 	EDP = edp(),
-	{ok, Service} = cse:add_service(ServiceKey, Module, EDP),
-	#service{key = ServiceKey, module = Module, edp = EDP} = Service.
+	ok = cse:add_service(ServiceKey, Module, EDP).
+
+get_service() ->
+	[{userdata, [{doc, "Get an IN service logic processing program (SLP)"}]}].
+
+get_service(_Config) ->
+	ServiceKey = rand:uniform(2147483647),
+	Module = cse_slp_prepaid_cap_fsm,
+	EDP = edp(),
+	cse:add_service(ServiceKey, Module, EDP),
+	#in_service{key = ServiceKey, module = Module,
+			edp = EDP} = cse:get_service(ServiceKey).
 
 find_service() ->
 	[{userdata, [{doc, "Find an IN service logic processing program (SLP)"}]}].
@@ -181,7 +198,7 @@ find_service(_Config) ->
 	EDP = edp(),
 	cse:add_service(ServiceKey, Module, EDP),
 	{ok, Service} = cse:find_service(ServiceKey),
-	#service{key = ServiceKey, module = Module, edp = EDP} = Service.
+	#in_service{key = ServiceKey, module = Module, edp = EDP} = Service.
 
 get_services() ->
 	[{userdata, [{doc, "List all IN service logic processing programs (SLP)"}]}].
@@ -190,7 +207,7 @@ get_services(_Config) ->
 	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
 	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
 	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
-	F = fun(S) -> is_record(S, service) end,
+	F = fun(S) -> is_record(S, in_service) end,
 	lists:all(F, cse:get_services()).
 
 delete_service() ->
@@ -200,6 +217,55 @@ delete_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, edp()),
 	ok = cse:delete_service(ServiceKey).
+
+add_context() ->
+	[{userdata, [{doc, "Add a DIAMETER logic processing program (SLP)"}]}].
+
+add_context(_Config) ->
+	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
+	Module = cse_slp_prepaid_diameter_fsm,
+	ok = cse:add_context(ContextId, Module, [], []).
+
+get_context() ->
+	[{userdata, [{doc, "Get a DIAMETER SLP"}]}].
+
+get_context(_Config) ->
+	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
+	Module = cse_slp_prepaid_diameter_fsm,
+	cse:add_context(ContextId, Module, [], []),
+	#diameter_context{id = ContextId, module = Module,
+			args = [], opts = []} = cse:get_context(ContextId).
+
+find_context() ->
+	[{userdata, [{doc, "Find a DIAMETER SLP"}]}].
+
+find_context(_Config) ->
+	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
+	Module = cse_slp_prepaid_diameter_fsm,
+	cse:add_context(ContextId, Module, [], []),
+	{ok, Context} = cse:find_context(ContextId),
+	#diameter_context{id = ContextId, module = Module,
+			args = [], opts = []} = Context.
+
+get_contexts() ->
+	[{userdata, [{doc, "List all DIAMETER contexts"}]}].
+
+get_contexts(_Config) ->
+	Module = cse_slp_prepaid_diameter_fsm,
+	cse:add_context(list_to_binary(cse_test_lib:rand_name(20)), Module, [], []),
+	cse:add_context(list_to_binary(cse_test_lib:rand_name(20)), Module, [], []),
+	cse:add_context(list_to_binary(cse_test_lib:rand_name(20)), Module, [], []),
+	F = fun(S) -> is_record(S, diameter_context) end,
+	lists:all(F, cse:get_contexts()).
+
+delete_context() ->
+	[{userdata, [{doc, "Remove a DIAMETER SLP"}]}].
+
+delete_context(_Config) ->
+	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
+	Module = cse_slp_prepaid_diameter_fsm,
+	cse:add_context(ContextId, Module, [], []),
+	ok = cse:delete_context(ContextId).
 
 no_service() ->
 	[{userdata, [{doc, "Attempt to find a non-existent SLP"}]}].

@@ -59,7 +59,8 @@ start(normal = _StartType, _Args) ->
 		false ->
 			[]
 	end,
-	Tables = [resource_spec, resource, service] ++ HttpdTables,
+	Tables = [resource_spec, resource,
+			in_service, diameter_context] ++ HttpdTables,
 	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
 		ok ->
 			start1();
@@ -154,7 +155,7 @@ start7() ->
 	case catch ets:new(session, Options) of
 		{'EXIT', Reason} ->
 			{error, Reason};
-		TID ->
+		_TID ->
 			start8()
 	end.
 %% @hidden
@@ -355,52 +356,59 @@ install4(Nodes, Acc) ->
 	end.
 %% @hidden
 install5(Nodes, Acc) ->
-	case create_table(service, Nodes) of
+	case create_table(in_service, Nodes) of
 		ok ->
-			install6(Nodes, [service | Acc]);
+			install6(Nodes, [in_service | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
-%% @hidden
 install6(Nodes, Acc) ->
-	case application:load(inets) of
+	case create_table(diameter_context, Nodes) of
 		ok ->
-			error_logger:info_msg("Loaded inets.~n"),
-			install7(Nodes, Acc);
-		{error, {already_loaded, inets}} ->
-			install7(Nodes, Acc)
+			install7(Nodes, [diameter_context | Acc]);
+		{error, Reason} ->
+			{error, Reason}
 	end.
 %% @hidden
 install7(Nodes, Acc) ->
-	case is_mod_auth_mnesia() of
-		true ->
+	case application:load(inets) of
+		ok ->
+			error_logger:info_msg("Loaded inets.~n"),
 			install8(Nodes, Acc);
-		false ->
-			error_logger:info_msg("Httpd service not defined. "
-					"User table not created~n"),
-			install10(Nodes, Acc)
+		{error, {already_loaded, inets}} ->
+			install8(Nodes, Acc)
 	end.
 %% @hidden
 install8(Nodes, Acc) ->
-	case create_table(httpd_user, Nodes) of
-		ok ->
-			install9(Nodes, [httpd_user | Acc]);
-		{error, Reason} ->
-			{error, Reason}
+	case is_mod_auth_mnesia() of
+		true ->
+			install9(Nodes, Acc);
+		false ->
+			error_logger:info_msg("Httpd service not defined. "
+					"User table not created~n"),
+			install11(Nodes, Acc)
 	end.
 %% @hidden
 install9(Nodes, Acc) ->
-	case create_table(httpd_group, Nodes) of
+	case create_table(httpd_user, Nodes) of
 		ok ->
-			install10(Nodes, [httpd_group | Acc]);
+			install10(Nodes, [httpd_user | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-install10(_Nodes, Tables) ->
+install10(Nodes, Acc) ->
+	case create_table(httpd_group, Nodes) of
+		ok ->
+			install11(Nodes, [httpd_group | Acc]);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+install11(_Nodes, Tables) ->
 	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
 		ok ->
-			install11(Tables, lists:member(httpd_user, Tables));
+			install12(Tables, lists:member(httpd_user, Tables));
 		{timeout, Tables} ->
 			error_logger:error_report(["Timeout waiting for tables",
 					{tables, Tables}]),
@@ -411,21 +419,21 @@ install10(_Nodes, Tables) ->
 			{error, Reason}
 	end.
 %% @hidden
-install11(Tables, true) ->
+install12(Tables, true) ->
 	case inets:start() of
 		ok ->
 			error_logger:info_msg("Started inets.~n"),
-			install12(Tables);
+			install13(Tables);
 		{error, {already_started, inets}} ->
-			install12(Tables);
+			install13(Tables);
 		{error, Reason} ->
 			error_logger:error_msg("Failed to start inets~n"),
 			{error, Reason}
 	end;
-install11(Tables, false) ->
+install12(Tables, false) ->
 	{ok, Tables}.
 %% @hidden
-install12(Tables) ->
+install13(Tables) ->
 	case cse:list_users() of
 		{ok, []} ->
 			UserData = [{locale, "en"}],
@@ -489,10 +497,14 @@ create_table(resource, Nodes) when is_list(Nodes) ->
 	create_table1(resource, mnesia:create_table(resource,
 			[{disc_copies, Nodes},
 			{attributes, record_info(fields, resource)}]));
-create_table(service, Nodes) when is_list(Nodes) ->
-	create_table1(service, mnesia:create_table(service,
+create_table(in_service, Nodes) when is_list(Nodes) ->
+	create_table1(in_service, mnesia:create_table(in_service,
 			[{disc_copies, Nodes},
-			{attributes, record_info(fields, service)}]));
+			{attributes, record_info(fields, in_service)}]));
+create_table(diameter_context, Nodes) when is_list(Nodes) ->
+	create_table1(diameter_context, mnesia:create_table(diameter_context,
+			[{disc_copies, Nodes},
+			{attributes, record_info(fields, diameter_context)}]));
 create_table(httpd_user, Nodes) when is_list(Nodes) ->
 	create_table1(httpd_user,
 			mnesia:create_table(httpd_user, [{type, bag},
