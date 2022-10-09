@@ -1,3 +1,8 @@
+2022-10-09  Vance Shipley <vances@sigscale.org>
+
+	* diameter ccr context lookup slp
+	* export types from cse api module
+
 2022-10-07  Vance Shipley <vances@sigscale.org>
 
 	* diameter terminating call handling

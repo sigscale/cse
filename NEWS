@@ -1,3 +1,8 @@
+October 9, 2022
+---------------
+	- rename IN service key table
+	- add diameter context table
+
 October 7, 2022
 ---------------
 	- handle terminating calls with diameter
