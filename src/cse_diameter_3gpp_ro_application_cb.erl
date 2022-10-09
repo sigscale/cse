@@ -36,6 +36,7 @@
 -include("diameter_gen_3gpp.hrl").
 -include("diameter_gen_3gpp_ro_application.hrl").
 -include("diameter_gen_cc_application_rfc4006.hrl").
+-include("cse.hrl").
 
 -record(state, {}).
 
@@ -256,6 +257,7 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 process_request(_IpAddress, _Port,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'Service-Context-Id' = ContextId,
 				'Auth-Application-Id' = ?RO_APPLICATION_ID,
 				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum} = Request)
@@ -263,7 +265,9 @@ process_request(_IpAddress, _Port,
 	try
 		Children = supervisor:which_children(cse_sup),
 		{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
-		supervisor:start_child(SlpSup, [cse_slp_prepaid_diameter_fsm, [], []])
+		#diameter_context{module = Module, args = Args,
+				opts = Opts} = cse:get_context(ContextId),
+		supervisor:start_child(SlpSup, [Module, Args, Opts])
 	of
 		{ok, Child} ->
 			case catch gen_statem:call(Child, Request) of
@@ -275,7 +279,7 @@ process_request(_IpAddress, _Port,
 							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							OHost, ORealm, RequestType, RequestNum);
 				Reply ->
-					{ok, _Session} = cse:add_session(SessionId, Child),
+					cse:add_session(SessionId, Child),
 					{reply, Reply}
 			end;
 		{error, Reason} ->
@@ -302,8 +306,8 @@ process_request(_IpAddress, _Port,
 				'CC-Request-Number' = RequestNum} = Request)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST' ->
 	try
-		case cse:get_session(SessionId) of
-			{ok, {SessionId, Pid}} ->
+		case cse:find_session(SessionId) of
+			{ok, Pid} ->
 				case catch gen_statem:call(Pid, Request) of
 					{'EXIT', Reason1} ->
 						error_logger:error_report(["Diameter Error",
@@ -341,21 +345,21 @@ process_request(_IpAddress, _Port,
 				'CC-Request-Number' = RequestNum} = Request)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
 	try
-		cse:get_session(SessionId)
+		cse:find_session(SessionId)
 	of
-		{ok, {SessionId, Pid}} ->
+		{ok, Pid} ->
 			case catch gen_statem:call(Pid, Request) of
 				{'EXIT', Reason1} ->
 					error_logger:error_report(["Diameter Error",
 							{module, ?MODULE}, {session, SessionId},
 							{fsm, Pid}, {type, event_type(RequestType)},
 							{error, Reason1}]),
-					ok = cse:delete_session(SessionId),
+					cse:delete_session(SessionId),
 					diameter_error(SessionId,
 							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							OHost, ORealm, RequestType, RequestNum);
 				Reply ->
-					ok = cse:delete_session(SessionId),
+					cse:delete_session(SessionId),
 					{reply, Reply}
 			end;
 		{error, Reason} ->
