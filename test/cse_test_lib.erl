@@ -9,7 +9,9 @@
 -export([rand_name/0, rand_name/1]).
 -export([rand_dn/0, rand_dn/1]).
 
--define(Applications, [mnesia, inets, asn1, snmp, sigscale_mibs, m3ua, tcap, gtt, diameter, cse]).
+-define(Applications,
+		[mnesia, inets, asn1, snmp, sigscale_mibs,
+		m3ua, tcap, gtt, diameter, cse]).
 -define(TIMEOUT, 1000).
 
 -spec init_tables() -> Result
@@ -24,7 +26,7 @@ init_tables([m3ua | T]) ->
 init_tables([gtt | T]) ->
 	init_tables([gtt_ep, gtt_as, gtt_pc], gtt_app, T);
 init_tables([cse | T]) ->
-	init_tables([resource, in_service, diameter_context], cse_app, T);
+	init_tables([resource, cse_service, cse_context], cse_app, T);
 init_tables([]) ->
 	ok.
 %% @hidden

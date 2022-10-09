@@ -60,7 +60,7 @@ start(normal = _StartType, _Args) ->
 			[]
 	end,
 	Tables = [resource_spec, resource,
-			in_service, diameter_context] ++ HttpdTables,
+			cse_service, cse_context] ++ HttpdTables,
 	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
 		ok ->
 			start1();
@@ -150,9 +150,9 @@ start6() ->
 	end.
 %% @hidden
 start7() ->
-	Options = [set, public, named_table, {write_concurrency, true},
-			{keypos, 1}],
-	case catch ets:new(session, Options) of
+	Options = [set, public, named_table,
+			{write_concurrency, true}, {keypos, 1}],
+	case catch ets:new(cse_session, Options) of
 		{'EXIT', Reason} ->
 			{error, Reason};
 		_TID ->
@@ -356,16 +356,21 @@ install4(Nodes, Acc) ->
 	end.
 %% @hidden
 install5(Nodes, Acc) ->
-	case create_table(in_service, Nodes) of
+	case create_table(cse_service, Nodes) of
 		ok ->
-			install6(Nodes, [in_service | Acc]);
+			install6(Nodes, [cse_service | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 install6(Nodes, Acc) ->
-	case create_table(diameter_context, Nodes) of
+	case create_table(cse_context, Nodes) of
 		ok ->
-			install7(Nodes, [diameter_context | Acc]);
+			ContextId = "32260@3gpp.org",
+			Mod = cse_slp_prepaid_diameter_fsm,
+			Args = [],
+			Opts = [],
+			cse:add_context(ContextId, Mod, Args, Opts),
+			install7(Nodes, [cse_context | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -497,13 +502,15 @@ create_table(resource, Nodes) when is_list(Nodes) ->
 	create_table1(resource, mnesia:create_table(resource,
 			[{disc_copies, Nodes},
 			{attributes, record_info(fields, resource)}]));
-create_table(in_service, Nodes) when is_list(Nodes) ->
-	create_table1(in_service, mnesia:create_table(in_service,
+create_table(cse_service, Nodes) when is_list(Nodes) ->
+	create_table1(cse_service, mnesia:create_table(cse_service,
 			[{disc_copies, Nodes},
+			{record_name, in_service},
 			{attributes, record_info(fields, in_service)}]));
-create_table(diameter_context, Nodes) when is_list(Nodes) ->
-	create_table1(diameter_context, mnesia:create_table(diameter_context,
+create_table(cse_context, Nodes) when is_list(Nodes) ->
+	create_table1(cse_context, mnesia:create_table(cse_context,
 			[{disc_copies, Nodes},
+			{record_name, diameter_context},
 			{attributes, record_info(fields, diameter_context)}]));
 create_table(httpd_user, Nodes) when is_list(Nodes) ->
 	create_table1(httpd_user,
