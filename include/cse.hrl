@@ -16,9 +16,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 
--type characteristics() :: #{CharName :: string() => characteristic()}.
--type related_resources() :: #{RelType :: string() => resource_rel()}.
-
 -record(gtt,
 		{num :: string() | '_' | '$1',
 		value :: term() | undefined | '_' | '$2'}).
@@ -38,13 +35,12 @@
 		last_modified :: {TS :: pos_integer(), N :: pos_integer()}
 				| undefined | '_',
 		is_bundle :: boolean() | undefined | '_',
-		party = [] :: [party_rel()] | undefined | '_',
+		party = [] :: [cse:party_rel()] | undefined | '_',
 		status :: string() | undefined | '_',
-		related = [] :: [resource_spec_rel()] | '_',
+		related = [] :: [cse:resource_spec_rel()] | '_',
 		feature = [] :: [] | '_',
-		characteristic = [] :: [resource_spec_char()] | '_',
-		target_schema :: target_res_schema() | undefined | '_'}).
--type resource_spec() :: #resource_spec{}.
+		characteristic = [] :: [cse:resource_spec_char()] | '_',
+		target_schema :: cse:target_res_schema() | undefined | '_'}).
 
 -record(resource_spec_rel,
 		{id :: string() | undefined | '_',
@@ -57,8 +53,7 @@
 		min :: non_neg_integer() | undefined | '_',
 		max :: non_neg_integer() | undefined | '_',
 		default :: non_neg_integer() | undefined | '_',
-		characteristic = [] :: [resource_spec_char()] | '_'}).
--type resource_spec_rel() :: #resource_spec_rel{}.
+		characteristic = [] :: [cse:resource_spec_char()] | '_'}).
 
 -record(resource,
 		{id :: string() | undefined | '_',
@@ -75,16 +70,15 @@
 		oper_state :: string() | undefined | '_',
 		usage_state :: string() | undefined | '_',
 		status :: string() | undefined | '_',
-		party = [] :: [party_rel()] | undefined | '_',
+		party = [] :: [cse:party_rel()] | undefined | '_',
 		feature = [] :: [] | '_',
-		specification :: resource_spec_ref() | undefined | '_',
-		related = #{} :: related_resources() | '_',
-		characteristic = #{} :: characteristics() | '_',
+		specification :: cse:resource_spec_ref() | undefined | '_',
+		related = #{} :: cse:related_resources() | '_',
+		characteristic = #{} :: cse:characteristics() | '_',
 		class_type :: string() | undefined | '_',
 		base_type :: string() | undefined | '_',
 		schema :: string() | undefined | '_',
 		attributes :: map() | undefined | '_'}).
--type resource() :: #resource{}.
 
 -record(resource_ref,
 		{id :: string() | undefined | '_',
@@ -95,23 +89,20 @@
 		base_type :: string() | undefined | '_',
 		schema :: string() | undefined | '_',
 		attributes :: map() | undefined | '_'}).
--type resource_ref() :: #resource_ref{}.
 
 -record(resource_rel,
 		{rel_type :: string() | undefined | '_',
-		resource :: resource_ref() | undefined | '_',
+		resource :: cse:resource_ref() | undefined | '_',
 		class_type :: string() | undefined | '_',
 		base_type :: string() | undefined | '_',
 		schema :: string() | undefined | '_',
 		attributes :: map() | undefined | '_'}).
--type resource_rel() :: #resource_rel{}.
 
 -record(resource_spec_ref,
 		{id :: string() | undefined | '_',
 		href :: string() | undefined | '_',
 		name :: string() | undefined | '_',
 		version :: string() | undefined | '_'}).
--type resource_spec_ref() :: #resource_spec_ref{}.
 
 -record(resource_spec_char,
 		{name :: string() | undefined | '_',
@@ -126,10 +117,9 @@
 		min :: non_neg_integer() | undefined | '_',
 		max :: non_neg_integer() | undefined | '_',
 		regex :: string() | undefined | '_',
-		related = [] :: [resource_spec_char_rel()] | '_',
-		value = [] :: [resource_spec_char_val()] | undefined | '_',
+		related = [] :: [cse:resource_spec_char_rel()] | '_',
+		value = [] :: [cse:resource_spec_char_val()] | undefined | '_',
 		value_type :: string() | undefined | '_'}).
--type resource_spec_char() :: #resource_spec_char{}.
 
 -record(resource_spec_char_rel,
 		{char_id :: string() | undefined | '_',
@@ -139,7 +129,6 @@
 		res_spec_id :: string() | undefined | '_',
 		res_spec_href :: string() | undefined | '_',
 		rel_type :: string() | undefined | '_'}).
--type resource_spec_char_rel() :: #resource_spec_char_rel{}.
 
 -record(resource_spec_char_val,
 		{is_default :: boolean() | undefined | '_',
@@ -153,7 +142,6 @@
 		value_from :: integer() | undefined | '_',
 		value_to :: integer() | undefined | '_',
 		value_type :: string() | undefined | '_'}).
--type resource_spec_char_val() :: #resource_spec_char_val{}.
 
 -record(char_rel,
 		{id :: string() | undefined | '_',
@@ -162,24 +150,21 @@
 		schema :: string() | undefined | '_',
 		base_type :: string() | undefined | '_',
 		attributes :: map() | undefined | '_'}).
--type char_rel() :: #char_rel{}.
 
 -record(characteristic,
 		{id :: string() | undefined | '_',
 		name :: string() | undefined | '_',
-		related = [] :: [char_rel()] | '_',
+		related = [] :: [cse:char_rel()] | '_',
 		value_type :: string() | undefined | '_',
 		value :: term() | undefined | '_',
 		class_type :: string() | undefined | '_',
 		schema :: string() | undefined | '_',
 		base_type :: string() | undefined | '_',
 		attributes :: map() | undefined | '_'}).
--type characteristic() :: #characteristic{}.
 
 -record(target_res_schema,
 		{location :: string() | undefined | '_',
 		type :: string() | undefined | '_'}).
--type target_res_schema() :: #target_res_schema{}.
 
 -record(party_rel,
 		{id :: string() | undefined | '_',
@@ -187,7 +172,6 @@
 		name :: string() | undefined | '_',
 		role :: string() | undefined | '_',
 		ref_type :: string() | undefined | '_'}).
--type party_rel() :: #party_rel{}.
 
 -record(service,
 		{key :: 0..2147483647,

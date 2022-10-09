@@ -621,7 +621,7 @@ static_spec(?RANGE_ROW_SPEC = SpecId) ->
 
 -spec resource(Resource) -> Resource
 	when
-		Resource :: resource() | map().
+		Resource :: cse:resource() | map().
 %% @doc CODEC for `Resource'.
 resource(#resource{} = Resource) ->
 	resource(record_info(fields, resource), Resource, #{});
@@ -862,7 +862,7 @@ resource_ref([], _, Acc) ->
 
 -spec characteristic(Characteristics) -> Characteristics
 	when
-		Characteristics :: characteristics() | [map()].
+		Characteristics :: cse:characteristics() | [map()].
 %% @doc CODEC for `Characteristic'.
 characteristic(#{} = Characteristics) ->
 	Fields = record_info(fields, characteristic),
@@ -923,8 +923,8 @@ characteristic([], _, Acc) ->
 
 -spec resource_spec_ref(ResourceSpecificationRef) -> ResourceSpecificationRef
 	when
-		ResourceSpecificationRef :: [resource_spec_ref()] | [map()]
-				| resource_spec_ref() | map().
+		ResourceSpecificationRef :: [cse:resource_spec_ref()] | [map()]
+				| cse:resource_spec_ref() | map().
 %% @doc CODEC for `ResourceSpecificationRef'.
 resource_spec_ref(#resource_spec_ref{} = ResourceSpecificationRef) ->
 	resource_spec_ref(record_info(fields, resource_spec_ref),
@@ -964,7 +964,7 @@ resource_spec_ref([], _, Acc) ->
 
 -spec resource_spec(ResourceSpecification) -> ResourceSpecification
 	when
-		ResourceSpecification :: resource_spec() | map().
+		ResourceSpecification :: cse:resource_spec() | map().
 %% @doc CODEC for `ResourceSpecification'.
 resource_spec(#resource_spec{} = ResourceSpecification) ->
 	resource_spec(record_info(fields, resource_spec), ResourceSpecification, #{});
@@ -1105,7 +1105,7 @@ resource_spec([], _, Acc) ->
 
 -spec resource_spec_rel(ResourceSpecRelationship) -> ResourceSpecRelationship
 	when
-		ResourceSpecRelationship :: [resource_spec_rel()] | [map()].
+		ResourceSpecRelationship :: [cse:resource_spec_rel()] | [map()].
 %% @doc CODEC for `ResourceSpecRelationship'.
 %% @private
 resource_spec_rel([#resource_spec_rel{} | _] = List) ->
@@ -1204,7 +1204,7 @@ resource_spec_rel([], _, Acc) ->
 -spec resource_spec_char(ResourceSpecCharacteristic) ->
 		ResourceSpecCharacteristic
 	when
-		ResourceSpecCharacteristic :: [resource_spec_char()] | [map()].
+		ResourceSpecCharacteristic :: [cse:resource_spec_char()] | [map()].
 %% @doc CODEC for `ResourceSpecCharacteristic'.
 %% @private
 resource_spec_char([#resource_spec_char{} | _] = List) ->
@@ -1335,7 +1335,7 @@ resource_spec_char([], _, Acc) ->
 -spec resource_spec_char_rel(ResourceSpecCharRelationship) ->
 		ResourceSpecCharRelationship
 	when
-		ResourceSpecCharRelationship :: [resource_spec_char_rel()] | [map()].
+		ResourceSpecCharRelationship :: [cse:resource_spec_char_rel()] | [map()].
 %% @doc CODEC for `ResourceSpecCharRelationship'.
 %% @private
 resource_spec_char_rel([#resource_spec_char_rel{} | _] = List) ->
@@ -1412,7 +1412,7 @@ resource_spec_char_rel([], _, Acc) ->
 -spec resource_spec_char_val(ResourceSpecCharacteristicValue) ->
 		ResourceSpecCharacteristicValue
 	when
-		ResourceSpecCharacteristicValue :: [resource_spec_char_val()] | [map()].
+		ResourceSpecCharacteristicValue :: [cse:resource_spec_char_val()] | [map()].
 %% @doc CODEC for `ResourceSpecCharacteristicValue'.
 %% @private
 resource_spec_char_val([#resource_spec_char_val{} | _] = List) ->
@@ -1520,8 +1520,8 @@ resource_spec_char_val([], _, Acc) ->
 
 -spec target_res_schema(TargetSchemaRef) -> TargetSchemaRef
 	when
-		TargetSchemaRef :: [target_res_schema()] | [map()]
-				| target_res_schema() | map().
+		TargetSchemaRef :: [cse:target_res_schema()] | [map()]
+				| cse:target_res_schema() | map().
 %% @doc CODEC for `TargetSchemaRef'.
 target_res_schema(#target_res_schema{} = TargetSchemaRef) ->
 	target_res_schema(record_info(fields, target_res_schema),
@@ -1549,8 +1549,8 @@ target_res_schema([], _, Acc) ->
 
 -spec party_rel(RelatedPartyRef) -> RelatedPartyRef
 	when
-		RelatedPartyRef :: [party_rel()] | [map()]
-				| party_rel() | map().
+		RelatedPartyRef :: [cse:party_rel()] | [map()]
+				| cse:party_rel() | map().
 %% @doc CODEC for `RelatedPartyRef'.
 party_rel([#party_rel{} | _] = List) ->
 	Fields = record_info(fields, party_rel),

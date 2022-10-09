@@ -35,6 +35,12 @@
 -export([announce/1]).
 -export([add_session/2, get_session/1, get_sessions/0, delete_session/1]).
 
+-export_type([characteristics/0, related_resources/0, resource_spec/0,
+		resource_spec_rel/0, resource/0, resource_ref/0, resource_rel/0,
+		resource_spec_ref/0, resource_spec_char/0, resource_spec_char_rel/0,
+		resource_spec_char_val/0, char_rel/0, characteristic/0,
+		target_res_schema/0, party_rel/0, service/0, diameter_context/0]).
+
 -export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
 
@@ -50,6 +56,24 @@
 -define(RANGE_TABLE_SPEC,  "1651055414682-258").
 -define(RANGE_ROW_SPEC,    "1651057291061-274").
 -define(CHUNKSIZE,         100).
+
+-type characteristics() :: #{CharName :: string() => characteristic()}.
+-type related_resources() :: #{RelType :: string() => resource_rel()}.
+-type resource_spec() :: #resource_spec{}.
+-type resource_spec_rel() :: #resource_spec_rel{}.
+-type resource() :: #resource{}.
+-type resource_ref() :: #resource_ref{}.
+-type resource_rel() :: #resource_rel{}.
+-type resource_spec_ref() :: #resource_spec_ref{}.
+-type resource_spec_char() :: #resource_spec_char{}.
+-type resource_spec_char_rel() :: #resource_spec_char_rel{}.
+-type resource_spec_char_val() :: #resource_spec_char_val{}.
+-type char_rel() :: #char_rel{}.
+-type characteristic() :: #characteristic{}.
+-type target_res_schema() :: #target_res_schema{}.
+-type party_rel() :: #party_rel{}.
+-type service() :: #service{}.
+-type diameter_context() :: #diameter_context{}.
 
 %%----------------------------------------------------------------------
 %%  The cse public API
