@@ -54,6 +54,11 @@
 init([Sup] = _Args) ->
 	{ok, Name} = application:get_env(tsl_name),
 	{ok, Module} = application:get_env(tsl_callback),
+	init1(Sup, Name, Module).
+%% @hidden
+init1(Sup, Name, Module)
+		when is_atom(Name), Name /= undefined,
+		is_atom(Module), Module /= undefined ->
 	{ok, TcoArgs} = application:get_env(tsl_args),
 	{ok, Options} = application:get_env(tsl_opts),
 	case tcap:start_tsl({local, Name}, Module, [Sup | TcoArgs], Options) of
@@ -61,7 +66,9 @@ init([Sup] = _Args) ->
 			{ok, TCO, #state{sup = Sup, tco = TCO}};
 		{error, Reason} ->
 			{error, Reason}
-	end.
+	end;
+init1(_Sup, _Name, _Module) ->
+	ignore.
 
 -spec terminate(Reason, State) -> any()
 	when
