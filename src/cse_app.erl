@@ -337,12 +337,7 @@ install2(Nodes) ->
 install3(Nodes, Acc) ->
 	case create_table(resource_spec, Nodes) of
 		ok ->
-			case install_resource_specs() of
-				ok ->
-					install4(Nodes, [resource_spec | Acc]);
-				{error, Reason} ->
-					{error, Reason}
-			end;
+			install4(Nodes, [resource_spec | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -365,11 +360,6 @@ install5(Nodes, Acc) ->
 install6(Nodes, Acc) ->
 	case create_table(cse_context, Nodes) of
 		ok ->
-			ContextId = "32260@3gpp.org",
-			Mod = cse_slp_prepaid_diameter_fsm,
-			Args = [],
-			Opts = [],
-			cse:add_context(ContextId, Mod, Args, Opts),
 			install7(Nodes, [cse_context | Acc]);
 		{error, Reason} ->
 			{error, Reason}
@@ -424,21 +414,37 @@ install11(_Nodes, Tables) ->
 			{error, Reason}
 	end.
 %% @hidden
-install12(Tables, true) ->
+install12(Nodes, Acc) ->
+	case install_resource_specs() of
+		ok ->
+			install13(Nodes, [resource_spec | Acc]);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+install13(Nodes, Acc) ->
+	ContextId = "32260@3gpp.org",
+	Mod = cse_slp_prepaid_diameter_fsm,
+	Args = [],
+	Opts = [],
+	cse:add_context(ContextId, Mod, Args, Opts),
+	install14(Nodes, Acc).
+%% @hidden
+install14(Tables, true) ->
 	case inets:start() of
 		ok ->
 			error_logger:info_msg("Started inets.~n"),
-			install13(Tables);
+			install15(Tables);
 		{error, {already_started, inets}} ->
-			install13(Tables);
+			install15(Tables);
 		{error, Reason} ->
 			error_logger:error_msg("Failed to start inets~n"),
 			{error, Reason}
 	end;
-install12(Tables, false) ->
+install14(Tables, false) ->
 	{ok, Tables}.
 %% @hidden
-install13(Tables) ->
+install15(Tables) ->
 	case cse:list_users() of
 		{ok, []} ->
 			UserData = [{locale, "en"}],
