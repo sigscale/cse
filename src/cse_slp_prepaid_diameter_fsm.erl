@@ -18,17 +18,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
 %%% 	module implements a Service Logic Processing Program (SLP)
-%%% 	for Diameter Ro Application Part within the
+%%% 	for DIAMETER Ro application within the
 %%% 	{@link //cse. cse} application.
-%%%
-%%% 	This module is not intended to be started directly but rather
-%%% 	pushed onto the callback stack of the
-%%% 	{@link //cse/cse_slp_cap_fsm. cse_slp_cap_fsm}
-%%% 	{@link //stdlib/gen_statem. gen_statem} behaviour callback
-%%% 	module which handles initialization, dialog `BEGIN' and the
-%%% 	first `Invoke' with `InitialDP'.  The Service Key is used to
-%%% 	lookup the SLP implementation module (this) and push it onto
-%%% 	the callback stack.
 %%%
 -module(cse_slp_prepaid_diameter_fsm).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
