@@ -1544,12 +1544,14 @@ service_rating3(#{rsu := undefined, usu := undefined}, Acc) ->
 subscription_id(Data) ->
 	subscription_id1(Data, []).
 %% @hidden
-subscription_id1(#{msisdn := MSISDN} = Data, Acc) ->
+subscription_id1(#{msisdn := MSISDN} = Data, Acc)
+		when is_list(MSISDN) ->
 	subscription_id2(Data, ["msisdn-" ++ MSISDN | Acc]);
 subscription_id1(Data, Acc) ->
 	subscription_id2(Data, Acc).
 %% @hidden
-subscription_id2(#{imsi := IMSI} = _Data, Acc) ->
+subscription_id2(#{imsi := IMSI} = _Data, Acc)
+		when is_list(IMSI) ->
 	["imsi-" ++ IMSI | Acc];
 subscription_id2(_Data, Acc) ->
 	Acc.
