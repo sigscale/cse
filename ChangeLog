@@ -1,3 +1,10 @@
+2022-10-10  Vance Shipley <vances@sigscale.org>
+
+	* do not start protcool stacks unless configured
+	* do not start tco bridge unless name and module defined
+	* correct edoc module deascription
+	* handle undefined imsi/msisdn in subscription id
+
 2022-10-09  Vance Shipley <vances@sigscale.org>
 
 	* use registry to get diameter slpi
