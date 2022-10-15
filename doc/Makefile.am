@@ -51,6 +51,8 @@ doc_DATA = overview.edoc $(modhtml) \
 		modules-frame.html overview-summary.html \
 		index.html stylesheet.css edoc-info \
 		sigscale-logo.png \
+		oas-logo.svg \
+		swaggerhub-logo.svg \
 		supervision.svg \
 		in-processing-model.svg \
 		in-functional-architecture.svg \
@@ -76,6 +78,8 @@ overview.edoc: overview.edoc-in
 			mv $$i.tmp $$i; \
 	done
 	-cp -n $(top_srcdir)/doc/sigscale-logo.png .
+	-cp -n $(top_srcdir)/doc/oas-logo.svg .
+	-cp -n $(top_srcdir)/doc/swaggerhub-logo.svg .
 	-cp -n $(top_srcdir)/doc/in-processing-model.svg .
 	-cp -n $(top_srcdir)/doc/in-functional-architecture.svg .
 	-cp -n $(top_srcdir)/doc/supervision.svg .

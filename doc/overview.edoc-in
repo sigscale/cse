@@ -16,18 +16,20 @@
 		3GPP TS 29.078</a> Customised Applications for Mobile network Enhanced Logic (CAMEL)
 		Application Part (CAP)
 
-@doc This application implements a Service Control Function (SCF) in an Intelligent Network (IN).
+@doc This application implements a Custom Service Environment (CSE).
 
 ==Introduction==
-SigScale CSE (CAMEL Service Environment) is an Intelligent Network (IN)
-platform to support a network operator's customized service logic. The
-3GPP CAMEL Application Part (CAP) protocol is supported as well as ETSI
-INAP for wireline operators.
-
 This application provides a Service Logic Execution Environment (SLEE) for
 Service Logic Processing Programs (SLP) implementing an operator's custom
 services.  It is a highly concurrent SLEE, with low resource requirements,
-supporting instantaneous SLP instantiation.
+supporting instantaneous SLP instantiation. Several protocol stacks are
+supported including CAP, INAP, DIAMETER, RADIUS and REST.
+
+SigScale CSE performs the Service Control Function (SCF) in an
+Intelligent Network (IN), providing a platform to support a network
+operator's customized service logic. The 3GPP CAMEL Application Part (CAP)
+protocol is supported, providing a CAMEL Service Environment (CSE),
+as well as ETSI INAP for wireline operators. 
 
 ===IN Service Processing Model===
 The IN arose from an inability of network operators to rapidly create
@@ -38,7 +40,8 @@ between network functions via service independent interfaces.
 A high level overview of an IN service processing model is given
 in ITU-T Q.1201 Figure 16 as depicted below:
 
-<img alt="IN Processing Model" src="in-processing-model.svg" />
+<img class="diagram" alt="IN Processing Model"
+		src="in-processing-model.svg" />
 
 Basic Call Processing (BCP) is provided in network functions such as
 Mobile Switching Centers (MSC). The "hooks" are introduced into
@@ -56,7 +59,8 @@ implemented.
 The main elements in the high level IN functional architecture
 are depicted in the diagram below:
 
-<img alt="IN Functional Architecture" src="in-functional-architecture.svg" />
+<img class="diagram" alt="IN Functional Architecture"
+		src="in-functional-architecture.svg" />
 
 This application implements the Service Control Function (SCF)
 which provides the service logic programs (SLPs) that are used to
@@ -81,14 +85,14 @@ with the {@link //stdlib/gen_statem. gen_statem} behaviour.
 The CAMEL standardized Originating Basic Call State Machine (O-BCSM)
 is depicted in <a href="#figure1-1">Figure 1-1</a>.
 
-<p><img alt="diagram of camel o-bcsm"
+<p><img class="diagram" alt="diagram of camel o-bcsm"
 		name="figure1-1" src="o-bcsm-camel.svg" /><br />
 Figure 1-1: O-BCSM</p>
 
 The CAMEL standardized Terminating Basic Call State Machine (T-BCSM)
 is depicted in <a href="#figure1-2">Figure 1-2</a>.
 
-<p><img alt="diagram of camel t-bcsm"
+<p><img class="diagram" alt="diagram of camel t-bcsm"
 		name="figure1-2" src="t-bcsm-camel.svg" /><br />
 Figure 1-2: T-BCSM</p>
 
@@ -104,7 +108,7 @@ application exchange primitives with a Transaction Coordinator (TCO)
 process in the {@link //tcap. tcap} application's Transaction Sublayer
 (TSL).
 
-<p><img alt="diagram of interprocess communication"
+<p><img class="diagram" alt="diagram of interprocess communication"
 		name="figure1-2" src="messaging.svg" /><br />
 Figure 1-2: Messaging</p>
 
@@ -112,34 +116,182 @@ Figure 1-2: Messaging</p>
 Process instances of the applications may be distributed across nodes
 as depicted in <a href="#figure1-3">Figure 1-3</a>.
 
-<p><img alt="diagram of process distribution"
+<p><img class="diagram" alt="diagram of process distribution"
 		name="figure1-3" src="distribution.svg" /><br />
 Figure 1-3: Distribution</p>
 
 ==Installation==
 Before running the {@link //cse. cse} application for the first time
-it is necessary to initialize {@link //mnesia. mnesia} tables and
-configure a {@link //gtt. gtt} application server (AS) and SCTP
-endpoint (EP).
+it is necessary to initialize {@link //mnesia. mnesia} tables.
+
+===Initialize CSE===
 ```
 otp@cse:~$ ERL_LIBS=lib erl -sname cse -config releases/%VERSION%/sys
-(cse@cse)1> m3ua_app:install().
-(cse@cse)2> gtt_app:install().
-(cse@cse)3> cse_app:install().
+(cse@cse)1> cse_app:install().
+'''
+
+===Initialize M3UA===
+For IN use cases the SIGTRAN stack tables should be initialized:
+```
+(cse@cse)2> m3ua_app:install().
+'''
+
+===Initialize GTT===
+Configure a {@link //gtt. gtt} application server (AS) and SCTP endpoint (EP):
+```
+(cse@cse)3> gtt_app:install().
 (cse@cse)4> gtt:add_as(sg1, sg, 0, 0, [{2057, [], []}], loadshare, 1, 2).
 (cse@cse)5> gtt:add_ep(ep1, {{0,0,0,0}, 2905, [{ppi,false},{use_rc,false}]}, undefined, server, sgp, gtt_m3ua_cb, [{ssn, #{146 => cse_tsl}}], [sg1]).
-(cse@cse)5> q().
+(cse@cse)6> q().
 '''
 
 ==Operation==
+The CSE application will start any number of configured TCAP or DIAMETER
+services.  The {@link //inets. inets} application may be started to
+support REST APIs.
+
+===REST API===
+The {@link //cse. cse} application provides a
+<a target="_blank" href="http://www.ics.uci.edu/~fielding/pubs/dissertation/top.htm">RESTful</a>
+API built on the <a target="_blank" href="http://tools.ietf.org/html/rfc2616">HTTP</a> protocol
+and using <a target="_blank" href="http://tools.ietf.org/html/rfc4627">JSON</a> data encoding.
+
+The following <a target="_blank" href="https://www.tmforum.org/open-apis/">
+TM Forum Open APIs</a> are used:
+<p><table id="mt">
+	<thead>
+		<tr id="mt">
+			<th id="mt">Number</th>
+			<th id="mt">TM Forum Open API</th>
+			<th id="mt">Download</th>
+			<th id="mt">Browse</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr id="mt">
+			<td id="mt">TMF634</td>
+			<td id="mt">Resource Catalog Management</td>
+			<td id="mt">
+				<a href="/schema/resourceCatalogManagement.swagger.json"
+						download="resourceCatalogManagement.json">
+					<img src="oas-logo.svg" />
+				</a>
+			</td>
+			<td id="mt">
+				<a target="_blank"
+						href="https://app.swaggerhub.com/apis/SigScale/cse-resource-catalog/4.0.0">
+					<img src="swaggerhub-logo.svg" />
+				</a>
+			</td>
+		</tr>
+		<tr id="mt">
+			<td id="mt">TMF639</td>
+			<td id="mt">Resource Inventory Management</td>
+			<td id="mt">
+				<a href="/schema/resourceInventoryManagement.swagger.json"
+						download="resourceInventoryManagement.json">
+					<img src="oas-logo.svg" />
+				</a>
+			</td>
+			<td id="mt">
+				<a target="_blank"
+						href="https://app.swaggerhub.com/apis/SigScale/cse-resource-inventory/4.0.0">
+					<img src="swaggerhub-logo.svg" />
+				</a>
+			</td>
+		</tr>
+	</tbody>
+</table></p>
+
+===HTTP Methods===
+The <a target="_blank" href="http://tools.ietf.org/html/rfc2616">HTTP</a>
+methods used in this API include
+<a target="_blank" href="http://tools.ietf.org/html/rfc2616#section-9.3">`GET'</a>,
+<a target="_blank" href="http://tools.ietf.org/html/rfc2616#section-9.5">`POST'</a>,
+<a target="_blank" href="http://tools.ietf.org/html/rfc2616#section-9.7">`DELETE'</a>.
+
+===Query Patterns===
+The Resource Inventory is indexed by the `id' attribute, making direct
+selection using the path pattern `/resource/{id}' very efficient. Where
+unavailable a query component
+(<a target="_blank" href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.4">RFC3986</a>)
+may be added to the path to select resource(s).
+
+====Simple Query====
+The `name' and `resourceSpecification' attributes are supported in a query
+component using the simple syntax described in
+<a target="_blank" href="https://www.tmforum.org/resources/specification/tmf630-rest-api-design-guidelines-4-2-0/">
+TMF630</a> Part 1. The following example may be used to select all the rows
+of `Prefix' tables by querying for the `resourceSpecification' value of a
+`Prefix' table row:
+```
+curl -su admin:admin \
+      http://localhost:8080/resourceInventoryManagement/v4/resource?resourceSpecification.id=1647577957914-66
+'''
+
+====Advanced Query Filter====
+The `resourceCharacteristic' and `resourceRelationship' attribute values
+are arrays of objects which cannot be selected using a simple query but
+are supported using an advanced query pattern described in
+<a target="_blank" href="https://www.tmforum.org/resources/specification/tmf630-rest-api-design-guidelines-4-2-0/">
+TMF630</a> Part 6. A `filter' parameter value is a
+<a target="_blank" href="https://www.ietf.org/archive/id/draft-ietf-jsonpath-base-05.html">
+JSONPath</a> expression selecting members of these arrays. Simple and
+advanced filters may be combined.
+
+Selecting a specific row in a table requires a query on the characteristics
+which define the columns. The following is a JSONPath expression example
+selecting a row in a `Range' table:
+```
+resourceCharacteristic[?(@.name=='start' && @.value=='0010000'}]
+'''
+
+The following example demonstrates querying for a row in a table,
+with a locally created `resourceSpecification', using the above filter.
+Note that the special characters in the JSONPath expression must be escaped:
+```
+curl -su admin:admin \
+      http://localhost:8080/resourceInventoryManagement/v4/resource?resourceSpecification.id=1665845853451-392&filter=resourceCharacteristic%5B%3F(%40.name%3D%3D%27start%27%26%26%40.value%3D%3D%2730010000%27)%5D
+'''
+
+====Delete by Query====
+To save a step you may use an advanced query to delete a table row. Use the
+above path with a DELETE operation and the REST server will first locate
+the resource using the query and then continue with the DELETE operation
+using the discovered `{id}'.
+
+===Pagination===
+A `GET' operation on a REST <i>Collection</i>, with or without a query
+portion, could result in a huge array of <i>Items</i>. To prevent
+overwhelming the client or server pagination is used. A maximum limit
+on the number of items in a single response (page) is enforced (default
+`1000'). The `Content-Range' header 
+(<a target="_blank" href="https://www.rfc-editor.org/rfc/rfc7233">RFC7233</a>)
+shall indicate the range of the response and the total size (if available):
+```
+Content-Range: items 1-1000/3768
+Accept-Ranges: items
+Etag: 1643855624410-7330
+'''
+The `Etag' header provides a reference to a process in the server which
+holds a result buffer and continuation pointer. This process will be
+removed after an idle timeout (default `1m'). A series of paginated `GET'
+requests MUST include an `If-Match' header, containing the `Etag' value
+of the first response, and specify the next page with the `Range' header:
+```
+If-Match: 1643855624410-7330
+Range: items=1001-2000
+'''
+See `rest_page_size' and `rest_page_timeout' in the Configuration section
+below.
 
 ==Configuration==
 The {@link //cse. cse} application may be configured using the following
-application environment variables (`~/releases/<VERSION>/sys.config'):
+application environment variables (`~/releases/<VERSION>/sys.config').
 
 ===DIAMETER===
 Application environment variables configuring instances of the
-{@link //diameter. diameter} application.
+{@link //diameter. diameter} application:
 <dl>
 	<dt>`diameter'</dt>
 		<dd>Defines DIAMETER services as `[{Addr, Port, Options}]'.
@@ -151,7 +303,7 @@ Application environment variables configuring instances of the
 
 ===TCAP===
 Application environment variables configuring binding of the
-Transaction Sublayer (TSL) of the {@link //tcap. tcap} application.
+Transaction Sublayer (TSL) of the {@link //tcap. tcap} application:
 <dl>
 	<dt>`tsl_name'</dt>
 		<dd>Registered name of the TCO process in the TCAP Transaction
@@ -191,8 +343,7 @@ API on the 3GPP Re interface to a remote Rating Funtion (RF) (i.e. OCS).
 </dl>
 
 ===REST===
-Application environment variables configuring HTTP server
-({@link //inets/httpd. httpd}) behaviour.
+Application environment variables configuring REST API behaviour:
 <dl>
 	<dt>`rest_page_size'</dt>
 		<dd>Defines the maximum number of items to return in a single
@@ -204,7 +355,7 @@ Application environment variables configuring HTTP server
 
 ===SNMP===
 Application environment variables configuring the SNMP
-{@link //snmp/snmpa. agent} behaviour.
+{@link //snmp/snmpa. agent} behaviour:
 <dl>
 	<dt>`snmp_alarms'</dt>
 		<dd>Defines SNMP notifications ("traps"). The value format is

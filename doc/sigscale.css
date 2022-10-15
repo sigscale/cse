@@ -1,15 +1,15 @@
 /* standard EDoc style sheet */
 body {
 	font-family: Verdana, Arial, Helvetica, sans-serif;
-      	margin-left: .25in;
-       	margin-right: .2in;
-       	margin-top: 0.2in;
-       	margin-bottom: 0.2in;
-       	color: #000000;
-       	background-color: #ffffff;
+	margin-left: .25in;
+	margin-right: .2in;
+	margin-top: 0.2in;
+	margin-bottom: 0.2in;
+	color: #000000;
+	background-color: #ffffff;
 }
 h1,h2 {
- 	margin-left: -0.2in;
+	margin-left: -0.2in;
 }
 div.navbar {
 	background-color: #f57f17;
@@ -21,10 +21,10 @@ h2.indextitle {
 }
 h3.function,h3.typedecl {
 	background-color: #f57f17;
- 	padding-left: 1em;
+	padding-left: 1em;
 }
 div.spec {
- 	margin-left: 2em;
+	margin-left: 2em;
 	background-color: #eeeeee;
 }
 a.module,a.package {
@@ -55,6 +55,12 @@ td {
 }
 
 /* SigScale style */
+img.diagram {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	width: 50%;
+}
 table#mt, tr#mt, td#mt {
 	border: 1px solid black;
 	text-align: left;
@@ -80,5 +86,8 @@ caption.op {
 }
 td#opl {
 	background-color: #f57f17;
+}
+td#mt img {
+	height: 2em;
 }
 
