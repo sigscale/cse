@@ -23,9 +23,10 @@
 
 -include_lib("inets/include/httpd.hrl").
 
--define(DIAMETERDATA, 32251).
--define(DIAMETERVOICE, 32260).
--define(DIAMETERSMS, 32274).
+-define(PS,  "32251@3gpp.org").
+-define(IMS, "32260@3gpp.org").
+-define(SMS, "32274@3gpp.org").
+-define(VCS, "32276@3gpp.org").
 
 -ifdef(OTP_RELEASE).
 	-if(?OTP_RELEASE > 23).
@@ -98,8 +99,8 @@ do_post(ModData, Body, ["ratingdata"]) ->
 		{ok, #{"invocationSequenceNumber" := SequenceNumber,
 				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
-			IMSI = get_imsi(SubscriptionId),
-			ServiceRatingResponse = rate(IMSI, Request, ModData),
+			Subscriber = get_sub_id(SubscriptionId),
+			ServiceRatingResponse = rate(Subscriber, Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
 					"serviceRating" => ServiceRatingResponse},
@@ -114,8 +115,8 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "update"]) ->
 		{ok, #{"invocationSequenceNumber" := SequenceNumber,
 				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
-			IMSI = get_imsi(SubscriptionId),
-			ServiceRatingResponse = rate(IMSI, Request, ModData),
+			Subscriber = get_sub_id(SubscriptionId),
+			ServiceRatingResponse = rate(Subscriber, Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
 					"serviceRating" => ServiceRatingResponse},
@@ -128,9 +129,10 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 		{ok, #{"invocationSequenceNumber" := SequenceNumber,
 				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
-			IMSI = get_imsi(SubscriptionId),
-			ServiceRatingResponse = rate(IMSI, Request, ModData),
-			{ok, {_, 0} = _Account} = gen_server:call(ocs, {release, IMSI}),
+			Subscriber = get_sub_id(SubscriptionId),
+			ServiceRatingResponse = rate(Subscriber, Request, ModData),
+			{ok, {_, 0} = _Account} = gen_server:call(ocs,
+					{release, Subscriber}),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now),
 					"serviceRating" => ServiceRatingResponse},
@@ -146,57 +148,73 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 		ModData :: #mod{},
 		Response :: map().
 %% @doc Build a rating response.
-rate(IMSI, #{"serviceRating" := ServiceRating}, ModData) ->
-	rate1(IMSI, ServiceRating, ModData, []).
+rate(Subscriber, #{"serviceRating" := ServiceRating}, ModData) ->
+	rate1(Subscriber, ServiceRating, ModData, []).
 %% @hidden
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := SvcContextId} = H | T] , ModData, Acc) ->
-	case service_type(SvcContextId) of
-		?DIAMETERDATA ->
-			Amount = rand:uniform(10) * 1000000,
-			case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-				{ok, {_Balance, Reserve}} when Reserve > 0 ->
-					H1 = maps:remove("requestedUnit", H),
-					ServiceRating = H1#{"resultCode" => "SUCCESS",
-							"grantedUnit" => #{"totalVolume" => Reserve}},
-					rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
-				{error, out_of_credit} ->
-					do_response(ModData, {error, 403});
-				{error, not_found} ->
-					do_response(ModData, {error, 404});
-				{error, _Reason} ->
-					do_response(ModData, {error, 500})
-			end;
-		?DIAMETERVOICE ->
-			Amount = rand:uniform(50) * 30,
-			case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-				{ok, {_Balance, Reserve}} when Reserve > 0 ->
-					H1 = maps:remove("requestedUnit", H),
-					ServiceRating = H1#{"resultCode" => "SUCCESS",
-							"grantedUnit" => #{"time" => Reserve}},
-					rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
-				{error, out_of_credit} ->
-					do_response(ModData, {error, 403});
-				{error, not_found} ->
-					do_response(ModData, {error, 404});
-				{error, _Reason} ->
-					do_response(ModData, {error, 500})
-			end;
-		?DIAMETERSMS ->
-			Amount = rand:uniform(5),
-			case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-				{ok, {_Balance, Reserve}} when Reserve > 0 ->
-					H1 = maps:remove("requestedUnit", H),
-					ServiceRating = H1#{"resultCode" => "SUCCESS",
-							"grantedUnit" => #{"serviceSpecificUnit" => Reserve}},
-					rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
-				{error, out_of_credit} ->
-					do_response(ModData, {error, 403});
-				{error, not_found} ->
-					do_response(ModData, {error, 404});
-				{error, _Reason} ->
-					do_response(ModData, {error, 500})
-			end
+		"serviceContextId" := ?PS} = H | T] , ModData, Acc) ->
+	Amount = rand:uniform(10) * 1000000,
+	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+			H1 = maps:remove("requestedUnit", H),
+			ServiceRating = H1#{"resultCode" => "SUCCESS",
+					"grantedUnit" => #{"totalVolume" => Reserve}},
+			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(Subscriber, [#{"requestSubType" := "RESERVE",
+		"serviceContextId" := ?IMS} = H | T] , ModData, Acc) ->
+	Amount = rand:uniform(50) * 30,
+	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+			H1 = maps:remove("requestedUnit", H),
+			ServiceRating = H1#{"resultCode" => "SUCCESS",
+					"grantedUnit" => #{"time" => Reserve}},
+			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(Subscriber, [#{"requestSubType" := "RESERVE",
+		"serviceContextId" := ?SMS} = H | T] , ModData, Acc) ->
+	Amount = rand:uniform(5),
+	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+			H1 = maps:remove("requestedUnit", H),
+			ServiceRating = H1#{"resultCode" => "SUCCESS",
+					"grantedUnit" => #{"serviceSpecificUnit" => Reserve}},
+			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(Subscriber, [#{"requestSubType" := "RESERVE",
+		"serviceContextId" := ?VCS} = H | T] , ModData, Acc) ->
+	Amount = rand:uniform(50) * 30,
+	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
+		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+			H1 = maps:remove("requestedUnit", H),
+			ServiceRating = H1#{"resultCode" => "SUCCESS",
+					"grantedUnit" => #{"time" => Reserve}},
+			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+erlang:display({?MODULE, ?LINE, _Reason}),
+			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, [#{"requestSubType" := "DEBIT",
 		"consumedUnit" := ConsumedUnit} = H | T], ModData, Acc) ->
@@ -256,17 +274,19 @@ send(#mod{socket = Socket, socket_type = SocketType} = Info,
 	httpd_response:send_header(Info, StatusCode, Headers),
 	httpd_socket:deliver(SocketType, Socket, ResponseBody).
 
--spec get_imsi(SubscriptionIds) -> Subscriber
+-spec get_sub_id(SubscriptionIds) -> Subscriber
 	when
 		SubscriptionIds :: [Id],
 		Id :: string(),
 		Subscriber :: string().
-%% @hidden Get a subscriber IMSI from list of subscription identifiers.
-get_imsi(["imsi-" ++ IMSI | _]) ->
+%% @hidden Get an ID from list of subscription identifiers.
+get_sub_id(["imsi-" ++ IMSI | _]) ->
 	IMSI;
-get_imsi([_ | T]) ->
-	get_imsi(T);
-get_imsi([]) ->
+get_sub_id(["msisdn-" ++ MSISDN| _]) ->
+	MSISDN;
+get_sub_id([_ | T]) ->
+	get_sub_id(T);
+get_sub_id([]) ->
 	undefined.
 
 %% @hidden
@@ -276,22 +296,4 @@ get_units(#{"totalVolume" := TotalVolume}) ->
 	TotalVolume;
 get_units(#{"serviceSpecificUnit" := ServiceSpecificUnit}) ->
 	ServiceSpecificUnit.
-
-%% @hidden
-service_type(Id)
-		when is_list(Id) ->
-	service_type(list_to_binary(Id));
-service_type(Id) ->
-	case binary:part(Id, size(Id), -9) of
-		<<"@3gpp.org">> ->
-			ServiceContext = binary:part(Id, byte_size(Id) - 14, 5),
-			case catch binary_to_integer(ServiceContext) of
-				{'EXIT', _} ->
-					undefined;
-				SeviceType ->
-					SeviceType
-			end;
-		_ ->
-			undefined
-	end.
 
