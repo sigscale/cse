@@ -84,21 +84,6 @@ init_per_suite(Config) ->
 	ok = application:set_env(cse, tsl_callback, Callback),
 	{ok, TslArgs} = application:get_env(cse, tsl_args),
 	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
-	ok = cse_test_lib:start([inets]),
-	HttpdPort = case inets:start(httpd,
-			[{port, 0},
-			{server_name, atom_to_list(?MODULE)},
-			{server_root, "./"},
-			{document_root, ?config(data_dir, Config)},
-			{modules, [mod_ct_nrf]}]) of
-		{ok, HttpdPid} ->
-			[{port, Port}] = httpd:info(HttpdPid, [port]),
-			Port;
-		{error, InetsReason} ->
-			ct:fail(InetsReason)
-	end,
-	ok = application:set_env(cse, nrf_uri,
-			"http://localhost:" ++ integer_to_list(HttpdPort)),
 	ok = cse_test_lib:init_tables(),
 	ok = cse_test_lib:start(),
 	EDP = #{abandon => notifyAndContinue,
@@ -111,13 +96,41 @@ init_per_suite(Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	ok = cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, EDP),
 	{ok, TCO} = application:get_env(cse, tsl_name),
-	[{tco, TCO}, {service_key, ServiceKey} | Config].
+	Config1 = [{tco, TCO}, {service_key, ServiceKey} | Config],
+	init_per_suite1(Config1).
+init_per_suite1(Config) ->
+	case inets:start(httpd,
+			[{port, 0},
+			{server_name, atom_to_list(?MODULE)},
+			{server_root, "./"},
+			{document_root, ?config(data_dir, Config)},
+			{modules, [mod_ct_nrf]}]) of
+		{ok, HttpdPid} ->
+			[{port, Port}] = httpd:info(HttpdPid, [port]),
+			NrfUri = "http://localhost:" ++ integer_to_list(Port),
+			ok = application:set_env(cse, nrf_uri, NrfUri),
+			Config1 = [{server_port, Port}, {server_pid, HttpdPid}, {nrf_uri, NrfUri} | Config],
+			init_per_suite2(Config1);
+		{error, InetsReason} ->
+			ct:fail(InetsReason)
+	end.
+%% @hidden
+init_per_suite2(Config) ->
+	case gen_server:start({local, ocs}, cse_test_ocs_server, [], []) of
+		{ok, Pid} ->
+			[{ocs, Pid} | Config];
+		{error, Reason} ->
+			ct:fail(Reason)
+	end.
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
 %% Cleanup after the whole suite.
 %%
-end_per_suite(_Config) ->
-	ok = cse_test_lib:stop().
+end_per_suite(Config) ->
+	ok = cse_test_lib:stop(),
+	OCS = ?config(ocs, Config),
+	ok = gen_server:stop(OCS),
+	Config.
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before each test case.
@@ -154,6 +167,7 @@ start_dialogue() ->
 	[{userdata, [{doc, "Start a TCAP Dialogue"}]}].
 
 start_dialogue(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -161,7 +175,10 @@ start_dialogue(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -190,6 +207,7 @@ end_dialogue() ->
 	[{userdata, [{doc, "End a TCAP Dialogue"}]}].
 
 end_dialogue(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -197,7 +215,10 @@ end_dialogue(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -222,6 +243,7 @@ initial_dp_mo() ->
 	[{userdata, [{doc, "MO InitialDP received by SLPI"}]}].
 
 initial_dp_mo(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -229,7 +251,10 @@ initial_dp_mo(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -244,6 +269,7 @@ initial_dp_mt() ->
 	[{userdata, [{doc, "MT InitialDP received by SLPI"}]}].
 
 initial_dp_mt(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -251,7 +277,10 @@ initial_dp_mt(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -266,6 +295,7 @@ continue() ->
 	[{userdata, [{doc, "Continue received by SSF"}]}].
 
 continue(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -273,7 +303,10 @@ continue(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -290,6 +323,7 @@ dp_arming() ->
 	[{userdata, [{doc, "RequestReportBCSMEvent received by SSF"}]}].
 
 dp_arming(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -297,7 +331,10 @@ dp_arming(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -326,6 +363,7 @@ apply_charging() ->
 	[{userdata, [{doc, "ApplyCharging received by SSF"}]}].
 
 apply_charging(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -333,7 +371,10 @@ apply_charging(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -360,6 +401,7 @@ call_info_request() ->
 	[{userdata, [{doc, "CallInformationRequest received by SSF"}]}].
 
 call_info_request(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -367,7 +409,10 @@ call_info_request(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	SccpParams2 = receive
@@ -397,6 +442,7 @@ mo_abandon() ->
 	[{userdata, [{doc, "EventReportBCSM:oAbandon received by SCF"}]}].
 
 mo_abandon(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -404,7 +450,10 @@ mo_abandon(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -433,6 +482,7 @@ mt_abandon() ->
 	[{userdata, [{doc, "EventReportBCSM:tAbandon received by SCF"}]}].
 
 mt_abandon(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -440,7 +490,10 @@ mt_abandon(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -469,6 +522,7 @@ mo_answer() ->
 	[{userdata, [{doc, "EventReportBCSM:oAnswer received by SCF"}]}].
 
 mo_answer(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -476,7 +530,10 @@ mo_answer(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -498,6 +555,7 @@ mt_answer() ->
 	[{userdata, [{doc, "EventReportBCSM:tAnswer received by SCF"}]}].
 
 mt_answer(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -505,7 +563,10 @@ mt_answer(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	TcUser = receive
@@ -527,6 +588,7 @@ mo_disconnect() ->
 	[{userdata, [{doc, "EventReportBCSM:oDisconnect received by SCF"}]}].
 
 mo_disconnect(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -534,7 +596,10 @@ mo_disconnect(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -566,6 +631,7 @@ mt_disconnect() ->
 	[{userdata, [{doc, "EventReportBCSM:tDisconnect received by SCF"}]}].
 
 mt_disconnect(Config) ->
+	OCS = ?config(ocs, Config),
 	ServiceKey = ?config(service_key, Config),
 	TCO = ?config(tco, Config),
 	TCO ! {?MODULE, self()},
@@ -573,7 +639,10 @@ mt_disconnect(Config) ->
 	SsfParty = party(),
 	ScfParty = party(),
 	SsfTid = tid(),
-	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_mt(SsfTid, AC, ServiceKey, IMSI),
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
@@ -761,7 +830,7 @@ unitdata(UserData, CalledParty, CallingParty) ->
 			calledAddress = CalledParty,
 			callingAddress = CallingParty}.
 
-pdu_initial_mo(OTID, AC, ServiceKey) ->
+pdu_initial_mo(OTID, AC, ServiceKey, IMSI) ->
 	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
 	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
 			{dialogueRequest, AARQ}),
@@ -782,7 +851,7 @@ pdu_initial_mo(OTID, AC, ServiceKey) ->
 			locationNumber = isup_calling_party(),
 			bearerCapability = {bearerCap,<<128,144,163>>},
 			eventTypeBCSM = collectedInfo,
-			iMSI = <<0,1,16,16,50,84,118,152>>,
+			iMSI = cse_codec:tbcd(IMSI),
 			locationInformation = LocationInformation,
 			'ext-basicServiceCode' = {'ext-Teleservice', <<17>>},
 			callReferenceNumber = crypto:strong_rand_bytes(4),
@@ -800,7 +869,7 @@ pdu_initial_mo(OTID, AC, ServiceKey) ->
 	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
 	UD.
 
-pdu_initial_mt(OTID, AC, ServiceKey) ->
+pdu_initial_mt(OTID, AC, ServiceKey, IMSI) ->
 	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
 	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
 			{dialogueRequest, AARQ}),
@@ -822,7 +891,7 @@ pdu_initial_mt(OTID, AC, ServiceKey) ->
 			locationNumber = isup_calling_party(),
 			bearerCapability = {bearerCap,<<128,144,163>>},
 			eventTypeBCSM = termAttemptAuthorized,
-			iMSI = <<0,1,16,16,50,84,118,152>>,
+			iMSI = cse_codec:tbcd(IMSI),
 			locationInformation = LocationInformation,
 			callReferenceNumber = crypto:strong_rand_bytes(4),
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
