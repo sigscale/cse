@@ -80,8 +80,7 @@ init_per_suite(Config) ->
 	ok = application:set_env(mnesia, dir, DataDir),
 	ok = cse_test_lib:unload(cse),
 	ok = cse_test_lib:load(cse),
-	{ok, Cb} = application:get_env(cse, tsl_callback),
-	Callback = callback(Cb),
+	Callback = callback(cse_tco_server_cb),
 	ok = application:set_env(cse, tsl_callback, Callback),
 	{ok, TslArgs} = application:get_env(cse, tsl_args),
 	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
@@ -112,7 +111,7 @@ init_per_suite(Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	ok = cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, EDP),
 	{ok, TCO} = application:get_env(cse, tsl_name),
-	[{tco, TCO}, {orig_cb, Cb}, {service_key, ServiceKey} | Config].
+	[{tco, TCO}, {service_key, ServiceKey} | Config].
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
 %% Cleanup after the whole suite.
