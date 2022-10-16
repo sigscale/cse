@@ -1,3 +1,17 @@
+2022-10-16  Vance Shipley <vances@sigscale.org>
+
+	* no nrf release on end before nrf start
+	* cap and inap test suites use test ocs server
+	* use test library for random ids
+	* handle vcs context in nrf test server
+	* register all diameter contexts
+	* support callback record in tsl start
+	* update tcap config in cap and inap test suites
+	* update to match cse api change
+	* shrink messaging diagram
+	* update edoc overview page, including rest and diameter
+	* wait for installed tables before insertion
+
 2022-10-10  Vance Shipley <vances@sigscale.org>
 
 	* do not start protcool stacks unless configured
