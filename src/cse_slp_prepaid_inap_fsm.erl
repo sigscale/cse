@@ -1464,8 +1464,11 @@ exception(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-exception(timeout, _EventContent, Data) ->
+exception(timeout, _EventContent,
+		#{nrf_location := _Location} = Data) ->
 	nrf_release(Data);
+exception(timeout, _EventContent, Data) ->
+	{next_state, null, Data};
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId} = Data) ->
@@ -1495,8 +1498,13 @@ exception(cast, {'TC', 'L-CANCEL', indication,
 exception(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
-		#{did := DialogueID} = Data) ->
+		#{did := DialogueID, nrf_location := _Location} = Data) ->
 	nrf_release(Data);
+exception(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+				componentsPresent = false}} = _EventContent,
+		#{did := DialogueID} = Data) ->
+	{next_state, null, Data};
 exception(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
