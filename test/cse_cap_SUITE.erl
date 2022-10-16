@@ -110,7 +110,7 @@ init_per_suite(Config) ->
 			no_answer => interrupted,
 			route_fail => interrupted},
 	ServiceKey = rand:uniform(2147483647),
-	{ok, _} = cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, EDP),
+	ok = cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, EDP),
 	{ok, TCO} = application:get_env(cse, tsl_name),
 	[{tco, TCO}, {orig_cb, Cb}, {service_key, ServiceKey} | Config].
 
