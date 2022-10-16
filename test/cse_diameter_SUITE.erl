@@ -193,8 +193,8 @@ initial_scur() ->
 
 initial_scur(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -222,8 +222,8 @@ initial_scur_nrf() ->
 
 initial_scur_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -244,8 +244,8 @@ interim_scur() ->
 
 interim_scur(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -281,8 +281,8 @@ interim_scur_nrf() ->
 
 interim_scur_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -311,8 +311,8 @@ final_scur() ->
 
 final_scur(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
@@ -346,8 +346,8 @@ final_scur_nrf() ->
 
 final_scur_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -382,8 +382,8 @@ unknown_subscriber() ->
 	[{userdata, [{doc, "SCUR Nrf start with unknown user"}]}].
 
 unknown_subscriber(_Config) ->
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
@@ -396,8 +396,8 @@ out_of_credit() ->
 
 out_of_credit(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	{ok, {0, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, 0}),
@@ -411,8 +411,8 @@ initial_in_call() ->
 
 initial_in_call(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -440,8 +440,8 @@ interim_in_call() ->
 
 interim_in_call(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
@@ -477,8 +477,8 @@ final_in_call() ->
 
 final_in_call(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ generate_identity(10),
-	MSISDN = generate_identity(11),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
@@ -512,14 +512,14 @@ final_in_call(Config) ->
 %%---------------------------------------------------------------------
 
 scur_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
-	Destination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
 	scur_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
 scur_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
-	Origination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
@@ -553,14 +553,14 @@ scur_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 	diameter:call(?MODULE, cc_app_test, CCR, []).
 
 scur_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
-	Destination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
 	scur_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
 scur_interim(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
-	Origination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
@@ -596,14 +596,14 @@ scur_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 	diameter:call(?MODULE, cc_app_test, CCR, []).
 
 scur_stop(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
-	Destination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
 	scur_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
 scur_stop(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
-	Origination = [$+ | generate_identity(rand:uniform(10) + 5)],
+	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
@@ -671,22 +671,4 @@ transport_opts1({Trans, LocalAddr, RemAddr, RemPort}) ->
 	[{transport_module, Trans}, {transport_config,
 		[{raddr, RemAddr}, {rport, RemPort},
 		{reuseaddr, true}, {ip, LocalAddr}]}].
-
--spec generate_identity(Length) -> string()
-	when
-		Length :: pos_integer().
-%% @doc Generate a random uniform numeric identity.
-%% @private
-generate_identity(Length) when Length > 0 ->
-	Charset = lists:seq($0, $9),
-	NumChars = length(Charset),
-	Random = crypto:strong_rand_bytes(Length),
-	generate_identity(Random, Charset, NumChars,[]).
-%% @hidden
-generate_identity(<<N, Rest/binary>>, Charset, NumChars, Acc) ->
-	CharNum = (N rem NumChars) + 1,
-	NewAcc = [lists:nth(CharNum, Charset) | Acc],
-	generate_identity(Rest, Charset, NumChars, NewAcc);
-generate_identity(<<>>, _Charset, _NumChars, Acc) ->
-	Acc.
 
