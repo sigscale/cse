@@ -414,37 +414,21 @@ install11(_Nodes, Tables) ->
 			{error, Reason}
 	end.
 %% @hidden
-install12(Nodes, Acc) ->
-	case install_resource_specs() of
-		ok ->
-			install13(Nodes, [resource_spec | Acc]);
-		{error, Reason} ->
-			{error, Reason}
-	end.
-%% @hidden
-install13(Nodes, Acc) ->
-	ContextId = "32260@3gpp.org",
-	Mod = cse_slp_prepaid_diameter_fsm,
-	Args = [],
-	Opts = [],
-	cse:add_context(ContextId, Mod, Args, Opts),
-	install14(Nodes, Acc).
-%% @hidden
-install14(Tables, true) ->
+install12(Tables, true) ->
 	case inets:start() of
 		ok ->
 			error_logger:info_msg("Started inets.~n"),
-			install15(Tables);
+			install13(Tables);
 		{error, {already_started, inets}} ->
-			install15(Tables);
+			install13(Tables);
 		{error, Reason} ->
 			error_logger:error_msg("Failed to start inets~n"),
 			{error, Reason}
 	end;
-install14(Tables, false) ->
-	{ok, Tables}.
+install12(Tables, false) ->
+	install14(Tables).
 %% @hidden
-install15(Tables) ->
+install13(Tables) ->
 	case cse:list_users() of
 		{ok, []} ->
 			UserData = [{locale, "en"}],
@@ -453,7 +437,7 @@ install15(Tables) ->
 					error_logger:info_report(["Created a default user",
 							{username, "admin"}, {password, "admin"},
 							{locale, "en"}]),
-					{ok, Tables};
+					install14(Tables);
 				{error, Reason} ->
 					error_logger:error_report(["Failed to creat default user",
 							{username, "admin"}, {password, "admin"},
@@ -463,12 +447,28 @@ install15(Tables) ->
 		{ok, Users} ->
 			error_logger:info_report(["Found existing http users",
 					{users, Users}]),
-			{ok, Tables};
+			install14(Tables);
 		{error, Reason} ->
 			error_logger:error_report(["Failed to list http users",
 				{error, Reason}]),
 			{error, Reason}
 	end.
+%% @hidden
+install14(Tables) ->
+	case install_resource_specs() of
+		ok ->
+			install15([resource_spec | Tables ]);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+install15(Tables) ->
+	ContextId = "32260@3gpp.org",
+	Mod = cse_slp_prepaid_diameter_fsm,
+	Args = [],
+	Opts = [],
+	cse:add_context(ContextId, Mod, Args, Opts),
+	{ok, Tables}.
 
 %%----------------------------------------------------------------------
 %%  Internal functions
