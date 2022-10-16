@@ -108,7 +108,8 @@ application exchange primitives with a Transaction Coordinator (TCO)
 process in the {@link //tcap. tcap} application's Transaction Sublayer
 (TSL).
 
-<p><img class="diagram" alt="diagram of interprocess communication"
+<p><img id="messaging" class="diagram"
+		alt="diagram of interprocess communication"
 		name="figure1-2" src="messaging.svg" /><br />
 Figure 1-2: Messaging</p>
 

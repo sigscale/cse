@@ -61,6 +61,12 @@ img.diagram {
 	margin-right: auto;
 	width: 50%;
 }
+img.diagram#messaging {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	width: 25%;
+}
 table#mt, tr#mt, td#mt {
 	border: 1px solid black;
 	text-align: left;
