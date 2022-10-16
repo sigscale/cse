@@ -463,11 +463,13 @@ install14(Tables) ->
 	end.
 %% @hidden
 install15(Tables) ->
-	ContextId = "32260@3gpp.org",
 	Mod = cse_slp_prepaid_diameter_fsm,
 	Args = [],
 	Opts = [],
-	cse:add_context(ContextId, Mod, Args, Opts),
+	cse:add_context("32251@3gpp.org", Mod, Args, Opts), % PS
+	cse:add_context("32260@3gpp.org", Mod, Args, Opts), % IMS
+	cse:add_context("32274@3gpp.org", Mod, Args, Opts), % SMS
+	cse:add_context("32276@3gpp.org", Mod, Args, Opts), % VCS
 	{ok, Tables}.
 
 %%----------------------------------------------------------------------
