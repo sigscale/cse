@@ -17,7 +17,8 @@
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_server. gen_server} behaviour callback
-%%% 	module mocks an OCS for the CSE `cse_diameter_SUITE' test suite.
+%%% 	module mocks an OCS for the CSE `cse_{diameter,cap,inap}_SUITE'
+%%% 	test suites.
 %%%
 -module(cse_test_ocs_server).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
