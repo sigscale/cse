@@ -602,7 +602,7 @@ is_mod_auth_mnesia1(InetsServices) ->
 			end,
 			is_mod_auth_mnesia2(lists:filter(F, HttpdInfo));
 		false ->
-			ok
+			false
 	end.
 %% @hidden
 is_mod_auth_mnesia2([{directory, {_Dir, []}} | T]) ->
