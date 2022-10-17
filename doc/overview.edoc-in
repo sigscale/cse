@@ -312,7 +312,9 @@ Transaction Sublayer (TSL) of the {@link //tcap. tcap} application:
 	<dt>`tsl_callback'</dt>
 		<dd>Name of the {@link //tcap/tcap_tco_server. `tcap_tco_server'}
 				behaviour callback module implementing the TCAP binding.
-				(default: `cse_tco_server_cb')</dd>
+				To enable the TCAP stack with the default module use
+				`cse_tco_server_cb'.
+				(default:` undefined'})</dd>
 	<dt>`tsl_opts'</dt>
 		<dd>Options in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/'4}.
 				(default: `[]')</dd>
