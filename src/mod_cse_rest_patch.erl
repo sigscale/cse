@@ -109,17 +109,10 @@ do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 %% @hidden
 parse_query(Resource,
 		#mod{parsed_header = RequestHeaders} = ModData,
-		#{path := Path, query := Query}) ->
-	do_patch(Resource, ModData,
-			get_etag(RequestHeaders),
-			string:lexemes(Path, [$/]),
-			uri_string:dissect_query(Query));
-parse_query(Resource,
-		#mod{parsed_header = RequestHeaders} = ModData,
 		#{path := Path}) ->
 	do_patch(Resource, ModData,
 			get_etag(RequestHeaders),
-			string:lexemes(Path, [$/]), []);
+			string:lexemes(Path, [$/]));
 parse_query(_, #mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, _) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
@@ -135,9 +128,13 @@ parse_query(_, #mod{parsed_header = RequestHeaders,
 	{proceed, [{response, {already_sent, 404, Size}} | Data]}.
 
 %% @hidden
+do_patch(Resource,
+		#mod{entity_body = Body, parsed_header = Headers} = ModData, Etag,
+		["resourceInventoryManagement", "v4", "resource", Id]) ->
+	do_response(ModData, Resource:patch_resource(Id, Etag, Body, Headers));
 do_patch(_Resource,
 		#mod{parsed_header = RequestHeaders, data = Data} = ModData,
-		_Etag, _Path, _Query) ->
+		_Etag, _Path) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
 			title => "Not Found",
 			detail => "No resource exists at the path provided",
