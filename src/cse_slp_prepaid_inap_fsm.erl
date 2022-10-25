@@ -864,10 +864,13 @@ o_active(cast, {'TC', 'INVOKE', indication,
 o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#{did := DialogueID, consumed := Consumed} = _Data) ->
+		#{did := DialogueID, consumed := Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
-			keep_state_and_data;
+			% @todo Parse network operator specific CallResult
+			Time = 0,
+			NewData = Data#{consumed => Time},
+			nrf_update((Time - Consumed) div 10, NewData);
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1047,10 +1050,13 @@ t_active(cast, {'TC', 'INVOKE', indication,
 t_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
 				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#{did := DialogueID, consumed := Consumed} = _Data) ->
+		#{did := DialogueID, consumed := Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
 		{ok, ChargingResultArg} ->
-			keep_state_and_data;
+			% @todo Parse network operator specific CallResult
+			Time = 0,
+			NewData = Data#{consumed => Time},
+			nrf_update((Time - Consumed) div 10, NewData);
 		{error, Reason} ->
 			{stop, Reason}
 	end;
