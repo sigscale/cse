@@ -96,7 +96,7 @@ handle_agent(_Domain, {IpAddress, Port} = _Address, Type,
 			{timestamp, Timestamp}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! {error, unknown_agent},
-    ignore;
+	ignore;
 handle_agent(_Domain, {IpAddress, Port} = _Address, Type,
 		{Status, Index, Varbinds} = _SnmpInfo, UserData) ->
 	error_logger:error_report(["SNMP Manager: Unknown Agent",
@@ -104,7 +104,7 @@ handle_agent(_Domain, {IpAddress, Port} = _Address, Type,
 			{status, Status}, {index, Index}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! {error, unknown_agent},
-    ignore.
+	ignore.
 
 -spec handle_pdu(TargetName, ReqId, SnmpPduInfo, UserData) -> any()
 	when
@@ -120,7 +120,7 @@ handle_pdu(TargetName, ReqId,
 			{status, Status}, {index, Index}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! ok,
-    ignore.
+	ignore.
 
 -spec handle_trap(TargetName, SnmpTrapInfo, UserData) -> Reply
 	when
@@ -140,7 +140,7 @@ handle_trap(TargetName,
 			{status, Status}, {index, Index}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! ok,
-    ignore;
+	ignore;
 handle_trap(TargetName,
 		 {Enteprise, Generic, Spec, Timestamp, Varbinds}, UserData) ->
 	error_logger:error_report(["SNMP Manager: Received Trap",
@@ -149,7 +149,7 @@ handle_trap(TargetName,
 			{timestamp, Timestamp}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! ok,
-    ignore.
+	ignore.
 
 -spec handle_inform(TargetName, SnmpInformInfo, UserData) -> Reply
 	when
@@ -168,7 +168,7 @@ handle_inform(TargetName,
 			{status, Status}, {index, Index}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! ok,
-    no_reply.
+	no_reply.
 
 -spec handle_report(TargetName, SnmpReportInfo, UserData) -> Reply
 	when
@@ -187,7 +187,7 @@ handle_report(TargetName,
 			{status, Status}, {index, Index}, {varbinds, Varbinds},
 			{userdata, UserData}]),
 	UserData ! ok,
-    ignore.
+	ignore.
 
 -spec handle_invalid_result(In, Out) -> any()
 	when
