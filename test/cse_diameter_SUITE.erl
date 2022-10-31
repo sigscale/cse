@@ -112,16 +112,17 @@ init_per_suite(Config) ->
    Config1 = [{diameter_host, Host}, {realm, Realm},
          {diameter_address, DiameterAddress} | Config],
 	ok = cse_test_lib:start(),
-   ok = diameter:start_service(?MODULE, client_acct_service_opts(Config1)),
    true = diameter:subscribe(?MODULE),
-	ct:sleep(500),
+   ok = diameter:start_service(?MODULE, client_acct_service_opts(Config1)),
+   receive
+      #diameter_event{service = ?MODULE, info = start} ->
+			ok
+	end,
    {ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
    receive
       #diameter_event{service = ?MODULE, info = Info}
             when element(1, Info) == up ->
-			init_per_suite1(Config1);
-      _Other ->
-         {skip, diameter_client_service_not_started}
+			init_per_suite1(Config1)
    end.
 init_per_suite1(Config) ->
 	case inets:start(httpd,
