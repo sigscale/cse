@@ -1,3 +1,14 @@
+2022-10-31  Vance Shipley <vances@sigscale.org>
+
+	* snmp polling diameter peer info and stats
+	* wait for diameter service to start in test suite
+	* refactor prepaid diameter for failure handling
+	* handle patch resource in inets mod (only)
+	* nrf_update on inap apply charging report
+	* fix install error when inets not enabled
+	* update default config value for tcap in edoc
+	* update edoc in test ocs server
+
 2022-10-16  Vance Shipley <vances@sigscale.org>
 
 	* no nrf release on end before nrf start
