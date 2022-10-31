@@ -25,10 +25,41 @@
 -export([load/0, load/1, unload/0, unload/1]).
 
 %% export the cse_mib snmp agent callbacks
--export([dbp_local_config/2, dbp_local_stats/2, dcca_peer_info/3]).
-		
+-export([dbp_local_config/2, dbp_local_stats/2, dcca_peer_info/3,
+		dcca_peer_stats/3]).
 
 -include("cse.hrl").
+
+-record(peer_stats,
+		{ccr_in = 0 :: non_neg_integer(),
+		ccr_out = 0 :: non_neg_integer(),
+		ccr_dropped = 0 :: non_neg_integer(),
+		cca_in = 0 :: non_neg_integer(),
+		cca_out = 0 :: non_neg_integer(),
+		cca_dropped = 0 :: non_neg_integer(),
+		rar_in = 0 :: non_neg_integer(),
+		rar_dropped = 0 :: non_neg_integer(),
+		rar_out = 0 :: non_neg_integer(),
+		raa_out = 0 :: non_neg_integer(),
+		str_in = 0 :: non_neg_integer(),
+		str_out = 0 :: non_neg_integer(),
+		str_dropped = 0 :: non_neg_integer(),
+		sta_in = 0 :: non_neg_integer(),
+		sta_out = 0 :: non_neg_integer(),
+		sta_dropped = 0 :: non_neg_integer(),
+		aar_in = 0 :: non_neg_integer(),
+		aar_out = 0 :: non_neg_integer(),
+		aar_dropped = 0 :: non_neg_integer(),
+		aaa_in = 0 :: non_neg_integer(),
+		aaa_out = 0 :: non_neg_integer(),
+		aaa_dropped = 0 :: non_neg_integer(),
+		asr_in = 0 :: non_neg_integer(),
+		asr_dropped = 0 :: non_neg_integer(),
+		asr_out = 0 :: non_neg_integer(),
+		asa_dropped = 0 :: non_neg_integer(),
+		asa_out = 0 :: non_neg_integer(),
+		raa_in = 0 :: non_neg_integer(),
+		asa_in = 0 :: non_neg_integer()}).
 
 %%----------------------------------------------------------------------
 %%  The cse_mib public API
@@ -102,7 +133,7 @@ dbp_local_config(get, Item) ->
 					{value, binary_to_list(Info)};
 				Info when is_list(Info) ->
 					{value, Info};
-				_ ->
+				_Other ->
 					genErr
 			end;
 		false ->
@@ -249,6 +280,168 @@ dcca_peer_info_get(Index, Columns) ->
 			{genErr, 0}
 	end.
 
+-spec dcca_peer_stats(Operation, RowIndex, Columns) -> Result
+	when
+		Operation :: get | get_next,
+		RowIndex :: ObjectId,
+		ObjectId :: [integer()],
+		Columns :: [Column],
+		Column :: integer(),
+		Result :: [Element] | {genErr, Column},
+		Element :: {value, Value} | {ObjectId, Value},
+		Value :: atom() | integer() | string() | [integer()].
+%% @doc Handle SNMP requests for the peer stats table.
+dcca_peer_stats(get_next = _Operation, [] = _RowIndex, Columns) ->
+	dcca_peer_stats_get_next(1, Columns, true);
+dcca_peer_stats(get_next, [N], Columns) ->
+	dcca_peer_stats_get_next(N + 1, Columns, true);
+dcca_peer_stats(get, [N], Columns) ->
+	dcca_peer_stats_get(N, Columns).
+%% @hidden
+dcca_peer_stats_get_next(Index, Columns, First) ->
+	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+		Service when is_tuple(Service) ->
+			case catch diameter:service_info(Service, connections) of
+				Info when is_list(Info) ->
+					case peer_stats(Index, Info) of
+						{ok, Stats} ->
+							F1 = fun(0, Acc) ->
+										[{[2, Index], Stats#peer_stats.ccr_in} | Acc];
+									(1, Acc) ->
+										[{genErr, 0} | Acc];
+									(2, Acc) ->
+										[{[2, Index], Stats#peer_stats.ccr_in} | Acc];
+									(3, Acc) ->
+										[{[3, Index], Stats#peer_stats.ccr_out} | Acc];
+									(4, Acc) ->
+										[{[4, Index], Stats#peer_stats.ccr_dropped} | Acc];
+									(5, Acc) ->
+										[{[5, Index], Stats#peer_stats.cca_in} | Acc];
+									(6, Acc) ->
+										[{[6, Index], Stats#peer_stats.cca_out} | Acc];
+									(7, Acc) ->
+										[{[7, Index], Stats#peer_stats.cca_dropped} | Acc];
+									(8, Acc) ->
+										[{[8, Index], Stats#peer_stats.rar_in} | Acc];
+									(9, Acc) ->
+										[{[9, Index], Stats#peer_stats.rar_dropped} | Acc];
+									(10, Acc) ->
+										[{[10, Index], Stats#peer_stats.raa_out} | Acc];
+									(11, Acc) ->
+										[{[11, Index], Stats#peer_stats.rar_dropped} | Acc];
+									(12, Acc) ->
+										[{[12, Index], Stats#peer_stats.str_out} | Acc];
+									(13, Acc) ->
+										[{[13, Index], Stats#peer_stats.str_dropped} | Acc];
+									(14, Acc) ->
+										[{[14, Index], Stats#peer_stats.sta_in} | Acc];
+									(15, Acc) ->
+										[{[15, Index], Stats#peer_stats.sta_dropped} | Acc];
+									(16, Acc) ->
+										[{[16, Index], Stats#peer_stats.aar_out} | Acc];
+									(17, Acc) ->
+										[{[17, Index], Stats#peer_stats.aar_dropped} | Acc];
+									(18, Acc) ->
+										[{[18, Index], Stats#peer_stats.aaa_in} | Acc];
+									(19, Acc) ->
+										[{[19, Index], Stats#peer_stats.aaa_dropped} | Acc];
+									(20, Acc) ->
+										[{[20, Index], Stats#peer_stats.asr_in} | Acc];
+									(21, Acc) ->
+										[{[21, Index], Stats#peer_stats.asr_dropped} | Acc];
+									(22, Acc) ->
+										[{[22, Index], Stats#peer_stats.asa_out} | Acc];
+									(23, Acc) ->
+										[{[23, Index], Stats#peer_stats.asa_dropped} | Acc];
+									(_, Acc) ->
+										[endOfTable | Acc]
+							end,
+							lists:reverse(lists:foldl(F1, [], Columns));
+						{error, not_found} when First == true ->
+							F2 = fun(N) ->
+									N + 1
+							end,
+							NextColumns = lists:map(F2, Columns),
+							dcca_peer_stats_get_next(1, NextColumns, false);
+						{error, not_found} ->
+							[endOfTable || _ <- Columns]
+					end;
+				_Info ->
+					[endOfTable || _ <- Columns]
+			end;
+		false ->
+			{genErr, 0}
+	end.
+%% @hidden
+dcca_peer_stats_get(Index, Columns) ->
+	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+		Service when is_tuple(Service) ->
+			case catch diameter:service_info(Service, connections) of
+				Info when is_list(Info) ->
+					case peer_stats(Index, Info) of
+						{ok, Stats} ->
+							F1 = fun(0, Acc) ->
+										[{genErr, 0} | Acc];
+									(1, Acc) ->
+										[{noValue, noSuchInstance} | Acc];
+									(2, Acc) ->
+										[{value, Stats#peer_stats.ccr_in} | Acc];
+									(3, Acc) ->
+										[{value, Stats#peer_stats.ccr_out} | Acc];
+									(4, Acc) ->
+										[{value, Stats#peer_stats.ccr_dropped} | Acc];
+									(5, Acc) ->
+										[{value, Stats#peer_stats.cca_in} | Acc];
+									(6, Acc) ->
+										[{value, Stats#peer_stats.cca_out} | Acc];
+									(7, Acc) ->
+										[{value, Stats#peer_stats.cca_dropped} | Acc];
+									(8, Acc) ->
+										[{value, Stats#peer_stats.rar_in} | Acc];
+									(9, Acc) ->
+										[{value, Stats#peer_stats.rar_dropped} | Acc];
+									(10, Acc) ->
+										[{value, Stats#peer_stats.raa_out} | Acc];
+									(11, Acc) ->
+										[{value, Stats#peer_stats.rar_dropped} | Acc];
+									(12, Acc) ->
+										[{value, Stats#peer_stats.str_out} | Acc];
+									(13, Acc) ->
+										[{value, Stats#peer_stats.str_dropped} | Acc];
+									(14, Acc) ->
+										[{value, Stats#peer_stats.sta_in} | Acc];
+									(15, Acc) ->
+										[{value, Stats#peer_stats.sta_dropped} | Acc];
+									(16, Acc) ->
+										[{value, Stats#peer_stats.aar_out} | Acc];
+									(17, Acc) ->
+										[{value, Stats#peer_stats.aar_dropped} | Acc];
+									(18, Acc) ->
+										[{value, Stats#peer_stats.aaa_in} | Acc];
+									(19, Acc) ->
+										[{value, Stats#peer_stats.aaa_dropped} | Acc];
+									(20, Acc) ->
+										[{value, Stats#peer_stats.asr_in} | Acc];
+									(21, Acc) ->
+										[{value, Stats#peer_stats.asr_dropped} | Acc];
+									(22, Acc) ->
+										[{value, Stats#peer_stats.asa_out} | Acc];
+									(23, Acc) ->
+										[{value, Stats#peer_stats.asa_dropped} | Acc];
+									(_, Acc) ->
+										[{noValue, noSuchInstance} | Acc]
+							end,
+							lists:reverse(lists:foldl(F1, [], Columns));
+						{error, not_found} ->
+							{noValue, noSuchInstance}
+					end;
+				_Info ->
+						{noValue, noSuchInstance}
+			end;
+		false ->
+			{genErr, 0}
+	end.
+
 %%----------------------------------------------------------------------
 %% internal functions
 %----------------------------------------------------------------------
@@ -369,4 +562,73 @@ peer_info2(Caps, PeerId) ->
 %% @hidden
 peer_info3(PeerId, Rev) ->
 	{ok, {PeerId, Rev}}.
+
+-spec peer_stats(Index, Info) -> Result
+   when
+		Index :: integer(),
+      Info :: [tuple()],
+      Result :: {ok, #peer_stats{}} | {error, Reason},
+      Reason :: term().
+%% @doc Get peer stats table entry.
+%% @hidden
+peer_stats(Index, Info) ->
+	case catch lists:nth(Index, Info) of
+		Connection when is_list(Connection) ->
+			peer_stats(Connection);
+		_ ->
+			{error, not_found}
+	end.
+%% @hidden
+peer_stats(Connection) ->
+	case lists:keyfind(statistics, 1, Connection) of
+		{_, Statistics} ->
+				peer_stats1(Statistics, #peer_stats{});
+		false ->
+			{error, not_found}
+	end.
+%% @hidden
+peer_stats1([{{{_, 272, 0}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{ccr_in = N});
+peer_stats1([{{{_, 272, 0}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{ccr_out = N});
+peer_stats1([{{{_, 272, 1}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{cca_in = N});
+peer_stats1([{{{_, 272, 1}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{cca_out = N});
+peer_stats1([{{{_, 258, 0}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{rar_in = N});
+peer_stats1([{{{_, 258, 0}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{rar_out = N});
+peer_stats1([{{{_, 258, 1}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{raa_in = N});
+peer_stats1([{{{_, 258, 1}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{raa_out = N});
+peer_stats1([{{{_, 275, 0}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{str_in = N});
+peer_stats1([{{{_, 275, 0}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{str_out = N});
+peer_stats1([{{{_, 275, 1}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{sta_in = N});
+peer_stats1([{{{_, 275, 1}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{sta_out = N});
+peer_stats1([{{{_, 265, 0}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{aar_in = N});
+peer_stats1([{{{_, 265, 0}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{aar_out = N});
+peer_stats1([{{{_, 265, 1}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{aaa_in = N});
+peer_stats1([{{{_, 265, 1}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{aaa_out = N});
+peer_stats1([{{{_, 274, 0}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{asr_in = N});
+peer_stats1([{{{_, 274, 0}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{asr_out = N});
+peer_stats1([{{{_, 274, 1}, recv}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{asa_in = N});
+peer_stats1([{{{_, 274, 1}, send}, N} | T], Acc) ->
+	peer_stats1(T, Acc#peer_stats{asa_out = N});
+peer_stats1([_ | T], Acc) ->
+	peer_stats1(T, Acc);
+peer_stats1([], Acc) ->
+	{ok, Acc}.
 
