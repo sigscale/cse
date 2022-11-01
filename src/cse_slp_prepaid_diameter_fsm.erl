@@ -192,7 +192,7 @@ authorize_origination_attempt({call, From},
 				'Service-Information' = ServiceInformation},
 		#{session_id := SessionId, nrf_location := Location} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-		is_list(Location) ->
+				is_list(Location) ->
 	{CallingDN, CalledDN} = call_parties(ServiceInformation),
 	NewData = Data#{from => From, req_type => RequestType,
 			reqno => RequestNum, mscc => MSCC,
@@ -205,7 +205,7 @@ authorize_origination_attempt({call, From},
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-		is_list(Location) ->
+				is_list(Location) ->
 	NewData = Data#{from => From, mscc => MSCC,
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
@@ -722,23 +722,25 @@ collect_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 collect_information({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+		when RequestTpe == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_update(NewData);
 collect_information({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+		when RequestTpe == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 collect_information(cast,
 		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -887,11 +889,10 @@ analyse_information({call, From},
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST';
-				RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 				is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => RequestType},
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	case usu_positive(MSCC) of
 		true ->
 			{next_state, active, NewData, postpone};
@@ -900,13 +901,14 @@ analyse_information({call, From},
 	end;
 analyse_information({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 analyse_information(cast,
 		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -993,23 +995,25 @@ routing(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 routing({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestsType},
 	nrf_update(NewData);
 routing({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 routing(cast,
 		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -1162,23 +1166,25 @@ t_alerting(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 t_alerting({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_update(NewData);
 t_alerting({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 t_alerting(cast,
 		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
@@ -1320,23 +1326,25 @@ active(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 active({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_update(NewData);
 active({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
-				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
-		when is_list(Location) ->
-	NewData = Data#{from => From, mscc => MSCC, reqno => RequestNum,
-			req_type => ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST'},
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 active(cast,
 		{nrf_update, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
