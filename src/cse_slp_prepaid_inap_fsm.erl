@@ -739,7 +739,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #{eventTypeBCSM := tNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -751,7 +751,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 		{ok, #{eventTypeBCSM := tBusy}}
 				when map_get(busy, EDP) == interrupted ->
 			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
 					{allCallSegments, cse_codec:cause(Cause)}),
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
@@ -787,7 +787,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
 				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_CallInformationReportArg', Argument) of
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #{requestedInformationList := CallInfo}} ->
 			{keep_state, call_info(CallInfo, Data)};
 		{error, Reason} ->
