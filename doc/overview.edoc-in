@@ -2,17 +2,22 @@
 @version %VERSION%
 @title %DESCRIPTION%
 
-@reference <a href="https://www.itu.int/rec/T-REC-I.312-199210-I">Q.1201</a>
+@reference <a target="_blank"
+		href="https://www.itu.int/rec/T-REC-I.312-199210-I">Q.1201</a>
 		Principles of Intelligent Network Architecture
-@reference <a href="https://www.itu.int/rec/T-REC-Q.1204-199303-I">Q.1204</a>
+@reference <a target="_blank"
+		href="https://www.itu.int/rec/T-REC-Q.1204-199303-I">Q.1204</a>
 		Intelligent Network Distributed Functional Plane Architecture
-@reference <a href="https://www.etsi.org/deliver/etsi_i_ets/300300_300399/30037401/01_60/ets_30037401e01p.pdf">
+@reference <a target="_blank"
+		href="https://www.etsi.org/deliver/etsi_i_ets/300300_300399/30037401/01_60/ets_30037401e01p.pdf">
 		ETS 300 374-1</a> Intelligent Network Application Protocol (INAP);
 		Capability Set 1 (CS1)
-@reference <a href="https://www.etsi.org/deliver/etsi_en/301100_301199/30114001/01.03.04_60/en_30114001v010304p.pdf">
+@reference <a target="_blank"
+		href="https://www.etsi.org/deliver/etsi_en/301100_301199/30114001/01.03.04_60/en_30114001v010304p.pdf">
 		ETSI EN 301 140-1</a> Intelligent Network Application Protocol (INAP);
 		Capability Set 2 (CS2)
-@reference <a href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=29&amp;GSMSpecPart2=078">
+@reference <a target="_blank"
+		href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=29&amp;GSMSpecPart2=078">
 		3GPP TS 29.078</a> Customised Applications for Mobile network Enhanced Logic (CAMEL)
 		Application Part (CAP)
 
@@ -328,7 +333,8 @@ Transaction Sublayer (TSL) of the {@link //tcap. tcap} application:
 ===Nrf_Rating===
 Application environment variables configuring HTTP client
 ({@link //inets/httpc. httpc}) behaviour for the
-<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
+<a target="_blank"
+href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
 API on the 3GPP Re interface to a remote Rating Funtion (RF) (i.e. OCS).
 <dl>
 	<dt>`nrf_profile'</dt>
