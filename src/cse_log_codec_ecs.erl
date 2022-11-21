@@ -179,9 +179,11 @@ codec_diameter_ecs3(CCR,
 		Direction :: originating | terminating,
 		Calling :: [$0..$9],
 		Called :: [$0..$9],
-		Network :: #{context => Context, session_id => SessionId},
+		Network :: #{context => Context, session_id => SessionId,
+				hplmn => PLMN, vplmn => PLMN},
 		Context :: string(),
 		SessionId :: binary(),
+		PLMN :: string(),
 		OCS :: #{nrf_location => NrfLocation},
 		NrfLocation :: string().
 %% @doc Prepaid SLP event CODEC for Elastic Stack logs.
@@ -191,7 +193,7 @@ codec_diameter_ecs3(CCR,
 %% 	Common Schema (ECS).
 %%
 %% 	Service Logic Processing Programs (SLP) may use this CODEC function
-%%% 	with the {@link //cse/cse_log. cse_log} logging functions and the
+%% 	with the {@link //cse/cse_log. cse_log} logging functions and the
 %% 	{@link //cse/cse_log:log_option(). cse_log:log_option()}
 %% 	`{codec, {{@module}, codec_prepaid_ecs}}'.
 %%
@@ -220,7 +222,8 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol", "end"], Outcome), $,,
-			ecs_url(map_get(nrf_location, OCS)), $}].
+			ecs_url(map_get(nrf_location, OCS)), $,,
+			ecs_prepaid(State, Call, Network, OCS), $}].
 
 -spec ecs_base(Timestamp) -> iodata()
 	when
@@ -466,4 +469,23 @@ ecs_3gpp_ro(#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 			$", "cc_request_number", $", $:, integer_to_list(RequestNumber), $,,
 			$", "service_context_id", $", $:, $", ServiceContextId, $", $,,
 			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
+
+%% @hidden
+ecs_prepaid(State, Call, Network, _OCS) ->
+	[$", "prepaid", $", $:, ${,
+			$", "state", $", $:, $", atom_to_list(State), $", $,,
+			$", "hplmn", $", $:, $", get_string(hplmn, Network), $", $,,
+			$", "vplmn", $", $:, $", get_string(vplmn, Network), $", $,,
+			$", "direction", $", $:, $", get_string(direction, Call), $", $,,
+			$", "calling", $", $:, $", get_string(calling, Call), $", $,,
+			$", "called", $", $:, $", get_string(called, Call), $", $}].
+
+%% @hidden
+get_string(Key, Map) ->
+	case maps:get(Key, Map, undefined) of
+		Value when is_atom(Value) ->
+			atom_to_list(Value);
+		Value ->
+			Value
+	end.
 
