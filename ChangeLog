@@ -1,3 +1,10 @@
+2022-11-11  Vance Shipley <vances@sigscale.org>
+
+	* prepaid call information in ecs
+	* open edoc links in new browser tab
+	* remove gsm from a couple codec arguments
+	* systemd: to_erl/run_erl pipes in /run/cse/
+
 2022-11-01  Vance Shipley <vances@sigscale.org>
 
 	* correct terminating to active transition
