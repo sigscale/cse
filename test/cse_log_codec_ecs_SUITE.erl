@@ -159,7 +159,7 @@ prepaid_originating(_Config) ->
 	Called = cse_test_lib:rand_dn(),
 	Call = #{direction => Direction, calling => Calling, called => Called},
 	ContextId = "32260@3gpp.org",
-	SessionId = session_id("ct"),
+	SessionId = list_to_binary(session_id("ct")),
 	Network = #{context => ContextId, session_id => SessionId,
 			hplmn => Realm, vplmn => Realm},
 	NrfUri = "http://localhost:8080/nrf-rating/v1/ratingdata/42",

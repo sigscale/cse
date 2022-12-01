@@ -471,14 +471,40 @@ ecs_3gpp_ro(#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
 
 %% @hidden
-ecs_prepaid(State, Call, Network, _OCS) ->
-	[$", "prepaid", $", $:, ${,
-			$", "state", $", $:, $", atom_to_list(State), $", $,,
-			$", "hplmn", $", $:, $", get_string(hplmn, Network), $", $,,
-			$", "vplmn", $", $:, $", get_string(vplmn, Network), $", $,,
-			$", "direction", $", $:, $", get_string(direction, Call), $", $,,
+ecs_prepaid(State, Call, Network, OCS) ->
+	Acc = [$", "prepaid", $", $:, ${,
+			$", "state", $", $:, $", atom_to_list(State), $"],
+	ecs_prepaid1(Call, Network, OCS, Acc).
+%% @hidden
+ecs_prepaid1(#{direction := Direction} = Call, Network, OCS, Acc)
+		when is_list(Direction) ->
+	Acc1 = [Acc, $,,
+			$", "direction", $", $:, $", Direction, $", $,,
 			$", "calling", $", $:, $", get_string(calling, Call), $", $,,
-			$", "called", $", $:, $", get_string(called, Call), $", $}].
+			$", "called", $", $:, $", get_string(called, Call), $"],
+	ecs_prepaid2(Network, OCS, Acc1);
+ecs_prepaid1(_Call, Network, OCS, Acc) ->
+	ecs_prepaid2(Network, OCS, Acc).
+%% @hidden
+ecs_prepaid2(#{hplmn := _HPLMN} = Network, OCS, Acc) ->
+	Acc1 = [Acc, $,,
+			$", "hplmn", $", $:, $", get_string(hplmn, Network), $", $,,
+			$", "vplmn", $", $:, $", get_string(vplmn, Network), $"],
+	ecs_prepaid3(Network, OCS, Acc1);
+ecs_prepaid2(Network, OCS, Acc) ->
+	ecs_prepaid3(Network, OCS, Acc).
+%% @hidden
+ecs_prepaid3(#{context := Context, session_id := SessionId}, OCS, Acc)
+		when is_list(Context), is_binary(SessionId) ->
+	Acc1 = [Acc, $,,
+			$", "context", $", $:, $", Context, $", $,,
+			$", "session", $", $:, $", binary_to_list(SessionId), $"],
+	ecs_prepaid4(OCS, Acc1);
+ecs_prepaid3(_Network, OCS, Acc) ->
+	ecs_prepaid4(OCS, Acc).
+%% @hidden
+ecs_prepaid4(_OCS, Acc) ->
+	[Acc, $}].
 
 %% @hidden
 get_string(Key, Map) ->
