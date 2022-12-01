@@ -24,9 +24,6 @@
 
 -behaviour(supervisor_bridge).
 
--include_lib("tcap/include/DialoguePDUs.hrl").
--include_lib("tcap/include/tcap.hrl").
-
 %% export the callback needed for supervisor_bridge behaviour
 -export([init/1, terminate/2]).
 
@@ -62,7 +59,7 @@ init([Sup] = _Args) ->
 init1(Sup, Name, Callback)
 		when is_atom(Name), Name /= undefined,
 		((is_atom(Callback) and (Callback /= undefined))
-		or is_record(Callback, tcap_tco_cb)) ->
+		or (element(1, Callback) == tcap_tco_cb)) ->
 	{ok, TcoArgs} = application:get_env(tsl_args),
 	{ok, Options} = application:get_env(tsl_opts),
 	case tcap:start_tsl({local, Name}, Callback, [Sup | TcoArgs], Options) of

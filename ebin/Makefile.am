@@ -20,12 +20,7 @@ beam_DATA = cse.beam \
 		cse_server.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
-		cse_slp_cap_fsm.beam \
-		cse_slp_inap_fsm.beam \
-		cse_slp_prepaid_cap_fsm.beam \
-		cse_slp_prepaid_inap_fsm.beam \
 		cse_slp_prepaid_diameter_fsm.beam \
-		cse_tco_server_cb.beam \
 		cse_codec.beam \
 		cse_log.beam \
 		cse_log_codec_ecs.beam \
@@ -46,6 +41,17 @@ beam_DATA = cse.beam \
 		diameter_gen_3gpp.beam \
 		diameter_gen_3gpp_ro_application.beam \
 		cse_mib.beam
+
+if SIGTRAN
+beam_DATA += cse_tco_server_cb.beam \
+		cse_slp_cap_fsm.beam \
+		cse_slp_inap_fsm.beam \
+		cse_slp_prepaid_cap_fsm.beam \
+		cse_slp_prepaid_inap_fsm.beam
+
+cse_codec.beam:$(top_builddir)/src/cse_codec.erl $(top_srcdir)/include/cse_codec.hrl
+	$(ERLC) $(ERLCFLAGS) -DCAP -I $(top_srcdir)/include -I $(top_builddir)/include $<
+endif
 
 %.beam:	$(top_srcdir)/src/%.erl $(top_srcdir)/include/cse.hrl $(top_srcdir)/include/cse_codec.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include -I $(top_builddir)/include $<
@@ -75,9 +81,22 @@ diameter_gen_3gpp_ro_application.beam:$(top_builddir)/src/diameter_gen_3gpp_ro_a
 		$(top_builddir)/include/diameter_gen_3gpp.hrl
 	$(ERLC) $(ERLCFLAGS) -I $(top_builddir)/include $<
 
+if SIGTRAN
 %.app:   %.app-in
 	sed -e 's/%APP_NAME%/$(PACKAGE_NAME)/' \
-			-e 's/%APP_VERSION%/$(PACKAGE_VERSION)/' < $< > $@ 
+			-e 's/%APP_VERSION%/$(PACKAGE_VERSION)/' < $< > $@
+else
+%.app:   %.app-in
+	sed -e 's/%APP_NAME%/$(PACKAGE_NAME)/' \
+			-e 's/%APP_VERSION%/$(PACKAGE_VERSION)/' \
+			-e '/^\s*cse_slp_cap_fsm,/d' \
+			-e '/^\s*cse_slp_inap_fsm,/d' \
+			-e '/^\s*cse_slp_prepaid_cap_fsm,/d' \
+			-e '/^\s*cse_slp_prepaid_inap_fsm,/d' \
+			-e '/^\s*cse_slp_prepaid_diameter_fsm,/d' \
+			-e '/^\s*cse_tco_server_cb,/d' < $< > $@
+endif
+
 
 CLEANFILES = $(beam_DATA) $(app_DATA)
 

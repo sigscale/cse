@@ -9,10 +9,15 @@
 -export([rand_name/0, rand_name/1]).
 -export([rand_dn/0, rand_dn/1]).
 
--define(Applications,
-		[mnesia, inets, asn1, snmp, sigscale_mibs,
-		m3ua, tcap, gtt, diameter, cse]).
 -define(TIMEOUT, 1000).
+
+-ifdef(SIGTRAN).
+applications() ->
+	[mnesia, inets, asn1, snmp, sigscale_mibs, m3ua, tcap, gtt, diameter, cse].
+-else.
+applications() ->
+	[mnesia, inets, asn1, snmp, sigscale_mibs, diameter, cse].
+-endif.
 
 -spec init_tables() -> Result
 	when
@@ -44,7 +49,7 @@ init_tables(Tables, Mod, T) ->
 	end.
 
 start() ->
-	start(?Applications).
+	start(applications()).
 
 start([H | T]) ->
 	case application:start(H) of
@@ -59,7 +64,7 @@ start([]) ->
 	ok.
 
 stop() ->
-	stop(lists:reverse(?Applications)).
+	stop(lists:reverse(applications())).
 
 stop([H | T]) ->
 	case application:stop(H) of

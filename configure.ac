@@ -92,15 +92,23 @@ AC_ERLANG_CHECK_LIB([mnesia], [], [AC_MSG_WARN([mnesia was not found!])])
 AC_ERLANG_CHECK_LIB([inets], [], [AC_MSG_WARN([inets was not found!])])
 AC_ERLANG_CHECK_LIB([snmp], [], [AC_MSG_WARN([snmp was not found!])])
 AC_ERLANG_CHECK_LIB([diameter], [], [AC_MSG_WARN([diameter was not found!])])
-AC_ERLANG_CHECK_LIB([sigscale_mibs], [], [AC_MSG_WARN([sigscale_mibs was not found!])])
-AC_ERLANG_CHECK_LIB([m3ua], [], [AC_MSG_ERROR([m3ua was not found!])])
-AC_ERLANG_CHECK_LIB([sccp], [], [AC_MSG_ERROR([sccp was not found!])])
-AC_ERLANG_CHECK_LIB([gtt], [], [AC_MSG_ERROR([gtt was not found!])])
-AC_ERLANG_CHECK_LIB([tcap], [], [AC_MSG_ERROR([tcap was not found!])])
-AC_ERLANG_CHECK_LIB([map], [], [AC_MSG_ERROR([map was not found!])])
-AC_ERLANG_CHECK_LIB([inap], [], [AC_MSG_ERROR([inap was not found!])])
-AC_ERLANG_CHECK_LIB([cap], [], [AC_MSG_ERROR([cap was not found!])])
 AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_ERROR([zj was not found!])])
+AC_ERLANG_CHECK_LIB([sigscale_mibs], [], [AC_MSG_WARN([sigscale_mibs was not found!])])
+AC_ERLANG_CHECK_LIB([tcap], [], [])
+AC_ERLANG_CHECK_LIB([m3ua], [], [])
+AC_ERLANG_CHECK_LIB([sccp], [], [])
+AC_ERLANG_CHECK_LIB([cap], [], [])
+AC_ERLANG_CHECK_LIB([inap], [], [])
+AC_ERLANG_CHECK_LIB([map], [], [])
+AC_ERLANG_CHECK_LIB([gtt], [], [])
+AM_CONDITIONAL([SIGTRAN],
+		[test -n $ERLANG_LIB_VER_tcap \
+				&& test -n $ERLANG_LIB_VER_m3ua \
+				&& test -n $ERLANG_LIB_VER_sccp \
+				&& test -n $ERLANG_LIB_VER_cap \
+				&& test -n $ERLANG_LIB_VER_inap \
+				&& test -n $ERLANG_LIB_VER_map \
+				&& test -n $ERLANG_LIB_VER_gtt])
 
 
 ##
@@ -122,9 +130,8 @@ AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_ERROR([zj was not found!])])
 ##
 ## Output:  create output files
 ##
-
 AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile src/Makefile
 		priv/Makefile priv/schema/Makefile
 		priv/mibs/Makefile mibs/Makefile
-		test/Makefile $PACKAGE_NAME.rel sys.config])
+		test/Makefile sys.config sigtran.rel $PACKAGE_NAME.rel])
 

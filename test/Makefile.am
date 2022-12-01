@@ -3,26 +3,47 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
+check_DATA = .dialyzer_ok .common_test_ok
+
 testmods = cse_api_SUITE \
 		cse_query_parse_SUITE \
 		cse_rest_api_SUITE \
 		cse_log_SUITE \
 		cse_log_codec_ecs_SUITE \
-		cse_cap_SUITE \
-		cse_inap_SUITE \
 		cse_codec_SUITE \
 		cse_test_lib \
-		mod_ct_nrf \
 		cse_diameter_SUITE \
 		cse_snmp_SUITE \
-		cse_test_ocs_server \
 		diameter_test_client_cb \
+		cse_test_ocs_server \
+		mod_ct_nrf \
 		cse_snmpm_cb
 
-check_DATA = .dialyzer_ok .common_test_ok
+DIA_ARGS =
+CT_ARGS =
+
+if SIGTRAN
+testmods += cse_inap_SUITE \
+		cse_cap_SUITE
+
+cse_test_lib.beam:$(top_srcdir)/test/cse_test_lib.erl
+	$(ERLC) $(ERLCFLAGS) -DSIGTRAN -I $(top_srcdir)/include -I $(top_builddir)/include $<
+
+DIA_ARGS += -DCAP
+CT_ARGS += -pa $(top_builddir)/ebin \
+         -pa $(ERLANG_LIB_DIR_m3ua)/ebin \
+         -pa $(ERLANG_LIB_DIR_sccp)/ebin \
+         -pa $(ERLANG_LIB_DIR_gtt)/ebin \
+         -pa $(ERLANG_LIB_DIR_tcap)/ebin \
+         -pa $(ERLANG_LIB_DIR_map)/ebin \
+         -pa $(ERLANG_LIB_DIR_cap)/ebin \
+         -pa $(ERLANG_LIB_DIR_inap)/ebin \
+         -pa $(ERLANG_LIB_DIR_sigscale_mibs)/ebin \
+         -pa $(ERLANG_LIB_DIR_zj)/ebin
+endif
 
 .dialyzer_ok:	$(addsuffix .beam, $(testmods))
-	dialyzer  --src -I $(top_builddir)/include $(top_srcdir)/src
+	dialyzer $(DIA_ARGS) --src -I $(top_builddir)/include $(top_srcdir)/src
 
 %.beam:$(top_srcdir)/test/%.erl
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include -I $(top_builddir)/include $<
@@ -39,13 +60,7 @@ check_DATA = .dialyzer_ok .common_test_ok
 	@if [ ! -d cse_diameter_SUITE_data ]; then mkdir cse_diameter_SUITE_data; fi
 	ct_run -no_auto_compile \
 			-pa $(top_builddir)/ebin \
-			-pa $(ERLANG_LIB_DIR_m3ua)/ebin \
-			-pa $(ERLANG_LIB_DIR_sccp)/ebin \
-			-pa $(ERLANG_LIB_DIR_gtt)/ebin \
-			-pa $(ERLANG_LIB_DIR_tcap)/ebin \
-			-pa $(ERLANG_LIB_DIR_map)/ebin \
-			-pa $(ERLANG_LIB_DIR_cap)/ebin \
-			-pa $(ERLANG_LIB_DIR_inap)/ebin \
+			$(CT_ARGS) \
 			-pa $(ERLANG_LIB_DIR_sigscale_mibs)/ebin \
 			-pa $(ERLANG_LIB_DIR_zj)/ebin \
 			-logdir log -config ct.cfg -spec test.spec -dir . \

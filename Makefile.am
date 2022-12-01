@@ -12,8 +12,13 @@ endif
 .PHONY: release
 release: $(PACKAGE_VERSION).tar.gz
 
+if SIGTRAN
+$(PACKAGE_VERSION).rel: $(PACKAGE_NAME).rel sigtran.rel
+	sed -e '/{sigscale_mibs,/r sigtran.rel' $< > $@
+else
 $(PACKAGE_VERSION).rel: $(PACKAGE_NAME).rel
-	cp $(PACKAGE_NAME).rel $(PACKAGE_VERSION).rel
+	cp $< $@
+endif
 
 ERLTMP := $(shell mktemp -d)
 

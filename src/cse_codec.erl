@@ -25,10 +25,13 @@
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
 		isdn_address/1, tbcd/1, generic_number/1, generic_digits/1,
-		date_time/1, error_code/1, cause/1, ims_uri/1]).
+		date_time/1, cause/1, ims_uri/1]).
 
--include("cse_codec.hrl").
+-ifdef(CAP).
+-export([error_code/1]).
 -include_lib("cap/include/CAP-errorcodes.hrl").
+-endif.
+-include("cse_codec.hrl").
 
 -type called_party() :: #called_party{}.
 -type called_party_bcd() :: #called_party_bcd{}.
@@ -244,6 +247,7 @@ date_time({{Year, Month, Day}, {Hour, Minute, Second}}) ->
 	<<Y2:4, Y1:4, Y4:4, Y3:4, M2:4, M1:4, D2:4, D1:4,
 		H2:4, H1:4, Min2:4, Min1:4, S2:4, S1:4>>.
 	
+-ifdef(CAP).
 -spec error_code(ErrorCode) -> ErrorName
 	when
 		ErrorCode :: {local, integer()} | {global, tuple()},
@@ -285,6 +289,7 @@ error_code(?'errcode-unknownPDPID') ->
 	unknownPDPID;
 error_code(?'errcode-unknownCSID') ->
 	unknownCSID.
+-endif.
 
 -spec cause(Cause) -> Cause
 	when
