@@ -1,0 +1,7 @@
+	{m3ua, "@ERLANG_LIB_VER_m3ua@", load},
+	{tcap, "@ERLANG_LIB_VER_tcap@", load},
+	{sccp, "@ERLANG_LIB_VER_sccp@", load},
+	{map, "@ERLANG_LIB_VER_map@", load},
+	{inap, "@ERLANG_LIB_VER_inap@", load},
+	{cap, "@ERLANG_LIB_VER_cap@", load},
+	{gtt, "@ERLANG_LIB_VER_gtt@", load},
