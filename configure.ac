@@ -87,12 +87,13 @@ AC_ERLANG_CHECK_LIB([stdlib],
 		[AS_VERSION_COMPARE([$ERLANG_LIB_VER_stdlib], ["3.5"],
 				[AC_MSG_ERROR([>= stdlib-3.5 required!])])],
 		[AC_MSG_ERROR([stdlib was not found!])])
-AC_ERLANG_CHECK_LIB([sasl], [], [AC_MSG_WARN([sasl was not found!])])
-AC_ERLANG_CHECK_LIB([mnesia], [], [AC_MSG_WARN([mnesia was not found!])])
+AC_ERLANG_CHECK_LIB([sasl], [], [AC_MSG_ERROR([sasl was not found!])])
+AC_ERLANG_CHECK_LIB([mnesia], [], [AC_MSG_ERROR([mnesia was not found!])])
 AC_ERLANG_CHECK_LIB([inets], [], [AC_MSG_WARN([inets was not found!])])
 AC_ERLANG_CHECK_LIB([snmp], [], [AC_MSG_WARN([snmp was not found!])])
 AC_ERLANG_CHECK_LIB([diameter], [], [AC_MSG_WARN([diameter was not found!])])
-AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_ERROR([zj was not found!])])
+AC_ERLANG_CHECK_LIB([parsetools], [], [AC_MSG_WARN([parsetools was not found!])])
+AC_ERLANG_CHECK_LIB([zj], [], [AC_MSG_WARN([zj was not found!])])
 AC_ERLANG_CHECK_LIB([sigscale_mibs], [], [AC_MSG_WARN([sigscale_mibs was not found!])])
 AC_ERLANG_CHECK_LIB([tcap], [], [])
 AC_ERLANG_CHECK_LIB([m3ua], [], [])
