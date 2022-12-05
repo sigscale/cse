@@ -1,3 +1,10 @@
+2022-12-05  Vance Shipley <vances@sigscale.org>
+
+	* modernize release building
+	* check for parsetools (yeec, leex)
+	* add missing sigtran release file snippet
+	* refactor prepaid ecs log, include diameter network info
+
 2022-12-01  Vance Shipley <vances@sigscale.org>
 
 	*  build without sigtran applications
