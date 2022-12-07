@@ -1,5 +1,7 @@
 2022-12-07  Vance Shipley <vances@sigscale.org>
 
+	* handle diameter already started
+	* portable systemd configuration
 	* diameter optional, start if services configured
 	* require mnesia application running
 	* change missing libraries from warnings to errors
