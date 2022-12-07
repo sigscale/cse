@@ -46,6 +46,7 @@
 		{applications,
 				[kernel,
 				stdlib,
+				mnesia,
 				inets]},
 		{optional_applications,
 				[diameter,
