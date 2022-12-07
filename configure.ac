@@ -133,6 +133,7 @@ AM_CONDITIONAL([SIGTRAN],
 ##
 AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile src/Makefile
 		priv/Makefile priv/schema/Makefile
-		priv/mibs/Makefile mibs/Makefile
-		test/Makefile sys.config sigtran.rel $PACKAGE_NAME.rel])
+		priv/mibs/Makefile mibs/Makefile test/Makefile
+		sys.config sigtran.rel $PACKAGE_NAME.rel
+		scripts/cse scripts/cse.service])
 

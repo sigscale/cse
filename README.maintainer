@@ -3,6 +3,7 @@ You'll need the following GNU tools:
 	- autoconf
 	- automake
 	- make
+	- pkg-config
 
 ## Maintainer Build
 	1. aclocal                   (creates aclocal.m4)
