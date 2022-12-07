@@ -1,4 +1,4 @@
-%%% cse_slp_prepaid_diameter_fsm.erl
+%%% cse_slp_prepaid_diameter_ro_fsm.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021-2022 SigScale Global Inc.
@@ -21,7 +21,7 @@
 %%% 	for DIAMETER Ro application within the
 %%% 	{@link //cse. cse} application.
 %%%
--module(cse_slp_prepaid_diameter_fsm).
+-module(cse_slp_prepaid_diameter_ro_fsm).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
 -author('Refath Wadood <refath@sigscale.org>').
 
@@ -91,7 +91,7 @@
 		grantedUnit => #{unit() => pos_integer()}}.
 
 %%----------------------------------------------------------------------
-%%  The cse_slp_prepaid_diameter_fsm gen_statem callbacks
+%%  The cse_slp_prepaid_diameter_ro_fsm gen_statem callbacks
 %%----------------------------------------------------------------------
 
 -spec callback_mode() -> Result

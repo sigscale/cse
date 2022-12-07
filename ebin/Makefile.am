@@ -20,7 +20,7 @@ beam_DATA = cse.beam \
 		cse_server.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
-		cse_slp_prepaid_diameter_fsm.beam \
+		cse_slp_prepaid_diameter_ro_fsm.beam \
 		cse_codec.beam \
 		cse_log.beam \
 		cse_log_codec_ecs.beam \
@@ -93,7 +93,6 @@ else
 			-e '/^\s*cse_slp_inap_fsm,/d' \
 			-e '/^\s*cse_slp_prepaid_cap_fsm,/d' \
 			-e '/^\s*cse_slp_prepaid_inap_fsm,/d' \
-			-e '/^\s*cse_slp_prepaid_diameter_fsm,/d' \
 			-e '/^\s*cse_tco_server_cb,/d' < $< > $@
 endif
 

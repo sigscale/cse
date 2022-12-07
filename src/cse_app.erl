@@ -475,7 +475,7 @@ install14(Tables) ->
 	end.
 %% @hidden
 install15(Tables) ->
-	Mod = cse_slp_prepaid_diameter_fsm,
+	Mod = cse_slp_prepaid_diameter_ro_fsm,
 	Args = [],
 	Opts = [],
 	cse:add_context("32251@3gpp.org", Mod, Args, Opts), % PS

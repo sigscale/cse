@@ -223,7 +223,7 @@ add_context() ->
 
 add_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
-	Module = cse_slp_prepaid_diameter_fsm,
+	Module = cse_slp_prepaid_diameter_ro_fsm,
 	ok = cse:add_context(ContextId, Module, [], []).
 
 get_context() ->
@@ -231,7 +231,7 @@ get_context() ->
 
 get_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
-	Module = cse_slp_prepaid_diameter_fsm,
+	Module = cse_slp_prepaid_diameter_ro_fsm,
 	cse:add_context(ContextId, Module, [], []),
 	#diameter_context{id = ContextId, module = Module,
 			args = [], opts = []} = cse:get_context(ContextId).
@@ -241,7 +241,7 @@ find_context() ->
 
 find_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
-	Module = cse_slp_prepaid_diameter_fsm,
+	Module = cse_slp_prepaid_diameter_ro_fsm,
 	cse:add_context(ContextId, Module, [], []),
 	{ok, Context} = cse:find_context(ContextId),
 	#diameter_context{id = ContextId, module = Module,
@@ -251,7 +251,7 @@ get_contexts() ->
 	[{userdata, [{doc, "List all DIAMETER contexts"}]}].
 
 get_contexts(_Config) ->
-	Module = cse_slp_prepaid_diameter_fsm,
+	Module = cse_slp_prepaid_diameter_ro_fsm,
 	cse:add_context(list_to_binary(cse_test_lib:rand_name(20)), Module, [], []),
 	cse:add_context(list_to_binary(cse_test_lib:rand_name(20)), Module, [], []),
 	cse:add_context(list_to_binary(cse_test_lib:rand_name(20)), Module, [], []),
@@ -263,7 +263,7 @@ delete_context() ->
 
 delete_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
-	Module = cse_slp_prepaid_diameter_fsm,
+	Module = cse_slp_prepaid_diameter_ro_fsm,
 	cse:add_context(ContextId, Module, [], []),
 	ok = cse:delete_context(ContextId).
 
