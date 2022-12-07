@@ -185,6 +185,8 @@ start10(TopSup, DiameterServices) ->
 	case application:start(diameter) of
 		ok ->
 			start11(TopSup, DiameterServices);
+		{error, {already_started, _}} ->
+			start11(TopSup, DiameterServices);
 		{error, Reason} ->
 			{error, Reason}
 	end.
