@@ -103,13 +103,13 @@ AC_ERLANG_CHECK_LIB([inap], [], [])
 AC_ERLANG_CHECK_LIB([map], [], [])
 AC_ERLANG_CHECK_LIB([gtt], [], [])
 AM_CONDITIONAL([SIGTRAN],
-		[test -n $ERLANG_LIB_VER_tcap \
-				&& test -n $ERLANG_LIB_VER_m3ua \
-				&& test -n $ERLANG_LIB_VER_sccp \
-				&& test -n $ERLANG_LIB_VER_cap \
-				&& test -n $ERLANG_LIB_VER_inap \
-				&& test -n $ERLANG_LIB_VER_map \
-				&& test -n $ERLANG_LIB_VER_gtt])
+		[test "$ERLANG_LIB_DIR_tcap" != "not found" \
+				&& test "$ERLANG_LIB_DIR_m3ua" != "not found" \
+				&& test "$ERLANG_LIB_DIR_sccp" != "not found" \
+				&& test "$ERLANG_LIB_DIR_cap" != "not found" \
+				&& test "$ERLANG_LIB_DIR_inap" != "not found" \
+				&& test "$ERLANG_LIB_DIR_map" != "not found" \
+				&& test "$ERLANG_LIB_DIR_gtt" != "not found"])
 
 
 ##
