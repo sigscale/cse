@@ -179,14 +179,24 @@ start9(TopSup, []) ->
 	{ok, DiameterServices} = application:get_env(diameter),
 	start10(TopSup, DiameterServices).
 %% @hidden
-start10(TopSup, [{Addr, Port, Options} | T]) ->
+start10(TopSup, [] = DiameterServices) ->
+	start11(TopSup, DiameterServices);
+start10(TopSup, DiameterServices) ->
+	case application:start(diameter) of
+		ok ->
+			start11(TopSup, DiameterServices);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start11(TopSup, [{Addr, Port, Options} | T]) ->
 	case cse:start_diameter(Addr, Port, Options) of
 		{ok, _Sup} ->
-			start10(TopSup, T);
+			start11(TopSup, T);
 		{error, Reason} ->
 			{error, Reason}
 	end;
-start10(TopSup, []) ->
+start11(TopSup, []) ->
 	catch cse_mib:load(),
 	{ok, TopSup}.
 
