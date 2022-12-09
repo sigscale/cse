@@ -658,10 +658,10 @@ client_acct_service_opts(Config) ->
 			{restrict_connections, false},
 			{application, [{alias, base_app_test},
 					{dictionary, diameter_gen_base_rfc6733},
-					{module, diameter_test_client_cb}]},
+					{module, cse_test_diameter_cb}]},
 			{application, [{alias, cc_app_test},
 					{dictionary, diameter_gen_3gpp_ro_application},
-					{module, diameter_test_client_cb}]}].
+					{module, cse_test_diameter_cb}]}].
 
 %% @hidden
 transport_opts(Address, Port, Trans) when is_atom(Trans) ->
