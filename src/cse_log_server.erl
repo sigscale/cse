@@ -265,7 +265,20 @@ handle_info(Info, State) ->
 %% @see //stdlib/gen_server:terminate/3
 %% @private
 terminate(_Reason, #state{log = Log} = _State) ->
-	disk_log:close(Log).
+	terminate1(Log, disk_log:close(Log)).
+%% @hidden
+terminate1(Log, ok) ->
+	terminate2(Log, disk_log:sync(Log));
+terminate1(Log, {error, Reason}) ->
+	terminate2(Log, {error, Reason}).
+%% @hidden
+terminate2(Log, ok) ->
+	ok;
+terminate2(Log, {error, Reason}) ->
+	Descr = lists:flatten(disk_log:format_error(Reason)),
+	Trunc = lists:sublist(Descr, length(Descr) - 1),
+	?LOG_ERROR([{?MODULE, terminate}, {disk_log, Log},
+			{description, Trunc}, {error, Reason}]).
 
 -spec code_change(OldVersion, State, Extra) -> Result
 	when
