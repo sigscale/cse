@@ -215,6 +215,12 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 		_ ->
 			"success"
 	end,
+	URL = case maps:get(nrf_location, OCS, []) of
+			[] ->
+				maps:get(nrf_uri, OCS, []);
+			Location ->
+				Location
+	end,
 	[${,
 			ecs_base(StartTime), $,,
 			ecs_service(ServiceName, "slp"), $,,
@@ -222,7 +228,7 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol", "end"], Outcome), $,,
-			ecs_url(map_get(nrf_location, OCS)), $,,
+			ecs_url(URL), $,,
 			ecs_prepaid(State, Call, Network, OCS), $}].
 
 -spec ecs_base(Timestamp) -> iodata()
@@ -436,7 +442,7 @@ ecs_url(URL) when is_map(URL) ->
 		undefined ->
 			Acc5;
 		Fragment ->
-			[[$", "scheme", $", $:, $", Fragment, $"] | Acc5]
+			[[$", "fragment", $", $:, $", Fragment, $"] | Acc5]
 	end,
 	Acc7 = case maps:get(userinfo, URL, undefined) of
 		undefined ->
