@@ -1,3 +1,12 @@
+2022-12-10  Vance Shipley <vances@sigscale.org>
+
+	* ocs result and cause in prepaid log
+	* log nrf base url if nrf location missing
+	* correct type spec for synchronous log functions
+	* log server closes synchronously, reports errors verbosely
+	* correct test module namespace
+	* rename diameter ro slp module
+
 2022-12-07  Vance Shipley <vances@sigscale.org>
 
 	* handle diameter already started
