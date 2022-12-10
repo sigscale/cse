@@ -93,14 +93,16 @@ close(LogName)
 			{error, Reason}
 	end.
 
--spec log(LogName, Term) -> ok
+-spec log(LogName, Term) -> Result
    when
       LogName :: LocalName | {NodeName, LocalName}
 				| {global, GlobalName},
 		LocalName :: atom(),
 		NodeName :: atom(),
 		GlobalName :: term(),
-      Term :: term().
+      Term :: term(),
+		Result :: ok | {error, Reason},
+		Reason :: disk_log:log_error_rsn().
 %% @doc Synchronously write `Term' to an open log.
 %%
 %% 	The log should have been created with `{format, internal}'.
@@ -109,14 +111,16 @@ log(LogName, Term)
 		when is_atom(LogName); is_tuple(LogName) ->
 	gen_server:call(LogName, {log, Term}).
 
--spec blog(LogName, Term) -> ok
+-spec blog(LogName, Term) -> Result
    when
       LogName :: LocalName | {NodeName, LocalName}
 				| {global, GlobalName},
 		LocalName :: atom(),
 		NodeName :: atom(),
 		GlobalName :: term(),
-      Term :: term() | iodata().
+      Term :: term() | iodata(),
+		Result :: ok | {error, Reason},
+		Reason :: disk_log:log_error_rsn().
 %% @doc Synchronously wite `Bytes' to an open log.
 %%
 %% 	The log should have been created with `{format, external}'.
