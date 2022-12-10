@@ -1,4 +1,4 @@
-%%% diameter_test_client_cb.erl.erl
+%%% cse_test_diameter_cb.erl.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2016 - 2021 SigScale Global Inc.
@@ -15,10 +15,10 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc This callback module handles the messages of {@link //diameter. diameter}
-%%% application.
+%%% @doc This {@link //diameter. diameter} application callback module
+%%% 	handles a diameter test client.
 %%%
--module(diameter_test_client_cb).
+-module(cse_test_diameter_cb).
 -copyright('Copyright (c) 2016 - 2021 SigScale Global Inc.').
 
 -export([peer_up/3, peer_down/3, pick_peer/4, prepare_request/3,
