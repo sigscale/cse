@@ -163,7 +163,7 @@ prepaid_originating(_Config) ->
 	Network = #{context => ContextId, session_id => SessionId,
 			hplmn => Realm, vplmn => Realm},
 	NrfUri = "http://localhost:8080/nrf-rating/v1/ratingdata/42",
-	OCS = #{nrf_location => NrfUri},
+	OCS = #{nrf_location => NrfUri, nrf_result => "SUCCESS"},
 	Event = {Start, Stop, ServiceName, State, Subscriber, Call, Network, OCS},
 	JSON = cse_log_codec_ecs:codec_prepaid_ecs(Event),
 	{ok, ECS} = zj:decode(JSON).

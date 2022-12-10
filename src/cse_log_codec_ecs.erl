@@ -184,8 +184,12 @@ codec_diameter_ecs3(CCR,
 		Context :: string(),
 		SessionId :: binary(),
 		PLMN :: string(),
-		OCS :: #{nrf_location => NrfLocation},
-		NrfLocation :: string().
+		OCS :: #{nrf_uri => NrfURL, nrf_location => NrfLocation,
+				nrf_result => NrfResult, nrf_cause => NrfCause},
+		NrfURL :: string(),
+		NrfLocation :: string(),
+		NrfResult :: string(),
+		NrfCause :: string().
 %% @doc Prepaid SLP event CODEC for Elastic Stack logs.
 %%
 %% 	Formats call detail events for consumption by
@@ -509,15 +513,23 @@ ecs_prepaid3(#{context := Context, session_id := SessionId}, OCS, Acc)
 ecs_prepaid3(_Network, OCS, Acc) ->
 	ecs_prepaid4(OCS, Acc).
 %% @hidden
-ecs_prepaid4(_OCS, Acc) ->
-	[Acc, $}].
+ecs_prepaid4(OCS, Acc) when map_size(OCS) == 0 ->
+	[Acc, $}];
+ecs_prepaid4(OCS, Acc) ->
+	[Acc, $,, $", "ocs", $", $:, ${,
+			$", "result", $", $:, $", get_string(nrf_result, OCS), $", $,,
+			$", "cause", $", $:, $", get_string(nrf_cause, OCS), $", $}, $}].
 
 %% @hidden
 get_string(Key, Map) ->
 	case maps:get(Key, Map, undefined) of
 		Value when is_atom(Value) ->
 			atom_to_list(Value);
-		Value ->
+		Value when is_integer(Value) ->
+			integer_to_list(Value);
+		Value when is_float(Value) ->
+			float_to_list(Value);
+		Value when is_list(Value) ->
 			Value
 	end.
 
