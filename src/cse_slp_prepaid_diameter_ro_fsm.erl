@@ -50,7 +50,7 @@
 -define(RO_APPLICATION_ID, 4).
 -define(IANA_PEN_SigScale, 50386).
 -define(LOGNAME, prepaid).
--define(SERVICENAME, "Prepaid").
+-define(SERVICENAME, "Prepaid Voice").
 
 -type state() :: null
 		| authorize_origination_attempt | terminating_call_handling
@@ -58,24 +58,24 @@
 		| routing | o_alerting | t_alerting | active.
 
 -type statedata() :: #{start := pos_integer(),
-		nrf_profile => atom() | undefined,
-		nrf_uri => string() | undefined,
-		nrf_location => string() | undefined,
-		nrf_reqid => reference() | undefined,
-		imsi => [$0..$9]| undefined,
-		direction => originating | terminating | undefined,
-		called =>  [$0..$9] | undefined,
-		calling => [$0..$9] | undefined,
-		msisdn => string() | undefined,
-		context => string() | undefined,
-		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}] | undefined,
-		req_type => pos_integer() | undefined,
-		reqno =>  integer() | undefined,
-		session_id => binary() | undefined,
-		ohost => binary() | undefined,
-		orealm => binary() | undefined,
-		drealm => binary() | undefined,
-		from => pid() | undefined}.
+		nrf_profile => atom(),
+		nrf_uri => string(),
+		nrf_location => string(),
+		nrf_reqid => reference(),
+		imsi => [$0..$9],
+		direction => originating | terminating,
+		called =>  [$0..$9],
+		calling => [$0..$9],
+		msisdn => string(),
+		context => string(),
+		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
+		req_type => pos_integer(),
+		reqno =>  integer(),
+		session_id => binary(),
+		ohost => binary(),
+		orealm => binary(),
+		drealm => binary(),
+		from => pid()}.
 
 -type mscc() :: #{rg => pos_integer() | undefined,
 		si => pos_integer() | undefined,
@@ -1881,7 +1881,7 @@ nrf_release2(JSON,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
-			{keep_state, NewData, Actions};
+			{next_state, null, NewData, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
@@ -1891,7 +1891,7 @@ nrf_release2(JSON,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
-			{keep_state, NewData, Actions}
+			{next_state, null, NewData, Actions}
 	end.
 
 -spec mscc(MSCC) -> Result
@@ -2313,19 +2313,18 @@ address(Dest) ->
 %% @hidden
 log(State,
 		#{start := Start,
-		nrf_location := NrfLocation,
 		imsi := IMSI,
 		msisdn := MSISDN,
 		direction := Direction,
 		called :=  Called,
 		calling := Calling,
 		context := Context,
-		session_id := SessionId} = _Data) ->
+		session_id := SessionId} = Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
 	Call = #{direction => Direction, calling => Calling, called => Called},
 	Network = #{context => Context, session_id => SessionId},
-	OCS = #{nrf_location => NrfLocation},
+	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
 	cse_log:blog(?LOGNAME, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network, OCS}).
 
