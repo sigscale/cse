@@ -1,0 +1,65 @@
+@startuml
+
+state null {
+}
+state authorize_origination_attempt {
+}
+state terminating_call_handling {
+}
+state collect_information {
+}
+state analyse_information {
+}
+state routing {
+}
+state o_alerting {
+}
+state t_alerting {
+}
+state active {
+}
+
+[*] --> null : CCR
+null --> authorize_origination_attempt : originating
+null --> terminating_call_handling : terminating
+null --> [*]
+
+authorize_origination_attempt --> collect_information : CCR-I RSU
+authorize_origination_attempt --> collect_information : CCR-U RSU
+authorize_origination_attempt --> analyse_information : CCR-I RSU called
+authorize_origination_attempt --> analyse_information : CCR-U RSU called
+authorize_origination_attempt --> authorize_origination_attempt : CCR-I
+authorize_origination_attempt --> authorize_origination_attempt : CCR-U
+authorize_origination_attempt --> null : CCR-T
+
+terminating_call_handling --> t_alerting : CCR-I RSU
+terminating_call_handling --> t_alerting : CCR-U RSU
+terminating_call_handling --> active : CCR-U USU
+terminating_call_handling --> terminating_call_handling : CCR-I
+terminating_call_handling --> terminating_call_handling : CCR-U
+terminating_call_handling --> null : CCR-T
+
+collect_information --> analyse_information : CCR-U RSU called
+collect_information --> collect_information : CCR-U 
+collect_information --> null : CCR-T
+
+analyse_information --> active : CCR-U USU
+analyse_information --> routing : CCR-U
+analyse_information --> null : CCR-T
+
+routing --> active : CCR-U USU
+routing --> o_alerting : CCR-U
+routing --> null : CCR-T
+
+o_alerting --> active : CCR-U USU
+o_alerting --> o_alerting : CCR-U
+o_alerting --> null : CCR-T
+
+t_alerting --> active : CCR-U USU
+t_alerting --> t_alerting : CCR-U
+t_alerting --> null : CCR-T
+
+active --> null : CCR-T
+active --> active : CCR-U
+
+@enduml

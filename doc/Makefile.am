@@ -23,6 +23,7 @@ modhtml = cse.html \
 		cse_slp_prepaid_cap_fsm.html \
 		cse_slp_prepaid_inap_fsm.html \
 		cse_slp_prepaid_diameter_ro_fsm.html \
+		cse_slp_prepaid_diameter_gy_fsm.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \
@@ -61,7 +62,9 @@ doc_DATA = overview.edoc $(modhtml) \
 		o-bcsm-inap.svg \
 		t-bcsm-inap.svg \
 		messaging.svg \
-		distribution.svg
+		distribution.svg \
+		prepaid-diameter-ro.svg \
+		prepaid-diameter-gy.svg \
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
@@ -89,6 +92,8 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/t-bcsm-inap.svg .
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
+	-cp -n $(top_srcdir)/doc/prepaid-diameter-ro.svg .
+	-cp -n $(top_srcdir)/doc/prepaid-diameter-gy.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 
