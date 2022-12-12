@@ -1,3 +1,11 @@
+2022-12-13  Vance Shipley <vances@sigscale.org>
+
+	* application environment variables for httpc headers and options
+	* seperate slp for diameter gy
+	* include origin host/realm in console log reports
+	* transition to null on error in terminate or when session not established
+	* on nrf error in release transition to null state
+
 2022-12-10  Vance Shipley <vances@sigscale.org>
 
 	* ocs result and cause in prepaid log

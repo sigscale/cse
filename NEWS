@@ -1,5 +1,11 @@
-December 10 , 2022
-------------------
+December 13, 2022
+-----------------
+	- Configurablew HTTP headers and options for Nrf
+	- Fixes for exceptions in prepaid SLPs
+	- 3GPP Gy interface prepaid SLP
+
+December 10, 2022
+-----------------
 	- OCS result and cause in prepaid log
 	- Flush disk logs before close, verbose errors
 
