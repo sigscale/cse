@@ -64,7 +64,7 @@ doc_DATA = overview.edoc $(modhtml) \
 		messaging.svg \
 		distribution.svg \
 		prepaid-diameter-ro.svg \
-		prepaid-diameter-gy.svg \
+		prepaid-diameter-gy.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \

@@ -83,32 +83,34 @@
 		| change_position | service_change.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
 
--type statedata() :: #{dha => pid() | undefined,
-		cco => pid() | undefined,
-		did => 0..4294967295 | undefined,
+-type statedata() :: #{dha => pid(),
+		cco => pid(),
+		did => 0..4294967295,
 		iid => 0..127,
-		ac => tuple() | undefined,
-		scf => sccp_codec:party_address() | undefined,
-		ssf => sccp_codec:party_address() | undefined,
-		imsi => [$0..$9] | undefined,
-		msisdn => [$0..$9] | undefined,
-		called =>  [$0..$9] | undefined,
-		calling => [$0..$9] | undefined,
-		call_ref => binary() | undefined,
-		edp => #{event_type() => monitor_mode()} | undefined,
+		ac => tuple(),
+		scf => sccp_codec:party_address(),
+		ssf => sccp_codec:party_address(),
+		imsi => [$0..$9],
+		msisdn => [$0..$9],
+		called =>  [$0..$9],
+		calling => [$0..$9],
+		call_ref => binary(),
+		edp => #{event_type() => monitor_mode()},
 		call_info => #{attempt | connect | stop | cause =>
-				non_neg_integer() | string() | cse_codec:cause()} | undefined,
-		call_start => string() | undefined,
-		charging_start => string() | undefined,
+				non_neg_integer() | string() | cse_codec:cause()},
+		call_start => string(),
+		charging_start => string(),
 		consumed => non_neg_integer(),
 		pending => non_neg_integer(),
-		msc => [$0..$9] | undefined,
-		vlr => [$0..$9] | undefined,
-		isup => [$0..$9] | undefined,
+		msc => [$0..$9],
+		vlr => [$0..$9],
+		isup => [$0..$9],
 		nrf_profile => atom(),
 		nrf_uri => string(),
-		nrf_location => string() | undefined,
-		nrf_reqid => reference() | undefined}.
+		nrf_options => httpc:http_options(),
+		nrf_headers => httpc:headers(),
+		nrf_location => string(),
+		nrf_reqid => reference()}.
 
 -define(Pkgs, 'CAP-gsmSSF-gsmSCF-pkgs-contracts-acs').
 
@@ -178,8 +180,11 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		#{did := DialogueID} = Data) ->
 	{ok, Profile} = application:get_env(nrf_profile),
 	{ok, URI} = application:get_env(nrf_uri),
+	{ok, HttpOptions} = application:get_env(nrf_options),
+	{ok, Headers} = application:get_env(nrf_headers),
 	NewData = Data#{iid => 0, pending => 0, consumed => 0,
-			nrf_profile => Profile, nrf_uri => URI},
+			nrf_profile => Profile, nrf_uri => URI,
+			nrf_options => HttpOptions, nrf_headers => Headers},
 	Actions = [{next_event, internal, EventContent}],
 	{next_state, collect_information, NewData, Actions};
 null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
@@ -189,8 +194,11 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		#{did := DialogueID} = Data) ->
 	{ok, Profile} = application:get_env(nrf_profile),
 	{ok, URI} = application:get_env(nrf_uri),
+	{ok, HttpOptions} = application:get_env(nrf_options),
+	{ok, Headers} = application:get_env(nrf_headers),
 	NewData = Data#{iid => 0, pending => 0, consumed => 0,
-			nrf_profile => Profile, nrf_uri => URI},
+			nrf_profile => Profile, nrf_uri => URI,
+			nrf_options => HttpOptions, nrf_headers => Headers},
 	Actions = [{next_event, internal, EventContent}],
 	{next_state, terminating_call_handling, NewData, Actions};
 null(cast, {'TC', 'L-CANCEL', indication,
@@ -2087,14 +2095,15 @@ nrf_start6(ServiceRating, #{imsi := IMSI, msisdn := MSISDN} = Data) ->
 			"serviceRating" => [ServiceRating]},
 	nrf_start7(JSON, Data).
 %% @hidden
-nrf_start7(JSON, #{nrf_profile := Profile, nrf_uri := URI} = Data) ->
+nrf_start7(JSON, #{nrf_profile := Profile, nrf_uri := URI,
+			nrf_options := HttpOptions, nrf_headers := Headers} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
+	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ "/ratingdata", Headers, "application/json", Body},
-	HttpOptions = [{relaxed, true}],
-	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+	Request = {URI ++ "/ratingdata", Headers1, "application/json", Body},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_reqid => RequestId},
 			{keep_state, NewData};
@@ -2181,16 +2190,17 @@ nrf_update6(Consumed, ServiceRating,
 			"serviceRating" => [Debit, Reserve]},
 	nrf_update7(JSON, Data).
 %% @hidden
-nrf_update7(JSON, #{nrf_profile := Profile,
-		nrf_uri := URI, nrf_location := Location} = Data)
+nrf_update7(JSON, #{nrf_profile := Profile, nrf_uri := URI,
+			nrf_location := Location, nrf_options := HttpOptions,
+			nrf_headers := Headers} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
+	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
-	HttpOptions = [{relaxed, true}],
-	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+	Request = {URI ++ Location ++ "/update", Headers1, "application/json", Body},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_reqid => RequestId},
 			{keep_state, NewData};
@@ -2308,16 +2318,17 @@ nrf_release8(ServiceRating,
 			"serviceRating" => [ServiceRating1]},
 	nrf_release9(JSON, Data).
 %% @hidden
-nrf_release9(JSON, #{nrf_profile := Profile,
-		nrf_uri := URI, nrf_location := Location} = Data)
+nrf_release9(JSON, #{nrf_profile := Profile, nrf_uri := URI,
+			nrf_location := Location, nrf_options := HttpOptions,
+			nrf_headers := Headers} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
+	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/release", Headers, "application/json", Body},
-	HttpOptions = [{relaxed, true}],
-	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+	Request = {URI ++ Location ++ "/release", Headers1, "application/json", Body},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			Data1 = maps:remove(nrf_location, Data),
 			NewData = Data1#{nrf_reqid => RequestId, pending => 0},

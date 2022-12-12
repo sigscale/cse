@@ -62,6 +62,8 @@
 -type statedata() :: #{start := pos_integer(),
 		nrf_profile => atom(),
 		nrf_uri => string(),
+		nrf_options => httpc:http_options(),
+		nrf_headers => httpc:headers(),
 		nrf_location => string(),
 		nrf_reqid => reference(),
 		imsi => [$0..$9],
@@ -124,7 +126,10 @@ callback_mode() ->
 init(_Args) ->
 	{ok, Profile} = application:get_env(cse, nrf_profile),
 	{ok, URI} = application:get_env(cse, nrf_uri),
+	{ok, HttpOptions} = application:get_env(nrf_options),
+	{ok, Headers} = application:get_env(nrf_headers),
 	Data = #{nrf_profile => Profile, nrf_uri => URI,
+			nrf_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond)},
 	{ok, null, Data}.
 
@@ -1201,15 +1206,16 @@ nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
 %% @hidden
 nrf_start2(JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
+				nrf_options := HttpOptions, nrf_headers := Headers,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
+	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ "/ratingdata", Headers, "application/json", Body},
-	HttpOptions = [{relaxed, true}],
-	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+	Request = {URI ++ "/ratingdata", Headers1, "application/json", Body},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_reqid => RequestId},
 			{keep_state, NewData};
@@ -1254,17 +1260,18 @@ nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
 %% @hidden
 nrf_update2(JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
+				nrf_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, req_type := RequestType,
 				reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
+	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/update", Headers, "application/json", Body},
-	HttpOptions = [{relaxed, true}],
-	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+	Request = {URI ++ Location ++ "/update", Headers1, "application/json", Body},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_reqid => RequestId},
 			{keep_state, NewData};
@@ -1313,17 +1320,18 @@ nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
 %% @hidden
 nrf_release2(JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
+				nrf_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, req_type := RequestType,
 				reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers = [{"accept", "application/json"}],
+	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/release", Headers, "application/json", Body},
-	HttpOptions = [{relaxed, true}],
-	case httpc:request(post, Request, HttpOptions, Options, Profile) of
+	Request = {URI ++ Location ++ "/release", Headers1, "application/json", Body},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_reqid => RequestId},
 			{keep_state, NewData};
