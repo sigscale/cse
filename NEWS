@@ -1,6 +1,6 @@
 December 13, 2022
 -----------------
-	- Configurablew HTTP headers and options for Nrf
+	- Configurable HTTP headers and options for Nrf
 	- Fixes for exceptions in prepaid SLPs
 	- 3GPP Gy interface prepaid SLP
 
