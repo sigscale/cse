@@ -107,7 +107,7 @@
 		isup => [$0..$9],
 		nrf_profile => atom(),
 		nrf_uri => string(),
-		nrf_options => httpc:http_options(),
+		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
 		nrf_location => string(),
 		nrf_reqid => reference()}.
@@ -180,11 +180,11 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		#{did := DialogueID} = Data) ->
 	{ok, Profile} = application:get_env(nrf_profile),
 	{ok, URI} = application:get_env(nrf_uri),
-	{ok, HttpOptions} = application:get_env(nrf_options),
+	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
 	NewData = Data#{iid => 0, pending => 0, consumed => 0,
 			nrf_profile => Profile, nrf_uri => URI,
-			nrf_options => HttpOptions, nrf_headers => Headers},
+			nrf_http_options => HttpOptions, nrf_headers => Headers},
 	Actions = [{next_event, internal, EventContent}],
 	{next_state, collect_information, NewData, Actions};
 null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
@@ -194,11 +194,11 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		#{did := DialogueID} = Data) ->
 	{ok, Profile} = application:get_env(nrf_profile),
 	{ok, URI} = application:get_env(nrf_uri),
-	{ok, HttpOptions} = application:get_env(nrf_options),
+	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
 	NewData = Data#{iid => 0, pending => 0, consumed => 0,
 			nrf_profile => Profile, nrf_uri => URI,
-			nrf_options => HttpOptions, nrf_headers => Headers},
+			nrf_http_options => HttpOptions, nrf_headers => Headers},
 	Actions = [{next_event, internal, EventContent}],
 	{next_state, terminating_call_handling, NewData, Actions};
 null(cast, {'TC', 'L-CANCEL', indication,
@@ -2096,7 +2096,7 @@ nrf_start6(ServiceRating, #{imsi := IMSI, msisdn := MSISDN} = Data) ->
 	nrf_start7(JSON, Data).
 %% @hidden
 nrf_start7(JSON, #{nrf_profile := Profile, nrf_uri := URI,
-			nrf_options := HttpOptions, nrf_headers := Headers} = Data) ->
+			nrf_http_options := HttpOptions, nrf_headers := Headers} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
@@ -2191,7 +2191,7 @@ nrf_update6(Consumed, ServiceRating,
 	nrf_update7(JSON, Data).
 %% @hidden
 nrf_update7(JSON, #{nrf_profile := Profile, nrf_uri := URI,
-			nrf_location := Location, nrf_options := HttpOptions,
+			nrf_location := Location, nrf_http_options := HttpOptions,
 			nrf_headers := Headers} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
@@ -2319,7 +2319,7 @@ nrf_release8(ServiceRating,
 	nrf_release9(JSON, Data).
 %% @hidden
 nrf_release9(JSON, #{nrf_profile := Profile, nrf_uri := URI,
-			nrf_location := Location, nrf_options := HttpOptions,
+			nrf_location := Location, nrf_http_options := HttpOptions,
 			nrf_headers := Headers} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},

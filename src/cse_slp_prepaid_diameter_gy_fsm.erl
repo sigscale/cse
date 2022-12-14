@@ -62,7 +62,7 @@
 -type statedata() :: #{start := pos_integer(),
 		nrf_profile => atom(),
 		nrf_uri => string(),
-		nrf_options => httpc:http_options(),
+		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
 		nrf_location => string(),
 		nrf_reqid => reference(),
@@ -126,10 +126,10 @@ callback_mode() ->
 init(_Args) ->
 	{ok, Profile} = application:get_env(cse, nrf_profile),
 	{ok, URI} = application:get_env(cse, nrf_uri),
-	{ok, HttpOptions} = application:get_env(nrf_options),
+	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
 	Data = #{nrf_profile => Profile, nrf_uri => URI,
-			nrf_options => HttpOptions, nrf_headers => Headers,
+			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond)},
 	{ok, null, Data}.
 
@@ -1206,7 +1206,7 @@ nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
 %% @hidden
 nrf_start2(JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
-				nrf_options := HttpOptions, nrf_headers := Headers,
+				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
@@ -1260,7 +1260,7 @@ nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
 %% @hidden
 nrf_update2(JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
-				nrf_options := HttpOptions, nrf_headers := Headers,
+				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, req_type := RequestType,
 				reqno := RequestNum} = Data)
@@ -1320,7 +1320,7 @@ nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
 %% @hidden
 nrf_release2(JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
-				nrf_options := HttpOptions, nrf_headers := Headers,
+				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, req_type := RequestType,
 				reqno := RequestNum} = Data)

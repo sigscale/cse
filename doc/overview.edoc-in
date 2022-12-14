@@ -346,9 +346,13 @@ API on the 3GPP Re interface to a remote Rating Funtion (RF) (i.e. OCS).
 				<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
 				server (i.e. OCS).</dd>
 	<dt>`nrf_options'</dt>
-		<dd>HTTP {@link //inets/httpc:http_options(). options} used by the
-				{@link //inets/httpc. httpc} client
+		<dd>HTTP client ({@link //inets/httpc. httpc}) behaviour
+				{@link //inets/httpc:options(). options}.
 				(default: `[{keep_alive_timeout, 4000}]').</dd>
+	<dt>`nrf_http_options'</dt>
+		<dd>HTTP request {@link //inets/httpc:http_options(). options}
+				used by the {@link //inets/httpc. httpc} client.
+				(default: `[]').</dd>
 	<dt>`nrf_headers'</dt>
 		<dd>HTTP {@link //inets/httpc:headers(). headers} added by the
 				{@link //inets/httpc. httpc} client (default: `[]').</dd>
