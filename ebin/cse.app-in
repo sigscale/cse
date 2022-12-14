@@ -65,7 +65,7 @@
 				%				{dictionary, diameter_gen_3gpp_ro_application},
 				%				{module, cse_diameter_ro_application_cb},
 				%				{request_errors, callback}]},
-				%				{'Origin-Realm',"cse.mnc001.mnc001.3gppnetwork.org"}]}]},
+				%				{'Origin-Realm',"cse.mnc001.mcc001.3gppnetwork.org"}]}]},
 				{tsl_name, cse_tsl},
 				{tsl_callback, undefined},
 				% {tsl_callback, cse_tco_server_cb},
