@@ -5,7 +5,7 @@
 %                [{'Auth-Application-Id', [4]},
 %                {application,[{alias, cse_diameter_3gpp_ro_application},
 %                      {dictionary, diameter_gen_3gpp_ro_application},
-%                      {module, cse_diameter_ro_application_cb},
+%                      {module, cse_diameter_3gpp_ro_application_cb},
 %                      {request_errors, callback}]},
 %                {'Origin-Realm',"ims.mnc001.mnc001.3gppnetwork.org"}]}]},
      {logs,
