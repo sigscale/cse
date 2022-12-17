@@ -1,43 +1,31 @@
 @startuml
 
-state null {
-}
-state authorize_origination_attempt {
-}
-state collect_information {
-}
-state analyse_information {
-}
-state routing {
-}
-state active {
-}
+hide empty description
+skinparam shadowing false
+state null #white ##f57f17
+state authorize_origination_attempt #white ##f57f17
+state collect_information #white##f57f17
+state analyse_information #white##f57f17
+state active #white ##f57f17
 
 [*] --> null : CCR
-null --> authorize_origination_attempt : originating
+null --> authorize_origination_attempt : CCR
 null --> [*]
 
-authorize_origination_attempt --> collect_information : CCR-I RSU
-authorize_origination_attempt --> collect_information : CCR-U RSU
-authorize_origination_attempt --> analyse_information : CCR-I RSU called
-authorize_origination_attempt --> analyse_information : CCR-U RSU called
-authorize_origination_attempt --> authorize_origination_attempt : CCR-I
-authorize_origination_attempt --> authorize_origination_attempt : CCR-U
-authorize_origination_attempt --> null : CCR-T
+authorize_origination_attempt --> analyse_information : Success & Granted
+authorize_origination_attempt --> collect_information : Success
+authorize_origination_attempt --> null : Fail | Terminate
 
-collect_information --> analyse_information : CCR-U RSU called
-collect_information --> collect_information : CCR-U 
-collect_information --> null : CCR-T
+collect_information --> active : Success & Used
+collect_information --> analyse_information : Success
+collect_information --> collect_information : *
+collect_information --> null : Terminate
 
-analyse_information --> active : CCR-U USU
-analyse_information --> routing : CCR-U
-analyse_information --> null : CCR-T
+analyse_information --> active : Success & Used
+analyse_information --> analyse_information : *
+analyse_information --> null : Terminate
 
-routing --> active : CCR-U USU
-routing --> routing : CCR-U
-routing --> null : CCR-T
-
-active --> null : CCR-T
-active --> active : CCR-U
+active --> active : *
+active --> null : Terminate
 
 @enduml
