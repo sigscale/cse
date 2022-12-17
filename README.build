@@ -4,7 +4,6 @@
 ## Configure new build directory
 mkdir -p shell/lib
 ln -st shell/lib ../../$(ls -d ../cap.build/shell/lib/cap-*)
-ln -st shell/lib ../../$(ls -d ../cap.build/shell/lib/cap-*)
 ln -st shell/lib ../../$(ls -d ../gtt.build/shell/lib/gtt-*)
 ln -st shell/lib ../../$(ls -d ../inap.build/shell/lib/inap-*)
 ln -st shell/lib ../../$(ls -d ../m3ua.build/shell/lib/m3ua-*)

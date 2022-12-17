@@ -41,7 +41,8 @@ beam_DATA = cse.beam \
 		diameter_gen_etsi.beam \
 		diameter_gen_3gpp.beam \
 		diameter_gen_3gpp_ro_application.beam \
-		cse_mib.beam
+		cse_mib.beam \
+		user_default.beam
 
 if SIGTRAN
 beam_DATA += cse_tco_server_cb.beam \

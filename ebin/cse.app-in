@@ -40,6 +40,7 @@
 				cse_rest_query_scanner,
 				cse_rest_query_parser,
 				diameter_gen_ietf,
+                                user_default,
 				diameter_gen_etsi,
 				diameter_gen_3gpp,
 				diameter_gen_3gpp_ro_application]},
