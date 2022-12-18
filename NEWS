@@ -1,3 +1,9 @@
+December 18, 2022
+-----------------
+	- Shortcut commands for cse in OTP shell
+	- Configurable Nrf HTTP client options
+	- Prepaid DIAMETER Ro/Gy corrected/refactored
+
 December 13, 2022
 -----------------
 	- Configurable HTTP headers and options for Nrf

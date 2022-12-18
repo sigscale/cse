@@ -1,3 +1,11 @@
+2022-12-18  Vance Shipley <vances@sigscale.org>
+
+	* correct and refactor nrf codec for simplicity
+	* refactored slp state machines for prepaid diameter
+	* correct module name in app spec and sys config
+	* user_default module for shortcut functions
+	* seperate app env vars for httpc:options() and httpc:http_options()
+
 2022-12-13  Vance Shipley <vances@sigscale.org>
 
 	* application environment variables for httpc headers and options
