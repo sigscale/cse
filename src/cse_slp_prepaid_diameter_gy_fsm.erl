@@ -76,21 +76,6 @@
 		drealm => binary(),
 		from => pid()}.
 
--type mscc() :: #{rg => pos_integer() | undefined,
-		si => pos_integer() | undefined,
-		usu => #{unit() => pos_integer()} | undefined,
-		rsu => #{unit() => pos_integer()} | [] | undefined}.
-
--type unit() :: time | downlinkVolume | uplinkVolume
-		| totalVolume | serviceSpecificUnit.
-
--type service_rating() :: #{serviceContextId => string(),
-		serviceId => pos_integer(),
-		ratingGroup => pos_integer(),
-		requestSubType => string(),
-		consumedUnit => #{unit() => pos_integer()},
-		grantedUnit => #{unit() => pos_integer()}}.
-
 %%----------------------------------------------------------------------
 %%  The cse_slp_prepaid_diameter_gy_fsm gen_statem callbacks
 %%----------------------------------------------------------------------
@@ -190,12 +175,11 @@ authorize_origination_attempt(cast,
 				when is_list(Location) ->
 			try
 				NewData1 = NewData#{nrf_location => Location},
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, rsu_positive(MSCC)} of
+				case {ResultCode, is_rsu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
 						{next_state, analyse_information, NewData1, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false} ->
@@ -366,12 +350,11 @@ collect_information(cast,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, usu_positive(MSCC)} of
+				case {ResultCode, is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
 						{next_state, active, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false} ->
@@ -416,8 +399,7 @@ collect_information(cast,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
@@ -571,12 +553,11 @@ analyse_information(cast,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, usu_positive(MSCC)} of
+				case {ResultCode, is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
 						{next_state, active, NewData, Actions};
 					{_, _}->
@@ -619,8 +600,7 @@ analyse_information(cast,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
@@ -774,8 +754,7 @@ active(cast,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
@@ -817,8 +796,7 @@ active(cast,
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
-				Container = build_container(MSCC),
-				{ResultCode, NewMSCC} = build_mscc(ServiceRating, Container),
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
@@ -996,7 +974,7 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @doc Start rating a session.
 %% @hidden
 nrf_start(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(mscc(MSCC), ServiceContextId),
+	ServiceRating = service_rating(MSCC, ServiceContextId),
 	nrf_start1(ServiceRating, ServiceContextId, Data).
 %% @hidden
 nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
@@ -1050,7 +1028,7 @@ nrf_start2(JSON,
 		From :: {pid(), reference()}.
 %% @doc Update rating a session.
 nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(mscc(MSCC), ServiceContextId),
+	ServiceRating = service_rating(MSCC, ServiceContextId),
 	nrf_update1(ServiceRating, ServiceContextId, Data).
 %% @hidden
 nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
@@ -1110,7 +1088,7 @@ nrf_update2(JSON,
 		From :: {pid(), reference()}.
 %% @doc Finish rating a session.
 nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(mscc(MSCC), ServiceContextId),
+	ServiceRating = service_rating(MSCC, ServiceContextId),
 	nrf_release1(ServiceRating, ServiceContextId, Data).
 %% @hidden
 nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
@@ -1162,183 +1140,132 @@ nrf_release2(JSON,
 			{next_state, null, NewData, Actions}
 	end.
 
--spec mscc(MSCC) -> Result
-	when
-		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-		Result :: [mscc()].
-%% @doc Convert a list of Diameter MSCCs to a list of equivalent maps.
-mscc(MSCC) ->
-	mscc(MSCC, []).
 %% @hidden
-mscc([H | T], Acc) ->
-	Amounts = #{rg => rg(H), si => si(H), rsu => rsu(H), usu => usu(H)},
-	mscc(T, [Amounts | Acc]);
-mscc([], Acc) ->
-	lists:reverse(Acc).
-
-%% @hidden
-si(#'3gpp_ro_Multiple-Services-Credit-Control'{'Service-Identifier' = [SI]})
-		when is_integer(SI) ->
-	SI;
-si(_) ->
-	undefined.
-
-%% @hidden
-rg(#'3gpp_ro_Multiple-Services-Credit-Control'{'Rating-Group' = [RG]})
-		when is_integer(RG) ->
-	RG;
-rg(_) ->
-	undefined.
-
-%% @hidden
-rsu_positive([H | T]) ->
-	case rsu(H) of
-		#{} ->
-			true;
-		[] ->
-			true;
-		undefined ->
-			rsu_positive(T)
-	end;
-rsu_positive([]) ->
+is_rsu([#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = [_RSU]} | _]) ->
+	true;
+is_rsu([#'3gpp_ro_Multiple-Services-Credit-Control'{} | T]) ->
+	is_rsu(T);
+is_rsu([]) ->
 	false.
 
 %% @hidden
-rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = [#'3gpp_ro_Requested-Service-Unit'{
-		'CC-Time' = [CCTime]}]})
-		when is_integer(CCTime), CCTime > 0 ->
-	#{time => CCTime};
-rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = [#'3gpp_ro_Requested-Service-Unit'{
-		'CC-Total-Octets' = [CCTotalOctets]}]})
-		when is_integer(CCTotalOctets), CCTotalOctets > 0 ->
-	#{totalVolume => CCTotalOctets};
-rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = [#'3gpp_ro_Requested-Service-Unit'{
-		'CC-Output-Octets' = [CCOutputOctets],
-		'CC-Input-Octets' = [CCInputOctets]}]})
-		when is_integer(CCInputOctets), is_integer(CCOutputOctets),
-				CCInputOctets > 0, CCOutputOctets > 0 ->
-	#{totalVolume => CCInputOctets + CCOutputOctets,
-			downlinkVolume => CCOutputOctets, uplinkVolume => CCInputOctets};
-rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = [#'3gpp_ro_Requested-Service-Unit'{
-		'CC-Service-Specific-Units' = [CCSpecUnits]}]})
-		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
-	#{serviceSpecificUnit => CCSpecUnits};
-rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = [#'3gpp_ro_Requested-Service-Unit'{}]}) ->
-	[];
-rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{}) ->
-	undefined.
+rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Time' = [CCTime]}) ->
+	#{"time" => CCTime};
+rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]}) ->
+	#{"totalVolume" => CCTotalOctets};
+rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Output-Octets' = [CCOutputOctets],
+		'CC-Input-Octets' = [CCInputOctets]}) ->
+	#{"downlinkVolume" => CCOutputOctets, "uplinkVolume" => CCInputOctets};
+rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
+	#{"serviceSpecificUnit" => CCSpecUnits};
+rsu(#'3gpp_ro_Requested-Service-Unit'{}) ->
+	#{}.
 
 %% @hidden
-usu_positive([H | T]) ->
-	case usu(H) of
-		#{} ->
-			true;
-		undefined ->
-			usu_positive(T)
-	end;
-usu_positive([]) ->
+is_usu([#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Used-Service-Unit' = [_USU]} | _]) ->
+	true;
+is_usu([#'3gpp_ro_Multiple-Services-Credit-Control'{} | T]) ->
+	is_usu(T);
+is_usu([]) ->
 	false.
 
-usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
-		'CC-Time' = [CCTime]} | _]})
-		when is_integer(CCTime), CCTime > 0 ->
-	#{time => CCTime};
-usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
-		'CC-Total-Octets' = [CCTotalOctets]} | _]})
-		when is_integer(CCTotalOctets), CCTotalOctets > 0 ->
-	#{totalVolume => CCTotalOctets};
-usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
-		'CC-Output-Octets' = [CCOutputOctets],
-		'CC-Input-Octets' = [CCInputOctets]} | _]})
-		when is_integer(CCInputOctets), is_integer(CCOutputOctets),
-				CCInputOctets > 0, CCOutputOctets > 0 ->
-	#{totalVolume => CCInputOctets + CCOutputOctets,
-			downlinkVolume => CCOutputOctets, uplinkVolume => CCInputOctets};
-usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
-		'CC-Service-Specific-Units' = [CCSpecUnits]} | _]})
-		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
-	#{serviceSpecificUnit => CCSpecUnits};
-usu(#'3gpp_ro_Multiple-Services-Credit-Control'{'Used-Service-Unit' = []}) ->
-	undefined;
-usu(#'3gpp_ro_Multiple-Services-Credit-Control'{}) ->
-	undefined.
+%% @hidden
+usu(#'3gpp_ro_Used-Service-Unit'{'CC-Time' = [CCTime]}) ->
+	#{"time" => CCTime};
+usu(#'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]}) ->
+	#{"totalVolume" => CCTotalOctets};
+usu(#'3gpp_ro_Used-Service-Unit'{'CC-Output-Octets' = [CCOutputOctets],
+		'CC-Input-Octets' = [CCInputOctets]}) ->
+	#{"downlinkVolume" => CCOutputOctets, "uplinkVolume" => CCInputOctets};
+usu(#'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
+	#{"serviceSpecificUnit" => CCSpecUnits};
+usu(#'3gpp_ro_Used-Service-Unit'{}) ->
+	#{}.
 
 %% @hidden
-gsu(#{"time" := CCTime})
+gsu({ok, #{"time" := CCTime}})
 		when CCTime > 0 ->
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [CCTime]};
-gsu(#{"totalVolume" := CCTotalOctets})
+	[#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [CCTime]}];
+gsu({ok, #{"totalVolume" := CCTotalOctets}})
 		when CCTotalOctets > 0 ->
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]};
-gsu(#{"serviceSpecificUnit" := CCSpecUnits})
+	[#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]}];
+gsu({ok, #{"downlinkVolume" := CCOutputOctets,
+		"uplinkVolume" := CCInputOctets}})
+		when is_integer(CCInputOctets), is_integer(CCOutputOctets),
+				CCInputOctets > 0, CCOutputOctets > 0 ->
+	[#'3gpp_ro_Granted-Service-Unit'{
+		'CC-Output-Octets' = [CCOutputOctets],
+		'CC-Input-Octets' = [CCInputOctets]}];
+gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
 		when CCSpecUnits > 0 ->
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]};
+	[#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}];
 gsu(_) ->
 	[].
 
 -spec service_rating(MSCC, ServiceContextId) -> ServiceRating
 	when
-		MSCC :: [mscc()],
+		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
 		ServiceContextId :: string(),
-		ServiceRating :: [service_rating()].
+		ServiceRating :: [map()].
 %% @doc Build a `serviceRating' object.
 %% @hidden
 service_rating(MSCC, ServiceContextId) ->
 	service_rating(MSCC, ServiceContextId, []).
 %% @hidden
-service_rating([#{} = H| T], ServiceContextId, Acc) ->
-	service_rating(T, ServiceContextId,
-			Acc ++ service_rating1(H, ServiceContextId));
+service_rating([MSCC | T], ServiceContextId, Acc) ->
+	SR1 = service_rating_si(MSCC, #{"serviceContextId" => ServiceContextId}),
+	SR2 = service_rating_rg(MSCC, SR1),
+	Acc1 = service_rating_rsu(MSCC, SR2, Acc),
+	Acc2 = service_rating_usu(MSCC, SR2, Acc1),
+	service_rating(T, ServiceContextId, Acc2);
 service_rating([], _ServiceContextId, Acc) ->
 	lists:reverse(Acc).
+
 %% @hidden
-service_rating1(#{rg := RG} = MSCC, ServiceContextId)
-		when is_integer(RG) ->
-	Acc = #{serviceContextId => ServiceContextId, ratingGroup => RG},
-	service_rating2(MSCC, Acc);
-service_rating1(MSCC, ServiceContextId) ->
-	Acc = #{serviceContextId => ServiceContextId},
-	service_rating2(MSCC, Acc).
+service_rating_si(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Service-Identifier' = [SI]}, ServiceRating) ->
+	ServiceRating#{"serviceId" => SI};
+service_rating_si(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Service-Identifier' = []}, ServiceRating) ->
+	ServiceRating.
+
 %% @hidden
-service_rating2(#{si := SI} = MSCC, Acc)
-		when is_integer(SI) ->
-	Acc1 = Acc#{serviceId => SI},
-	service_rating3(MSCC, Acc1);
-service_rating2(MSCC, Acc) ->
-	service_rating3(MSCC, Acc).
+service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Rating-Group' = [RG]}, ServiceRating) ->
+	ServiceRating#{"ratingGroup" => RG};
+service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Rating-Group' = []}, ServiceRating) ->
+	ServiceRating.
+
 %% @hidden
-%% Initial
-service_rating3(#{rsu := [], usu := undefined}, Acc) ->
-	RatingObject = Acc#{requestSubType => "RESERVE"},
-	[RatingObject];
-service_rating3(#{rsu := #{} = RSU, usu := undefined}, Acc) ->
-	RatingObject = Acc#{requestSubType => "RESERVE", grantedUnit => RSU},
-	[RatingObject];
-%% Interim
-service_rating3(#{rsu := [], usu := #{} = USU}, Acc) ->
-	RatingObject1 = Acc#{requestSubType => "RESERVE"},
-	RatingObject2 = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
-	[RatingObject1, RatingObject2];
-service_rating3(#{rsu := #{} = RSU , usu := #{} = USU}, Acc) ->
-	RatingObject1 = Acc#{requestSubType => "RESERVE", grantedUnit => RSU},
-	RatingObject2 = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
-	[RatingObject1, RatingObject2];
-%% Final
-service_rating3(#{rsu := undefined, usu := #{} = USU}, Acc) ->
-	RatingObject = Acc#{requestSubType => "DEBIT", consumedUnit => USU},
-	[RatingObject];
-%% No RSU & No GSU
-service_rating3(#{rsu := undefined, usu := undefined}, Acc) ->
-	[Acc].
+service_rating_rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = [RSU]}, ServiceRating, Acc) ->
+	case rsu(RSU) of
+		ResquestedUnit when map_size(ResquestedUnit) > 0 ->
+			[ServiceRating#{"requestSubType" => "RESERVE",
+					"requestedUnit" => ResquestedUnit} | Acc];
+		_ResquestedUnit ->
+			[ServiceRating#{"requestSubType" => "RESERVE"} | Acc]
+	end;
+service_rating_rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = []}, _ServiceRating, Acc) ->
+	Acc.
+
+%% @hidden
+service_rating_usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Used-Service-Unit' = [USU]}, ServiceRating, Acc) ->
+	case usu(USU) of
+		UsedUnit when map_size(UsedUnit) > 0 ->
+			[ServiceRating#{"requestSubType" => "DEBIT",
+					"consumedUnit" => usu(USU)} | Acc];
+		_UsedUnit ->
+			Acc
+	end;
+service_rating_usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Used-Service-Unit' = []}, _ServiceRating, Acc) ->
+	Acc.
 
 %% @hidden
 subscription_id(Data) ->
@@ -1374,107 +1301,70 @@ msisdn([_H | T]) ->
 msisdn([]) ->
 	undefined.
 
--spec build_container(MSCC) -> MSCC
+-spec build_mscc(MSCC, ServiceRating) -> Result
 	when
-		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}].
-%% @doc Build a container for CCR MSCC.
-build_container(MSCC) ->
-	build_container(MSCC, []).
-%% @hidden
-build_container([#'3gpp_ro_Multiple-Services-Credit-Control'
-		{'Service-Identifier' = SI, 'Rating-Group' = RG} = _MSCC | T], Acc) ->
-	NewMSCC = #'3gpp_ro_Multiple-Services-Credit-Control'
-			{'Service-Identifier' = SI, 'Rating-Group' = RG},
-	build_container(T, [NewMSCC | Acc]);
-build_container([], Acc) ->
-	lists:reverse(Acc).
-
--spec build_mscc(ServiceRatings, Container) -> Result
-	when
-		ServiceRatings :: [service_rating()],
-		Container :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-		Result :: {ResultCode, [#'3gpp_ro_Multiple-Services-Credit-Control'{}]},
+		ServiceRating :: [map()],
+		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
+		Result :: {ResultCode, MSCC},
 		ResultCode :: pos_integer().
-%% @doc Build a list of CCA MSCCs
-build_mscc(ServiceRatings, Container) ->
-	build_mscc(ServiceRatings, Container, undefined).
+%% @doc Build CCA `MSCC' from Nrf `ServoceRating'.
+build_mscc(MSCC, ServiceRating) ->
+	FailRC = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+	build_mscc(MSCC, ServiceRating, {FailRC, []}).
 %% @hidden
-build_mscc([H | T], Container, FinalResultCode) ->
-	F = fun F(#{"serviceId" := SI, "ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
-			[#'3gpp_ro_Multiple-Services-Credit-Control'
-					{'Service-Identifier' = [SI], 'Rating-Group' = [RG]} = MSCC1 | T1], Acc) ->
-				case catch gsu(maps:get("grantedUnit", ServiceRating)) of
-					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
-						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Granted-Service-Unit' = [GSU],
-								'Result-Code' = [RC2]},
-						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc};
-					_ ->
-						RC2 = result_code(RC),
-						RC3 = case FinalResultCode of
-							undefined ->
-								RC2;
-							_ ->
-								FinalResultCode
-						end,
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Result-Code' = [RC2]},
-						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc}
-				end;
-		F(#{"serviceId" := SI, "resultCode" := RC} = ServiceRating,
-			[#'3gpp_ro_Multiple-Services-Credit-Control'
-					{'Service-Identifier' = [SI], 'Rating-Group' = []} = MSCC1 | T1], Acc) ->
-				case catch gsu(maps:get("grantedUnit", ServiceRating)) of
-					[] ->
-						RC2 = result_code(RC),
-						RC3 = case FinalResultCode of
-							undefined ->
-								RC2;
-							_ ->
-								FinalResultCode
-						end,
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Result-Code' = [RC2]},
-						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc};
-					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
-						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Granted-Service-Unit' = [GSU],
-								'Result-Code' = [RC2]},
-						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc};
-					_ ->
-						{FinalResultCode, lists:reverse(T1) ++ Acc}
-				end;
-			F(#{"ratingGroup" := RG, "resultCode" := RC} = ServiceRating,
-					[#'3gpp_ro_Multiple-Services-Credit-Control'
-							{'Service-Identifier' = [], 'Rating-Group' = [RG]} = MSCC1 | T1], Acc) ->
-				case catch gsu(maps:get("grantedUnit", ServiceRating)) of
-					#'3gpp_ro_Granted-Service-Unit'{} = GSU ->
-						RC2 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Granted-Service-Unit' = [GSU],
-								'Result-Code' = [RC2]},
-						{RC2, lists:reverse(T1) ++ [MSCC2] ++ Acc};
-					_ ->
-						RC2 = result_code(RC),
-						RC3 = case FinalResultCode of
-							undefined ->
-								RC2;
-							_ ->
-								FinalResultCode
-						end,
-						MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-								'Result-Code' = [RC2]},
-						{RC3, lists:reverse(T1) ++ [MSCC2] ++ Acc}
-				end;
-			F(ServiceRating, [H1 | T1], Acc) ->
-				F(ServiceRating, T1, [H1 | Acc])
-	end,
-	{NewFRC, NewContainer} = F(H, Container, []),
-	build_mscc(T, NewContainer, NewFRC);
-build_mscc([], NewContainer, FinalResultCode) ->
-	{FinalResultCode, lists:reverse(NewContainer)}.
+build_mscc([#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Service-Identifier' = SI, 'Rating-Group' = RG} | T] = _MSCC,
+		ServiceRating, Acc) ->
+	build_mscc(T, ServiceRating, build_mscc1(SI, RG, ServiceRating, Acc));
+build_mscc([], _ServiceRating, {FinalRC, Acc}) ->
+	{FinalRC, lists:reverse(Acc)}.
+%% @hidden
+build_mscc1([SI], [RG], [#{"serviceId" := SI, "ratingGroup" := RG,
+		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
+	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Granted-Service-Unit' = GSU,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([SI], [], [#{"serviceId" := SI,
+		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
+	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Granted-Service-Unit' = GSU,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [RG], [#{"ratingGroup" := RG,
+		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
+	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Rating-Group' = [RG],
+			'Granted-Service-Unit' = GSU,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) ->
+	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = GSU,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1(SI, RG, [_ | T], Acc) ->
+	build_mscc1(SI, RG, T, Acc);
+build_mscc1(_, _, [], Acc) ->
+	Acc.
+
+%% @hidden
+final_result(_, ?'DIAMETER_BASE_RESULT-CODE_SUCCESS') ->
+	?'DIAMETER_BASE_RESULT-CODE_SUCCESS';
+final_result(RC, _) ->
+	RC.
 
 -spec diameter_answer(SessionId, MSCC, ResultCode,
 		OriginHost, OriginRealm, RequestType, RequestNum) -> Result
