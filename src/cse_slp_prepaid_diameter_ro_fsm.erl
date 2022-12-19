@@ -21,6 +21,7 @@
 %%% 	for DIAMETER Ro application within the
 %%% 	{@link //cse. cse} application.
 %%%
+%%% 	==State Transitions==
 %%% 	<img alt="state machine" src="prepaid-diameter-ro.svg" />
 %%%
 -module(cse_slp_prepaid_diameter_ro_fsm).

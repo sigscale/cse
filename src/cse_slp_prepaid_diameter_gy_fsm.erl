@@ -21,6 +21,7 @@
 %%% 	for DIAMETER Gy application within the
 %%% 	{@link //cse. cse} application.
 %%%
+%%% 	==State Transitions==
 %%% 	<img alt="state machine" src="prepaid-diameter-gy.svg" />
 %%%
 -module(cse_slp_prepaid_diameter_gy_fsm).
