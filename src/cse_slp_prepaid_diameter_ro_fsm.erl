@@ -39,7 +39,7 @@
 %%% 	The following diagram depicts the states, and events which drive state
 %%% 	transitions, in the OCF finite state machine (FSM):
 %%%
-%%% 	<img alt="state machine" src="prepaid-diameter-gy.svg" />
+%%% 	<img alt="state machine" src="prepaid-diameter-ro.svg" />
 %%%
 -module(cse_slp_prepaid_diameter_ro_fsm).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
