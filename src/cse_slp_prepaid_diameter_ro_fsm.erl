@@ -200,13 +200,13 @@ authorize_origination_attempt(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, is_rsu(MSCC), CalledDN} of
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, Destination}
+				case {ResultCode, CalledDN} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', Destination}
 							when is_list(Destination) ->
 						{next_state, analyse_information, NewData1, Actions};
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, _} ->
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _} ->
 						{next_state, collect_information, NewData1, Actions};
-					{_, _, _} ->
+					{_, _} ->
 						{next_state, null, NewData1, Actions}
 				end
 			catch
