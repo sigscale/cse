@@ -63,6 +63,7 @@ doc_DATA = overview.edoc $(modhtml) \
 		t-bcsm-inap.svg \
 		messaging.svg \
 		distribution.svg \
+		ocf-nrf-msc.svg \
 		prepaid-diameter-ro.svg \
 		prepaid-diameter-gy.svg
 
@@ -92,6 +93,7 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/t-bcsm-inap.svg .
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
+	-cp -n $(top_srcdir)/doc/ocf-nrf-msc.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-ro.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-gy.svg .
 

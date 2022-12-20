@@ -21,7 +21,24 @@
 %%% 	for DIAMETER Gy application within the
 %%% 	{@link //cse. cse} application.
 %%%
-%%% 	==State Transitions==
+%%% 	This Service Logic Program (SLP) implements a 3GPP Online
+%%% 	Charging Function (OCF) interfacing across the <i>Re</i> reference
+%%% 	point interafce, using the
+%%% 	<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">
+%%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
+%%%
+%%% 	This SLP specifically handles Packet Switched (PS) data
+%%% 	service usage with `Service-Context-Id' of `32251@3gpp.org'.
+%%%
+%%% 	== Message Sequence ==
+%%% 	The diagram below depicts the normal sequence of exchanged messages:
+%%%
+%%% 	<img alt="message sequence chart" src="ocf-nrf-msc.svg" />
+%%%
+%%% 	== State Transitions ==
+%%% 	The following diagram depicts the states, and events which drive state
+%%% 	transitions, in the OCF finite state machine (FSM):
+%%%
 %%% 	<img alt="state machine" src="prepaid-diameter-gy.svg" />
 %%%
 -module(cse_slp_prepaid_diameter_gy_fsm).

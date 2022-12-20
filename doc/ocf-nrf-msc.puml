@@ -1,0 +1,44 @@
+@startuml
+
+skinparam sequence {
+ParticipantBorderColor #f57f17
+ParticipantBackgroundColor white
+LifeLineBorderColor #f57f17
+LifeLineBackgroundColor white
+}
+participant Core as core
+participant OCF as ocf
+participant OCS as ocs
+hide footbox
+
+core -> ocf : CCR-I
+activate ocf
+ocf -> ocs : POST /ratingdata
+activate ocs
+ocf <- ocs : 201 Created
+deactivate ocs
+core <- ocf : CCA-I
+deactivate ocf
+
+core -> ocf : CCR-U
+activate ocf
+ocf -> ocs : POST /ratingdata/{RatingDataRef}/update
+activate ocs
+ocf <- ocs : 200 OK
+deactivate ocs
+core <- ocf : CCA-U
+deactivate ocf
+
+== Repetition ==
+
+core -> ocf : CCR-T
+activate ocf
+ocf -> ocs : POST /ratingdata/{RatingDataRef}/release
+activate ocs
+ocf <- ocs : 200 OK
+deactivate ocs
+core <- ocf : CCA-T
+deactivate ocf
+
+
+@enduml
