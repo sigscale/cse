@@ -1,6 +1,13 @@
+2022-12-21  Vance Shipley <vances@sigscale.org>
+
+	* called dn type is, possibly empty, digit string
+	* message sequence chart in prepaid diameter slp edoc
+	* ignore rsu in transition to collect or analyse
+	* edoc header for state transitions
+	* correct and refactor nrf codec for simplicity
+
 2022-12-18  Vance Shipley <vances@sigscale.org>
 
-	* correct and refactor nrf codec for simplicity
 	* refactored slp state machines for prepaid diameter
 	* correct module name in app spec and sys config
 	* user_default module for shortcut functions
