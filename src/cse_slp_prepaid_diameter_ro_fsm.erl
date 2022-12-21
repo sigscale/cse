@@ -87,7 +87,7 @@
 		nrf_reqid => reference(),
 		imsi => [$0..$9],
 		direction => originating | terminating,
-		called =>  [$0..$9],
+		called => [$0..$9],
 		calling => [$0..$9],
 		msisdn => string(),
 		context => string(),
@@ -219,7 +219,7 @@ authorize_origination_attempt(cast,
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, CalledDN} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', Destination}
-							when is_list(Destination) ->
+							when length(Destination) > 0 ->
 						{next_state, analyse_information, NewData1, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _} ->
 						{next_state, collect_information, NewData1, Actions};
@@ -646,11 +646,14 @@ collect_information({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
-				'Multiple-Services-Credit-Control' = MSCC},
+				'Multiple-Services-Credit-Control' = MSCC,
+				'Service-Information' = ServiceInformation},
 		#{session_id := SessionId, nrf_location := Location} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 				is_list(Location) ->
+	{CallingDN, CalledDN} = call_parties(ServiceInformation),
 	NewData = Data#{from => From, mscc => MSCC,
+			calling => CallingDN, called => CalledDN,
 			reqno => RequestNum, req_type => RequestType},
 	nrf_update(NewData);
 collect_information({call, From},
@@ -718,7 +721,7 @@ collect_information(cast,
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, false, _} ->
 						{next_state, o_alerting, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false,
-							false, Destination} when is_list(Destination) ->
+							false, Destination} when length(Destination) > 0 ->
 						{next_state, analyse_information, NewData, Actions};
 					{_, _, _, _} ->
 						{keep_state, NewData, Actions}
@@ -2203,8 +2206,8 @@ result_code("RATING_FAILED") ->
 	when
 		ServiceInformation :: [#'3gpp_ro_Service-Information'{}],
 		Result :: {Calling, Called},
-		Calling :: undefined | [Digit],
-		Called :: undefined | [Digit],
+		Calling :: [Digit],
+		Called :: [Digit],
 		Digit :: $0..$9.
 %% @doc Extract call party addresses.
 %% @hidden
@@ -2212,12 +2215,12 @@ call_parties([#'3gpp_ro_Service-Information'{
 		'IMS-Information' = [#'3gpp_ro_IMS-Information'{
 		'Calling-Party-Address' = [],
 		'Called-Party-Address' = [CalledParty]}]}]) ->
-	{undefined, address(CalledParty)};
+	{[], address(CalledParty)};
 call_parties([#'3gpp_ro_Service-Information'{
 		'IMS-Information' = [#'3gpp_ro_IMS-Information'{
 		'Calling-Party-Address' = [CallingParty],
 		'Called-Party-Address' = []}]}]) ->
-	{address(CallingParty), undefined};
+	{address(CallingParty), []};
 call_parties([#'3gpp_ro_Service-Information'{
 		'IMS-Information' = [#'3gpp_ro_IMS-Information'{
 		'Calling-Party-Address' = [CallingParty],
@@ -2225,9 +2228,9 @@ call_parties([#'3gpp_ro_Service-Information'{
 	{address(CallingParty), address(CalledParty)};
 call_parties([#'3gpp_ro_Service-Information'{
 		'IMS-Information' = []}]) ->
-	{undefined, undefined};
+	{[], []};
 call_parties([]) ->
-	{undefined, undefined}.
+	{[], []}.
 
 %% @hidden
 address(<<"tel:", Dest/binary>>) ->
