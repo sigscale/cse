@@ -1,3 +1,8 @@
+December 27, 2022
+-----------------
+	- Nrf Location URL in console log reports
+	- Handle CCR event operations (messaging)
+
 December 18, 2022
 -----------------
 	- Shortcut commands for cse in OTP shell
