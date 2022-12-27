@@ -253,7 +253,6 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 		Result :: {reply, message()} | {answer_message, 5000..5999}.
 %% @doc Process a received DIAMETER packet.
 %% @private
-%% @todo Dynamic SLP selection.
 process_request(_IpAddress, _Port,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
@@ -377,6 +376,49 @@ process_request(_IpAddress, _Port,
 						{request, Request}, {error, Reason}, {stack, StackTrace}]),
 			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum)
+	end;
+process_request(_IpAddress, _Port,
+		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'Service-Context-Id' = ContextId,
+				'Auth-Application-Id' = ?RO_APPLICATION_ID,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum} = Request)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST' ->
+	try
+		Children = supervisor:which_children(cse_sup),
+		{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
+		#diameter_context{module = Module, args = Args,
+				opts = Opts} = cse:get_context(ContextId),
+		supervisor:start_child(SlpSup, [Module, Args, Opts])
+	of
+		{ok, Child} ->
+			case catch gen_statem:call(Child, Request) of
+				{'EXIT', Reason} ->
+					error_logger:error_report(["Diameter Error",
+							{module, ?MODULE}, {fsm, Child},
+							{type, event_type(RequestType)}, {error, Reason}]),
+					diameter_error(SessionId,
+							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							OHost, ORealm, RequestType, RequestNum);
+				Reply ->
+					{reply, Reply}
+			end;
+		{error, Reason} ->
+			error_logger:error_report(["Diameter Error",
+					{module, ?MODULE}, {error, Reason},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{type, event_type(RequestType)}]),
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
+	catch
+		?CATCH_STACK ->
+			?SET_STACK,
+			error_logger:warning_report(["Unable to process DIAMETER request",
+						{origin_host, OHost}, {origin_realm, ORealm},
+						{request, Request}, {error, Reason}, {stack, StackTrace}]),
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
 	end.
 
 -spec diameter_error(SessionId, ResultCode, OriginHost,
@@ -404,5 +446,6 @@ diameter_error(SessionId, ResultCode, OHost, ORealm, RequestType, RequestNum) ->
 %% @doc Converts CC-Request-Type integer value to a readable atom.
 event_type(?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST') -> start;
 event_type(?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST') -> interim;
-event_type(?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST') -> stop.
+event_type(?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST') -> stop;
+event_type(?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST') -> event.
 
