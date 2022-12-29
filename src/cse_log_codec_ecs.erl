@@ -487,9 +487,9 @@ ecs_prepaid(State, Call, Network, OCS) ->
 	ecs_prepaid1(Call, Network, OCS, Acc).
 %% @hidden
 ecs_prepaid1(#{direction := Direction} = Call, Network, OCS, Acc)
-		when is_list(Direction) ->
+		when is_atom(Direction) ->
 	Acc1 = [Acc, $,,
-			$", "direction", $", $:, $", Direction, $", $,,
+			$", "direction", $", $:, $", atom_to_list(Direction), $", $,,
 			$", "calling", $", $:, $", get_string(calling, Call), $", $,,
 			$", "called", $", $:, $", get_string(called, Call), $"],
 	ecs_prepaid2(Network, OCS, Acc1);
