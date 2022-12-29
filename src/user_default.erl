@@ -30,6 +30,11 @@
 %% export the user_default public API
 -export([help/0, ts/0, td/0]).
 
+-include("cse.hrl").
+-include("diameter_gen_3gpp.hrl").
+-include("diameter_gen_3gpp_ro_application.hrl").
+-include_lib("diameter/include/diameter.hrl").
+
 -define(MAX_HEAP_SIZE, 1000000).
 
 %%----------------------------------------------------------------------
@@ -43,24 +48,6 @@ help() ->
 	io:fwrite("**cse commands ** \n"),
 	io:fwrite("ts()            -- table sizes\n"),
 	io:fwrite("td()            -- table distribution\n"),
-	io:fwrite("su()            -- scheduler utilization\n"),
-	io:fwrite("di()            -- diameter services info\n"),
-	io:fwrite("di(Types)       -- diameter services info of types\n"),
-	io:fwrite("di(acct, Types) -- diameter accounting services info\n"),
-	io:fwrite("di(auth, Types) -- diameter authentication and authorization services info\n"),
-	io:fwrite("dc()            -- diameter capabilities values\n"),
-	io:fwrite("ll(acct)        -- last accounting log events\n"),
-	io:fwrite("ll(acct, N)\n"),
-	io:fwrite("ll(auth)        -- last authentication and authorization log events\n"),
-	io:fwrite("ll(auth, N)\n"),
-	io:fwrite("ql(acct, Match) -- query accounting log\n"),
-	io:fwrite("ql(acct, Match, Start)\n"),
-	io:fwrite("ql(acct, Match, Start, End)\n"),
-	io:fwrite("ql(auth, Match) -- query authentication and authorization log\n"),
-	io:fwrite("ql(auth, Match, Start)\n"),
-	io:fwrite("ql(auth, Match, Start, End)\n"),
-	true.
-
 
 -spec ts() -> ok.
 %% @doc Display the total number of records in ocs tables.
@@ -136,6 +123,120 @@ td0([H | T]) ->
 td0([]) ->
 	ok.
 
+-spec ll(Log) -> Events
+	when
+		Log :: acct | auth,
+		Events :: [cse_log:acct_event()] | [cse_log:auth_event()].
+%% @doc Get the last five events written to log.
+ll(acct = _Log) ->
+	case cse_log:last(cse_acct, 5) of
+		{Count, Events} when is_integer(Count) ->
+			Events;
+		{error, Reason} ->
+			exit(Reason)
+	end;
+ll(auth = _Log) ->
+	case cse_log:last(cse_auth, 5) of
+		{Count, Events} when is_integer(Count) ->
+			Events;
+		{error, Reason} ->
+			exit(Reason)
+	end.
+
+-spec ll(Log, N) -> Events
+	when
+		Log :: acct | auth,
+		N :: pos_integer(),
+		Events :: [cse_log:acct_event()] | [cse_log:auth_event()].
+%% @doc Get the last `N' events written to log.
+ll(acct = _Log, N) when is_integer(N), N > 0 ->
+	set_max_heap(),
+	case cse_log:last(cse_acct, N) of
+		{Count, Events} when is_integer(Count) ->
+			Events;
+		{error, Reason} ->
+			exit(Reason)
+	end;
+ll(auth = _Log, N) when is_integer(N), N > 0 ->
+	set_max_heap(),
+	case cse_log:last(cse_auth, N) of
+		{Count, Events} when is_integer(Count) ->
+			Events;
+		{error, Reason} ->
+			exit(Reason)
+	end.
+
+-spec ql(Log, Match) -> Events
+	when
+		Log :: acct | auth,
+		Match :: DiameterMatchSpec | RatedMatchSpec,
+		DiameterMatchSpec :: {DiameterMatchHead, MatchConditions},
+		DiameterMatchHead :: cse_log:acct_request() | cse_log:acct_response(),
+		RatedMatchSpec :: {RatedMatchHead, MatchConditions},
+		RatedMatchHead :: #rated{},
+		MatchConditions :: [tuple()],
+		Events :: [cse_log:acct_event()].
+%% @doc Query diameter logs.
+%%
+%% 	Start will be minus one hour from now.
+%%
+ql(acct = _Log, {MatchHead, MatchConditions} = Match)
+		when is_list(MatchConditions),
+		(is_record(MatchHead, '3gpp_ro_CCR')
+		or is_record(MatchHead, '3gpp_ro_CCA')
+		or is_record(MatchHead, rated)) ->
+	End = erlang:universaltime(),
+	EndS = calendar:datetime_to_gregorian_seconds(End),
+	Start = calendar:gregorian_seconds_to_datetime(EndS - 3600),
+	query_acct_log(Match, Start, End).
+
+-spec ql(Log, Match, Start) -> Events
+	when
+		Log :: acct | auth,
+		Match :: DiameterMatchSpec | RatedMatchSpec,
+		DiameterMatchSpec :: {DiameterMatchHead, MatchConditions},
+		DiameterMatchHead :: cse_log:acct_request() | cse_log:acct_response(),
+		RatedMatchSpec :: {RatedMatchHead, MatchConditions},
+		RatedMatchHead :: #rated{},
+		MatchConditions :: [tuple()],
+		Start :: calendar:datetime(),
+		Events :: [cse_log:acct_event()].
+%% @doc Query diameter logs.
+%%
+%% 	End time will be now.
+%%
+ql(acct = _Log, {MatchHead, MatchConditions} = Match,
+		{{_, _, _}, {_, _, _}} = Start)
+		when is_list(MatchConditions),
+		(is_record(MatchHead, '3gpp_ro_CCR')
+		or is_record(MatchHead, '3gpp_ro_CCA')
+		or is_record(MatchHead, rated)) ->
+	End = erlang:universaltime(),
+	query_acct_log(Match, Start, End).
+
+-spec ql(Log, Match, Start, End) -> Events
+	when
+		Log :: acct | auth,
+		Match :: DiameterMatchSpec | RatedMatchSpec,
+		DiameterMatchSpec :: {DiameterMatchHead, MatchConditions},
+		DiameterMatchHead :: cse_log:acct_request() | cse_log:acct_response(),
+		RatedMatchSpec :: {RatedMatchHead, MatchConditions},
+		RatedMatchHead :: #rated{},
+		MatchConditions :: [tuple()],
+		Start :: calendar:datetime(),
+		End :: calendar:datetime(),
+		Events :: [cse_log:acct_event()].
+%% @doc Query diameter logs.
+ql(acct = _Log, {MatchHead, MatchConditions} = Match,
+		{{_, _, _}, {_, _, _}} = Start,
+		{{_, _, _}, {_, _, _}} = End)
+		when is_list(MatchConditions),
+		(is_record(MatchHead, '3gpp_ro_CCR')
+		or is_record(MatchHead, '3gpp_ro_CCA')
+		or is_record(MatchHead, rated)) ->
+	End = erlang:universaltime(),
+	query_acct_log(Match, Start, End).
+
 %%----------------------------------------------------------------------
 %%  the user_default private api
 %%----------------------------------------------------------------------
@@ -167,3 +268,42 @@ snodes([H | T], Acc) ->
 	snodes(T, [atom_to_list(H), ", " | Acc]);
 snodes([], Acc) ->
 	lists:reverse(Acc).
+
+-spec query_acct_log(Match, Start, End) -> Events
+	when
+	        Match :: DiameterMatchSpec | RatedMatchSpec,
+		DiameterMatchSpec :: {DiameterMatchHead, MatchConditions},
+		DiameterMatchHead :: cse_log:acct_request() | cse_log:acct_response(),
+		RatedMatchSpec :: {RatedMatchHead, MatchConditions},
+		RatedMatchHead :: #rated{},
+		MatchConditions :: [tuple()],
+		Start :: calendar:datetime() | pos_integer(),
+		End :: calendar:datetime() | pos_integer(),
+		Events :: [cse_log:acct_event()].
+%% @hidden
+query_acct_log(Match, Start, End) ->
+	set_max_heap(),
+	query_acct_log(start, Start, End, Match, []).
+%% @hidden
+query_acct_log(eof, _, _, _, Acc) ->
+	lists:flatten(lists:reverse(Acc));
+query_acct_log(Context1, Start, End, Match, Acc) ->
+	case cse_log:acct_query(Context1, Start, End, diameter, '_', [Match]) of
+		{error, Reason} ->
+			exit(Reason);
+		{Context2, []} ->
+			query_acct_log(Context2, Start, End, Match, Acc);
+		{Context2, Events} ->
+			query_acct_log(Context2, Start, End, Match, [Events | Acc])
+	end.
+
+%% @hidden
+set_max_heap() ->
+	MaxHeapSize = #{error_logger => true,
+			kill => true, size => ?MAX_HEAP_SIZE},
+	case erlang:process_info(self(), max_heap_size) of
+		{max_heap_size, #{size := 0}} ->
+			erlang:process_flag(max_heap_size, MaxHeapSize);
+		{max_heap_size, _} ->
+			ok
+	end.
