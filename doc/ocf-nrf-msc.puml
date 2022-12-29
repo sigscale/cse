@@ -1,5 +1,6 @@
 @startuml
 
+skinparam shadowing false
 skinparam sequence {
 ParticipantBorderColor #f57f17
 ParticipantBackgroundColor white
