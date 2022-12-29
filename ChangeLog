@@ -1,3 +1,10 @@
+2022-12-29  Vance Shipley <vances@sigscale.org>
+
+	* fix to include call attributes in prepaid log
+	* remove shadow in msc diagram
+	* remove unused shell shortcut command functions
+	* prepaid slp modules require log codec
+
 2022-12-27  Vance Shipley <vances@sigscale.org>
 
 	*  handle ccr operation type event in ro application callback
