@@ -41,7 +41,7 @@
 %%  The user_default public API
 %%----------------------------------------------------------------------
 
--spec help() -> true.
+-spec help() -> ok.
 %% @doc Get help on shell local commands.
 help() ->
 	shell_default:help(),
