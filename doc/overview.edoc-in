@@ -303,8 +303,10 @@ Application environment variables configuring instances of the
 		<dd>Defines DIAMETER services as `[{Addr, Port, Options}]'.
 				Each set of local bind address (`Addr :: inet:ip_address()'),
 				port (`Port :: 0..65535') and options
-				(`Options :: [diameter:service_opt()]') define a
-				DIAMETER service. (default: `[]')</dd>
+				(`Options :: [diameter:service_opt()
+						| {listen, [diameter:transport_opt()]}
+						| {connect, [diameter:transport_opt()]}]')
+				define a DIAMETER service. (default: `[]')</dd>
 </dl>
 
 ===TCAP===
@@ -415,7 +417,8 @@ Application environment variables configuring SLP logs.
            [{{0,0,0,0}, 3868,
                  [{'Auth-Application-Id', [4]},
                  {'Supported-Vendor-Id',[193]},
-                 {application,[{alias, cse_diameter_3gpp_ro_application},
+                 {application,
+                       [{alias, cse_diameter_3gpp_ro_application},
                        {dictionary, diameter_gen_3gpp_ro_application},
                        {module, cse_diameter_3gpp_ro_application_cb},
                        {request_errors, callback}]},
