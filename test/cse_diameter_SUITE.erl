@@ -37,7 +37,8 @@
 		initial_in_call/0, initial_in_call/1,
 		interim_in_call/0, interim_in_call/1,
 		final_in_call/0, final_in_call/1,
-		client_connect/0, client_connect/1]).
+		client_connect/0, client_connect/1,
+		client_reconnect/0, client_reconnect/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("inets/include/mod_auth.hrl").
@@ -67,7 +68,8 @@ suite() ->
    [{userdata, [{doc, "Test suite for Diameter in CSE"}]},
 	{require, diameter},
 	{default_config, diameter,
-			[{address, {127,0,0,1}}]},
+			[{address, {127,0,0,1}},
+			{realm, "mnc001.mcc001.3gppnetwork.org"}]},
 	{require, log},
 	{default_config, log,
 			[{logs,
@@ -181,6 +183,17 @@ init_per_testcase(_TestCase, Config) ->
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.
 %%
+end_per_testcase(TestCase, _Config)
+		when TestCase == client_connect; TestCase == client_reconnect ->
+   Service = {?MODULE, server},
+   ok = diameter:stop_service(Service),
+   receive
+      #diameter_event{service = Service, info = stop} ->
+			ok
+	after
+		4000 ->
+			ct:fail(timeout)
+	end;
 end_per_testcase(_TestCase, _Config) ->
 	ok.
 
@@ -198,7 +211,7 @@ all() ->
 			interim_scur_nrf, final_scur, final_scur_nrf,
 			unknown_subscriber, out_of_credit,
 			initial_in_call, interim_in_call, final_in_call,
-			client_connect].
+			client_connect, client_reconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -561,15 +574,83 @@ client_connect(Config) ->
 			{'Origin-Realm', Realm},
 			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
 			{connect, ClientTransportOpts}],
-	{ok, _Pid} = cse:start_diameter(Address, 0, Options),
+	{ok, Pid} = cse:start_diameter(Address, 0, Options),
    receive
       #diameter_event{service = Service, info = Info}
             when element(1, Info) == up ->
+			ok = cse:stop_diameter(Pid)
+   end.
+
+client_reconnect() ->
+	[{userdata, [{doc, "Reconnect disconnected client to peer server"}]}].
+
+client_reconnect(Config) ->
+	Realm = ?config(realm, Config),
+	Address = ?config(diameter_address, Config),
+	Port = rand:uniform(64511) + 1024,
+   Service = {?MODULE, server},
+   true = diameter:subscribe(Service),
+   ok = diameter:start_service(Service,
+			server_acct_service_opts(Config)),
+   receive
+      #diameter_event{service = Service, info = start} ->
 			ok
 	after
 		4000 ->
 			ct:fail(timeout)
-   end.
+	end,
+	ServerTransportConfig = [{reuseaddr, true},
+			{ip, Address}, {port, Port}],
+	ServerTransportOpts = [{transport_module, diameter_tcp},
+			{transport_config, ServerTransportConfig}],
+   {ok, _Ref} = diameter:add_transport(Service,
+			{listen, ServerTransportOpts}),
+	Application = [{alias, ?RO_APPLICATION},
+			{dictionary, ?RO_APPLICATION_DICT},
+			{module, ?RO_APPLICATION_CALLBACK},
+			{request_errors, callback}],
+	ClientTransportConfig = [{raddr, Address},
+			{rport, Port},
+			{reuseaddr, true}, {ip, Address}],
+	ClientTransportOpts = [{connect_timer, 4000},
+			{transport_module, diameter_tcp},
+			{transport_config, ClientTransportConfig}],
+	Options = [{application, Application},
+			{'Origin-Realm', Realm},
+			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
+			{connect, ClientTransportOpts}],
+	{ok, Pid} = cse:start_diameter(Address, 0, Options),
+   receive
+      #diameter_event{service = Service, info = Info1}
+            when element(1, Info1) == up ->
+			ok
+	after
+		4000 ->
+			ct:fail(timeout)
+   end,
+   ok = diameter:stop_service(Service),
+   receive
+      #diameter_event{service = Service, info = stop} ->
+			ok
+	after
+		4000 ->
+			ct:fail(timeout)
+   end,
+	ct:sleep(1000),
+   ok = diameter:start_service(Service,
+			server_acct_service_opts(Config)),
+   receive
+      #diameter_event{service = Service, info = start} ->
+			ok
+	after
+		4000 ->
+			ct:fail(timeout)
+   end,
+   receive
+      #diameter_event{service = Service, info = Info2}
+            when element(1, Info2) == up ->
+			ok = cse:stop_diameter(Pid)
+	end.
 
 %%---------------------------------------------------------------------
 %%  Internal functions
@@ -697,6 +778,34 @@ scur_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Multiple-Services-Indicator' = [1],
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Subscription-Id' = [MSISDN1, IMSI1],
+			'Service-Information' = [ServiceInformation]},
+	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
+
+iec_event(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
+		when is_record(MMS, '3gpp_ro_MMS-Information') ->
+	MSISDN1 = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+			'Subscription-Id-Data' = MSISDN},
+	IMSI1 = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+			'Subscription-Id-Data' = IMSI},
+	RSU = #'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [1]},
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Requested-Service-Unit' = [RSU]},
+	ServiceInformation = #'3gpp_ro_Service-Information'{'MMS-Information' = MMS},
+	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'Service-Context-Id' = "32270@3gpp.org",
+			'User-Name' = [MSISDN],
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST',
+			'CC-Request-Number' = RequestNum,
+			'Event-Timestamp' = [calendar:universal_time()],
+			'Subscription-Id' = [MSISDN1, IMSI1],
+			'Requested-Action' = ?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING',
+			'Multiple-Services-Indicator' = [1],
+			'Multiple-Services-Credit-Control' = [MSCC],
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
