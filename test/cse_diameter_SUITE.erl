@@ -36,7 +36,8 @@
 		out_of_credit/0, out_of_credit/1,
 		initial_in_call/0, initial_in_call/1,
 		interim_in_call/0, interim_in_call/1,
-		final_in_call/0, final_in_call/1]).
+		final_in_call/0, final_in_call/1,
+		client_connect/0, client_connect/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("inets/include/mod_auth.hrl").
@@ -98,29 +99,42 @@ init_per_suite(Config) ->
 	Logs = ct:get_config({log, logs}, []),
 	ok = application:set_env(cse, logs, Logs),
 	DiameterAddress = ct:get_config({diameter, address}, {127,0,0,1}),
-	DiameterPort = ct:get_config({diameter, auth_port}, rand:uniform(64511) + 1024),
+	DiameterPort = ct:get_config({diameter, auth_port},
+			rand:uniform(64511) + 1024),
 	DiameterApplication = [{alias, ?RO_APPLICATION},
 			{dictionary, ?RO_APPLICATION_DICT},
 			{module, ?RO_APPLICATION_CALLBACK},
 			{request_errors, callback}],
-	Realm = ct:get_config({diameter, realm}, "mnc001.mcc001.3gppnetwork.org"),
-	Host = ct:get_config({diameter, host}, atom_to_list(?MODULE) ++ "." ++ Realm),
-	DiameterOptions = [{application, DiameterApplication}, {'Origin-Realm', Realm},
+	Realm = ct:get_config({diameter, realm},
+			"mnc001.mcc001.3gppnetwork.org"),
+	Host = ct:get_config({diameter, host},
+			atom_to_list(?MODULE) ++ "." ++ Realm),
+	DiameterOptions = [{application, DiameterApplication},
+			{'Origin-Realm', Realm},
 			{'Auth-Application-Id', [?RO_APPLICATION_ID]}],
 	DiameterAppVar = [{DiameterAddress, DiameterPort, DiameterOptions}],
 	ok = application:set_env(cse, diameter, DiameterAppVar),
    Config1 = [{diameter_host, Host}, {realm, Realm},
          {diameter_address, DiameterAddress} | Config],
 	ok = cse_test_lib:start(),
-   true = diameter:subscribe(?MODULE),
-   ok = diameter:start_service(?MODULE, client_acct_service_opts(Config1)),
+   Service = {?MODULE, client},
+   true = diameter:subscribe(Service),
+   ok = diameter:start_service(Service,
+			client_acct_service_opts(Config1)),
    receive
-      #diameter_event{service = ?MODULE, info = start} ->
+      #diameter_event{service = Service, info = start} ->
 			ok
 	end,
-   {ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
+	TransportConfig = [{raddr, DiameterAddress},
+			{rport, DiameterPort},
+			{reuseaddr, true}, {ip, DiameterAddress}],
+	TransportOpts = [{connect_timer, 4000},
+			{transport_module, diameter_tcp},
+			{transport_config, TransportConfig}],
+   {ok, _Ref} = diameter:add_transport(Service,
+			{connect, TransportOpts}),
    receive
-      #diameter_event{service = ?MODULE, info = Info}
+      #diameter_event{service = Service, info = Info}
             when element(1, Info) == up ->
 			init_per_suite1(Config1)
    end.
@@ -183,7 +197,8 @@ all() ->
 	[initial_scur, initial_scur_nrf, interim_scur,
 			interim_scur_nrf, final_scur, final_scur_nrf,
 			unknown_subscriber, out_of_credit,
-			initial_in_call, interim_in_call, final_in_call].
+			initial_in_call, interim_in_call, final_in_call,
+			client_connect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -508,6 +523,54 @@ final_in_call(Config) ->
 			'Granted-Service-Unit' = [],
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
 
+client_connect() ->
+	[{userdata, [{doc, "Connect as client to peer server"}]}].
+
+client_connect(Config) ->
+	Realm = ?config(realm, Config),
+	Address = ?config(diameter_address, Config),
+	Port = rand:uniform(64511) + 1024,
+   Service = {?MODULE, server},
+   true = diameter:subscribe(Service),
+   ok = diameter:start_service(Service,
+			server_acct_service_opts(Config)),
+   receive
+      #diameter_event{service = Service, info = start} ->
+			ok
+	after
+		4000 ->
+			ct:fail(timeout)
+	end,
+	ServerTransportConfig = [{reuseaddr, true},
+			{ip, Address}, {port, Port}],
+	ServerTransportOpts = [{transport_module, diameter_tcp},
+			{transport_config, ServerTransportConfig}],
+   {ok, _Ref} = diameter:add_transport(Service,
+			{listen, ServerTransportOpts}),
+	Application = [{alias, ?RO_APPLICATION},
+			{dictionary, ?RO_APPLICATION_DICT},
+			{module, ?RO_APPLICATION_CALLBACK},
+			{request_errors, callback}],
+	ClientTransportConfig = [{raddr, Address},
+			{rport, Port},
+			{reuseaddr, true}, {ip, Address}],
+	ClientTransportOpts = [{connect_timer, 4000},
+			{transport_module, diameter_tcp},
+			{transport_config, ClientTransportConfig}],
+	Options = [{application, Application},
+			{'Origin-Realm', Realm},
+			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
+			{connect, ClientTransportOpts}],
+	{ok, _Pid} = cse:start_diameter(Address, 0, Options),
+   receive
+      #diameter_event{service = Service, info = Info}
+            when element(1, Info) == up ->
+			ok
+	after
+		4000 ->
+			ct:fail(timeout)
+   end.
+
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
@@ -551,7 +614,7 @@ scur_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 			'Multiple-Services-Indicator' = [1],
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Service-Information' = [ServiceInformation]},
-	diameter:call(?MODULE, cc_app_test, CCR, []).
+	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
 	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
@@ -594,7 +657,7 @@ scur_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Subscription-Id' = [MSISDN1, IMSI1],
 			'Service-Information' = [ServiceInformation]},
-	diameter:call(?MODULE, cc_app_test, CCR, []).
+	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_stop(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
 	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
@@ -635,16 +698,7 @@ scur_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Subscription-Id' = [MSISDN1, IMSI1],
 			'Service-Information' = [ServiceInformation]},
-	diameter:call(?MODULE, cc_app_test, CCR, []).
-
-%% @doc Add a transport capability to diameter service.
-%% @hidden
-connect(SvcName, Address, Port, Transport) when is_atom(Transport) ->
-	connect(SvcName, [{connect_timer, 30000} | transport_opts(Address, Port, Transport)]).
-
-%% @hidden
-connect(SvcName, Opts)->
-	diameter:add_transport(SvcName, {connect, Opts}).
+	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 %% @hidden
 client_acct_service_opts(Config) ->
@@ -652,7 +706,7 @@ client_acct_service_opts(Config) ->
 			{'Origin-Realm', ?config(realm, Config)},
 			{'Vendor-Id', ?IANA_PEN_SigScale},
 			{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
-			{'Product-Name', "SigScale Test Client (Nrf)"},
+			{'Product-Name', "SigScale Test Client"},
 			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
 			{string_decode, false},
 			{restrict_connections, false},
@@ -664,12 +718,19 @@ client_acct_service_opts(Config) ->
 					{module, cse_test_diameter_cb}]}].
 
 %% @hidden
-transport_opts(Address, Port, Trans) when is_atom(Trans) ->
-	transport_opts1({Trans, Address, Address, Port}).
-
-%% @hidden
-transport_opts1({Trans, LocalAddr, RemAddr, RemPort}) ->
-	[{transport_module, Trans}, {transport_config,
-		[{raddr, RemAddr}, {rport, RemPort},
-		{reuseaddr, true}, {ip, LocalAddr}]}].
+server_acct_service_opts(Config) ->
+	[{'Origin-Host', ?config(diameter_host, Config)},
+			{'Origin-Realm', ?config(realm, Config)},
+			{'Vendor-Id', ?IANA_PEN_SigScale},
+			{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
+			{'Product-Name', "SigScale Test Server"},
+			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
+			{string_decode, false},
+			{restrict_connections, false},
+			{application, [{alias, base_app_test},
+					{dictionary, diameter_gen_base_rfc6733},
+					{module, cse_test_diameter_cb}]},
+			{application, [{alias, cc_app_test},
+					{dictionary, diameter_gen_3gpp_ro_application},
+					{module, cse_test_diameter_cb}]}].
 

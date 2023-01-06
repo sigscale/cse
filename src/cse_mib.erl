@@ -126,7 +126,7 @@ unload(Agent) ->
 % @doc Get local DIAMETER configuration.
 % @private
 dbp_local_config(get, Item) ->
-	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+	case lists:keyfind(cse, 1, diameter:services()) of
 		Service when is_tuple(Service) ->
 			case diameter:service_info(Service, Item) of
 				Info when is_binary(Info) ->
@@ -157,7 +157,7 @@ dbp_local_stats(get, uptime) ->
 					+ (Secs * 100) + (MicroSecs div 10)}
 	end;
 dbp_local_stats(get, Item) ->
-	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+	case lists:keyfind(cse, 1, diameter:services()) of
 		Service when is_tuple(Service) ->
 			case catch diameter:service_info(Service, transport) of
 				Info when is_list(Info) ->
@@ -195,7 +195,7 @@ dcca_peer_info(get, [N], Columns) ->
 	dcca_peer_info_get(N, Columns).
 %% @hidden
 dcca_peer_info_get_next(Index, Columns, First) ->
-	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+	case lists:keyfind(cse, 1, diameter:services()) of
 		Service when is_tuple(Service) ->
 			case catch diameter:service_info(Service, connections) of
 				Info when is_list(Info) ->
@@ -246,7 +246,7 @@ dcca_peer_info_get_next(Index, Columns, First) ->
 	end.
 %% @hidden
 dcca_peer_info_get(Index, Columns) ->
-	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+	case lists:keyfind(cse, 1, diameter:services()) of
 		Service when is_tuple(Service) ->
 			case catch diameter:service_info(Service, connections) of
 				Info when is_list(Info) ->
@@ -299,7 +299,7 @@ dcca_peer_stats(get, [N], Columns) ->
 	dcca_peer_stats_get(N, Columns).
 %% @hidden
 dcca_peer_stats_get_next(Index, Columns, First) ->
-	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+	case lists:keyfind(cse, 1, diameter:services()) of
 		Service when is_tuple(Service) ->
 			case catch diameter:service_info(Service, connections) of
 				Info when is_list(Info) ->
@@ -374,7 +374,7 @@ dcca_peer_stats_get_next(Index, Columns, First) ->
 	end.
 %% @hidden
 dcca_peer_stats_get(Index, Columns) ->
-	case lists:keyfind(cse_diameter_service_fsm, 1, diameter:services()) of
+	case lists:keyfind(cse, 1, diameter:services()) of
 		Service when is_tuple(Service) ->
 			case catch diameter:service_info(Service, connections) of
 				Info when is_list(Info) ->

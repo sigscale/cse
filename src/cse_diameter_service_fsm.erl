@@ -40,7 +40,7 @@
 		options => list(),
 		alarms => list()}.
 
--define(DIAMETER_SERVICE(A, P), {cse_diameter_service_fsm, A, P}).
+-define(DIAMETER_SERVICE(A, P), {cse, A, P}).
 -define(BASE_APPLICATION, cse_diameter_base_application).
 -define(BASE_APPLICATION_DICT, diameter_gen_base_rfc6733).
 -define(BASE_APPLICATION_CALLBACK, cse_diameter_base_application_cb).
@@ -79,7 +79,7 @@ callback_mode() ->
 %% @private
 init([Address, Port, Options] = _Args) ->
 	{TOptions1, SOptions1} = split_options(Options),
-	TOptions2 = transport_options(TOptions1, Address, Port),
+	TOptions2 = transport_options(Address, Port, TOptions1),
 	SOptions2 = service_options(SOptions1),
 	SvcName = ?DIAMETER_SERVICE(Address, Port),
 	diameter:subscribe(SvcName),
@@ -335,11 +335,12 @@ service_options(Options) ->
 				{Apps, [Opt | Opts]}
 	end,
 	{LocalApps, Options3} = lists:foldl(Fold, {BaseApps, []}, Options2),
-	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id', 1, Options3) of
+	{SVendorIds, Options4} = case lists:keytake('Supported-Vendor-Id',
+			1, Options3) of
 		false ->
 			{[?IANA_PEN_3GPP], Options3};
 		{_ ,{_, SVI}, Opts1} ->
-			{[?IANA_PEN_3GPP] ++ SVI, Opts1}
+			{SVI, Opts1}
 	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
@@ -351,111 +352,64 @@ service_options(Options) ->
 		{string_decode, false}],
 	BaseOptions ++ Options4 ++ LocalApps.
 
--spec transport_options(Options, Address, Port) -> Result
+-spec transport_options(Address, Port, Options) -> Options
 	when
-		Options :: [tuple()],
 		Address :: inet:ip_address(),
 		Port :: inet:port_number(),
-		Result :: {listen, Options}.
-%% @doc Returns options for a DIAMETER transport layer
+		Options :: {listen, [diameter:transport_opt()]}
+				| {connect, [diameter:transport_opt()]}.
+%% @doc Returns options for a DIAMETER transport layer.
 %% @hidden
-transport_options(Options, Address, Port) ->
+transport_options(Address, Port, {listen, Options}) ->
 	Options1 = case lists:keymember(transport_module, 1, Options) of
 		true ->
 			Options;
 		false ->
 			[{transport_module, diameter_tcp} | Options]
 	end,
-	Options2 = case lists:keyfind(transport_config, 1, Options1) of
-		{transport_config, Opts} ->
+	case lists:keytake(transport_config, 1, Options1) of
+		{value, {_, Opts}, Options2} ->
 			Opts1 = lists:keystore(reuseaddr, 1, Opts, {reuseaddr, true}),
 			Opts2 = lists:keystore(ip, 1, Opts1, {ip, Address}),
 			Opts3 = lists:keystore(port, 1, Opts2, {port, Port}),
-			lists:keyreplace(transport_config, 1, Options1, {transport_config, Opts3});
+			{listen, [{transport_config, Opts3} | Options2]};
 		false ->
 			Opts = [{reuseaddr, true}, {ip, Address}, {port, Port}],
-			[{transport_config, Opts} | Options1]
+			{listen, [{transport_config, Opts} | Options1]}
+	end;
+transport_options(Address, Port, {connect, Options}) ->
+	Options1 = case lists:keymember(transport_module, 1, Options) of
+		true ->
+			Options;
+		false ->
+			[{transport_module, diameter_tcp} | Options]
 	end,
-	{listen, Options2}.
+	{value, {_, Opts}, Options2} = lists:keytake(transport_config, 1, Options1),
+	true = lists:keymember(raddr, 1, Opts),
+	true = lists:keymember(rport, 1, Opts),
+	Opts1 = lists:keystore(reuseaddr, 1, Opts, {reuseaddr, true}),
+	Opts2 = lists:keystore(ip, 1, Opts1, {ip, Address}),
+	Opts3 = lists:keystore(port, 1, Opts2, {port, Port}),
+	{connect, [{transport_config, Opts3} | Options2]}.
 
 -spec split_options(Options) -> Result
 	when
 		Options :: [tuple()],
-		Result :: {TOptions, SOptions},
-		TOptions :: [tuple()],
-		SOptions :: [tuple()].
+		Result :: {Transport, Service},
+		Transport :: {listen, [diameter:transport_opt()]}
+				| {connect, [diameter:transport_opt()]},
+		Service :: [diameter:service_opt()].
 %% @doc Split `Options' list into transport and service options.
 split_options(Options) ->
-	split_options(Options, [], []).
-%% @hidden
-split_options([{'Origin-Host', DiameterIdentity} = H | T], Acc1, Acc2)
-		when is_list(DiameterIdentity) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Origin-Realm', DiameterIdentity} = H | T], Acc1, Acc2)
-		when is_list(DiameterIdentity) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{application, ApplicationsOpts} = H | T], Acc1, Acc2)
-		when is_list(ApplicationsOpts) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Host-IP-Address', Addresses} = H | T], Acc1, Acc2)
-		when is_list(Addresses), is_tuple(hd(Addresses)) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Vendor-Id', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{'Product-Name', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{'Origin-State-Id', _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Supported-Vendor-Id', _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Auth-Application-Id', Id} = H | T], Acc1, Acc2)
-		when is_list(Id) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Acct-Application-Id', Id} = H | T], Acc1, Acc2)
-		when is_list(Id) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Inband-Security-Id', _} = H| T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Vendor-Specific-Application-Id', _} = H| T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{'Firmware-Revision', _} | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([{capx_timeout, Timeout} = H | T], Acc1, Acc2)
-		when is_integer(Timeout) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{incoming_maxlen, MaxLength} = H | T], Acc1, Acc2)
-		when is_integer(MaxLength) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{pool_size, PoolSize} = H | T], Acc1, Acc2)
-		when is_integer(PoolSize) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{watchdog_timer, TwInit} = H | T], Acc1, Acc2)
-		when is_integer(TwInit) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{transport_module, diameter_tcp} = H | T], Acc1, Acc2) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{transport_module, diameter_sctp} = H | T], Acc1, Acc2) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{transport_config, _} = H | T], Acc1, Acc2) ->
-	split_options(T, [H | Acc1], Acc2);
-split_options([{decode_format, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{restrict_connections, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{sequence, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{share_peers, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{strict_arities, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{string_decode, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{traffic_counters, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([{use_shared_peers, _} = H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, [H | Acc2]);
-split_options([_H | T], Acc1, Acc2) ->
-	split_options(T, Acc1, Acc2);
-split_options([], Acc1, Acc2) ->
-	{Acc1, Acc2}.
+	case lists:keytake(connect, 1, Options) of
+		{value, Connect, Service} ->
+			{Connect, Service};
+		false ->
+			case lists:keytake(listen, 1, Options) of
+				{value, Listen, Service} ->
+					{Listen, Service};
+				false ->
+					{{listen, []}, Options}
+			end
+	end.
 
