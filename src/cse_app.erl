@@ -481,6 +481,7 @@ install15(Tables) ->
 	Opts = [],
 	cse:add_context("32251@3gpp.org", ModGy, Args, Opts), % PS
 	cse:add_context("32260@3gpp.org", ModRo, Args, Opts), % IMS
+	cse:add_context("32270@3gpp.org", ModRo, Args, Opts), % MMS
 	cse:add_context("32274@3gpp.org", ModRo, Args, Opts), % SMS
 	cse:add_context("32276@3gpp.org", ModRo, Args, Opts), % VCS
 	{ok, Tables}.

@@ -32,6 +32,7 @@
 		interim_scur_nrf/0, interim_scur_nrf/1,
 		final_scur/0, final_scur/1,
 		final_scur_nrf/0, final_scur_nrf/1,
+		event_iec/0, event_iec/1,
 		unknown_subscriber/0, unknown_subscriber/1,
 		out_of_credit/0, out_of_credit/1,
 		initial_in_call/0, initial_in_call/1,
@@ -209,7 +210,7 @@ sequences() ->
 all() ->
 	[initial_scur, initial_scur_nrf, interim_scur,
 			interim_scur_nrf, final_scur, final_scur_nrf,
-			unknown_subscriber, out_of_credit,
+			event_iec, unknown_subscriber, out_of_credit,
 			initial_in_call, interim_in_call, final_in_call,
 			client_connect, client_reconnect].
 
@@ -406,6 +407,31 @@ final_scur_nrf(Config) ->
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
 	{ok, {NewBalance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
+
+event_iec() ->
+	[{userdata, [{doc, "IEC CCR-E with CCA-E success"}]}].
+
+event_iec(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100000),
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	RequestNum = 0,
+	{ok, Answer} = iec_event(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Requested-Service-Unit' = [],
+			'Used-Service-Unit' = [],
+			'Granted-Service-Unit' = [GSU],
+			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [1]} = GSU.
 
 unknown_subscriber() ->
 	[{userdata, [{doc, "SCUR Nrf start with unknown user"}]}].
@@ -781,6 +807,20 @@ scur_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
+iec_event(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+   Recipient = #'3gpp_ro_Recipient-Address'{
+			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+			'Address-Data' = [Destination]},
+	MMS = #'3gpp_ro_MMS-Information'{'Recipient-Address' = [Recipient]},
+	iec_event(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
+iec_event(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+   Originator = #'3gpp_ro_Originator-Address'{
+			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+			'Address-Data' = [Origination]},
+	MMS = #'3gpp_ro_MMS-Information'{'Originator-Address' = [Originator]},
+	iec_event(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
 iec_event(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 		when is_record(MMS, '3gpp_ro_MMS-Information') ->
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
@@ -789,12 +829,12 @@ iec_event(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 	IMSI1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = IMSI},
-	RSU = #'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [1]},
+	RSU = #'3gpp_ro_Requested-Service-Unit'{},
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
 			'Rating-Group' = [RG],
 			'Requested-Service-Unit' = [RSU]},
-	ServiceInformation = #'3gpp_ro_Service-Information'{'MMS-Information' = MMS},
+	ServiceInformation = #'3gpp_ro_Service-Information'{'MMS-Information' = [MMS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32270@3gpp.org",
@@ -803,7 +843,7 @@ iec_event(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
 			'Subscription-Id' = [MSISDN1, IMSI1],
-			'Requested-Action' = ?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING',
+			'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
 			'Multiple-Services-Indicator' = [1],
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Service-Information' = [ServiceInformation]},
