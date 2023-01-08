@@ -1786,9 +1786,9 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @hidden
 nrf_start(#{mscc := MSCC, context := ServiceContextId} = Data) ->
 	ServiceRating = service_rating(MSCC, ServiceContextId),
-	nrf_start1(ServiceRating, ServiceContextId, Data).
+	nrf_start1(ServiceRating, Data).
 %% @hidden
-nrf_start1(ServiceRating, ?IMS_CONTEXTID, Data) ->
+nrf_start1(ServiceRating, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1843,9 +1843,9 @@ nrf_start2(JSON,
 %% @doc Update rating a session.
 nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
 	ServiceRating = service_rating(MSCC, ServiceContextId),
-	nrf_update1(ServiceRating, ServiceContextId, Data).
+	nrf_update1(ServiceRating, Data).
 %% @hidden
-nrf_update1(ServiceRating, ?IMS_CONTEXTID, Data) ->
+nrf_update1(ServiceRating, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1905,9 +1905,9 @@ nrf_update2(JSON,
 %% @doc Finish rating a session.
 nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
 	ServiceRating = service_rating(MSCC, ServiceContextId),
-	nrf_release1(ServiceRating, ServiceContextId, Data).
+	nrf_release1(ServiceRating, Data).
 %% @hidden
-nrf_release1(ServiceRating, ?IMS_CONTEXTID, Data) ->
+nrf_release1(ServiceRating, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
