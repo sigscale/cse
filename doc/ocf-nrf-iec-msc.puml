@@ -1,0 +1,24 @@
+@startuml
+
+skinparam shadowing false
+skinparam sequence {
+ParticipantBorderColor #f57f17
+ParticipantBackgroundColor white
+LifeLineBorderColor #f57f17
+LifeLineBackgroundColor white
+}
+participant Core as core
+participant OCF as ocf
+participant OCS as ocs
+hide footbox
+
+core -> ocf : CCR-E
+activate ocf
+ocf -> ocs : POST /ratingdata
+activate ocs
+ocf <- ocs : 201 Created
+deactivate ocs
+core <- ocf : CCA-E
+deactivate ocf
+
+@enduml

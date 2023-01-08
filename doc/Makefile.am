@@ -24,6 +24,7 @@ modhtml = cse.html \
 		cse_slp_prepaid_inap_fsm.html \
 		cse_slp_prepaid_diameter_ps_fsm.html \
 		cse_slp_prepaid_diameter_ims_fsm.html \
+		cse_slp_prepaid_diameter_mms_fsm.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \
@@ -64,8 +65,10 @@ doc_DATA = overview.edoc $(modhtml) \
 		messaging.svg \
 		distribution.svg \
 		ocf-nrf-msc.svg \
+		ocf-nrf-iec-msc.svg \
 		prepaid-diameter-data.svg \
-		prepaid-diameter-voice.svg
+		prepaid-diameter-voice.svg \
+		prepaid-diameter-event.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
@@ -94,8 +97,10 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
 	-cp -n $(top_srcdir)/doc/ocf-nrf-msc.svg .
+	-cp -n $(top_srcdir)/doc/ocf-nrf-iec-msc.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-data.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-voice.svg .
+	-cp -n $(top_srcdir)/doc/prepaid-diameter-event.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 

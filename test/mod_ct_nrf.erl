@@ -25,6 +25,7 @@
 
 -define(PS,  "32251@3gpp.org").
 -define(IMS, "32260@3gpp.org").
+-define(MMS, "32270@3gpp.org").
 -define(SMS, "32274@3gpp.org").
 -define(VCS, "32276@3gpp.org").
 
@@ -183,8 +184,26 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
+rate1(Subscriber, [#{"requestSubType" := "DEBIT",
+		"serviceContextId" := ContextId} = H | T] , ModData, Acc)
+		when ContextId == ?SMS; ContextId == ?MMS ->
+	Amount = rand:uniform(5),
+	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
+		{ok, {_Balance, _Reserve}} ->
+			H1 = maps:remove("requestedUnit", H),
+			ServiceRating = H1#{"resultCode" => "SUCCESS",
+					"grantedUnit" => #{"serviceSpecificUnit" => 1}},
+			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?SMS} = H | T] , ModData, Acc) ->
+		"serviceContextId" := ContextId} = H | T] , ModData, Acc)
+		when ContextId == ?SMS; ContextId == ?MMS ->
 	Amount = rand:uniform(5),
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
@@ -213,7 +232,6 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{error, not_found} ->
 			do_response(ModData, {error, 404});
 		{error, _Reason} ->
-erlang:display({?MODULE, ?LINE, _Reason}),
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, [#{"requestSubType" := "DEBIT",
