@@ -838,7 +838,7 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
    Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [MSISDN]},
-	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Destination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
    Recipient = #'3gpp_ro_Recipient-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [Destination]},
@@ -848,7 +848,7 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 			'Recipient-Info' = [Info]},
 	iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
 iec_event_sms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
-	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Origination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
    Originator = #'3gpp_ro_Originator-Received-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [Origination]},
@@ -860,8 +860,8 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 			'Originator-Received-Address' = [Originator],
 			'Recipient-Info' = [Info]},
 	iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
-iec_event_sms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
-		when is_record(MMS, '3gpp_ro_SMS-Information') ->
+iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
+		when is_record(SMS, '3gpp_ro_SMS-Information') ->
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -873,10 +873,10 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 			'Service-Identifier' = [SI],
 			'Rating-Group' = [RG],
 			'Requested-Service-Unit' = [RSU]},
-	ServiceInformation = #'3gpp_ro_Service-Information'{'SMS-Information' = [MMS]},
+	ServiceInformation = #'3gpp_ro_Service-Information'{'SMS-Information' = [SMS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32270@3gpp.org",
+			'Service-Context-Id' = "32274@3gpp.org",
 			'User-Name' = [MSISDN],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST',
 			'CC-Request-Number' = RequestNum,
@@ -892,7 +892,7 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
    Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [MSISDN]},
-	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Destination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
    Recipient = #'3gpp_ro_Recipient-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [Destination]},
@@ -901,7 +901,7 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 			'Recipient-Address' = [Recipient]},
 	iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
 iec_event_mms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
-	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Origination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
    Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [Origination]},

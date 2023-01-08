@@ -1541,34 +1541,34 @@ message_parties([]) ->
 	{[], []}.
 
 %% @hidden
-address([#'3gpp_ro_Originator-Address'{
-		'Address-Type' = ['?3GPP_RO_ADDRESS-TYPE_MSISDN'],
+address([#'3gpp_ro_Originator-Received-Address'{
+		'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 		'Address-Data' = [Data]} | _T]) ->
 	"msisdn-" ++ binary_to_list(Data);
-address([#'3gpp_ro_Originator-Address'{
-		'Address-Type' = ['?3GPP_RO_ADDRESS-TYPE_IMSI'],
+address([#'3gpp_ro_Originator-Received-Address'{
+		'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
 		'Address-Data' = [Data]} | _T]) ->
 	"imsi-" ++ binary_to_list(Data);
-address([#'3gpp_ro_Originator-Address'{
-		'Address-Type' = ['?3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+address([#'3gpp_ro_Originator-Received-Address'{
+		'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
 		'Address-Data' = [Data]} | _T]) ->
 	"nai-" ++ binary_to_list(Data);
 address([#'3gpp_ro_Recipient-Info'{
 		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Type' = ['?3GPP_RO_ADDRESS-TYPE_MSISDN'],
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [Data]} | _]} | _]) ->
 	"msisdn-" ++ binary_to_list(Data);
 address([#'3gpp_ro_Recipient-Info'{
 		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Type' = ['?3GPP_RO_ADDRESS-TYPE_IMSI'],
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
 				'Address-Data' = [Data]} | _]} | _]) ->
 	"imsi-" ++ binary_to_list(Data);
 address([#'3gpp_ro_Recipient-Info'{
 		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Type' = ['?3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
 				'Address-Data' = [Data]} | _]} | _]) ->
 	"nai-" ++ binary_to_list(Data);
-address([_ | T]) ->
+address([_H | T]) ->
 	address(T);
 address([]) ->
 	[].

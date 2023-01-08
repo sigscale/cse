@@ -175,10 +175,13 @@ codec_diameter_ecs3(CCR,
 		Subscriber :: #{imsi := IMSI, msisdn := MSISDN},
 		IMSI :: [$0..$9],
 		MSISDN :: [$0..$9],
-		Call :: #{direction := Direction, calling := Calling, called := Called},
+		Call :: #{direction := Direction, calling := Calling, called := Called}
+				| #{recipient := Recipient, originator := Originator},
 		Direction :: originating | terminating,
 		Calling :: [$0..$9],
 		Called :: [$0..$9],
+		Recipient :: string(),
+		Originator :: string(),
 		Network :: #{context => Context, session_id => SessionId,
 				hplmn => PLMN, vplmn => PLMN},
 		Context :: string(),
@@ -492,6 +495,12 @@ ecs_prepaid1(#{direction := Direction} = Call, Network, OCS, Acc)
 			$", "direction", $", $:, $", atom_to_list(Direction), $", $,,
 			$", "calling", $", $:, $", get_string(calling, Call), $", $,,
 			$", "called", $", $:, $", get_string(called, Call), $"],
+	ecs_prepaid2(Network, OCS, Acc1);
+ecs_prepaid1(#{originator := Originator, recipient := Recipient},
+		Network, OCS, Acc) when is_list(Originator), is_list(Recipient) ->
+	Acc1 = [Acc, $,,
+			$", "originator", $", $:, $", Originator, $", $,,
+			$", "recipient", $", $:, $", Recipient, $"],
 	ecs_prepaid2(Network, OCS, Acc1);
 ecs_prepaid1(_Call, Network, OCS, Acc) ->
 	ecs_prepaid2(Network, OCS, Acc).
