@@ -22,6 +22,7 @@ beam_DATA = cse.beam \
 		cse_slp_sup.beam \
 		cse_slp_prepaid_diameter_ps_fsm.beam \
 		cse_slp_prepaid_diameter_ims_fsm.beam \
+		cse_slp_prepaid_diameter_sms_fsm.beam \
 		cse_slp_prepaid_diameter_mms_fsm.beam \
 		cse_codec.beam \
 		cse_log.beam \

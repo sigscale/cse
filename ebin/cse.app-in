@@ -23,6 +23,7 @@
 				cse_slp_prepaid_inap_fsm,
 				cse_slp_prepaid_diameter_ps_fsm,
 				cse_slp_prepaid_diameter_ims_fsm,
+				cse_slp_prepaid_diameter_sms_fsm,
 				cse_slp_prepaid_diameter_mms_fsm,
 				cse_tco_server_cb,
 				cse_codec,

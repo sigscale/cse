@@ -24,6 +24,7 @@ modhtml = cse.html \
 		cse_slp_prepaid_inap_fsm.html \
 		cse_slp_prepaid_diameter_ps_fsm.html \
 		cse_slp_prepaid_diameter_ims_fsm.html \
+		cse_slp_prepaid_diameter_sms_fsm.html \
 		cse_slp_prepaid_diameter_mms_fsm.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
