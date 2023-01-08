@@ -475,15 +475,16 @@ install14(Tables) ->
 	end.
 %% @hidden
 install15(Tables) ->
-	ModRo = cse_slp_prepaid_diameter_ro_fsm,
-	ModGy = cse_slp_prepaid_diameter_gy_fsm,
-	Args = [],
-	Opts = [],
-	cse:add_context("32251@3gpp.org", ModGy, Args, Opts), % PS
-	cse:add_context("32260@3gpp.org", ModRo, Args, Opts), % IMS
-	cse:add_context("32270@3gpp.org", ModRo, Args, Opts), % MMS
-	cse:add_context("32274@3gpp.org", ModRo, Args, Opts), % SMS
-	cse:add_context("32276@3gpp.org", ModRo, Args, Opts), % VCS
+	cse:add_context("32251@3gpp.org",
+			cse_slp_prepaid_diameter_ps_fsm, [], []),
+	cse:add_context("32260@3gpp.org",
+			cse_slp_prepaid_diameter_ims_fsm, [], []),
+	cse:add_context("32270@3gpp.org",
+			cse_slp_prepaid_diameter_mms_fsm, [], []),
+	cse:add_context("32274@3gpp.org",
+			cse_slp_prepaid_diameter_sms_fsm, [], []),
+	cse:add_context("32276@3gpp.org",
+			cse_slp_prepaid_diameter_vcs_fsm, [], []),
 	{ok, Tables}.
 
 %%----------------------------------------------------------------------

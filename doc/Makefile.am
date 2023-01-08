@@ -22,8 +22,8 @@ modhtml = cse.html \
 		cse_slp_inap_fsm.html \
 		cse_slp_prepaid_cap_fsm.html \
 		cse_slp_prepaid_inap_fsm.html \
-		cse_slp_prepaid_diameter_ro_fsm.html \
-		cse_slp_prepaid_diameter_gy_fsm.html \
+		cse_slp_prepaid_diameter_ps_fsm.html \
+		cse_slp_prepaid_diameter_ims_fsm.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \
@@ -64,8 +64,8 @@ doc_DATA = overview.edoc $(modhtml) \
 		messaging.svg \
 		distribution.svg \
 		ocf-nrf-msc.svg \
-		prepaid-diameter-ro.svg \
-		prepaid-diameter-gy.svg
+		prepaid-diameter-data.svg \
+		prepaid-diameter-voice.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
@@ -94,8 +94,8 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
 	-cp -n $(top_srcdir)/doc/ocf-nrf-msc.svg .
-	-cp -n $(top_srcdir)/doc/prepaid-diameter-ro.svg .
-	-cp -n $(top_srcdir)/doc/prepaid-diameter-gy.svg .
+	-cp -n $(top_srcdir)/doc/prepaid-diameter-data.svg .
+	-cp -n $(top_srcdir)/doc/prepaid-diameter-voice.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 

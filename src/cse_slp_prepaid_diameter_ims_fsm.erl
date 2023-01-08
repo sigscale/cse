@@ -1,4 +1,4 @@
-%%% cse_slp_prepaid_diameter_gy_fsm.erl
+%%% cse_slp_prepaid_diameter_ims_fsm.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021-2022 SigScale Global Inc.
@@ -18,7 +18,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
 %%% 	module implements a Service Logic Processing Program (SLP)
-%%% 	for DIAMETER Gy application within the
+%%% 	for DIAMETER Ro application within the
 %%% 	{@link //cse. cse} application.
 %%%
 %%% 	This Service Logic Program (SLP) implements a 3GPP Online
@@ -27,8 +27,8 @@
 %%% 	<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">
 %%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
 %%%
-%%% 	This SLP specifically handles Packet Switched (PS) data
-%%% 	service usage with `Service-Context-Id' of `32251@3gpp.org'.
+%%% 	This SLP specifically handles IP Multimedia Subsystem (IMS) voice
+%%% 	service usage with `Service-Context-Id' of `32260@3gpp.org'.
 %%%
 %%% 	== Message Sequence ==
 %%% 	The diagram below depicts the normal sequence of exchanged messages:
@@ -39,9 +39,9 @@
 %%% 	The following diagram depicts the states, and events which drive state
 %%% 	transitions, in the OCF finite state machine (FSM):
 %%%
-%%% 	<img alt="state machine" src="prepaid-diameter-gy.svg" />
+%%% 	<img alt="state machine" src="prepaid-diameter-voice.svg" />
 %%%
--module(cse_slp_prepaid_diameter_gy_fsm).
+-module(cse_slp_prepaid_diameter_ims_fsm).
 -copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
 -author('Refath Wadood <refath@sigscale.org>').
 
@@ -52,7 +52,9 @@
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
 -export([null/3, authorize_origination_attempt/3,
-		collect_information/3, analyse_information/3, active/3]).
+		terminating_call_handling/3,
+		collect_information/3, analyse_information/3,
+		o_alerting/3, t_alerting/3, active/3]).
 %% export the private api
 -export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
@@ -67,35 +69,39 @@
 
 -define(RO_APPLICATION_ID, 4).
 -define(IANA_PEN_SigScale, 50386).
--define(PS_CONTEXTID, "32251@3gpp.org").
+-define(IMS_CONTEXTID, "32260@3gpp.org").
 -define(LOGNAME, prepaid).
--define(SERVICENAME, "Prepaid Data").
+-define(SERVICENAME, "Prepaid Voice").
 
 -type state() :: null
-		| authorize_origination_attempt
-		| collect_information | analyse_information | active.
+		| authorize_origination_attempt | terminating_call_handling
+		| collect_information | analyse_information
+		| o_alerting | t_alerting | active.
 
 -type statedata() :: #{start := pos_integer(),
+		from => pid(),
+		session_id => binary(),
+		context => string(),
+		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
+		req_type => pos_integer(),
+		reqno =>  integer(),
+		ohost => binary(),
+		orealm => binary(),
+		drealm => binary(),
+		imsi => [$0..$9],
+		msisdn => string(),
+		direction => originating | terminating,
+		called => [$0..$9],
+		calling => [$0..$9],
 		nrf_profile => atom(),
 		nrf_uri => string(),
 		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
 		nrf_location => string(),
-		nrf_reqid => reference(),
-		imsi => [$0..$9],
-		msisdn => string(),
-		context => string(),
-		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-		req_type => pos_integer(),
-		reqno =>  integer(),
-		session_id => binary(),
-		ohost => binary(),
-		orealm => binary(),
-		drealm => binary(),
-		from => pid()}.
+		nrf_reqid => reference()}.
 
 %%----------------------------------------------------------------------
-%%  The cse_slp_prepaid_diameter_gy_fsm gen_statem callbacks
+%%  The cse_slp_prepaid_diameter_ims_fsm gen_statem callbacks
 %%----------------------------------------------------------------------
 
 -spec callback_mode() -> Result
@@ -147,8 +153,20 @@ null(enter = _EventType, null = _EventContent, _Data) ->
 null(enter = _EventType, OldState, Data) ->
 	log(OldState,Data),
 	{stop, shutdown};
-null({call, _From}, #'3gpp_ro_CCR'{}, Data) ->
-	{next_state, authorize_origination_attempt, Data, postpone}.
+null({call, _From}, #'3gpp_ro_CCR'{
+		'Service-Information' = [#'3gpp_ro_Service-Information'{
+				'IMS-Information' = [#'3gpp_ro_IMS-Information'{
+						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE']}]}]},
+		Data) ->
+	NewData = Data#{direction => origininating},
+	{next_state, authorize_origination_attempt, NewData, postpone};
+null({call, _From}, #'3gpp_ro_CCR'{
+		'Service-Information' = [#'3gpp_ro_Service-Information'{
+				'IMS-Information' = [#'3gpp_ro_IMS-Information'{
+						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE']}]}]},
+		Data) ->
+	NewData = Data#{direction => terminating},
+	{next_state, terminating_call_handling, NewData, postpone}.
 
 -spec authorize_origination_attempt(EventType, EventContent, Data) -> Result
 	when
@@ -169,12 +187,14 @@ authorize_origination_attempt({call, From},
 				'CC-Request-Number' = RequestNum,
 				'Subscription-Id' = SubscriptionId,
 				'Multiple-Services-Credit-Control' = MSCC,
-				'Service-Information' = _ServiceInformation}, Data)
+				'Service-Information' = ServiceInformation}, Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
 	IMSI = imsi(SubscriptionId),
 	MSISDN = msisdn(SubscriptionId),
+	{CallingDN, CalledDN} = call_parties(ServiceInformation),
 	NewData = Data#{from => From,
 			imsi => IMSI, msisdn => MSISDN,
+			calling => CallingDN, called => CalledDN,
 			context => binary_to_list(SvcContextId),
 			mscc => MSCC, session_id => SessionId, ohost => OHost,
 			orealm => ORealm, drealm => DRealm, reqno => RequestNum,
@@ -182,7 +202,7 @@ authorize_origination_attempt({call, From},
 	nrf_start(NewData);
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId,
+		#{from := From, nrf_reqid := RequestId, called := CalledDN,
 				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId, req_type := RequestType} = Data) ->
@@ -197,10 +217,11 @@ authorize_origination_attempt(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, is_rsu(MSCC)} of
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+				case {ResultCode, CalledDN} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', Destination}
+							when length(Destination) > 0 ->
 						{next_state, analyse_information, NewData1, Actions};
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false} ->
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _} ->
 						{next_state, collect_information, NewData1, Actions};
 					{_, _} ->
 						{next_state, null, NewData1, Actions}
@@ -209,7 +230,7 @@ authorize_origination_attempt(cast,
 				_:Reason ->
 					?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 							{request_id, RequestId}, {profile, Profile},
-							{uri, URI}, {location, Location}, {slpi, self()},
+							{uri, URI}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, authorize_origination_attempt}]),
 					Reply1 = diameter_error(SessionId,
@@ -279,7 +300,7 @@ authorize_origination_attempt(cast, {nrf_release,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
-	?LOG_WARNING([{?MODULE, release},
+	?LOG_WARNING([{?MODULE, nrf_release},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
@@ -313,7 +334,7 @@ authorize_origination_attempt(cast, {nrf_release, {RequestId, {error, Reason}}},
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
-	?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
@@ -323,6 +344,335 @@ authorize_origination_attempt(cast, {nrf_release, {RequestId, {error, Reason}}},
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
+
+-spec terminating_call_handling(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>terminating_call_handling</em> state.
+%%.
+%% 	We handle `CCR-U' in this state because we may have entered
+%% 	from another SLP which consumed the `CCR-I'.
+%%.
+%% @private
+terminating_call_handling(enter, _EventContent, _Data) ->
+	keep_state_and_data;
+terminating_call_handling({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
+				'CC-Request-Type' = RequestType,
+				'Service-Context-Id' = SvcContextId,
+				'CC-Request-Number' = RequestNum,
+				'Subscription-Id' = SubscriptionId,
+				'Multiple-Services-Credit-Control' = MSCC,
+				'Service-Information' = ServiceInformation}, Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
+	IMSI = imsi(SubscriptionId),
+	MSISDN = msisdn(SubscriptionId),
+	{CallingDN, CalledDN} = call_parties(ServiceInformation),
+	NewData = Data#{from => From,
+			imsi => IMSI, msisdn => MSISDN,
+			calling => CallingDN, called => CalledDN,
+			context => binary_to_list(SvcContextId),
+			mscc => MSCC, session_id => SessionId, ohost => OHost,
+			orealm => ORealm, drealm => DRealm, reqno => RequestNum,
+			req_type => RequestType},
+	nrf_start(NewData);
+terminating_call_handling({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
+				'CC-Request-Type' = RequestType,
+				'Service-Context-Id' = SvcContextId,
+				'CC-Request-Number' = RequestNum,
+				'Subscription-Id' = SubscriptionId,
+				'Multiple-Services-Credit-Control' = MSCC,
+				'Service-Information' = ServiceInformation},
+		#{session_id := SessionId, nrf_location := Location} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location) ->
+	IMSI = imsi(SubscriptionId),
+	MSISDN = msisdn(SubscriptionId),
+	{CallingDN, CalledDN} = call_parties(ServiceInformation),
+	NewData = Data#{from => From,
+			imsi => IMSI, msisdn => MSISDN,
+			calling => CallingDN, called => CalledDN,
+			context => binary_to_list(SvcContextId),
+			mscc => MSCC, session_id => SessionId, ohost => OHost,
+			orealm => ORealm, drealm => DRealm, reqno => RequestNum,
+			req_type => RequestType},
+	nrf_update(NewData);
+terminating_call_handling({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC},
+		#{session_id := SessionId, nrf_location := Location} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
+	nrf_release(NewData);
+terminating_call_handling({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum},
+		#{session_id := SessionId, ohost := OHost, orealm := ORealm} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
+	NewData = Data#{from => From,
+			reqno => RequestNum, req_type => RequestType},
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	{next_state, null, NewData, Actions};
+terminating_call_handling(cast,
+		{NrfOperation, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_start ->
+			{next_state, null, NewData, Actions};
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+terminating_call_handling(cast,
+		{NrfOperation, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(nrf_reqid, Data),
+	NewData = maps:remove(from, Data1),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_start ->
+			{next_state, null, NewData, Actions};
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+terminating_call_handling(cast,
+		{nrf_start, {RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, mscc := MSCC, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, session_id := SessionId,
+				req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
+		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
+				when is_list(Location) ->
+			try
+				NewData1 = NewData#{nrf_location => Location},
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				case {ResultCode, is_rsu(MSCC)} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+						{next_state, t_alerting, NewData1, Actions};
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false} ->
+						{keep_state, NewData1, Actions};
+					{_, _} ->
+						{next_state, null, NewData1, Actions}
+				end
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, terminating_call_handling}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, null, NewData, Actions1}
+			end;
+		{{error, Partial, Remaining}, Location} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, terminating_call_handling}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions}
+	end;
+terminating_call_handling(cast,
+		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, session_id := SessionId,
+				reqno := RequestNum, req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				case {ResultCode, is_rsu(MSCC), is_usu(MSCC)} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true} ->
+						{next_state, active, NewData, Actions};
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, false} ->
+						{next_state, t_alerting, NewData, Actions};
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false, false} ->
+						{keep_state, NewData, Actions};
+					{_, _, _} ->
+						{next_state, null, NewData, Actions}
+				end
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, terminating_call_handling}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{keep_state, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, terminating_call_handling}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions}
+	end;
+terminating_call_handling(cast,
+		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, session_id := SessionId,
+				reqno := RequestNum, req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				{next_state, null, NewData, Actions}
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, terminating_call_handling}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, null, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, terminating_call_handling}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions}
+	end;
+terminating_call_handling(cast, {nrf_start,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#{from := From, nrf_reqid := RequestId,
+				nrf_profile := Profile, nrf_uri := URI,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_WARNING([{?MODULE, nrf_start},
+			{code, Code}, {reason, Phrase}, {request_id, RequestId},
+			{profile, Profile}, {uri, URI}, {slpi, self()},
+			{origin_host, OHost}, {origin_realm, ORealm},
+			{state, terminating_call_handling}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	{next_state, null, NewData, Actions};
+terminating_call_handling(cast, {NrfOperation, {RequestId, {error, Reason}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
+			{request_id, RequestId}, {profile, Profile},
+			{uri, URI}, {location, Location}, {slpi, self()},
+			{origin_host, OHost}, {origin_realm, ORealm},
+			{state, terminating_call_handling}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+terminating_call_handling(cast, {NrfOperation, {RequestId, {error, Reason}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
+			{request_id, RequestId}, {profile, Profile},
+			{uri, URI}, {location, Location}, {slpi, self()},
+			{origin_host, OHost}, {origin_realm, ORealm},
+			{state, terminating_call_handling}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
@@ -338,11 +688,14 @@ collect_information({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum,
-				'Multiple-Services-Credit-Control' = MSCC},
+				'Multiple-Services-Credit-Control' = MSCC,
+				'Service-Information' = ServiceInformation},
 		#{session_id := SessionId, nrf_location := Location} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-				is_list(Location) ->
+				is_list(Location)  ->
+	{CallingDN, CalledDN} = call_parties(ServiceInformation),
 	NewData = Data#{from => From, mscc => MSCC,
+			calling => CallingDN, called => CalledDN,
 			reqno => RequestNum, req_type => RequestType},
 	nrf_update(NewData);
 collect_information({call, From},
@@ -352,7 +705,7 @@ collect_information({call, From},
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-				is_list(Location) ->
+				is_list(Location)  ->
 	NewData = Data#{from => From, mscc => MSCC,
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
@@ -390,8 +743,9 @@ collect_information(cast,
 	end;
 collect_information(cast,
 		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf := Location, mscc := MSCC,
+		#{from := From, nrf_reqid := RequestId, called := CalledDN,
+				nrf_profile := Profile, nrf_uri := URI,
+				nrf_location := Location, mscc := MSCC,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				session_id := SessionId, req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
@@ -403,12 +757,16 @@ collect_information(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, is_usu(MSCC)} of
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+				case {ResultCode, is_rsu(MSCC),
+						is_usu(MSCC), CalledDN} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true, _} ->
 						{next_state, active, NewData, Actions};
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false} ->
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, false, _} ->
+						{next_state, o_alerting, NewData, Actions};
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false,
+							false, Destination} when length(Destination) > 0 ->
 						{next_state, analyse_information, NewData, Actions};
-					{_, _} ->
+					{_, _, _, _} ->
 						{keep_state, NewData, Actions}
 				end
 			catch
@@ -544,7 +902,7 @@ analyse_information({call, From},
 				'Multiple-Services-Credit-Control' = MSCC},
 		#{session_id := SessionId, nrf_location := Location} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-				is_list(Location)  ->
+				is_list(Location) ->
 	NewData = Data#{from => From, mscc => MSCC,
 			reqno => RequestNum, req_type => RequestType},
 	nrf_update(NewData);
@@ -606,10 +964,12 @@ analyse_information(cast,
 				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
 						ORealm, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
-				case {ResultCode, is_usu(MSCC)} of
-					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+				case {ResultCode, is_rsu(MSCC), is_usu(MSCC)} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true} ->
 						{next_state, active, NewData, Actions};
-					{_, _}->
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, false} ->
+						{next_state, o_alerting, NewData, Actions};
+					{_, _, _}->
 						{keep_state, NewData, Actions}
 				end
 			catch
@@ -717,6 +1077,408 @@ analyse_information(cast, {NrfOperation, {RequestId, {error, Reason}}},
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, analyse_information}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end.
+
+-spec o_alerting(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>o_alerting</em> state.
+%% @private
+o_alerting(enter, _EventContent, _Data) ->
+	keep_state_and_data;
+o_alerting({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC},
+		#{session_id := SessionId, nrf_location := Location} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
+	nrf_update(NewData);
+o_alerting({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC},
+		#{session_id := SessionId, nrf_location := Location} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location)  ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
+	nrf_release(NewData);
+o_alerting(cast,
+		{NrfOperation, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+o_alerting(cast,
+		{NrfOperation, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+o_alerting(cast,
+		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				case {ResultCode, is_usu(MSCC)} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+						{next_state, active, NewData, Actions};
+					{_, false} ->
+						{keep_state, NewData, Actions}
+				end
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, o_alerting}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{keep_state, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, o_alerting}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions}
+	end;
+o_alerting(cast,
+		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				{next_state, null, NewData, Actions}
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, o_alerting}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, null, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, o_alerting}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions}
+	end;
+o_alerting(cast, {NrfOperation,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_WARNING([{?MODULE, NrfOperation},
+			{code, Code}, {reason, Phrase}, {request_id, RequestId},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
+			{state, o_alerting}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+o_alerting(cast, {NrfOperation, {RequestId, {error, Reason}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
+			{request_id, RequestId}, {profile, Profile},
+			{uri, URI}, {location, Location}, {slpi, self()},
+			{origin_host, OHost}, {origin_realm, ORealm},
+			{state, o_alerting}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end.
+
+-spec t_alerting(EventType, EventContent, Data) -> Result
+	when
+		EventType :: gen_statem:event_type(),
+		EventContent :: term(),
+		Data :: statedata(),
+		Result :: gen_statem:event_handler_result(state()).
+%% @doc Handles events received in the <em>t_alerting</em> state.
+%% @private
+t_alerting(enter, _EventContent, _Data) ->
+	keep_state_and_data;
+t_alerting({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC},
+		#{session_id := SessionId, nrf_location := Location} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+				is_list(Location)  ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
+	nrf_update(NewData);
+t_alerting({call, From},
+		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
+				'CC-Request-Type' = RequestType,
+				'CC-Request-Number' = RequestNum,
+				'Multiple-Services-Credit-Control' = MSCC},
+		#{session_id := SessionId, nrf_location := Location} = Data)
+		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				is_list(Location) ->
+	NewData = Data#{from => From, mscc => MSCC,
+			reqno => RequestNum, req_type => RequestType},
+	nrf_release(NewData);
+t_alerting(cast,
+		{NrfOperation, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+t_alerting(cast,
+		{NrfOperation, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
+		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
+	Reply = diameter_error(SessionId, ResultCode,
+			OHost, ORealm, RequestType, RequestNum),
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+t_alerting(cast,
+		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				case {ResultCode, is_usu(MSCC)} of
+					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+						{next_state, active, NewData, Actions};
+					{_, false} ->
+						{keep_state, NewData, Actions}
+				end
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, t_alerting}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{keep_state, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, t_alerting}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions}
+	end;
+t_alerting(cast,
+		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := ServiceRating}} ->
+			try
+				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
+				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
+						ORealm, RequestType, RequestNum),
+				Actions = [{reply, From, Reply}],
+				{next_state, null, NewData, Actions}
+			catch
+				_:Reason ->
+					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+							{request_id, RequestId}, {profile, Profile},
+							{uri, URI}, {location, Location}, {slpi, self()},
+							{origin_host, OHost}, {origin_realm, ORealm},
+							{state, t_alerting}]),
+					Reply1 = diameter_error(SessionId,
+							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							OHost, ORealm, RequestType, RequestNum),
+					Actions1 = [{reply, From, Reply1}],
+					{next_state, null, NewData, Actions1}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, t_alerting}]),
+			Reply = diameter_error(SessionId,
+					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions}
+	end;
+t_alerting(cast, {NrfOperation,
+		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_WARNING([{?MODULE, NrfOperation},
+			{code, Code}, {reason, Phrase}, {request_id, RequestId},
+			{profile, Profile}, {uri, URI}, {location, Location},
+			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
+			{state, t_alerting}]),
+	Reply = diameter_error(SessionId,
+			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			OHost, ORealm, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+t_alerting(cast, {NrfOperation, {RequestId, {error, Reason}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_location := Location,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(from, Data),
+	NewData = maps:remove(nrf_reqid, Data1),
+	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
+			{request_id, RequestId}, {profile, Profile},
+			{uri, URI}, {location, Location}, {slpi, self()},
+			{origin_host, OHost}, {origin_realm, ORealm},
+			{state, t_alerting}]),
 	Reply = diameter_error(SessionId,
 			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			OHost, ORealm, RequestType, RequestNum),
@@ -838,8 +1600,8 @@ active(cast,
 		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, session_id := SessionId,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				session_id := SessionId, req_type := RequestType} = Data) ->
 	Data1 = maps:remove(from, Data),
 	NewData = maps:remove(nrf_reqid, Data1),
 	case zj:decode(Body) of
@@ -1026,7 +1788,7 @@ nrf_start(#{mscc := MSCC, context := ServiceContextId} = Data) ->
 	ServiceRating = service_rating(MSCC, ServiceContextId),
 	nrf_start1(ServiceRating, ServiceContextId, Data).
 %% @hidden
-nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
+nrf_start1(ServiceRating, ?IMS_CONTEXTID, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1053,20 +1815,23 @@ nrf_start2(JSON,
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+					{profile, Profile}, {uri, URI},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{slpi, self()}]),
 			Reply = diameter_error(SessionId,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
-			{keep_state, Data, Actions};
+			{next_state, null, Data, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+					{profile, Profile}, {uri, URI}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm}]),
 			Reply = diameter_error(SessionId,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
-			{keep_state, Data, Actions}
+			{next_state, null, Data, Actions}
 	end.
 
 -spec nrf_update(Data) -> Result
@@ -1080,7 +1845,7 @@ nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
 	ServiceRating = service_rating(MSCC, ServiceContextId),
 	nrf_update1(ServiceRating, ServiceContextId, Data).
 %% @hidden
-nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
+nrf_update1(ServiceRating, ?IMS_CONTEXTID, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1110,7 +1875,8 @@ nrf_update2(JSON,
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()}]),
+					{location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
 			Reply = diameter_error(SessionId,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
@@ -1120,7 +1886,8 @@ nrf_update2(JSON,
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()}]),
+					{location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
 			Reply = diameter_error(SessionId,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
@@ -1140,7 +1907,7 @@ nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
 	ServiceRating = service_rating(MSCC, ServiceContextId),
 	nrf_release1(ServiceRating, ServiceContextId, Data).
 %% @hidden
-nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
+nrf_release1(ServiceRating, ?IMS_CONTEXTID, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1170,7 +1937,8 @@ nrf_release2(JSON,
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()}]),
+					{location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
 			Reply = diameter_error(SessionId,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
@@ -1180,7 +1948,8 @@ nrf_release2(JSON,
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()}]),
+					{location, Location}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
 			Reply = diameter_error(SessionId,
 					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
@@ -1476,6 +2245,42 @@ result_code("USER_UNKNOWN") ->
 result_code("RATING_FAILED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED'.
 
+-spec call_parties(ServiceInformation) -> Result
+	when
+		ServiceInformation :: [#'3gpp_ro_Service-Information'{}],
+		Result :: {Calling, Called},
+		Calling :: [Digit],
+		Called :: [Digit],
+		Digit :: $0..$9.
+%% @doc Extract call party addresses.
+%% @hidden
+call_parties([#'3gpp_ro_Service-Information'{
+		'IMS-Information' = [#'3gpp_ro_IMS-Information'{
+		'Calling-Party-Address' = [],
+		'Called-Party-Address' = [CalledParty]}]}]) ->
+	{[], address(CalledParty)};
+call_parties([#'3gpp_ro_Service-Information'{
+		'IMS-Information' = [#'3gpp_ro_IMS-Information'{
+		'Calling-Party-Address' = [CallingParty],
+		'Called-Party-Address' = []}]}]) ->
+	{address(CallingParty), []};
+call_parties([#'3gpp_ro_Service-Information'{
+		'IMS-Information' = [#'3gpp_ro_IMS-Information'{
+		'Calling-Party-Address' = [CallingParty],
+		'Called-Party-Address' = [CalledParty]}]}]) ->
+	{address(CallingParty), address(CalledParty)};
+call_parties([#'3gpp_ro_Service-Information'{
+		'IMS-Information' = []}]) ->
+	{[], []};
+call_parties([]) ->
+	{[], []}.
+
+%% @hidden
+address(<<"tel:", Dest/binary>>) ->
+	binary_to_list(Dest);
+address(Dest) ->
+	binary_to_list(Dest).
+
 -spec log(OldState, Data) -> ok
 	when
 		OldState :: atom(),
@@ -1486,11 +2291,14 @@ log(State,
 		#{start := Start,
 		imsi := IMSI,
 		msisdn := MSISDN,
+		direction := Direction,
+		called :=  Called,
+		calling := Calling,
 		context := Context,
 		session_id := SessionId} = Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
-	Call = #{},
+	Call = #{direction => Direction, calling => Calling, called => Called},
 	Network = #{context => Context, session_id => SessionId},
 	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
 	cse_log:blog(?LOGNAME, {Start, Stop, ?SERVICENAME,
