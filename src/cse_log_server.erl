@@ -265,14 +265,14 @@ handle_info(Info, State) ->
 %% @see //stdlib/gen_server:terminate/3
 %% @private
 terminate(_Reason, #state{log = Log} = _State) ->
-	terminate1(Log, disk_log:close(Log)).
+	terminate1(Log, disk_log:sync(Log)).
 %% @hidden
 terminate1(Log, ok) ->
-	terminate2(Log, disk_log:sync(Log));
+	terminate2(Log, disk_log:close(Log));
 terminate1(Log, {error, Reason}) ->
 	terminate2(Log, {error, Reason}).
 %% @hidden
-terminate2(Log, ok) ->
+terminate2(_Log, ok) ->
 	ok;
 terminate2(Log, {error, Reason}) ->
 	Descr = lists:flatten(disk_log:format_error(Reason)),
