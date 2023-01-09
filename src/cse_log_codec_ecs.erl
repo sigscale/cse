@@ -24,7 +24,7 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log_codec_ecs  public API
--export([codec_diameter_ecs/1, codec_prepaid_ecs/1]).
+-export([codec_diameter_ecs/1, codec_prepaid_ecs/1, codec_rating_ecs/1]).
 -export([ecs_base/1, ecs_server/4, ecs_client/2, ecs_network/2,
 		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7,
 		ecs_url/1]).
@@ -210,6 +210,7 @@ codec_diameter_ecs3(CCR,
 %% 	calculated and `event.start', `event.stop' and `event.duration'
 %% 	will be included in the log event.
 %%
+%% @todo Refactor `outcome' after eliminating `exception' state.
 codec_prepaid_ecs({Start, Stop, ServiceName,
 		State, Subscriber, Call, Network, OCS} = _Term) ->
 	StartTime = cse_log:iso8601(Start),
@@ -237,6 +238,57 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 					"event", "session", ["protocol", "end"], Outcome), $,,
 			ecs_url(URL), $,,
 			ecs_prepaid(State, Call, Network, OCS), $}].
+
+-spec codec_rating_ecs(Term) -> iodata()
+	when
+		Term :: {Start, Stop, ServiceName, Subscriber, URL, HTTP},
+		Start :: pos_integer(),
+		Stop :: pos_integer(),
+		ServiceName :: string(),
+		Subscriber :: #{imsi := IMSI, msisdn := MSISDN},
+		IMSI :: [$0..$9],
+		MSISDN :: [$0..$9],
+		URL :: map(),
+		HTTP :: map().
+%% @doc Nrf_Rating event CODEC for Elastic Stack logs.
+%%
+%% 	Formats Nrf_Rating message transaction events on the Re interface
+%% 	for consumption by Elastic Stack by providing a JSON format aligned
+%% 	with The Elastic Common Schema (ECS).
+%%
+%% 	Callback handlers for the {@link //httpc. httpc} application
+%% 	may use this CODEC function with the {@link //cse/cse_log. cse_log}
+%% 	logging functions with the
+%% 	{@link //cse/cse_log:log_option(). cse_log:log_option()}
+%% 	`{codec, {{@module}, codec_rating_ecs}}'.
+%%
+%% 	The `StartTime' should be when the Nrf_Rating request was sent
+%% 	and `StopTime' when the response was received. The values are
+%% 	milliseconds since the epoch (e.g. `erlang:system_time(millisecond)').
+%% 	A duration will be calculated and `event.start', `event.stop' and
+%% 	`event.duration' will be included in the log event.
+%%
+codec_rating_ecs({Start, Stop, ServiceName, Subscriber, URL,
+		#{"response" := #{"status_code" := StatusCode}} = HTTP} = _Term) ->
+	StartTime = cse_log:iso8601(Start),
+	StopTime = cse_log:iso8601(Stop),
+	Duration = integer_to_list((Stop - Start) * 1000000),
+	#{imsi := IMSI, msisdn := MSISDN} = Subscriber,
+	Outcome = case ((StatusCode >= 200) and (StatusCode =< 299)) of
+		true ->
+			"success";
+		false ->
+			"failure"
+	end,
+	[${,
+			ecs_base(StartTime), $,,
+			ecs_service(ServiceName, "slp"), $,,
+			ecs_network("nrf", "http"), $,,
+			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
+			ecs_event(StartTime, StopTime, Duration,
+					"event", "session", ["protocol"], Outcome), $,,
+			ecs_url(URL), $,,
+			$", "http", $", $:, zj:encode(HTTP), $}].
 
 -spec ecs_base(Timestamp) -> iodata()
 	when
