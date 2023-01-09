@@ -304,7 +304,7 @@ ecs_base(Timestamp) ->
 			$", "application", $", $:, $", "sigscale-cse", $", $}],
 	Tags = [$", "tags", $", $:, $[, $]],
 	Version = [$", "ecs", $", $:, ${,
-			$", "version", $", $:, $", "8.2", $", $}],
+			$", "version", $", $:, $", "8.5", $", $}],
 	[TS, $,, Labels, $,, Tags, $,, Version].
 
 -spec ecs_server(Address, Domain, IP, Port) -> iodata()
