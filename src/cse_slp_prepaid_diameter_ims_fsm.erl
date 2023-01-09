@@ -2367,13 +2367,11 @@ ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
 			lists:keyfind("content-type", 1, Headers)} of
 		{{_, Bytes}, {_, MIME}} ->
 			Body1 = #{"bytes" => Bytes,
-					%"content" => cse_rest:stringify(zj:encode(Body))},
 					"content" => zj:encode(Body)},
 			#{"status_code" => StatusCode,
 					"mime_type" => MIME, "body" => Body1};
 		{{_, Bytes}, false} ->
 			Body1 = #{"bytes" => Bytes,
-					%"content" => cse_rest:stringify(zj:encode(Body))},
 					"content" => zj:encode(Body)},
 			#{"status_code" => StatusCode, "body" => Body1};
 		_ ->
