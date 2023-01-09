@@ -2389,11 +2389,23 @@ log_nrf(HTTP,
 		#{nrf_start := Start,
 		imsi := IMSI,
 		msisdn := MSISDN,
+		nrf_address := Address,
+		nrf_port := Port,
 		nrf_req_url := URL} = _Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
+	Client = case {Address, Port} of
+		{Address, Port} when is_tuple(Address), is_integer(Port) ->
+			{Address, Port};
+		{Address, _} when is_tuple(Address) ->
+			{Address, 0};
+		{_, Port} when is_integer(Port) ->
+			{[], Port};
+		{_, _} ->
+			{[], 0}
+	end,
 	cse_log:blog(?NRF_LOGNAME,
-			{Start, Stop, ?SERVICENAME, Subscriber, URL, HTTP}).
+			{Start, Stop, ?SERVICENAME, Subscriber, Client, URL, HTTP}).
 
 -spec log_fsm(OldState, Data) -> ok
 	when

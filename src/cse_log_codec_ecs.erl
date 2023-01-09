@@ -25,7 +25,7 @@
 
 %% export the cse_log_codec_ecs  public API
 -export([codec_diameter_ecs/1, codec_prepaid_ecs/1, codec_rating_ecs/1]).
--export([ecs_base/1, ecs_server/4, ecs_client/2, ecs_network/2,
+-export([ecs_base/1, ecs_server/4, ecs_client/4, ecs_network/2,
 		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7,
 		ecs_url/1]).
 -export([subscriber_id/1]).
@@ -43,7 +43,9 @@
 		Term :: {Start, Stop, ServiceName, Peer, Request, Reply},
 		Start :: pos_integer(),
 		Stop :: pos_integer(),
-		ServiceName :: diameter:service_name(),
+		ServiceName :: {cse, Address, Port},
+		Address :: inet:ip_address(),
+		Port :: non_neg_integer(),
 		Peer :: diameter_app:peer(),
 		Request :: diameter:message(),
 		Reply :: {reply,  diameter:message()}
@@ -73,14 +75,12 @@ codec_diameter_ecs({Start, Stop,
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
 	Duration = integer_to_list((Stop - Start) * 1000000),
-	ServiceIp = inet:ntoa(Address),
-	ServicePort = integer_to_list(Port),
 	{ServerAddress, ClientAddress} = Capabilities#diameter_caps.origin_host,
 	{ServerDomain, ClientDomain} = Capabilities#diameter_caps.origin_realm,
 	Acc = [${,
-			ecs_base(StartTime), $,,
-			ecs_server(ServerAddress, ServerDomain, ServiceIp, ServicePort), $,,
-			ecs_client(ClientAddress, ClientDomain)],
+			ecs_base(StartTime),
+			ecs_server(ServerAddress, ServerDomain, Address, Port),
+			ecs_client(ClientAddress, ClientDomain, [], 0)],
 	codec_diameter_ecs1(Request, Reply, StartTime, StopTime, Duration, Acc).
 %% @hidden
 %% @todo TCP/SCTP transport attributes.
@@ -241,13 +241,16 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 
 -spec codec_rating_ecs(Term) -> iodata()
 	when
-		Term :: {Start, Stop, ServiceName, Subscriber, URL, HTTP},
+		Term :: {Start, Stop, ServiceName, Subscriber, Client, URL, HTTP},
 		Start :: pos_integer(),
 		Stop :: pos_integer(),
 		ServiceName :: string(),
 		Subscriber :: #{imsi := IMSI, msisdn := MSISDN},
 		IMSI :: [$0..$9],
 		MSISDN :: [$0..$9],
+		Client :: {Address, Port},
+		Address :: inet:ip_address() | string(),
+		Port :: non_neg_integer(),
 		URL :: map(),
 		HTTP :: map().
 %% @doc Nrf_Rating event CODEC for Elastic Stack logs.
@@ -268,7 +271,8 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 %% 	A duration will be calculated and `event.start', `event.stop' and
 %% 	`event.duration' will be included in the log event.
 %%
-codec_rating_ecs({Start, Stop, ServiceName, Subscriber, URL,
+codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
+		{Address, Port} = _Client, URL,
 		#{"response" := #{"status_code" := StatusCode}} = HTTP} = _Term) ->
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
@@ -286,7 +290,8 @@ codec_rating_ecs({Start, Stop, ServiceName, Subscriber, URL,
 			ecs_network("nrf", "http"), $,,
 			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
 			ecs_event(StartTime, StopTime, Duration,
-					"event", "session", ["protocol"], Outcome), $,,
+					"event", "session", ["protocol"], Outcome),
+			ecs_client([], [], Address, Port), $,,
 			ecs_url(URL), $,,
 			$", "http", $", $:, zj:encode(HTTP), $}].
 
@@ -319,25 +324,95 @@ ecs_server(Address, Domain, IP, Port) when is_tuple(IP) ->
 ecs_server(Address, Domain, IP, Port) when is_integer(Port) ->
 	ecs_server(Address, Domain, IP, integer_to_list(Port));
 ecs_server(Address, Domain, IP, Port)
-		when (is_list(Address) or is_binary(Address)),
-		(is_list(Domain) or is_binary(Domain)) ->
-	Saddress = [$", "address", $", $:, $", Address, $"],
-	Sdomain = [$", "domain", $", $:, $", Domain, $"],
-	Sip = [$", "ip", $", $:, $", IP, $"],
-	Sport = [$", "port", $", $:, $", Port, $"],
-	[$", "server", $", $:, ${, Saddress, $,, Sdomain, $,, Sip, $,, Sport, $}].
+		when ((length(Address) > 0) or (size(Address) > 0)) ->
+	Acc = [$", "address", $", $:, $", Address, $"],
+	ecs_server1(Domain, IP, Port, Acc);
+ecs_server(_Address, Domain, IP, Port)
+		when ((length(Domain) > 0) or (size(Domain) > 0)) ->
+	Acc = [$", "address", $", $:, $", Domain, $"],
+	ecs_server1(Domain, IP, Port, Acc);
+ecs_server(_Address, Domain, IP, Port) when length(IP) > 0 ->
+	Acc = [$", "address", $", $:, $", IP, $"],
+	ecs_server1(Domain, IP, Port, Acc);
+ecs_server(_Address, _Domain, _IP, Port) ->
+	ecs_server3(Port, []).
+%% @hidden
+ecs_server1(Domain, IP, Port, Acc)
+		when ((length(Domain) > 0) or (size(Domain) > 0)) ->
+	NewAcc = [Acc, $,, $", "domain", $", $:, $", Domain, $"],
+	ecs_server2(IP, Port, NewAcc);
+ecs_server1(_Domain, IP, Port, Acc) ->
+	ecs_server2(IP, Port, Acc).
+%% @hidden
+ecs_server2(IP, Port, Acc) when length(IP) > 0 ->
+	NewAcc = [Acc, $,, $", "ip", $", $:, $", IP, $"],
+	ecs_server3(Port, NewAcc);
+ecs_server2(_IP, Port, Acc) ->
+	ecs_server3(Port, Acc).
+%% @hidden
+ecs_server3([$0], Acc) ->
+	ecs_server4(Acc);
+ecs_server3(Port, Acc) when length(Port) > 0 ->
+	NewAcc = [Acc, $,, $", "port", $", $:, Port],
+	ecs_server4(NewAcc);
+ecs_server3(_Port, Acc) ->
+	ecs_server4(Acc).
+%% @hidden
+ecs_server4([]) ->
+	[];
+ecs_server4(Acc) ->
+	[$,, $", "server", $", $:, ${, Acc, $}].
 
--spec ecs_client(Address, Domain) -> iodata()
+-spec ecs_client(Address, Domain, IP, Port) -> iodata()
 	when
 		Address :: binary() | string(),
-		Domain :: binary() | string().
+		Domain :: binary() | string(),
+		IP :: inet:ip_address() | string(),
+		Port :: non_neg_integer().
 %% @doc Elastic Common Schema (ECS): Client attributes.
-ecs_client(Address, Domain)
-		when (is_list(Address) or is_binary(Address)),
-		(is_list(Domain) or is_binary(Domain)) ->
-	Caddress = [$", "address", $", $:, $", Address, $"],
-	Cdomain = [$", "domain", $", $:, $", Domain, $"],
-	[$", "client", $", $:, ${, Caddress, $,, Cdomain, $}].
+ecs_client(Address, Domain, IP, Port) when is_tuple(IP) ->
+	ecs_client(Address, Domain, inet:ntoa(IP), Port);
+ecs_client(Address, Domain, IP, Port) when is_integer(Port) ->
+	ecs_client(Address, Domain, IP, integer_to_list(Port));
+ecs_client(Address, Domain, IP, Port)
+		when ((length(Address) > 0) or (size(Address) > 0)) ->
+	Acc = [$", "address", $", $:, $", Address, $"],
+	ecs_client1(Domain, IP, Port, Acc);
+ecs_client(_Address, Domain, IP, Port)
+		when ((length(Domain) > 0) or (size(Domain) > 0)) ->
+	Acc = [$", "address", $", $:, $", Domain, $"],
+	ecs_client1(Domain, IP, Port, Acc);
+ecs_client(_Address, Domain, IP, Port) when length(IP) > 0 ->
+	Acc = [$", "address", $", $:, $", IP, $"],
+	ecs_client1(Domain, IP, Port, Acc);
+ecs_client(_Address, _Domain, _IP, Port) ->
+	ecs_client3(Port, []).
+%% @hidden
+ecs_client1(Domain, IP, Port, Acc)
+		when ((length(Domain) > 0) or (size(Domain) > 0)) ->
+	NewAcc = [Acc, $,, $", "domain", $", $:, $", Domain, $"],
+	ecs_client2(IP, Port, NewAcc);
+ecs_client1(_Domain, IP, Port, Acc) ->
+	ecs_client2(IP, Port, Acc).
+%% @hidden
+ecs_client2(IP, Port, Acc) when length(IP) > 0 ->
+	NewAcc = [Acc, $,, $", "ip", $", $:, $", IP, $"],
+	ecs_client3(Port, NewAcc);
+ecs_client2(_IP, Port, Acc) ->
+	ecs_client3(Port, Acc).
+%% @hidden
+ecs_client3([$0], Acc) ->
+	ecs_client4(Acc);
+ecs_client3(Port, Acc) when length(Port) > 0 ->
+	NewAcc = [Acc, $,, $", "port", $", $:, Port],
+	ecs_client4(NewAcc);
+ecs_client3(_Port, Acc) ->
+	ecs_client4(Acc).
+%% @hidden
+ecs_client4([]) ->
+	[];
+ecs_client4(Acc) ->
+	[$,, $", "client", $", $:, ${, Acc, $}].
 
 -spec ecs_network(Application, Protocol) -> iodata()
 	when
