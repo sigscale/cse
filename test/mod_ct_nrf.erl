@@ -154,7 +154,7 @@ rate(Subscriber, #{"serviceRating" := ServiceRating}, ModData) ->
 %% @hidden
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		"serviceContextId" := ?PS} = H | T] , ModData, Acc) ->
-	Amount = rand:uniform(10) * 1000000,
+	Amount = (rand:uniform(10) + 5) * 1048576,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
