@@ -368,7 +368,7 @@ ecs_server4(Acc) ->
 		Address :: binary() | string(),
 		Domain :: binary() | string(),
 		IP :: inet:ip_address() | string(),
-		Port :: non_neg_integer().
+		Port :: non_neg_integer() | string().
 %% @doc Elastic Common Schema (ECS): Client attributes.
 ecs_client(Address, Domain, IP, Port) when is_tuple(IP) ->
 	ecs_client(Address, Domain, inet:ntoa(IP), Port);
