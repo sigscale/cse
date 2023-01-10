@@ -1,3 +1,15 @@
+January 10, 2023
+----------------
+	- Log HTTP transactions on Nrf_Rating interface
+	* Test cases for PS DIAMETER SCUR
+	* Test cases for DIAMETER IEC events
+	* Log server closes synchronously
+	* SLP for prepaid SMS service usage
+	* SLP for prepaid MMSW service usage
+	* Allow any service context id
+	* Support for DIAMETER client connections
+	* Test cases for DIAMETER client connect/reconnect
+
 December 27, 2022
 -----------------
 	- Nrf Location URL in console log reports

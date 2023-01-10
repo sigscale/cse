@@ -1,7 +1,7 @@
 %%% cse_tco_sup.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2021-2022 SigScale Global Inc.
+%%% @copyright 2021-2023 SigScale Global Inc.
 %%% @author Vance Shipley <vances@sigscale.org> [http://www.sigscale.org]
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 %%% @docfile "{@docsrc supervision.edoc}"
 %%%
 -module(cse_tco_sup).
--copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
+-copyright('Copyright (c) 2021-2023 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
 -behaviour(supervisor_bridge).

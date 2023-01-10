@@ -1,3 +1,26 @@
+2023-01-10  Vance Shipley <vances@sigscale.org>
+
+	* log nrf transaction in rating log for sms
+	* log nrf transaction in rating log for sms
+	* test cases for ps diameter scur
+	* log nrf transaction in rating log for ps
+	* include client in rating log; omit empty client/server
+	* declare version 8.5 in ecs logs
+	* rating log of nrf http transactions
+	* correct sms/mms originator/recipient in prepaid log
+	* log server closes synchronously
+	* edoc overview table of contents
+	* slp for prepaid diameter sms service usage
+	* slp for prepaid diameter  mms service usage
+	* allow any service context id
+	* rename diameter prepaid slp modules to match context
+	* add open api specification (swagger) for nrf
+	* test case for immediate event charging
+	* edoc update for diameter configuration with connect/listen
+	* test cases for diameter client connect/reconnect
+	* refactor diameter service options; support client
+	* correct type spec in shell help
+
 2022-12-29  Vance Shipley <vances@sigscale.org>
 
 	* fix to include call attributes in prepaid log

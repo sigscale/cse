@@ -1,7 +1,7 @@
 %%% cse_slp_prepaid_diameter_ims_fsm.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2021-2022 SigScale Global Inc.
+%%% @copyright 2021-2023 SigScale Global Inc.
 %%% @author Refath Wadood <refath@sigscale.org> [http://www.sigscale.org]
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +42,7 @@
 %%% 	<img alt="state machine" src="prepaid-diameter-voice.svg" />
 %%%
 -module(cse_slp_prepaid_diameter_ims_fsm).
--copyright('Copyright (c) 2021-2022 SigScale Global Inc.').
+-copyright('Copyright (c) 2021-2023 SigScale Global Inc.').
 -author('Refath Wadood <refath@sigscale.org>').
 
 -behaviour(gen_statem).
