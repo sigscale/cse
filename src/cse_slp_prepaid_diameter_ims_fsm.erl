@@ -295,8 +295,8 @@ authorize_origination_attempt(cast,
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_start,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+authorize_origination_attempt(cast,
+		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
@@ -313,8 +313,8 @@ authorize_origination_attempt(cast, {nrf_start,
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_release,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+authorize_origination_attempt(cast,
+		{nrf_release, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				 nrf_http := LogHTTP, session_id := SessionId,
@@ -332,7 +332,8 @@ authorize_origination_attempt(cast, {nrf_release,
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_start, {RequestId, {error, Reason}}},
+authorize_origination_attempt(cast,
+		{nrf_start, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, session_id := SessionId, ohost := OHost,
 				orealm := ORealm, req_type := RequestType,
@@ -348,7 +349,8 @@ authorize_origination_attempt(cast, {nrf_start, {RequestId, {error, Reason}}},
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_release, {RequestId, {error, Reason}}},
+authorize_origination_attempt(cast,
+		{nrf_release, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -633,8 +635,8 @@ terminating_call_handling(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-terminating_call_handling(cast, {nrf_start,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+terminating_call_handling(cast,
+		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
@@ -651,7 +653,8 @@ terminating_call_handling(cast, {nrf_start,
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-terminating_call_handling(cast, {NrfOperation, {RequestId, {error, Reason}}},
+terminating_call_handling(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -673,7 +676,8 @@ terminating_call_handling(cast, {NrfOperation, {RequestId, {error, Reason}}},
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-terminating_call_handling(cast, {NrfOperation, {RequestId, {error, Reason}}},
+terminating_call_handling(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -735,7 +739,8 @@ collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
@@ -752,7 +757,8 @@ collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
@@ -861,8 +867,8 @@ collect_information(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-collect_information(cast, {NrfOperation,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+collect_information(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				nrf_http := LogHTTP, session_id := SessionId,
@@ -886,7 +892,8 @@ collect_information(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-collect_information(cast, {NrfOperation, {RequestId, {error, Reason}}},
+collect_information(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -945,7 +952,8 @@ analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
@@ -962,7 +970,8 @@ analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
@@ -1068,8 +1077,8 @@ analyse_information(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-analyse_information(cast, {NrfOperation,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+analyse_information(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				nrf_http := LogHTTP, session_id := SessionId,
@@ -1093,7 +1102,8 @@ analyse_information(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-analyse_information(cast, {NrfOperation, {RequestId, {error, Reason}}},
+analyse_information(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -1152,7 +1162,8 @@ o_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
@@ -1169,7 +1180,8 @@ o_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
@@ -1273,8 +1285,8 @@ o_alerting(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-o_alerting(cast, {NrfOperation,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+o_alerting(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				nrf_http := LogHTTP, session_id := SessionId,
@@ -1298,7 +1310,8 @@ o_alerting(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-o_alerting(cast, {NrfOperation, {RequestId, {error, Reason}}},
+o_alerting(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -1357,7 +1370,8 @@ t_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
@@ -1374,7 +1388,8 @@ t_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
@@ -1478,8 +1493,8 @@ t_alerting(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-t_alerting(cast, {NrfOperation,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+t_alerting(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				nrf_http := LogHTTP, session_id := SessionId,
@@ -1503,7 +1518,8 @@ t_alerting(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-t_alerting(cast, {NrfOperation, {RequestId, {error, Reason}}},
+t_alerting(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -1562,7 +1578,8 @@ active(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
@@ -1579,7 +1596,8 @@ active(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
@@ -1678,8 +1696,8 @@ active(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-active(cast, {NrfOperation,
-		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
+active(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				nrf_http := LogHTTP, session_id := SessionId,
@@ -1703,7 +1721,8 @@ active(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-active(cast, {NrfOperation, {RequestId, {error, Reason}}},
+active(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
