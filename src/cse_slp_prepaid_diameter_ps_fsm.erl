@@ -68,8 +68,9 @@
 -define(RO_APPLICATION_ID, 4).
 -define(IANA_PEN_SigScale, 50386).
 -define(PS_CONTEXTID, "32251@3gpp.org").
--define(LOGNAME, prepaid).
 -define(SERVICENAME, "Prepaid Data").
+-define(FSM_LOGNAME, prepaid).
+-define(NRF_LOGNAME, rating).
 
 -type state() :: null
 		| authorize_origination_attempt
@@ -88,10 +89,15 @@
 		imsi => [$0..$9],
 		msisdn => string(),
 		nrf_profile => atom(),
+		nrf_address => inet:ip_address(),
+		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
 		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
 		nrf_location => string(),
+		nrf_start => pos_integer(),
+		nrf_req_url => string(),
+		nrf_http => map(),
 		nrf_reqid => reference()}.
 
 %%----------------------------------------------------------------------
@@ -132,6 +138,18 @@ init(_Args) ->
 	Data = #{nrf_profile => Profile, nrf_uri => URI,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond)},
+	case httpc:get_options([ip, port], Profile) of
+		{ok, Options} ->
+			init1(Options, Data);
+		{error, Reason} ->
+			{stop, Reason}
+	end.
+%% @hidden
+init1([{ip, Address} | T], Data) ->
+	init1(T, Data#{nrf_address => Address});
+init1([{port, Port} | T], Data) ->
+	init1(T, Data#{nrf_port => Port});
+init1([], Data) ->
 	{ok, null, Data}.
 
 -spec null(EventType, EventContent, Data) -> Result
@@ -145,7 +163,7 @@ init(_Args) ->
 null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
 null(enter = _EventType, OldState, Data) ->
-	log(OldState,Data),
+	log_fsm(OldState,Data),
 	{stop, shutdown};
 null({call, _From}, #'3gpp_ro_CCR'{}, Data) ->
 	{next_state, authorize_origination_attempt, Data, postpone}.
@@ -181,13 +199,13 @@ authorize_origination_attempt({call, From},
 			req_type => RequestType},
 	nrf_start(NewData);
 authorize_origination_attempt(cast,
-		{nrf_start, {RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId,
-				nrf_profile := Profile, nrf_uri := URI, mscc := MSCC,
+		{nrf_start, {RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				req_type := RequestType, mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
 				when is_list(Location) ->
@@ -232,35 +250,37 @@ authorize_origination_attempt(cast,
 			{next_state, null, NewData, Actions2}
 	end;
 authorize_origination_attempt(cast,
-		{nrf_start, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{nrf_start, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
-		{nrf_start, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{nrf_start, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(nrf_reqid, Data),
-	NewData = maps:remove(from, Data1),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_start,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+authorize_origination_attempt(cast,
+		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, session_id := SessionId, ohost := OHost,
-				orealm := ORealm, req_type := RequestType,
-				reqno := RequestNum} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				req_type := RequestType} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, nrf_start},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {slpi, self()},
@@ -271,14 +291,15 @@ authorize_origination_attempt(cast, {nrf_start,
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_release,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+authorize_origination_attempt(cast,
+		{nrf_release, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				req_type := RequestType, reqno := RequestNum} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				 nrf_http := LogHTTP, session_id := SessionId,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				req_type := RequestType} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, release},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {location, Location},
@@ -289,13 +310,13 @@ authorize_origination_attempt(cast, {nrf_release,
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_start, {RequestId, {error, Reason}}},
+authorize_origination_attempt(cast,
+		{nrf_start, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, session_id := SessionId, ohost := OHost,
 				orealm := ORealm, req_type := RequestType,
 				reqno := RequestNum} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {slpi, self()},
@@ -306,13 +327,13 @@ authorize_origination_attempt(cast, {nrf_start, {RequestId, {error, Reason}}},
 			OHost, ORealm, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast, {nrf_release, {RequestId, {error, Reason}}},
+authorize_origination_attempt(cast,
+		{nrf_release, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {location, Location}, {slpi, self()},
@@ -357,14 +378,16 @@ collect_information({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 collect_information(cast,
-		{NrfOperation, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -373,14 +396,16 @@ collect_information(cast,
 			{next_state, null, NewData, Actions}
 	end;
 collect_information(cast,
-		{NrfOperation, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -389,13 +414,14 @@ collect_information(cast,
 			{next_state, null, NewData, Actions}
 	end;
 collect_information(cast,
-		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
@@ -438,13 +464,14 @@ collect_information(cast,
 			{keep_state, NewData, Actions}
 	end;
 collect_information(cast,
-		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
@@ -479,15 +506,16 @@ collect_information(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-collect_information(cast, {NrfOperation,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+collect_information(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				req_type := RequestType, reqno := RequestNum} = Data)
+				nrf_http := LogHTTP, session_id := SessionId,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, NrfOperation},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {location, Location},
@@ -503,14 +531,14 @@ collect_information(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-collect_information(cast, {NrfOperation, {RequestId, {error, Reason}}},
+collect_information(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {location, Location}, {slpi, self()},
@@ -560,14 +588,16 @@ analyse_information({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 analyse_information(cast,
-		{NrfOperation, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -576,14 +606,16 @@ analyse_information(cast,
 			{next_state, null, NewData, Actions}
 	end;
 analyse_information(cast,
-		{NrfOperation, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -592,13 +624,14 @@ analyse_information(cast,
 			{next_state, null, NewData, Actions}
 	end;
 analyse_information(cast,
-		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
@@ -639,13 +672,14 @@ analyse_information(cast,
 			{keep_state, NewData, Actions}
 	end;
 analyse_information(cast,
-		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
@@ -680,15 +714,16 @@ analyse_information(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-analyse_information(cast, {NrfOperation,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+analyse_information(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				req_type := RequestType, reqno := RequestNum} = Data)
+				nrf_http := LogHTTP, session_id := SessionId,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, NrfOperation},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {location, Location},
@@ -704,14 +739,14 @@ analyse_information(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-analyse_information(cast, {NrfOperation, {RequestId, {error, Reason}}},
+analyse_information(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {location, Location}, {slpi, self()},
@@ -761,14 +796,16 @@ active({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 active(cast,
-		{NrfOperation, {_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -777,14 +814,16 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{NrfOperation, {_RequestId, {{_Version, 403, _Phrase}, _Headers, _Body}}},
-		#{from := From, ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
+		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(SessionId, ResultCode,
 			OHost, ORealm, RequestType, RequestNum),
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -793,13 +832,14 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{nrf_update, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				session_id := SessionId, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
@@ -835,13 +875,14 @@ active(cast,
 			{keep_state, NewData, Actions}
 	end;
 active(cast,
-		{nrf_release, {RequestId, {{_Version, 200, _Phrase}, _Headers, Body}}},
+		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location, mscc := MSCC,
-				ohost := OHost, orealm := ORealm, session_id := SessionId,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
+				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
@@ -876,15 +917,16 @@ active(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
-active(cast, {NrfOperation,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+active(cast,
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
-				req_type := RequestType, reqno := RequestNum} = Data)
+				nrf_http := LogHTTP, session_id := SessionId,
+				ohost := OHost, orealm := ORealm, reqno := RequestNum,
+				req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, NrfOperation},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {location, Location},
@@ -900,14 +942,14 @@ active(cast, {NrfOperation,
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
-active(cast, {NrfOperation, {RequestId, {error, Reason}}},
+active(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	Data1 = maps:remove(from, Data),
-	NewData = maps:remove(nrf_reqid, Data1),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {location, Location}, {slpi, self()},
@@ -1034,22 +1076,27 @@ nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"serviceRating" => ServiceRating},
-	nrf_start2(JSON, Data).
+	nrf_start2(Now, JSON, Data).
 %% @hidden
-nrf_start2(JSON,
+nrf_start2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
+	% @todo synchronous start
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ "/ratingdata", Headers1, "application/json", Body},
+	ContentType = "application/json",
+	RequestURL = URI ++ "/ratingdata",
+	LogHTTP = ecs_http(ContentType, Body),
+	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
-			NewData = Data#{nrf_reqid => RequestId},
+			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
+					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
@@ -1088,9 +1135,9 @@ nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"serviceRating" => ServiceRating},
-	nrf_update2(JSON, Data).
+	nrf_update2(Now, JSON, Data).
 %% @hidden
-nrf_update2(JSON,
+nrf_update2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
@@ -1101,11 +1148,15 @@ nrf_update2(JSON,
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/update", Headers1, "application/json", Body},
+	ContentType = "application/json",
+	RequestURL = URI ++ Location ++ "/update",
+	LogHTTP = ecs_http(ContentType, Body),
+	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
-			NewData = Data#{nrf_reqid => RequestId},
+			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
+					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
@@ -1148,9 +1199,9 @@ nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"serviceRating" => ServiceRating},
-	nrf_release2(JSON, Data).
+	nrf_release2(Now, JSON, Data).
 %% @hidden
-nrf_release2(JSON,
+nrf_release2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
@@ -1161,11 +1212,15 @@ nrf_release2(JSON,
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/release", Headers1, "application/json", Body},
+	ContentType = "application/json",
+	RequestURL = URI ++ Location ++ "/release",
+	LogHTTP = ecs_http(ContentType, Body),
+	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
-			NewData = Data#{nrf_reqid => RequestId},
+			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
+					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
@@ -1476,13 +1531,86 @@ result_code("USER_UNKNOWN") ->
 result_code("RATING_FAILED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED'.
 
--spec log(OldState, Data) -> ok
+-spec ecs_http(MIME, Body) -> HTTP
+	when
+		MIME :: string(),
+		Body :: binary() | iolist(),
+		HTTP :: map().
+%% @doc Construct ECS JSON `map()' for Nrf request.
+%% @hidden
+ecs_http(MIME, Body) ->
+	Body1 = #{"bytes" => iolist_size(Body),
+			%"content" => cse_rest:stringify(zj:encode(Body))},
+			"content" => zj:encode(Body)},
+	Request = #{"method" => "post",
+			"mime_type" => MIME,
+			"body" => Body1},
+	#{"request" => Request}.
+
+-spec ecs_http(Version, StatusCode, Headers, Body, HTTP) -> HTTP
+	when
+		Version :: string(),
+		StatusCode :: pos_integer(),
+		Headers :: [HttpHeader],
+		HttpHeader :: {Field, Value},
+		Field :: [byte()],
+		Value :: binary() | iolist(),
+		Body :: string(),
+		HTTP :: map().
+%% @doc Construct ECS JSON `map()' for Nrf request.
+%% @hidden
+ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
+	Response = case {lists:keyfind("content-length", 1, Headers),
+			lists:keyfind("content-type", 1, Headers)} of
+		{{_, Bytes}, {_, MIME}} ->
+			Body1 = #{"bytes" => Bytes,
+					"content" => zj:encode(Body)},
+			#{"status_code" => StatusCode,
+					"mime_type" => MIME, "body" => Body1};
+		{{_, Bytes}, false} ->
+			Body1 = #{"bytes" => Bytes,
+					"content" => zj:encode(Body)},
+			#{"status_code" => StatusCode, "body" => Body1};
+		_ ->
+			#{"status_code" => StatusCode}
+	end,
+	HTTP#{"version" => Version, "response" => Response}.
+
+-spec log_nrf(HTTP, Data) -> ok
+	when
+		HTTP :: map(),
+		Data :: statedata().
+%% @doc Write an event to a log.
+%% @hidden
+log_nrf(HTTP,
+		#{nrf_start := Start,
+		imsi := IMSI,
+		msisdn := MSISDN,
+		nrf_address := Address,
+		nrf_port := Port,
+		nrf_req_url := URL} = _Data) ->
+	Stop = erlang:system_time(millisecond),
+	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
+	Client = case {Address, Port} of
+		{Address, Port} when is_tuple(Address), is_integer(Port) ->
+			{Address, Port};
+		{Address, _} when is_tuple(Address) ->
+			{Address, 0};
+		{_, Port} when is_integer(Port) ->
+			{[], Port};
+		{_, _} ->
+			{[], 0}
+	end,
+	cse_log:blog(?NRF_LOGNAME,
+			{Start, Stop, ?SERVICENAME, Subscriber, Client, URL, HTTP}).
+
+-spec log_fsm(OldState, Data) -> ok
 	when
 		OldState :: atom(),
 		Data :: statedata().
-%% Log an event.
+%% @doc Write an event to a log.
 %% @hidden
-log(State,
+log_fsm(State,
 		#{start := Start,
 		imsi := IMSI,
 		msisdn := MSISDN,
@@ -1493,6 +1621,14 @@ log(State,
 	Call = #{},
 	Network = #{context => Context, session_id => SessionId},
 	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
-	cse_log:blog(?LOGNAME, {Start, Stop, ?SERVICENAME,
+	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network, OCS}).
+
+%% @hidden
+remove_nrf(Data) ->
+	Data1 = maps:remove(from, Data),
+	Data2 = maps:remove(nrf_start, Data1),
+	Data3 = maps:remove(nrf_req_uri, Data2),
+	Data4 = maps:remove(nrf_http, Data3),
+	maps:remove(nrf_reqid, Data4).
 
