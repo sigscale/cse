@@ -295,7 +295,7 @@ authorize_origination_attempt(cast,
 		{nrf_release, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				 nrf_http := LogHTTP, session_id := SessionId,
+				nrf_http := LogHTTP, session_id := SessionId,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
