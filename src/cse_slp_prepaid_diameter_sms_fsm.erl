@@ -1665,7 +1665,7 @@ ecs_http(MIME, Body) ->
 		HttpHeader :: {Field, Value},
 		Field :: [byte()],
 		Value :: binary() | iolist(),
-		Body :: string(),
+		Body :: binary() | iolist(),
 		HTTP :: map().
 %% @doc Construct ECS JSON `map()' for Nrf request.
 %% @hidden

@@ -2362,7 +2362,6 @@ address(Dest) ->
 %% @hidden
 ecs_http(MIME, Body) ->
 	Body1 = #{"bytes" => iolist_size(Body),
-			%"content" => cse_rest:stringify(zj:encode(Body))},
 			"content" => zj:encode(Body)},
 	Request = #{"method" => "post",
 			"mime_type" => MIME,
@@ -2377,7 +2376,7 @@ ecs_http(MIME, Body) ->
 		HttpHeader :: {Field, Value},
 		Field :: [byte()],
 		Value :: binary() | iolist(),
-		Body :: string(),
+		Body :: binary() | iolist(),
 		HTTP :: map().
 %% @doc Construct ECS JSON `map()' for Nrf request.
 %% @hidden
