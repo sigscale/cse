@@ -251,7 +251,7 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 		Client :: {Address, Port},
 		Address :: inet:ip_address() | string(),
 		Port :: non_neg_integer(),
-		URL :: map(),
+		URL :: uri_string:uri_string() | uri_string:uri_map(),
 		HTTP :: map().
 %% @doc Nrf_Rating event CODEC for Elastic Stack logs.
 %%
