@@ -88,6 +88,7 @@
 		drealm => binary(),
 		imsi => [$0..$9],
 		msisdn => string(),
+		vplmn  => {MCC :: [$0..$9], MNC :: [$0..$9]} | undefined,
 		nrf_profile => atom(),
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
@@ -187,12 +188,13 @@ authorize_origination_attempt({call, From},
 				'CC-Request-Number' = RequestNum,
 				'Subscription-Id' = SubscriptionId,
 				'Multiple-Services-Credit-Control' = MSCC,
-				'Service-Information' = _ServiceInformation}, Data)
+				'Service-Information' = ServiceInformation}, Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
 	IMSI = imsi(SubscriptionId),
 	MSISDN = msisdn(SubscriptionId),
+	VPLMN = vplmn(ServiceInformation),
 	NewData = Data#{from => From,
-			imsi => IMSI, msisdn => MSISDN,
+			imsi => IMSI, msisdn => MSISDN, vplmn => VPLMN,
 			context => binary_to_list(SvcContextId),
 			mscc => MSCC, session_id => SessionId, ohost => OHost,
 			orealm => ORealm, drealm => DRealm, reqno => RequestNum,
@@ -1064,11 +1066,8 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 		From :: {pid(), reference()}.
 %% @doc Start rating a session.
 %% @hidden
-nrf_start(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(MSCC, ServiceContextId),
-	nrf_start1(ServiceRating, ServiceContextId, Data).
-%% @hidden
-nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
+nrf_start(Data) ->
+	ServiceRating = service_rating(Data),
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1076,9 +1075,9 @@ nrf_start1(ServiceRating, ?PS_CONTEXTID, Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"serviceRating" => ServiceRating},
-	nrf_start2(Now, JSON, Data).
+	nrf_start1(Now, JSON, Data).
 %% @hidden
-nrf_start2(Now, JSON,
+nrf_start1(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				session_id := SessionId, ohost := OHost, orealm := ORealm,
@@ -1123,11 +1122,8 @@ nrf_start2(Now, JSON,
 		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
 		From :: {pid(), reference()}.
 %% @doc Update rating a session.
-nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(MSCC, ServiceContextId),
-	nrf_update1(ServiceRating, ServiceContextId, Data).
-%% @hidden
-nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
+nrf_update(Data) ->
+	ServiceRating = service_rating(Data),
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1135,9 +1131,9 @@ nrf_update1(ServiceRating, ?PS_CONTEXTID, Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"serviceRating" => ServiceRating},
-	nrf_update2(Now, JSON, Data).
+	nrf_update1(Now, JSON, Data).
 %% @hidden
-nrf_update2(Now, JSON,
+nrf_update1(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
@@ -1187,11 +1183,8 @@ nrf_update2(Now, JSON,
 		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
 		From :: {pid(), reference()}.
 %% @doc Finish rating a session.
-nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(MSCC, ServiceContextId),
-	nrf_release1(ServiceRating, ServiceContextId, Data).
-%% @hidden
-nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
+nrf_release(Data) ->
+	ServiceRating = service_rating(Data),
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -1199,9 +1192,9 @@ nrf_release1(ServiceRating, ?PS_CONTEXTID, Data) ->
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"serviceRating" => ServiceRating},
-	nrf_release2(Now, JSON, Data).
+	nrf_release1(Now, JSON, Data).
 %% @hidden
-nrf_release2(Now, JSON,
+nrf_release1(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, session_id := SessionId,
@@ -1308,23 +1301,25 @@ gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
 gsu(_) ->
 	[].
 
--spec service_rating(MSCC, ServiceContextId) -> ServiceRating
+-spec service_rating(Data) -> ServiceRating
 	when
-		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-		ServiceContextId :: string(),
+		Data :: statedata(),
 		ServiceRating :: [map()].
 %% @doc Build a `serviceRating' object.
 %% @hidden
-service_rating(MSCC, ServiceContextId) ->
-	service_rating(MSCC, ServiceContextId, []).
+service_rating(#{mscc := MSCC} = Data) ->
+	service_rating(MSCC, Data, []).
 %% @hidden
-service_rating([MSCC | T], ServiceContextId, Acc) ->
-	SR1 = service_rating_si(MSCC, #{"serviceContextId" => ServiceContextId}),
-	SR2 = service_rating_rg(MSCC, SR1),
-	Acc1 = service_rating_rsu(MSCC, SR2, Acc),
-	Acc2 = service_rating_usu(MSCC, SR2, Acc1),
-	service_rating(T, ServiceContextId, Acc2);
-service_rating([], _ServiceContextId, Acc) ->
+service_rating([MSCC | T], #{context := ServiceContextId,
+		vplmn := VPLMN} = Data, Acc) ->
+	SR1 = #{"serviceContextId" => ServiceContextId},
+	SR2 = service_rating_si(MSCC, SR1),
+	SR3 = service_rating_rg(MSCC, SR2),
+	SR4 = service_rating_ps(VPLMN, SR3),
+	Acc1 = service_rating_rsu(MSCC, SR4, Acc),
+	Acc2 = service_rating_usu(MSCC, SR4, Acc1),
+	service_rating(T, Data, Acc2);
+service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
 
 %% @hidden
@@ -1341,6 +1336,14 @@ service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	ServiceRating#{"ratingGroup" => RG};
 service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Rating-Group' = []}, ServiceRating) ->
+	ServiceRating.
+
+%% @hidden
+service_rating_ps({MCC, MNC}, ServiceRating) ->
+	SgsnMccMnc = #{"mcc" => MCC, "mnc" => MNC},
+	ServiceInformation = #{"sgsnMccMnc" => SgsnMccMnc},
+	ServiceRating#{"serviceInformation" => ServiceInformation};
+service_rating_ps(undefined, ServiceRating) ->
 	ServiceRating.
 
 %% @hidden
@@ -1403,6 +1406,16 @@ msisdn([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Data' = MSISDN,
 msisdn([_H | T]) ->
 	msisdn(T);
 msisdn([]) ->
+	undefined.
+
+%% @hidden
+vplmn([#'3gpp_ro_Service-Information'{
+			'PS-Information' = [#'3gpp_ro_PS-Information'{
+					'3GPP-SGSN-MCC-MNC' = [MCCMNC]}]}]) ->
+	MCC = binary:bin_to_list(MCCMNC, 0, 3),
+	MNC = binary:bin_to_list(MCCMNC, 3, byte_size(MCCMNC) - 3),
+	{MCC, MNC};
+vplmn(_) ->
 	undefined.
 
 -spec build_mscc(MSCC, ServiceRating) -> Result
