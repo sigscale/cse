@@ -2259,14 +2259,14 @@ final_result(RC, _) ->
 -spec diameter_answer(SessionId, MSCC, ResultCode,
 		OriginHost, OriginRealm, RequestType, RequestNum) -> Result
 	when
-			SessionId :: binary(),
-			MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-			ResultCode :: pos_integer(),
-			OriginHost :: string(),
-			OriginRealm :: string(),
-			RequestType :: integer(),
-			RequestNum :: integer(),
-			Result :: #'3gpp_ro_CCA'{}.
+		SessionId :: binary(),
+		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
+		ResultCode :: pos_integer(),
+		OriginHost :: binary(),
+		OriginRealm :: binary(),
+		RequestType :: integer(),
+		RequestNum :: integer(),
+		Result :: #'3gpp_ro_CCA'{}.
 %% @doc Build CCA response.
 %% @hidden
 diameter_answer(SessionId, MSCC, ResultCode,
@@ -2284,8 +2284,8 @@ diameter_answer(SessionId, MSCC, ResultCode,
 	when
 		SessionId :: binary(),
 		ResultCode :: pos_integer(),
-		OriginHost :: string(),
-		OriginRealm :: string(),
+		OriginHost :: binary(),
+		OriginRealm :: binary(),
 		RequestType :: integer(),
 		RequestNum :: integer(),
 		Reply :: #'3gpp_ro_CCA'{}.

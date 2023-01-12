@@ -1476,8 +1476,8 @@ final_result(RC, _) ->
 			SessionId :: binary(),
 			MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
 			ResultCode :: pos_integer(),
-			OriginHost :: string(),
-			OriginRealm :: string(),
+			OriginHost :: binary(),
+			OriginRealm :: binary(),
 			RequestType :: integer(),
 			RequestNum :: integer(),
 			Result :: #'3gpp_ro_CCA'{}.
@@ -1498,8 +1498,8 @@ diameter_answer(SessionId, MSCC, ResultCode,
 	when
 		SessionId :: binary(),
 		ResultCode :: pos_integer(),
-		OriginHost :: string(),
-		OriginRealm :: string(),
+		OriginHost :: binary(),
+		OriginRealm :: binary(),
 		RequestType :: integer(),
 		RequestNum :: integer(),
 		Reply :: #'3gpp_ro_CCA'{}.
