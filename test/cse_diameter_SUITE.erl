@@ -1036,7 +1036,7 @@ scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum) ->
-	PS = #'3gpp_ro_PS-Information'{},
+	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1063,7 +1063,7 @@ scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
-	PS = #'3gpp_ro_PS-Information'{},
+	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1092,7 +1092,7 @@ scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ps_stop(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
-	PS = #'3gpp_ro_PS-Information'{},
+	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
