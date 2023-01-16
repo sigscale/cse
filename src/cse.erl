@@ -26,7 +26,7 @@
 -export([start/0, stop/0]).
 -export([start_diameter/3, stop_diameter/1]).
 -export([add_resource_spec/1, get_resource_specs/0, find_resource_spec/1,
-		delete_resource_spec/1, query_resource_spec/5]).
+		delete_resource_spec/1, query_resource_spec/4]).
 -export([add_resource/1, delete_resource/1,
 		get_resources/0, find_resource/1, query_resource/6]).
 -export([add_user/3, delete_user/1,
@@ -51,18 +51,18 @@
 -include("cse.hrl").
 -include_lib("inets/include/mod_auth.hrl").
 
--define(PathCatalog,       "/resourceCatalogManagement/v4/").
--define(PathInventory,     "/resourceInventoryManagement/v4/").
--define(INDEX_TABLE_SPEC,  "1662614478074-19").
--define(INDEX_ROW_SPEC,    "1662614480005-35").
--define(PREFIX_TABLE_SPEC, "1647577955926-50").
--define(PREFIX_ROW_SPEC,   "1647577957914-66").
--define(RANGE_TABLE_SPEC,  "1651055414682-258").
--define(RANGE_ROW_SPEC,    "1651057291061-274").
+-define(PathCatalog,       <<"/resourceCatalogManagement/v4/">>).
+-define(PathInventory,     <<"/resourceInventoryManagement/v4/">>).
+-define(INDEX_TABLE_SPEC,  <<"1662614478074-19">>).
+-define(INDEX_ROW_SPEC,    <<"1662614480005-35">>).
+-define(PREFIX_TABLE_SPEC, <<"1647577955926-50">>).
+-define(PREFIX_ROW_SPEC,   <<"1647577957914-66">>).
+-define(RANGE_TABLE_SPEC,  <<"1651055414682-258">>).
+-define(RANGE_ROW_SPEC,    <<"1651057291061-274">>).
 -define(CHUNKSIZE,         100).
 
--type characteristics() :: #{CharName :: string() => characteristic()}.
--type related_resources() :: #{RelType :: string() => resource_rel()}.
+-type characteristics() :: #{CharName :: binary() => characteristic()}.
+-type related_resources() :: #{RelType :: binary() => resource_rel()}.
 -type resource_spec() :: #resource_spec{}.
 -type resource_spec_rel() :: #resource_spec_rel{}.
 -type resource() :: #resource{}.
@@ -387,24 +387,23 @@ query_users2({like, String} = _MatchLocale, Cont, Users)
 %% @doc Add an entry in the Resource Specification table.
 add_resource_spec(#resource_spec{name = Name, id = undefined,
 		href = undefined, last_modified = undefined, related = Rels}
-		= ResourceSpec1) when is_list(Name) ->
+		= ResourceSpec1) when is_binary(Name) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
-	Href = ?PathCatalog ++ "resourceSpecification/" ++ Id,
-	case lists:keytake("based", #resource_spec_rel.rel_type, Rels) of
-		{value, #resource_spec_rel{id = SpecId} = BasedRel, Rest} when
+	Href = iolist_to_binary([?PathCatalog, "resourceSpecification/", Id]),
+	case lists:keyfind(<<"based">>, #resource_spec_rel.rel_type, Rels) of
+		#resource_spec_rel{id = SpecId} when
 				SpecId == ?INDEX_TABLE_SPEC;
 				SpecId == ?PREFIX_TABLE_SPEC;
 				SpecId == ?RANGE_TABLE_SPEC ->
-			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
-					href = Href, last_modified = LM,
-					related = [BasedRel | Rest]},
+			ResourceSpec2 = ResourceSpec1#resource_spec{id = list_to_binary(Id),
+					href = Href, last_modified = LM},
 			add_resource_spec1(ResourceSpec2, Name,
-					cse:query_resource_spec(start, '_', {exact, Name}, '_', '_'));
-		_ ->
-			ResourceSpec2 = ResourceSpec1#resource_spec{id = Id,
+					cse:query_resource_spec(start, {exact, Name}, '_', '_'));
+		_Other ->
+			ResourceSpec2 = ResourceSpec1#resource_spec{id = list_to_binary(Id),
 					href = Href, last_modified = LM},
 			add_resource_spec2(ResourceSpec2)
 	end.
@@ -413,7 +412,7 @@ add_resource_spec1(ResourceSpec, _Name, {eof, []}) ->
 	add_resource_spec2(ResourceSpec);
 add_resource_spec1(ResourceSpec, Name, {Cont, []}) ->
 	add_resource_spec1(ResourceSpec, Name,
-			cse:query_resource_spec(Cont, '_', {exact, Name}, '_', '_'));
+			cse:query_resource_spec(Cont, {exact, Name}, '_', '_'));
 add_resource_spec1(_ResourceSpec, _Name, {_Cont_, [_H | _T]}) ->
 	{error, table_exists};
 add_resource_spec1(_ResourceSpec, _Name, {error, Reason}) ->
@@ -440,13 +439,13 @@ add_resource_spec2(ResourceSpec) ->
 %% @doc Add an entry in the Resource table.
 add_resource(#resource{id = undefined,
 		name = Name, last_modified = undefined} = Resource)
-		when is_list(Name) ->
+		when is_binary(Name) ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	Id = integer_to_list(TS) ++ "-" ++ integer_to_list(N),
 	LM = {TS, N},
-	Href = ?PathInventory ++ "resource/" ++ Id,
-	NewResource = Resource#resource{id = Id,
+	Href = iolist_to_binary([?PathInventory, "resource/", Id]),
+	NewResource = Resource#resource{id = list_to_binary(Id),
 			href = Href, last_modified = LM},
 	add_resource1(NewResource).
 %% @hidden
@@ -481,7 +480,7 @@ add_resource3(_Resource, {error, Reason}) ->
 %% @hidden
 add_resource4(Resource, Related) ->
 	case lists:keyfind(?INDEX_TABLE_SPEC, #resource_spec_rel.id, Related) of
-		#resource_spec_rel{rel_type = "based"} ->
+		#resource_spec_rel{rel_type = <<"based">>} ->
 			add_resource_index_table(Resource);
 		_ ->
 			add_resource5(Resource, Related)
@@ -489,7 +488,7 @@ add_resource4(Resource, Related) ->
 %% @hidden
 add_resource5(Resource, Related) ->
 	case lists:keyfind(?PREFIX_TABLE_SPEC, #resource_spec_rel.id, Related) of
-		#resource_spec_rel{rel_type = "based"} ->
+		#resource_spec_rel{rel_type = <<"based">>} ->
 			add_resource_prefix_table(Resource);
 		_ ->
 			add_resource6(Resource, Related)
@@ -497,7 +496,7 @@ add_resource5(Resource, Related) ->
 %% @hidden
 add_resource6(Resource, Related) ->
 	case lists:keyfind(?RANGE_TABLE_SPEC, #resource_spec_rel.id, Related) of
-		#resource_spec_rel{rel_type = "based"} ->
+		#resource_spec_rel{rel_type = <<"based">>} ->
 			add_resource_prefix_table(Resource);
 		_ ->
 			add_resource7(Resource, Related)
@@ -505,7 +504,7 @@ add_resource6(Resource, Related) ->
 %% @hidden
 add_resource7(Resource, Related) ->
 	case lists:keyfind(?INDEX_ROW_SPEC, #resource_spec_rel.id, Related) of
-		#resource_spec_rel{rel_type = "based"} ->
+		#resource_spec_rel{rel_type = <<"based">>} ->
 			add_resource_index_row(Resource);
 		_ ->
 			add_resource8(Resource, Related)
@@ -513,7 +512,7 @@ add_resource7(Resource, Related) ->
 %% @hidden
 add_resource8(Resource, Related) ->
 	case lists:keyfind(?PREFIX_ROW_SPEC, #resource_spec_rel.id, Related) of
-		#resource_spec_rel{rel_type = "based"} ->
+		#resource_spec_rel{rel_type = <<"based">>} ->
 			add_resource_prefix_row(Resource);
 		_ ->
 			add_resource9(Resource, Related)
@@ -521,7 +520,7 @@ add_resource8(Resource, Related) ->
 %% @hidden
 add_resource9(Resource, Related) ->
 	case lists:keyfind(?RANGE_ROW_SPEC, #resource_spec_rel.id, Related) of
-		#resource_spec_rel{rel_type = "based"} ->
+		#resource_spec_rel{rel_type = <<"based">>} ->
 			add_resource_range_row(Resource);
 		_ ->
 			add_resource10(Resource)
@@ -540,7 +539,7 @@ add_resource10(Resource) ->
 
 %% @hidden
 add_resource_index_table(#resource{name = Name} = Resource) ->
-	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
+	case mnesia:table_info(binary_to_existing_atom(Name), attributes) of
 		[key, val] ->
 			F = fun() ->
 					mnesia:write(Resource)
@@ -557,8 +556,8 @@ add_resource_index_table(#resource{name = Name} = Resource) ->
 
 %% @hidden
 add_resource_index_row(#resource{related = Related} = Resource) ->
-	case maps:find("contained", Related) of
-		{ok, #resource_rel{rel_type = "contained",
+	case maps:find(<<"contained">>, Related) of
+		{ok, #resource_rel{rel_type = <<"contained">>,
 				resource = #resource_ref{name = Table}}} ->
 			add_resource_index_row(Table, Resource);
 		error ->
@@ -567,10 +566,10 @@ add_resource_index_row(#resource{related = Related} = Resource) ->
 %% @hidden
 add_resource_index_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
-	case maps:find("key", Chars) of
-		{ok, #characteristic{name = "key", value = Key}} ->
-			case maps:find("value", Chars) of
-				{ok, #characteristic{name = "value", value = Value}} ->
+	case maps:find(<<"key">>, Chars) of
+		{ok, #characteristic{name = <<"key">>, value = Key}} ->
+			case maps:find(<<"value">>, Chars) of
+				{ok, #characteristic{name = <<"value">>, value = Value}} ->
 					add_resource_index_row(Table, Resource, Key, Value);
 				error ->
 					{error, missing_chars}
@@ -580,7 +579,7 @@ add_resource_index_row(Table,
 	end.
 %% @hidden
 add_resource_index_row(TableS, Resource, Key, Value) ->
-	TableA = list_to_existing_atom(TableS),
+	TableA = binary_to_existing_atom(TableS),
 	Record = {TableA, Key, Value},
 	F = fun() ->
 			mnesia:write(TableA, Record, write),
@@ -595,7 +594,7 @@ add_resource_index_row(TableS, Resource, Key, Value) ->
 
 %% @hidden
 add_resource_prefix_table(#resource{name = Name} = Resource) ->
-	case mnesia:table_info(list_to_existing_atom(Name), attributes) of
+	case mnesia:table_info(binary_to_existing_atom(Name), attributes) of
 		[num, value] ->
 			F = fun() ->
 					mnesia:write(Resource)
@@ -612,8 +611,8 @@ add_resource_prefix_table(#resource{name = Name} = Resource) ->
 
 %% @hidden
 add_resource_prefix_row(#resource{related = Related} = Resource) ->
-	case maps:find("contained", Related) of
-		{ok, #resource_rel{rel_type = "contained",
+	case maps:find(<<"contained">>, Related) of
+		{ok, #resource_rel{rel_type = <<"contained">>,
 				resource = #resource_ref{name = Table}}} ->
 			add_resource_prefix_row(Table, Resource);
 		error ->
@@ -622,10 +621,10 @@ add_resource_prefix_row(#resource{related = Related} = Resource) ->
 %% @hidden
 add_resource_prefix_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
-	case maps:find("prefix", Chars) of
-		{ok, #characteristic{name = "prefix", value = Prefix}} ->
-			case maps:find("value", Chars) of
-				{ok, #characteristic{name = "value", value = Value}} ->
+	case maps:find(<<"prefix">>, Chars) of
+		{ok, #characteristic{name = <<"prefix">>, value = Prefix}} ->
+			case maps:find(<<"value">>, Chars) of
+				{ok, #characteristic{name = <<"value">>, value = Value}} ->
 					add_resource_prefix_row(Table, Resource, Prefix, Value);
 				error ->
 					{error, missing_chars}
@@ -654,8 +653,8 @@ add_resource_prefix_row(Table, Resource, Prefix, Value) ->
 
 %% @hidden
 add_resource_range_row(#resource{related = Related} = Resource) ->
-	case maps:find("contained", Related) of
-		{ok, #resource_rel{rel_type = "contained",
+	case maps:find(<<"contained">>, Related) of
+		{ok, #resource_rel{rel_type = <<"contained">>,
 				resource = #resource_ref{name = Table}}} ->
 			add_resource_range_row(Table, Resource);
 		error ->
@@ -664,12 +663,12 @@ add_resource_range_row(#resource{related = Related} = Resource) ->
 %% @hidden
 add_resource_range_row(Table,
 		#resource{characteristic = Chars} = Resource) ->
-	case maps:find("start", Chars) of
-		{ok, #characteristic{name = "start", value = Start}} ->
-			case maps:find("end", Chars) of
-				{ok, #characteristic{name = "end", value = End}} ->
-					case maps:find("value", Chars) of
-						{ok, #characteristic{name = "value", value = Value}} ->
+	case maps:find(<<"start">>, Chars) of
+		{ok, #characteristic{name = <<"start">>, value = Start}} ->
+			case maps:find(<<"end">>, Chars) of
+				{ok, #characteristic{name = <<"end">>, value = End}} ->
+					case maps:find(<<"value">>, Chars) of
+						{ok, #characteristic{name = <<"value">>, value = Value}} ->
 							add_resource_range_row(Table, Resource, Start, End, Value);
 						error ->
 							{error, missing_chars}
@@ -749,12 +748,14 @@ get_resources() ->
 
 -spec find_resource_spec(ID) -> Result
 	when
-		ID :: string(),
+		ID :: binary() | string(),
 		Result :: {ok, ResourceSpecification} | {error, Reason},
 		ResourceSpecification :: #resource_spec{},
 		Reason :: not_found | term().
 %% @doc Get a Resource Specification by identifier.
 find_resource_spec(ID) when is_list(ID) ->
+	find_resource_spec(list_to_binary(ID));
+find_resource_spec(ID) when is_binary(ID) ->
 	F = fun() ->
 			mnesia:read(resource_spec, ID, read)
 	end,
@@ -769,12 +770,14 @@ find_resource_spec(ID) when is_list(ID) ->
 
 -spec find_resource(ID) -> Result
 	when
-		ID :: string(),
+		ID :: binary() | string(),
 		Result :: {ok, Resource} | {error, Reason},
 		Resource :: #resource{},
 		Reason :: not_found | term().
 %% @doc Get a Resource by identifier.
 find_resource(ID) when is_list(ID) ->
+	find_resource(list_to_binary(ID));
+find_resource(ID) when is_binary(ID) ->
 	F = fun() ->
 			mnesia:read(resource, ID, read)
 	end,
@@ -789,11 +792,13 @@ find_resource(ID) when is_list(ID) ->
 
 -spec delete_resource_spec(ID) -> Result
 	when
-		ID :: string(),
+		ID :: binary() | string(),
 		Result :: ok | {error, Reason},
 		Reason :: not_found | term().
 %% @doc Delete an entry from the Resource Specification table.
 delete_resource_spec(ID) when is_list(ID) ->
+	delete_resource_spec(list_to_binary(ID));
+delete_resource_spec(ID) when is_binary(ID) ->
 	F = fun() ->
 			case mnesia:read(resource_spec, ID, write) of
 				[#resource_spec{id = ID}] ->
@@ -811,11 +816,13 @@ delete_resource_spec(ID) when is_list(ID) ->
 
 -spec delete_resource(ID) -> Result
 	when
-		ID :: string(),
+		ID :: binary() | string(),
 		Result :: ok | {error, Reason},
 		Reason :: not_found | term().
 %% @doc Delete an entry from the Resource table.
 delete_resource(ID) when is_list(ID) ->
+	delete_resource(list_to_binary(ID));
+delete_resource(ID) when is_binary(ID) ->
 	F = fun() ->
 			case mnesia:read(resource, ID, write) of
 				[#resource{id = ID} = Resource1] ->
@@ -829,7 +836,7 @@ delete_resource(ID) when is_list(ID) ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = ?INDEX_TABLE_SPEC}}}} ->
-			TableName = list_to_existing_atom(Name),
+			TableName = binary_to_existing_atom(Name),
 			case mnesia:clear_table(TableName) of
 				{atomic, ok} ->
 					ok;
@@ -855,25 +862,25 @@ delete_resource(ID) when is_list(ID) ->
 				specification = #resource_spec_ref{id = SpecId}} = Resource2}} ->
 			case cse:find_resource_spec(SpecId) of
 				{ok, #resource_spec{related = Related}} ->
-					case lists:keyfind("based",
+					case lists:keyfind(<<"based">>,
 							#resource_spec_rel.rel_type, Related) of
-						#resource_spec_rel{id = ?INDEX_TABLE_SPEC, rel_type = "based"} ->
-							TableName = list_to_existing_atom(Name),
+						#resource_spec_rel{id = ?INDEX_TABLE_SPEC, rel_type = <<"based">>} ->
+							TableName = binary_to_existing_atom(Name),
 							case mnesia:clear_table(TableName) of
 								{atomic, ok} ->
 									ok;
 								{aborted, Reason} ->
 									{error, Reason}
 							end;
-						#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = "based"} ->
+						#resource_spec_rel{id = ?PREFIX_TABLE_SPEC, rel_type = <<"based">>} ->
 							cse_gtt:clear_table(Name);
-						#resource_spec_rel{id = ?RANGE_TABLE_SPEC, rel_type = "based"} ->
+						#resource_spec_rel{id = ?RANGE_TABLE_SPEC, rel_type = <<"based">>} ->
 							cse_gtt:clear_table(Name);
-						#resource_spec_rel{id = ?INDEX_ROW_SPEC, rel_type = "based"} ->
+						#resource_spec_rel{id = ?INDEX_ROW_SPEC, rel_type = <<"based">>} ->
 							delete_resource_row(?INDEX_ROW_SPEC, Resource2);
-						#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = "based"} ->
+						#resource_spec_rel{id = ?PREFIX_ROW_SPEC, rel_type = <<"based">>} ->
 							delete_resource_row(?PREFIX_ROW_SPEC, Resource2);
-						#resource_spec_rel{id = ?RANGE_ROW_SPEC, rel_type = "based"} ->
+						#resource_spec_rel{id = ?RANGE_ROW_SPEC, rel_type = <<"based">>} ->
 							delete_resource_row(?RANGE_ROW_SPEC, Resource2);
 						_ ->
 							ok
@@ -885,15 +892,15 @@ delete_resource(ID) when is_list(ID) ->
 
 %% @hidden
 delete_resource_row(Based,
-		#resource{related = #{"contained" := #resource_rel{
+		#resource{related = #{<<"contained">> := #resource_rel{
 		resource = #resource_ref{name = Table}}}} = Resource) ->
 	delete_resource_row(Based, Table, Resource);
 delete_resource_row(_Based, _Resource) ->
 	{error, table_not_found}.
 %% @hidden
 delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{
-		characteristic = #{"key" := #characteristic{value = Key}}}) ->
-	TableName = list_to_existing_atom(Table),
+		characteristic = #{<<"key">> := #characteristic{value = Key}}}) ->
+	TableName = binary_to_existing_atom(Table),
 	F = fun()  ->
 			mnesia:delete(TableName, Key, write)
 	end,
@@ -904,173 +911,308 @@ delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{
 			{error, Reason}
 	end;
 delete_resource_row(?PREFIX_ROW_SPEC, Table, #resource{
-		characteristic = #{"prefix" := #characteristic{value = Prefix}}}) ->
-	TableName = list_to_existing_atom(Table),
+		characteristic = #{<<"prefix">> := #characteristic{value = Prefix}}}) ->
+	TableName = binary_to_existing_atom(Table),
 	cse_gtt:delete(TableName, Prefix);
 delete_resource_row(?RANGE_ROW_SPEC, Table, #resource{
-		characteristic = #{"start" := #characteristic{value = Start},
-		"end" := #characteristic{value = End}}}) ->
-	TableName = list_to_existing_atom(Table),
+		characteristic = #{<<"start">> := #characteristic{value = Start},
+		<<"end">> := #characteristic{value = End}}}) ->
+	TableName = binary_to_existing_atom(Table),
 	cse_gtt:delete_range(TableName, Start, End);
 delete_resource_row(_Based, _Table, _Resource) ->
 	{error, table_not_found}.
 
--spec query_resource_spec(Cont, MatchId,
-		MatchName, MatchRelId, MatchRelType) -> Result
+-dialyzer({nowarn_function, query_resource_spec1/5}).
+-spec query_resource_spec(Cont, MatchName,
+		MatchRelId, MatchRelType) -> Result
 	when
 		Cont :: start | any(),
-		MatchId :: Match,
-		MatchName :: Match,
-		MatchRelId :: Match,
-		MatchRelType :: Match,
-		Match :: {exact, string()} | {like, string()} | '_',
+		MatchName :: {exact, MatchValue} | {like, MatchValue} | '_',
+		MatchRelId :: {exact, MatchValue} | '_',
+		MatchRelType :: {exact, MatchValue} | {like, MatchValue} | '_',
+		MatchValue :: string() | binary(),
 		Result :: {Cont1, [#resource_spec{}]} | {error, Reason},
 		Cont1 :: eof | any(),
 		Reason :: term().
 %% @doc Query the Resource Specification table.
-query_resource_spec(Cont, '_', MatchName, MatchRelId, MatchRelType) ->
+%%
+%% 	The resource specification table may be queried using
+%% 	match operations on select attributes. The `exact'
+%% 	operator matches when the entire target value matches
+%% 	`MatchValue' exactly. The `like' operator may be used
+%% 	for partial matching. If the operator is `like', and
+%% 	the last character of `MatchValue' is `%', the value
+%% 	before the `%' is matched against the prefix of the
+%% 	same length of the target value. All match operations
+%% 	must succeed to select a resource specification.
+%% 	
+%% 	Resource specifications may be selected by name with
+%% 	`MatchName'.
+%%
+%% 	Resource specifications may be selected by related
+%% 	resource specification. The name of a relationship
+%% 	type (`rel_type') (e.g. `"based"') may be	matched
+%% 	with `MatchRelType'. The identifier (`id') of the
+%% 	related resource specification mab be matched with
+%% 	`MatchRelId'. Note that matching is limited to the
+%% 	the first relationship in the list.
+%%
+query_resource_spec(Cont, '_' = _MatchName,
+		MatchRelId, MatchRelType) ->
 	MatchHead = #resource_spec{_ = '_'},
-	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelType);
-query_resource_spec(Cont, {Op, String}, MatchName, MatchRelId, MatchRelType)
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead = case lists:last(String) of
-		$% when Op == like ->
-			#resource_spec{id = lists:droplast(String) ++ '_', _ = '_'};
+	query_resource_spec1(Cont, MatchHead, [],
+			MatchRelId, MatchRelType);
+query_resource_spec(Cont, {Op, MatchValue},
+		MatchRelId, MatchRelType) when is_list(MatchValue) ->
+	query_resource_spec(Cont, {Op, list_to_binary(MatchValue)},
+			MatchRelId, MatchRelType);
+query_resource_spec(Cont, {exact, MatchValue},
+		MatchRelId, MatchRelType) when is_binary(MatchValue) ->
+	MatchHead = #resource_spec{name = MatchValue, _ = '_'},
+	query_resource_spec1(Cont, MatchHead, [],
+			MatchRelId, MatchRelType);
+query_resource_spec(Cont, {like, MatchValue},
+		MatchRelId, MatchRelType) when is_binary(MatchValue) ->
+	case binary:last(MatchValue) of
+		$% ->
+			Size = byte_size(MatchValue) - 1,
+			Prefix = binary_part(MatchValue, 0, Size),
+			MatchHead = #resource_spec{name = '$1', _ = '_'},
+			BinaryPart = {'binary_part', '$1', 0, Size},
+			MatchConditions = [{'==', BinaryPart, Prefix}],
+			query_resource_spec1(Cont, MatchHead, MatchConditions,
+					MatchRelId, MatchRelType);
 		_ ->
-			#resource_spec{id = String, _ = '_'}
-	end,
-	query_resource_spec1(Cont, MatchHead, MatchName, MatchRelId, MatchRelType).
+			MatchHead = #resource_spec{name = MatchValue, _ = '_'},
+			query_resource_spec1(Cont, MatchHead, [],
+					MatchRelId, MatchRelType)
+	end.
 %% @hidden
-query_resource_spec1(Cont, MatchHead, '_', MatchRelId, MatchRelType) ->
-	query_resource_spec2(Cont, MatchHead, MatchRelId, MatchRelType);
-query_resource_spec1(Cont, MatchHead1, {Op, String}, MatchRelId, MatchRelType)
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead2 = case lists:last(String) of
-		$% when Op == like ->
-			MatchHead1#resource_spec{name = lists:droplast(String) ++ '_'};
-		_ ->
-			MatchHead1#resource_spec{name = String}
+query_resource_spec1(Cont, MatchHead, MatchConditions, '_', '_') ->
+	MatchSpec = [{MatchHead, MatchConditions, ['$_']}],
+	query_resource_spec2(Cont, MatchSpec);
+query_resource_spec1(Cont, MatchHead, MatchConditions,
+		{Op, MatchValue}, MatchRelType) when is_list(MatchValue) ->
+	query_resource_spec1(Cont, MatchHead, MatchConditions,
+		{Op, list_to_binary(MatchValue)}, MatchRelType);
+query_resource_spec1(Cont, MatchHead, MatchConditions,
+		MatchRelId, {Op, MatchValue}) when is_list(MatchValue) ->
+	query_resource_spec1(Cont, MatchHead, MatchConditions,
+		MatchRelId, {Op, list_to_binary(MatchValue)});
+query_resource_spec1(Cont, MatchHead, MatchConditions,
+		 MatchRelId, MatchRelType) ->
+	MatchRelId1 = case MatchRelId of
+		{exact, MatchValue1} ->
+			MatchValue1;
+		'_' ->
+			'_'
 	end,
-	query_resource_spec2(Cont, MatchHead2, MatchRelId, MatchRelType).
-%% @hidden
-query_resource_spec2(Cont, MatchHead, '_', MatchRelType) ->
-	query_resource_spec3(Cont, MatchHead, MatchRelType);
-query_resource_spec2(Cont, MatchHead1, {Op, String}, MatchRelType)
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead2 = case lists:last(String) of
-		$% when Op == like ->
-			MatchHead1#resource_spec{related = [#resource_spec_rel{id
-					= lists:droplast(String) ++ '_', _ = '_'}, _ = '_']};
-		_ ->
-			MatchHead1#resource_spec{related
-					= [#resource_spec_rel{id = String, _ = '_'}, _ = '_']}
+	{MatchRelType1, MatchConditions2} = case MatchRelType of
+		{like, MatchValue2} when binary_part(MatchValue2,
+				byte_size(MatchValue2), - 1) == <<$->> ->
+			Size = byte_size(MatchValue2) - 1,
+			Prefix = binary_part(MatchValue2, 0, Size),
+			BinaryPart = {'binary_part', '$2', 0, Size},
+			MatchConditions1 = [{'==', BinaryPart, Prefix}],
+			{'$2', MatchConditions ++ MatchConditions1};
+		{like, MatchValue2} ->
+			{MatchValue2, MatchConditions};
+		{exact, MatchValue2} ->
+			{MatchValue2, MatchConditions};
+		'_' ->
+			{'_', MatchConditions}
 	end,
-	query_resource_spec3(Cont, MatchHead2, MatchRelType).
+	Related = [#resource_spec_rel{id = MatchRelId1,
+			rel_type = MatchRelType1, _ = '_'} | '_'],
+	MatchHead1 = MatchHead#resource_spec{related = Related},
+	MatchSpec = [{MatchHead1, MatchConditions2, ['$_']}],
+	query_resource_spec2(Cont, MatchSpec).
 %% @hidden
-query_resource_spec3(Cont, MatchHead, '_') ->
-	MatchSpec = [{MatchHead, [], ['$_']}],
-	query_resource_spec4(Cont, MatchSpec);
-query_resource_spec3(Cont, MatchHead1, {Op, String})
-		when is_list(String), ((Op == exact) orelse (Op == like)) ->
-	MatchHead2 = case lists:last(String) of
-		$% when Op == like ->
-			MatchHead1#resource_spec{related = [#resource_spec_rel{rel_type
-					= lists:droplast(String) ++ '_', _ = '_'}, _ = '_']};
-		_ ->
-			MatchHead1#resource_spec{related
-					= [#resource_spec_rel{rel_type = String, _ = '_'}, _ = '_']}
-	end,
-	MatchSpec = [{MatchHead2, [], ['$_']}],
-	query_resource_spec4(Cont, MatchSpec).
-%% @hidden
-query_resource_spec4(start, MatchSpec) ->
+query_resource_spec2(start, MatchSpec) ->
 	F = fun() ->
 			mnesia:select(resource_spec, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	query_resource_spec5(mnesia:ets(F));
-query_resource_spec4(Cont, _MatchSpec) ->
+	query_resource_spec3(mnesia:ets(F));
+query_resource_spec2(Cont, _MatchSpec) ->
 	F = fun() ->
 			mnesia:select(Cont)
 	end,
-	query_resource_spec5(mnesia:ets(F)).
+	query_resource_spec3(mnesia:ets(F)).
 %% @hidden
-query_resource_spec5({Resources, Cont}) ->
+query_resource_spec3({Resources, Cont}) ->
 	{Cont, Resources};
-query_resource_spec5('$end_of_table') ->
+query_resource_spec3('$end_of_table') ->
 	{eof, []}.
 
 -spec query_resource(Cont, MatchName, MatchResSpecId,
 		MatchRelType, MatchRelName, MatchChars) -> Result
 	when
 		Cont :: start | any(),
-		MatchName :: {exact, string()} | {like, string()} | '_',
-		MatchResSpecId :: {exact, string()} | '_',
-		MatchRelType :: {exact, string()} | '_',
-		MatchRelName :: {exact, string()} | '_',
+		MatchName :: {exact, MatchValue} | {like, MatchValue} | '_',
+		MatchResSpecId :: {exact, MatchValue} | '_',
+		MatchRelType :: {exact, MatchValue} | '_',
+		MatchRelName :: {exact, MatchValue} | '_',
 		MatchChars :: [{{exact, CharName}, {exact, CharValue}}] | '_',
-		CharName :: string(),
-		CharValue :: string(),
+		MatchValue :: string() | binary(),
+		CharName :: MatchValue,
+		CharValue :: MatchValue | '_',
 		Result :: {Cont1, [#resource{}]} | {error, Reason},
 		Cont1 :: eof | any(),
 		Reason :: term().
 %% @doc Query the Resource table.
+%%
+%% 	The resource table may be queried using match operations
+%% 	on select attributes. The `exact' operator matches when
+%% 	the entire target value matches `MatchValue' exactly. The
+%% 	`like' operator may be used for partial matching. If the
+%% 	operator is `like', and the last character of `MatchValue'
+%% 	is `%', the value before the `%' is matched against the
+%% 	prefix of the same length of the target value. All match
+%% 	operations must succeed to select a resource.
+%% 	
+%% 	Resources may be selected by name with `MatchName'.
+%%
+%% 	Resources may be selected by identifier of the resource
+%% 	specification they reference with `MatchResSpecId'.
+%%
+%% 	Resources may be selected by related resource.  The name
+%% 	of a resource relationship (e.g. `"contained"') may be
+%% 	matched with `MatchRelType' and optionally the name of
+%% 	the related resource with `MatchRelName'. Note that
+%% 	use of `MatchRelName' requires a value for `MatchRelType'
+%% 	to also be provided.
+%%
+%% 	Resources may be selected by characteristic values. A
+%% 	list of resource characteristic name/value pair match
+%% 	operations may be provided in `MatchChars'.
+%% 	
 query_resource(Cont, '_' = _MatchName, MatchResSpecId,
 		MatchRelType, MatchRelName, MatchChars) ->
 	MatchHead = #resource{_ = '_'},
-	query_resource1(Cont, MatchHead, MatchResSpecId,
+	query_resource1(Cont, MatchHead, [], MatchResSpecId,
 			MatchRelType, MatchRelName, MatchChars);
-query_resource(Cont, {Op, Name} = _MatchName, MatchResSpecId,
+query_resource(Cont, {Op, MatchValue}, MatchResSpecId,
 		MatchRelType, MatchRelName, MatchChars)
-		when is_list(Name), ((Op == exact) orelse (Op == like)) ->
-	MatchHead = case lists:last(Name) of
-		$% when Op == like ->
-			#resource{name = lists:droplast(Name) ++ '_', _ = '_'};
+		when is_list(MatchValue) ->
+	query_resource(Cont, {Op, list_to_binary(MatchValue)},
+		MatchResSpecId, MatchRelType, MatchRelName, MatchChars);
+query_resource(Cont, {exact, MatchValue}, MatchResSpecId,
+		MatchRelType, MatchRelName, MatchChars)
+		when is_binary(MatchValue) ->
+	MatchHead = #resource{name = MatchValue, _ = '_'},
+	query_resource1(Cont, MatchHead, [],
+		MatchResSpecId, MatchRelType, MatchRelName, MatchChars);
+query_resource(Cont, {like, MatchValue}, MatchResSpecId,
+		MatchRelType, MatchRelName, MatchChars)
+		when is_binary(MatchValue) ->
+	case binary:last(MatchValue) of
+		$% ->
+			Size = byte_size(MatchValue) - 1,
+			Prefix = binary_part(MatchValue, 0, Size),
+			MatchHead = #resource{name = '$1', _ = '_'},
+			BinaryPart = {'binary_part', '$1', 0, Size},
+			MatchConditions = [{'==', BinaryPart, Prefix}],
+			query_resource1(Cont, MatchHead, MatchConditions,
+					MatchResSpecId, MatchRelType, MatchRelName, MatchChars);
 		_ ->
-			#resource{id = Name, _ = '_'}
-	end,
-	query_resource1(Cont, MatchHead, MatchResSpecId,
-			MatchRelType, MatchRelName, MatchChars).
+			MatchHead = #resource{name = MatchValue, _ = '_'},
+			query_resource1(Cont, MatchHead, [],
+					MatchResSpecId, MatchRelType, MatchRelName, MatchChars)
+	end.
 %% @hidden
-query_resource1(Cont, MatchHead, '_' = _MatchResSpecId,
+query_resource1(Cont, MatchHead, MatchConditions, '_' = _MatchResSpecId,
 		MatchRelType, MatchRelName, MatchChars) ->
-	query_resource2(Cont, MatchHead,
+	query_resource2(Cont, MatchHead, MatchConditions,
 			MatchRelType, MatchRelName, MatchChars);
-query_resource1(Cont, MatchHead1, {exact, SpecId} = _MatchResSpecId,
-		MatchRelType, MatchRelName, MatchChars) when is_list(SpecId) ->
-	ResourceSpecRef = #resource_spec_ref{id = SpecId, _ = '_'},
-	MatchHead2 = MatchHead1#resource{specification = ResourceSpecRef},
-	query_resource2(Cont, MatchHead2,
+query_resource1(Cont, MatchHead, MatchConditions, {Op, MatchValue},
+		MatchRelType, MatchRelName, MatchChars) when is_list(MatchValue) ->
+	query_resource1(Cont, MatchHead, MatchConditions,
+			{Op, list_to_binary(MatchValue)}, MatchRelType,
+			MatchRelName, MatchChars);
+query_resource1(Cont, MatchHead, MatchConditions, {exact, MatchValue},
+		MatchRelType, MatchRelName, MatchChars) when is_binary(MatchValue) ->
+	ResourceSpecRef = #resource_spec_ref{id = MatchValue, _ = '_'},
+	MatchHead1 = MatchHead#resource{specification = ResourceSpecRef},
+	query_resource2(Cont, MatchHead1, MatchConditions,
 			MatchRelType, MatchRelName, MatchChars).
 %% @hidden
-query_resource2(Cont, MatchHead, '_', '_', MatchChars) ->
-	query_resource3(Cont, MatchHead, MatchChars);
-query_resource2(Cont, MatchHead1, {exact, RelType}, '_', MatchChars)
-		when is_list(RelType) ->
-	ResourceRel = #resource_rel{_ = '_'},
-	Related = #{RelType => ResourceRel},
-	MatchHead2 = MatchHead1#resource{related = Related},
-	query_resource3(Cont, MatchHead2, MatchChars);
-query_resource2(Cont, MatchHead1, {exact, RelType}, {exact, RelName},
-		MatchChars) when is_list(RelType), is_list(RelName) ->
-	ResourceRef = #resource_ref{name = RelName, _ = '_'},
+query_resource2(Cont, MatchHead, MatchConditions, '_', '_', MatchChars) ->
+	query_resource3(Cont, MatchHead, MatchConditions, MatchChars);
+query_resource2(Cont, MatchHead, MatchConditions,
+		{Op, MatchValue}, MatchRelName, MatchChars) when is_list(MatchValue) ->
+	query_resource2(Cont, MatchHead, MatchConditions,
+			{Op, list_to_binary(MatchValue)}, MatchRelName, MatchChars);
+query_resource2(Cont, MatchHead, MatchConditions, MatchRelType,
+		{Op, MatchValue}, MatchChars) when is_list(MatchValue) ->
+	query_resource2(Cont, MatchHead, MatchConditions, MatchRelType,
+			{Op, list_to_binary(MatchValue)}, MatchChars);
+query_resource2(Cont, MatchHead, MatchConditions,
+		MatchRelType, MatchRelName, MatchChars) ->
+	{MatchRelType1, MatchConditions2} = case MatchRelType of
+		{like, MatchValue1} when binary_part(MatchValue1,
+				byte_size(MatchValue1), - 1) == <<$->> ->
+			Size1 = byte_size(MatchValue1) - 1,
+			Prefix1 = binary_part(MatchValue1, 0, Size1),
+			BinaryPart1 = {'binary_part', '$2', 0, Size1},
+			MatchConditions1 = [{'==', BinaryPart1, Prefix1}],
+			{'$2', MatchConditions ++ MatchConditions1};
+		{like, MatchValue1} ->
+			{MatchValue1, MatchConditions};
+		{exact, MatchValue1} ->
+			{MatchValue1, MatchConditions};
+		'_' ->
+			{'_', MatchConditions}
+	end,
+	{MatchRelName1, MatchConditions4} = case MatchRelName of
+		{like, MatchValue2} when binary_part(MatchValue2,
+				byte_size(MatchValue2), - 1) == <<$->> ->
+			Size2 = byte_size(MatchValue2) - 1,
+			Prefix2 = binary_part(MatchValue2, 0, Size2),
+			BinaryPart2 = {'binary_part', '$3', 0, Size2},
+			MatchConditions3 = [{'==', BinaryPart2, Prefix2}],
+			{'$3', MatchConditions2 ++ MatchConditions3};
+		{like, MatchValue2} ->
+			{MatchValue2, MatchConditions2};
+		{exact, MatchValue2} ->
+			{MatchValue2, MatchConditions2};
+		'_' ->
+			{'_', MatchConditions2}
+	end,
+	ResourceRef = #resource_ref{name = MatchRelName1, _ = '_'},
 	ResourceRel = #resource_rel{resource = ResourceRef, _ = '_'},
-	Related = #{RelType => ResourceRel},
-	MatchHead2 = MatchHead1#resource{related = Related},
-	query_resource3(Cont, MatchHead2, MatchChars).
+	Related = #{MatchRelType1 => ResourceRel},
+	MatchHead1 = MatchHead#resource{related = Related},
+	query_resource3(Cont, MatchHead1, MatchConditions4, MatchChars).
 %% @hidden
-query_resource3(Cont, MatchHead, '_' = _MatchChars) ->
-	MatchSpec = [{MatchHead, [], ['$_']}],
+query_resource3(Cont, MatchHead, MatchConditions, '_' = _MatchChars) ->
+	MatchSpec = [{MatchHead, MatchConditions, ['$_']}],
 	query_resource4(Cont, MatchSpec);
-query_resource3(Cont, MatchHead1,
-		[{{exact, CharName}, {exact, CharValue}} | T]  = _MatchChars)
-		when is_list(CharName), is_list(CharValue) ->
+query_resource3(Cont, #resource{characteristic = '_'} = MatchHead,
+		MatchConditions, MatchChars) ->
+	query_resource3(Cont, MatchHead#resource{characteristic = #{}},
+		MatchConditions, MatchChars);
+query_resource3(Cont, MatchHead, MatchConditions,
+		[{{exact, CharName}, {exact, CharValue}} | T])
+		when is_list(CharName) ->
+	query_resource3(Cont, MatchHead, MatchConditions,
+		[{{exact, list_to_binary(CharName)}, {exact, CharValue}} | T]);
+query_resource3(Cont, MatchHead, MatchConditions,
+		[{{exact, CharName}, {exact, CharValue}} | T])
+		when is_list(CharValue) ->
+	query_resource3(Cont, MatchHead, MatchConditions,
+		[{{exact, CharName}, {exact, list_to_binary(CharValue)}} | T]);
+query_resource3(Cont,
+		#resource{characteristic = Characteristics} = MatchHead,
+		MatchConditions, [{{exact, CharName}, {exact, CharValue}} | T])
+		when is_map(Characteristics), is_binary(CharName),
+		((is_binary(CharValue)) or (CharValue == '_')) ->
 	Characteristic = #characteristic{name = CharName,
 			value = CharValue, _ = '_'},
-	Characteristics = #{CharName => Characteristic},
-	MatchHead2 = MatchHead1#resource{characteristic = Characteristics},
-	query_resource3(Cont, MatchHead2, T);
-query_resource3(Cont, MatchHead, [] = _MatchChars) ->
-	MatchSpec = [{MatchHead, [], ['$_']}],
+	Characteristics1 = Characteristics#{CharName => Characteristic},
+	MatchHead1 = MatchHead#resource{characteristic = Characteristics1},
+	query_resource3(Cont, MatchHead1, MatchConditions, T);
+query_resource3(Cont, MatchHead, MatchConditions, []) ->
+	MatchSpec = [{MatchHead, MatchConditions, ['$_']}],
 	query_resource4(Cont, MatchSpec).
 %% @hidden
 query_resource4(start, MatchSpec) ->
@@ -1635,3 +1777,4 @@ is_edp1(true) ->
 	true;
 is_edp1(false) ->
 	false.
+

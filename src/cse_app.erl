@@ -583,7 +583,7 @@ install_resource_specs() ->
 %% @doc Install static Resource Specifications.
 %% @private
 install_resource_specs([H | T]) ->
-	Spec = cse_rest_res_resource:static_spec(H),
+	Spec = cse_rest_res_resource:static_spec(list_to_binary(H)),
 	F = fun() ->
 				mnesia:write(resource_spec, Spec, write)
 	end,

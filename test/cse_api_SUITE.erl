@@ -303,16 +303,18 @@ add_prefix_table_spec() ->
 
 add_prefix_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
+	NameB = list_to_binary(Name),
 	Specification = dynamic_prefix_table_spec(Name),
-	{ok, #resource_spec{name = Name}} = cse:add_resource_spec(Specification).
+	{ok, #resource_spec{name = NameB}} = cse:add_resource_spec(Specification).
 
 add_range_table_spec() ->
 	[{userdata, [{doc, "Add a Resource Specification for a prefix range table"}]}].
 
 add_range_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
+	NameB = list_to_binary(Name),
 	Specification = dynamic_range_table_spec(Name),
-	{ok, #resource_spec{name = Name}} = cse:add_resource_spec(Specification).
+	{ok, #resource_spec{name = NameB}} = cse:add_resource_spec(Specification).
 
 get_index_table_spec() ->
 	[{userdata, [{doc, "Get a dynamic index table Resource Specification"}]}].
@@ -376,33 +378,36 @@ add_index_table() ->
 
 add_index_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
+	NameB = list_to_binary(Name),
 	SpecificationT = dynamic_index_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_index_table(Name, SpecificationR),
 	ok = new_index_table(Name, []),
-	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+	{ok, #resource{name = NameB}} = cse:add_resource(ResourceT).
 
 add_prefix_table() ->
 	[{userdata, [{doc, "Add a Resource for a prefix table"}]}].
 
 add_prefix_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
+	NameB = list_to_binary(Name),
 	SpecificationT = dynamic_prefix_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_prefix_table(Name, SpecificationR),
 	ok = cse_gtt:new(Name, []),
-	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+	{ok, #resource{name = NameB}} = cse:add_resource(ResourceT).
 
 add_range_table() ->
 	[{userdata, [{doc, "Add a Resource for a prefix range table"}]}].
 
 add_range_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
+	NameB = list_to_binary(Name),
 	SpecificationT = dynamic_range_table_spec(Name),
 	{ok, SpecificationR} = cse:add_resource_spec(SpecificationT),
 	ResourceT = dynamic_range_table(Name, SpecificationR),
 	ok = cse_gtt:new(Name, []),
-	{ok, #resource{name = Name}} = cse:add_resource(ResourceT).
+	{ok, #resource{name = NameB}} = cse:add_resource(ResourceT).
 
 get_index_table() ->
 	[{userdata, [{doc, "Get a Resource for an index table"}]}].
@@ -759,178 +764,209 @@ edp() ->
 			no_answer => interrupted,
 			route_fail => interrupted}.
 
-dynamic_index_table_spec(Name) ->
+dynamic_index_table_spec(Name)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecId = cse_rest_res_resource:index_table_spec_id(),
 	SpecRel = #resource_spec_rel{id = SpecId,
-			href = ?specPath ++ SpecId,
-			name = "IndexTable",
-			rel_type = "based"},
-	#resource_spec{name = Name,
-			description = "Dynamic index table specification",
-			category = "IndexTable",
-			version = "1.0",
+			href = erlang:iolist_to_binary([?specPath, SpecId]),
+			name = <<"IndexTable">>,
+			rel_type = <<"based">>},
+	#resource_spec{name = NameB,
+			description = <<"Dynamic index table specification">>,
+			category = <<"IndexTable">>,
+			version = <<"1.0">>,
 			related = [SpecRel]}.
 
-dynamic_index_row_spec(Name, TableSpec) ->
+dynamic_index_row_spec(Name, TableSpec)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecId = cse_rest_res_resource:index_row_spec_id(),
 	SpecRel1 = #resource_spec_rel{id = SpecId,
-			href = ?specPath ++ SpecId,
-			name = "IndexRow",
-			rel_type = "based"},
+			href = erlang:iolist_to_binary([?specPath, SpecId]),
+			name = <<"IndexRow">>,
+			rel_type = <<"based">>},
 	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
 			href = TableSpec#resource_spec.href,
 			name = TableSpec#resource_spec.name,
-			rel_type = "contained"},
-	#resource_spec{name = Name,
-			description = "Dynamic index table row specification",
-			category = "IndexRow",
-			version = "1.0",
+			rel_type = <<"contained">>},
+	#resource_spec{name = NameB,
+			description = <<"Dynamic index table row specification">>,
+			category = <<"IndexRow">>,
+			version = <<"1.0">>,
 			related = [SpecRel1, SpecRel2]}.
 
-dynamic_prefix_table_spec(Name) ->
+dynamic_prefix_table_spec(Name)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	SpecRel = #resource_spec_rel{id = SpecId,
-			href = ?specPath ++ SpecId,
-			name = "PrefixTable",
-			rel_type = "based"},
-	#resource_spec{name = Name,
-			description = "Dynamic prefix table specification",
-			category = "PrefixTable",
-			version = "1.0",
+			href = erlang:iolist_to_binary([?specPath, SpecId]),
+			name = <<"PrefixTable">>,
+			rel_type = <<"based">>},
+	#resource_spec{name = NameB,
+			description = <<"Dynamic prefix table specification">>,
+			category = <<"PrefixTable">>,
+			version = <<"1.0">>,
 			related = [SpecRel]}.
 
-dynamic_prefix_row_spec(Name, TableSpec) ->
+dynamic_prefix_row_spec(Name, TableSpec)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
 	SpecRel1 = #resource_spec_rel{id = SpecId,
-			href = ?specPath ++ SpecId,
-			name = "PrefixTable",
-			rel_type = "based"},
+			href = erlang:iolist_to_binary([?specPath, SpecId]),
+			name = <<"PrefixTable">>,
+			rel_type = <<"based">>},
 	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
 			href = TableSpec#resource_spec.href,
 			name = TableSpec#resource_spec.name,
-			rel_type = "contained"},
-	#resource_spec{name = Name,
-			description = "Dynamic prefix table row specification",
-			category = "PrefixRow",
-			version = "1.0",
+			rel_type = <<"contained">>},
+	#resource_spec{name = NameB,
+			description = <<"Dynamic prefix table row specification">>,
+			category = <<"PrefixRow">>,
+			version = <<"1.0">>,
 			related = [SpecRel1, SpecRel2]}.
 
-dynamic_range_table_spec(Name) ->
+dynamic_range_table_spec(Name)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
 	SpecRel = #resource_spec_rel{id = SpecId,
-			href = ?specPath ++ SpecId,
-			name = "RangeTable",
-			rel_type = "based"},
-	#resource_spec{name = Name,
-			description = "Dynamic prefix range table specification",
-			category = "RangeTable",
-			version = "1.0",
+			href = erlang:iolist_to_binary([?specPath, SpecId]),
+			name = <<"RangeTable">>,
+			rel_type = <<"based">>},
+	#resource_spec{name = NameB,
+			description = <<"Dynamic prefix range table specification">>,
+			category = <<"RangeTable">>,
+			version = <<"1.0">>,
 			related = [SpecRel]}.
 
-dynamic_range_row_spec(Name, TableSpec) ->
+dynamic_range_row_spec(Name, TableSpec)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecId = cse_rest_res_resource:prefix_range_row_spec_id(),
 	SpecRel1 = #resource_spec_rel{id = SpecId,
-			href = ?specPath ++ SpecId,
-			name = "RangeTable",
-			rel_type = "based"},
+			href = erlang:iolist_to_binary([?specPath, SpecId]),
+			name = <<"RangeTable">>,
+			rel_type = <<"based">>},
 	SpecRel2 = #resource_spec_rel{id = TableSpec#resource_spec.id,
 			href = TableSpec#resource_spec.href,
 			name = TableSpec#resource_spec.name,
-			rel_type = "contained"},
-	#resource_spec{name = Name,
-			description = "Dynamic prefix range table row specification",
-			category = "RangeRow",
-			version = "1.0",
+			rel_type = <<"contained">>},
+	#resource_spec{name = NameB,
+			description = <<"Dynamic prefix range table row specification">>,
+			category = <<"RangeRow">>,
+			version = <<"1.0">>,
 			related = [SpecRel1, SpecRel2]}.
 
-dynamic_index_table(Name, TableSpec) ->
+dynamic_index_table(Name, TableSpec)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
 			href = TableSpec#resource_spec.href,
 			name = TableSpec#resource_spec.name},
-	#resource{name = Name,
-			description = "Dynamic index table",
-			category = "IndexTable",
-			version = "1.0",
+	#resource{name = NameB,
+			description = <<"Dynamic index table">>,
+			category = <<"IndexTable">>,
+			version = <<"1.0">>,
 			specification = SpecRef}.
 
-dynamic_index_row(Name, RowSpec, Table, Key, Value) ->
+dynamic_index_row(Name, RowSpec, Table, Key, Value)
+		when is_list(Name), is_list(Key), is_list(Value)  ->
+	NameB = list_to_binary(Name),
+	KeyB = list_to_binary(Key),
+	ValueB = list_to_binary(Value),
 	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
 			href = RowSpec#resource_spec.href,
 			name = RowSpec#resource_spec.name},
 	ResourceRef = #resource_ref{id = Table#resource.id,
 			href = Table#resource.href,
 			name = Table#resource.name},
-	ResourceRel = #resource_rel{rel_type = "contained",
+	ResourceRel = #resource_rel{rel_type = <<"contained">>,
 			resource = ResourceRef},
-	Column1 = #characteristic{name = "key", value = Key},
-	Column2 = #characteristic{name = "value", value = Value},
-	#resource{name = Name,
-			description = "Dynamic index table row",
-			category = "IndexRow",
-			version = "1.0",
-			related = #{"contained" => ResourceRel},
+	Column1 = #characteristic{name = <<"key">>, value = KeyB},
+	Column2 = #characteristic{name = <<"value">>, value = ValueB},
+	#resource{name = NameB,
+			description = <<"Dynamic index table row">>,
+			category = <<"IndexRow">>,
+			version = <<"1.0">>,
+			related = #{<<"contained">> => ResourceRel},
 			specification = SpecRef,
-			characteristic = #{"key" => Column1, "value" => Column2}}.
+			characteristic = #{<<"key">> => Column1, <<"value">> => Column2}}.
 
-dynamic_prefix_table(Name, TableSpec) ->
+dynamic_prefix_table(Name, TableSpec)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
 			href = TableSpec#resource_spec.href,
 			name = TableSpec#resource_spec.name},
-	#resource{name = Name,
-			description = "Dynamic prefix table",
-			category = "PrefixTable",
-			version = "1.0",
+	#resource{name = NameB,
+			description = <<"Dynamic prefix table">>,
+			category = <<"PrefixTable">>,
+			version = <<"1.0">>,
 			specification = SpecRef}.
 
-dynamic_prefix_row(Name, RowSpec, Table, Prefix, Value) ->
+dynamic_prefix_row(Name, RowSpec, Table, Prefix, Value)
+		when is_list(Name), is_list(Prefix), is_list(Value)  ->
+	NameB = list_to_binary(Name),
+	PrefixB = list_to_binary(Prefix),
+	ValueB = list_to_binary(Value),
 	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
 			href = RowSpec#resource_spec.href,
 			name = RowSpec#resource_spec.name},
 	ResourceRef = #resource_ref{id = Table#resource.id,
 			href = Table#resource.href,
 			name = Table#resource.name},
-	ResourceRel = #resource_rel{rel_type = "contained",
+	ResourceRel = #resource_rel{rel_type = <<"contained">>,
 			resource = ResourceRef},
-	Column1 = #characteristic{name = "prefix", value = Prefix},
-	Column2 = #characteristic{name = "value", value = Value},
-	#resource{name = Name,
-			description = "Dynamic prefix table row",
-			category = "PrefixRow",
-			version = "1.0",
-			related = #{"contained" => ResourceRel},
+	Column1 = #characteristic{name = <<"prefix">>, value = PrefixB},
+	Column2 = #characteristic{name = <<"value">>, value = ValueB},
+	#resource{name = NameB,
+			description = <<"Dynamic prefix table row">>,
+			category = <<"PrefixRow">>,
+			version = <<"1.0">>,
+			related = #{<<"contained">> => ResourceRel},
 			specification = SpecRef,
-			characteristic = #{"prefix" => Column1, "value" => Column2}}.
+			characteristic = #{<<"prefix">> => Column1, <<"value">> => Column2}}.
 
-dynamic_range_table(Name, TableSpec) ->
+dynamic_range_table(Name, TableSpec)
+		when is_list(Name) ->
+	NameB = list_to_binary(Name),
 	SpecRef = #resource_spec_ref{id = TableSpec#resource_spec.id,
 			href = TableSpec#resource_spec.href,
 			name = TableSpec#resource_spec.name},
-	#resource{name = Name,
-			description = "Dynamic prefix range table",
-			category = "RangeTable",
-			version = "1.0",
+	#resource{name = NameB,
+			description = <<"Dynamic prefix range table">>,
+			category = <<"RangeTable">>,
+			version = <<"1.0">>,
 			specification = SpecRef}.
 
-dynamic_range_row(Name, RowSpec, Table, Start, End, Value) ->
+dynamic_range_row(Name, RowSpec, Table, Start, End, Value)
+		when is_list(Name), is_list(Start), is_list(End), is_list(Value)  ->
+	NameB = list_to_binary(Name),
+	StartB = list_to_binary(Start),
+	EndB = list_to_binary(End),
+	ValueB = list_to_binary(Value),
 	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
 			href = RowSpec#resource_spec.href,
 			name = RowSpec#resource_spec.name},
 	ResourceRef = #resource_ref{id = Table#resource.id,
 			href = Table#resource.href,
 			name = Table#resource.name},
-	ResourceRel = #resource_rel{rel_type = "contained",
+	ResourceRel = #resource_rel{rel_type = <<"contained">>,
 			resource = ResourceRef},
-	Column1 = #characteristic{name = "start", value = Start},
-	Column2 = #characteristic{name = "end", value = End},
-	Column3 = #characteristic{name = "value", value = Value},
-	#resource{name = Name,
-			description = "Dynamic prefix range table row",
-			category = "RangeRow",
-			version = "1.0",
-			related = #{"contained" => ResourceRel},
+	Column1 = #characteristic{name = <<"start">>, value = StartB},
+	Column2 = #characteristic{name = <<"end">>, value = EndB},
+	Column3 = #characteristic{name = <<"value">>, value = ValueB},
+	#resource{name = NameB,
+			description = <<"Dynamic prefix range table row">>,
+			category = <<"RangeRow">>,
+			version = <<"1.0">>,
+			related = #{<<"contained">> => ResourceRel},
 			specification = SpecRef,
-			characteristic = #{"start" => Column1,
-					"end" => Column2, "value" => Column3}}.
+			characteristic = #{<<"start">> => Column1,
+					<<"end">> => Column2, <<"value">> => Column3}}.
 
 new_index_table(Name, Options) when is_list(Name) ->
 	case mnesia:create_table(list_to_atom(Name), Options) of
