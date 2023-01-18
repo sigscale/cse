@@ -1,5 +1,7 @@
 2023-01-18  Vance Shipley <vances@sigscale.org>
 
+	* include cse_mib module in application specification
+	* handle error return from snmpa send notification
 	* refactor diameter service fsm to handle all events
 	* include visited plmn in ps test cases
 	* accept http requests for problem detail content (rfc7807)
