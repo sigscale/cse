@@ -154,7 +154,7 @@ started(info = _EventType,
 			state => State},
 	Metadata = #{report_cb => F},
 	?LOG_WARNING(Report, Metadata),
-	ok = send_notification(State, OriginHost, Alarms),
+	send_notification(State, OriginHost, Alarms),
 	keep_state_and_data;
 started(info, #diameter_event{service = Service,
 				info = {reconnect, _Ref, _Opts}},
@@ -250,7 +250,7 @@ send_notification1(Notification, false = NotifyName, Varbinds) ->
 			Notification, no_receiver, Varbinds) of
 		ok ->
 			ok;
-		{'EXIT', Reason} ->
+		{Error, Reason} when Error == error; Error == 'EXIT' ->
 			error_logger:info_report(["SNMP Notification send faliure",
 					{notification, Notification}, {notify_name, NotifyName},
 					{error, Reason}])
@@ -260,7 +260,7 @@ send_notification1(Notification, {notify_name, NotifyName}, Varbinds) ->
 			Notification, no_receiver, NotifyName, Varbinds) of
 		ok ->
 			ok;
-		{'EXIT', Reason} ->
+		{Error, Reason} when Error == error; Error == 'EXIT' ->
 			error_logger:info_report(["SNMP Notification send faliure",
 					{notification, Notification}, {notify_name, NotifyName},
 					{error, Reason}])
