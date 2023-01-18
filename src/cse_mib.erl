@@ -225,7 +225,7 @@ dcca_peer_info_get_next(Index, Columns, First) ->
 							end,
 							try
 								 lists:reverse(lists:foldl(F1, [], Columns))
-							catch	
+							catch
 								{genError, N} ->
 									{genError, N}
 							end;
