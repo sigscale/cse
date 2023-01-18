@@ -1,7 +1,18 @@
+2023-01-18  Vance Shipley <vances@sigscale.org>
+
+	* refactor diameter service fsm to handle all events
+	* include visited plmn in ps test cases
+	* accept http requests for problem detail content (rfc7807)
+	* visited plmn in service rating of nrf for ps
+	* typespec correction
+	* sync upstream changes to nrf schema
+	* url uses uri_string type specification
+	* improve type specification for body in http log
+
 2023-01-10  Vance Shipley <vances@sigscale.org>
 
 	* log nrf transaction in rating log for sms
-	* log nrf transaction in rating log for sms
+	* log nrf transaction in rating log for mms
 	* test cases for ps diameter scur
 	* log nrf transaction in rating log for ps
 	* include client in rating log; omit empty client/server
