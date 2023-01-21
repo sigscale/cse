@@ -59,7 +59,7 @@ init([Sup] = _Args) ->
 init1(Sup, Name, Callback)
 		when is_atom(Name), Name /= undefined,
 		((is_atom(Callback) and (Callback /= undefined))
-		or (element(1, Callback) == tcap_tco_cb)) ->
+		orelse (element(1, Callback) == tcap_tco_cb)) ->
 	{ok, TcoArgs} = application:get_env(tsl_args),
 	{ok, Options} = application:get_env(tsl_opts),
 	case tcap:start_tsl({local, Name}, Callback, [Sup | TcoArgs], Options) of
