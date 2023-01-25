@@ -383,37 +383,31 @@ service_options(Options) ->
 				| {connect, [diameter:transport_opt()]}.
 %% @doc Returns options for a DIAMETER transport layer.
 %% @hidden
-transport_options(Address, Port, {listen, Options}) ->
-	Options1 = case lists:keymember(transport_module, 1, Options) of
+transport_options(Address, Port, {Role, TOptions}) ->
+	TOptions1 = case lists:keymember(transport_module, 1, TOptions) of
 		true ->
-			Options;
+			TOptions;
 		false ->
-			[{transport_module, diameter_tcp} | Options]
+			[{transport_module, diameter_tcp} | TOptions]
 	end,
-	case lists:keytake(transport_config, 1, Options1) of
-		{value, {_, Opts}, Options2} ->
-			Opts1 = lists:keystore(reuseaddr, 1, Opts, {reuseaddr, true}),
-			Opts2 = lists:keystore(ip, 1, Opts1, {ip, Address}),
-			Opts3 = lists:keystore(port, 1, Opts2, {port, Port}),
-			{listen, [{transport_config, Opts3} | Options2]};
+	{Config5, TOptions3} = case lists:keytake(transport_config, 1, TOptions1) of
+		{value, {_, Config1}, TOptions2} ->
+			Config2 = lists:keystore(reuseaddr, 1, Config1, {reuseaddr, true}),
+			Config3 = lists:keystore(port, 1, Config2, {port, Port}),
+			Config4 = lists:usort([{ip, Address} | Config3]),
+			{Config4, TOptions2};
 		false ->
-			Opts = [{reuseaddr, true}, {ip, Address}, {port, Port}],
-			{listen, [{transport_config, Opts} | Options1]}
-	end;
-transport_options(Address, Port, {connect, Options}) ->
-	Options1 = case lists:keymember(transport_module, 1, Options) of
-		true ->
-			Options;
-		false ->
-			[{transport_module, diameter_tcp} | Options]
+			Config1 = [{reuseaddr, true}, {ip, Address}, {port, Port}],
+			{Config1, TOptions1}
 	end,
-	{value, {_, Opts}, Options2} = lists:keytake(transport_config, 1, Options1),
-	true = lists:keymember(raddr, 1, Opts),
-	true = lists:keymember(rport, 1, Opts),
-	Opts1 = lists:keystore(reuseaddr, 1, Opts, {reuseaddr, true}),
-	Opts2 = lists:keystore(ip, 1, Opts1, {ip, Address}),
-	Opts3 = lists:keystore(port, 1, Opts2, {port, Port}),
-	{connect, [{transport_config, Opts3} | Options2]}.
+	transport_options1(Role, Config5, TOptions3).
+%% @hidden
+transport_options1(listen, Config, TOptions) ->
+	{listen, [{transport_config, Config} | TOptions]};
+transport_options1(connect, Config, TOptions) ->
+	true = lists:keymember(raddr, 1, Config),
+	true = lists:keymember(rport, 1, Config),
+	{connect, [{transport_config, Config} | TOptions]}.
 
 -spec split_options(Options) -> Result
 	when
