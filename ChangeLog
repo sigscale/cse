@@ -1,3 +1,7 @@
+2023-01-25  Vance Shipley <vances@sigscale.org>
+
+	* handle multiple ip address options in diameter transport
+
 2023-01-24  Vance Shipley <vances@sigscale.org>
 
 	* short circuit guard required in tco sup
