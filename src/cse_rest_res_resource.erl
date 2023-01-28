@@ -319,7 +319,7 @@ query_filter(MFA, Codec, Query, Filters, Headers) ->
 	end.
 
 %% @hidden
-query_page(Codec, PageServer, Etag, Query, _Filters, Start, End) ->
+query_page(Codec, PageServer, Etag, _Query, _Filters, Start, End) ->
 	case gen_server:call(PageServer, {Start, End}) of
 		{error, Status} ->
 			{error, Status};

@@ -27,18 +27,20 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([wait_for_start/3, started/3, wait_for_stop/3]).
+-export([wait_for_start/3, started/3]).
 
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 -include_lib("kernel/include/inet.hrl").
+-include_lib("kernel/include/logger.hrl").
 
--type state() :: wait_for_start | started | wait_for_stop.
--type statedata() :: #{transport_ref =>  undefined | reference(),
-		address => inet:ip_address(),
-		port => inet:port_number(),
-		options => list(),
-		alarms => list()}.
+-type state() :: wait_for_start | started.
+-type statedata() :: #{transport_ref :=  undefined | reference(),
+		address := inet:ip_address(),
+		port := inet:port_number(),
+		options := list(),
+		backoff := pos_integer(),
+		alarms := list()}.
 
 -define(DIAMETER_SERVICE(A, P), {cse, A, P}).
 -define(BASE_APPLICATION, cse_diameter_base_application).
@@ -89,8 +91,9 @@ init([Address, Port, Options] = _Args) ->
 			case diameter:add_transport(SvcName, TOptions2) of
 				{ok, Ref} ->
 					{ok, Alarms} = application:get_env(cse, snmp_alarms),
-					Data = #{transport_ref => Ref, address => Address,
-							port => Port, options => Options, alarms => Alarms},
+					Data = #{service => SvcName, transport_ref => Ref,
+							address => Address, port => Port,
+							options => Options, alarms => Alarms},
 					{ok, wait_for_start, Data};
 				{error, Reason} ->
 					{stop, Reason}
@@ -107,15 +110,16 @@ init([Address, Port, Options] = _Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>wait_for_start</em> state.
 %% @private
-wait_for_start(_EventType, null = _EventContent, _Data) ->
-	keep_state_and_data;
-wait_for_start(info, #diameter_event{info = start} = _EventContent, Data) ->
-	{next_state, started, Data};
-wait_for_start(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{stop, noconnection, Data};
-wait_for_start(info, #diameter_event{info = stop, service = Service},
+wait_for_start(info = _EventType,
+		#diameter_event{service = Service, info = start} = _EventContent,
 		#{service := Service} = Data) ->
-	{stop, stop, Data}.
+	{next_state, started, Data};
+wait_for_start(info,
+		#diameter_event{service = Service, info = stop},
+		#{service := Service} = Data) ->
+	{stop, stop, Data};
+wait_for_start(info, {'EXIT', _Pid, Reason}, Data) ->
+	{stop, Reason, Data}.
 
 -spec started(EventType, EventContent, Data) -> Result
 	when
@@ -125,72 +129,91 @@ wait_for_start(info, #diameter_event{info = stop, service = Service},
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>started</em> state.
 %% @private
-started(_EventType, null = _EventContent, _Data) ->
+started(info = _EventType,
+		#diameter_event{service = Service, info = Info},
+		#{alarms := Alarms, service := Service} = _Data)
+		when element(1, Info) == up; element(1, Info) == down ->
+	{_, #diameter_caps{origin_host = {_, OH}}} = element(3, Info),
+	OriginHost = binary_to_list(OH),
+	State = element(1, Info),
+	F = fun(R, #{single_line := false}) ->
+				Format = "    ~s~n    service: ~w~n"
+						"    peer: ~s~n    state: ~w~n",
+				Args = [maps:get(title, R), maps:get(service, R),
+						maps:get(peer, R), maps:get(state, R)],
+				io_lib:fwrite(Format, Args);
+			(R, #{single_line := true}) ->
+				Format = "~s: service:~w, peer:~s, state:~w",
+				Args = [maps:get(title, R), maps:get(service, R),
+						maps:get(peer, R), maps:get(state, R)],
+				io_lib:fwrite(Format, Args)
+	end,
+	Report = #{module => ?MODULE,
+			title => "DIAMETER peer connection state changed",
+			service => Service, peer => OriginHost,
+			state => State},
+	Metadata = #{report_cb => F},
+	?LOG_WARNING(Report, Metadata),
+	send_notification(State, OriginHost, Alarms),
 	keep_state_and_data;
-started(info, #diameter_event{info = Event, service = Service},
-		#{alarms := Alarms} = Data) when element(1, Event) == up;
-		element(1, Event) == down ->
-	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
-	Peer = binary_to_list(P),
-	error_logger:info_report(["DIAMETER peer connection state changed",
-			{service, Service}, {event, element(1, Event)},
-			{peer, Peer}]),
-	ok = send_notification(element(1, Event), Peer, Alarms),
-	{next_state, started, Data};
-started(info, #diameter_event{info = Event, service = Service},
-		Data) when element(1, Event) == closed ->
-	{_CER, _Caps, #diameter_caps{origin_host = {_, Peer}}, _Packet} = element(3, Event),
-	error_logger:info_report(["DIAMETER peer connection state changed",
-			{service, Service}, {event, element(1, Event)},
-			{peer, binary_to_list(Peer)}]),
-	{stop, stop, Data};
-started(info, #diameter_event{info = {watchdog,
-			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
-	{next_state, started, Data};
-started(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{stop, noconnection, Data};
-started(info, #diameter_event{info = stop, service = Service},
-		#{service := Service} = Data) ->
-	{stop, stop, Data};
-started(info, #diameter_event{info = Event, service = Service},
-		Data) ->
-	error_logger:info_report(["DIAMETER event",
-			{service, Service}, {event, Event}]),
-	{next_state, started, Data}.
-
--spec wait_for_stop(EventType, EventContent, Data) -> Result
-	when
-		EventType :: gen_statem:event_type(),
-		EventContent :: term(),
-		Data :: statedata(),
-		Result :: gen_statem:event_handler_result(state()).
-%% @doc Handles events received in the <em>wait_for_stop</em> state.
-%% @private
-wait_for_stop(_EventType, null = _EventContent, _Data) ->
+started(info, #diameter_event{service = Service,
+				info = {reconnect, _Ref, _Opts}},
+		#{service := Service} = _Data) ->
 	keep_state_and_data;
-wait_for_stop(info, #diameter_event{info = Event, service = Service},
-		#{alarms := Alarms} = Data) when element(1, Event) == up;
-		element(1, Event) == down ->
-	{_PeerRef, #diameter_caps{origin_host = {_, P}}} = element(3, Event),
-	Peer = binary_to_list(P),
-	error_logger:info_report(["DIAMETER peer connection state changed",
-			{service, Service}, {event, element(1, Event)},
-			{peer, Peer}]),
-	ok = send_notification(element(1, Event), Peer, Alarms),
-	{next_state, started, Data};
-wait_for_stop(info, #diameter_event{info = {watchdog,
-			_Ref, _PeerRef, {_From, _To}, _Config}}, Data) ->
-	{next_state, shutdown, Data};
-wait_for_stop(info, #diameter_event{info = Event, service = Service},
+started(info, #diameter_event{service = Service,
+				info = {closed, _Ref,
+						{'CER', _ResultCode, _Caps, _Pkt},
+						_Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info,
+		#diameter_event{service = Service,
+				info = {closed, _Ref,
+						{'CER', _Caps, {_ResultCode, _Pkt}},
+						_Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info,
+		#diameter_event{service = Service,
+				info = {closed, _Ref,
+						{'CER', timeout},
+						_Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info = _EventType,
+		#diameter_event{service = Service,
+				info = {closed, _Ref,
+						{'CEA', _Result, _Caps, _Pkt},
+						_Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info = _EventType,
+		#diameter_event{service = Service,
+				info = {closed, _Ref,
+						{'CEA', _Caps, _Pkt},
+						_Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info = _EventType,
+		#diameter_event{service = Service,
+				info = {closed, _Ref,
+						{'CEA', timeout},
+						_Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info, #diameter_event{service = Service,
+				info = {watchdog, _Ref, _PeerRef, {_From, _To}, _Config}},
+		#{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info, #diameter_event{service = Service,
+				info = _Other}, #{service := Service} = _Data) ->
+	keep_state_and_data;
+started(info, #diameter_event{service = Service,
+				 info = stop},
 		#{service := Service} = Data) ->
-	error_logger:info_report(["DIAMETER event",
-			{service, Service}, {event, Event}]),
-	{next_state, shutdown, Data};
-wait_for_stop(info, {'EXIT', _Pid, noconnection}, Data) ->
-	{stop, noconnection, Data};
-wait_for_stop(info, #diameter_event{info = stop, service = Service},
-		#{service := Service} = Data) ->
-	{stop, stop, Data}.
+	{stop, stop, Data};
+started(info, {'EXIT', _Pid, Reason}, Data) ->
+	{stop, Reason, Data}.
 
 -spec send_notification(Event, Peer, AlarmList) -> ok
 	when
@@ -227,7 +250,7 @@ send_notification1(Notification, false = NotifyName, Varbinds) ->
 			Notification, no_receiver, Varbinds) of
 		ok ->
 			ok;
-		{'EXIT', Reason} ->
+		{Error, Reason} when Error == error; Error == 'EXIT' ->
 			error_logger:info_report(["SNMP Notification send faliure",
 					{notification, Notification}, {notify_name, NotifyName},
 					{error, Reason}])
@@ -237,7 +260,7 @@ send_notification1(Notification, {notify_name, NotifyName}, Varbinds) ->
 			Notification, no_receiver, NotifyName, Varbinds) of
 		ok ->
 			ok;
-		{'EXIT', Reason} ->
+		{Error, Reason} when Error == error; Error == 'EXIT' ->
 			error_logger:info_report(["SNMP Notification send faliure",
 					{notification, Notification}, {notify_name, NotifyName},
 					{error, Reason}])
@@ -360,37 +383,31 @@ service_options(Options) ->
 				| {connect, [diameter:transport_opt()]}.
 %% @doc Returns options for a DIAMETER transport layer.
 %% @hidden
-transport_options(Address, Port, {listen, Options}) ->
-	Options1 = case lists:keymember(transport_module, 1, Options) of
+transport_options(Address, Port, {Role, TOptions}) ->
+	TOptions1 = case lists:keymember(transport_module, 1, TOptions) of
 		true ->
-			Options;
+			TOptions;
 		false ->
-			[{transport_module, diameter_tcp} | Options]
+			[{transport_module, diameter_tcp} | TOptions]
 	end,
-	case lists:keytake(transport_config, 1, Options1) of
-		{value, {_, Opts}, Options2} ->
-			Opts1 = lists:keystore(reuseaddr, 1, Opts, {reuseaddr, true}),
-			Opts2 = lists:keystore(ip, 1, Opts1, {ip, Address}),
-			Opts3 = lists:keystore(port, 1, Opts2, {port, Port}),
-			{listen, [{transport_config, Opts3} | Options2]};
+	{Config5, TOptions3} = case lists:keytake(transport_config, 1, TOptions1) of
+		{value, {_, Config1}, TOptions2} ->
+			Config2 = lists:keystore(reuseaddr, 1, Config1, {reuseaddr, true}),
+			Config3 = lists:keystore(port, 1, Config2, {port, Port}),
+			Config4 = lists:usort([{ip, Address} | Config3]),
+			{Config4, TOptions2};
 		false ->
-			Opts = [{reuseaddr, true}, {ip, Address}, {port, Port}],
-			{listen, [{transport_config, Opts} | Options1]}
-	end;
-transport_options(Address, Port, {connect, Options}) ->
-	Options1 = case lists:keymember(transport_module, 1, Options) of
-		true ->
-			Options;
-		false ->
-			[{transport_module, diameter_tcp} | Options]
+			Config1 = [{reuseaddr, true}, {ip, Address}, {port, Port}],
+			{Config1, TOptions1}
 	end,
-	{value, {_, Opts}, Options2} = lists:keytake(transport_config, 1, Options1),
-	true = lists:keymember(raddr, 1, Opts),
-	true = lists:keymember(rport, 1, Opts),
-	Opts1 = lists:keystore(reuseaddr, 1, Opts, {reuseaddr, true}),
-	Opts2 = lists:keystore(ip, 1, Opts1, {ip, Address}),
-	Opts3 = lists:keystore(port, 1, Opts2, {port, Port}),
-	{connect, [{transport_config, Opts3} | Options2]}.
+	transport_options1(Role, Config5, TOptions3).
+%% @hidden
+transport_options1(listen, Config, TOptions) ->
+	{listen, [{transport_config, Config} | TOptions]};
+transport_options1(connect, Config, TOptions) ->
+	true = lists:keymember(raddr, 1, Config),
+	true = lists:keymember(rport, 1, Config),
+	{connect, [{transport_config, Config} | TOptions]}.
 
 -spec split_options(Options) -> Result
 	when

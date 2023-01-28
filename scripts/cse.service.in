@@ -1,5 +1,5 @@
 [Unit]
-Description="Custom Service Environment (CSE)"
+Description=Custom Service Environment (CSE)
 Documentation="https://github.com/sigscale/cse"
 After=epmd.service epmd.socket
 
