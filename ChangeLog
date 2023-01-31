@@ -1,3 +1,9 @@
+2023-01-31  Vance Shipley <vances@sigscale.org>
+
+	* no module in bif calls
+	* remove quotes in systemd service description
+	* store only binary strings in tables
+
 2023-01-25  Vance Shipley <vances@sigscale.org>
 
 	* handle multiple ip address options in diameter transport
