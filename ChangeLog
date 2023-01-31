@@ -1,5 +1,6 @@
 2023-01-31  Vance Shipley <vances@sigscale.org>
 
+	* switch the rest resource module private api to binary
 	* no module in bif calls
 	* remove quotes in systemd service description
 	* store only binary strings in tables
