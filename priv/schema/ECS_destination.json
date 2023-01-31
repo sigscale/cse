@@ -1,0 +1,17 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "http://sigscale.org/schema/ECS_destination.json",
+	"title": "Elastic Common Schema (ECS) Destination",
+	"description": "Destination fields capture details about the receiver of a network exchange/packet. These fields are populated from a network event, packet, or other event containing details of a network transaction.",
+	"type": "object",
+	"properties": {
+		"subdomain": {
+			"description": "The subdomain portion of a fully qualified domain name includes all of the names except the host name under the registered_domain.",
+			"type": "string",
+			"format": "hostname",
+			"examples": [
+				"mnc001.mcc001.3gppnetwork.org"
+			]
+		}
+	}
+}

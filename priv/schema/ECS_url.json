@@ -1,0 +1,60 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "http://sigscale.org/schema/ECS_url.json",
+	"title": "Elastic Common Schema (ECS) URL",
+	"description": "Uniform Resource Locator (URL) fields.",
+	"type": "object",
+	"properties": {
+		"scheme": {
+			"description": "Scheme part of the URL.",
+			"type": "string",
+			"examples": [
+				"http",
+				"https"
+			]
+		},
+		"domain": {
+			"description": "Hostname part of the URL.",
+			"type": "string",
+			"format": "hostname",
+			"examples": [
+				"example.net"
+			]
+		},
+		"port": {
+			"description": "Port number part of the URL.",
+			"type": "string",
+			"examples": [
+				"8080"
+			]
+		},
+		"path": {
+			"description": "Path part of the URL.",
+			"type": "string",
+			"examples": [
+				"/resourceInventoryManagement/v4/resource"
+			]
+		},
+		"query": {
+			"description": "Query part of the URL.",
+			"type": "string",
+			"examples": [
+				"resourceSpecification.id=42"
+			]
+		},
+		"fragment": {
+			"description": "Fragment part of the URL.",
+			"type": "string",
+			"examples": [
+				"name"
+			]
+		},
+		"username": {
+			"description": "Username part of the URL.",
+			"type": "string",
+			"examples": [
+				"stephen"
+			]
+		}
+	}
+}

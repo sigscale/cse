@@ -1,0 +1,96 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "http://sigscale.org/schema/ECS_rating.json",
+	"title": "Elastic Log for Prepaid Rating"
+	"description": "Elastic Stack log format for prepaid service on the Re interface with SigScale CSE",
+	"type": "object",
+	"allOf": [
+		{
+			"$ref": "/schema/ECS_base.json"
+		},
+		{
+			"$ref": "/schema/ECS_ecs.json"
+		},
+		{
+			"$ref": "/schema/ECS_service.json"
+		},
+		{
+			"$ref": "/schema/ECS_network.json"
+		},
+		{
+			"$ref": "/schema/ECS_user.json"
+		},
+		{
+			"$ref": "/schema/ECS_event.json"
+		},
+		{
+			"$ref": "/schema/ECS_url.json"
+		},
+		{
+			"$ref": "/schema/ECS_http.json"
+		}
+	],
+	"examples": [
+		{
+			"@timestamp": "2023-01-31T13:27:01.623Z",
+			"labels": {
+				"application": "sigscale-cse"
+			},
+			"tags": [],
+			"ecs": {
+				"version": "8.5"
+			},
+			"service": {
+				"name": "Prepaid Voice",
+				"type": "slp",
+				"node": {
+					"name": "cse@build-focal"
+				}
+			},
+			"network": {
+				"application": "nrf",
+				"protocol": "http"
+			},
+			"user": {
+				"name": "msisdn-62168902651",
+				"id": "imsi-0010019609545793"
+			},
+			"event": {
+				"start": "2023-01-31T13:27:01.623Z",
+				"stop": "2023-01-31T13:27:01.625Z",
+				"duration": "2000000",
+				"kind": "event",
+				"category": "session",
+				"type": [
+					"protocol"
+				],
+				"outcome": "success"
+			},
+			"url":{
+				"scheme": "http",
+				"path": "/ratingdata",
+				"port": 44169,
+				"domain": "localhost"
+			},
+			"http":	{
+				"version": "HTTP/1.1",
+				"mime_type": "application/json",
+				"request": {
+					"method": "post",
+					"body": {
+						"content": "\"{\\\"subscriptionId\\\":[\\\"imsi-0010019609545793\\\",\\\"msisdn-62168902651\\\"],\\\"serviceRating\\\":[{\\\"serviceId\\\":18,\\\"serviceContextId\\\":\\\"32260@3gpp.org\\\",\\\"requestSubType\\\":\\\"RESERVE\\\",\\\"ratingGroup\\\":196}],\\\"nfConsumerIdentification\\\":{\\\"nodeFunctionality\\\":\\\"OCF\\\"},\\\"invocationTimeStamp\\\":\\\"2023-01-31T13:27:01.623Z\\\",\\\"invocationSequenceNumber\\\":1}\"",
+						"bytes": 314
+					}
+				},
+				"response": {
+					"status_code": 201,
+					"mime_type": "application/json",
+					"body": {
+						"content": "\"{\\\"serviceRating\\\":[{\\\"serviceId\\\":18,\\\"serviceContextId\\\":\\\"32260@3gpp.org\\\",\\\"resultCode\\\":\\\"SUCCESS\\\",\\\"requestSubType\\\":\\\"RESERVE\\\",\\\"ratingGroup\\\":196,\\\"grantedUnit\\\":{\\\"time\\\":150}}],\\\"invocationTimeStamp\\\":\\\"2023-01-31T13:27:01.624Z\\\",\\\"invocationSequenceNumber\\\":1}\"",
+						"bytes": 245
+					}
+				}
+			}
+		}
+	]
+}

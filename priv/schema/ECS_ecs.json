@@ -1,0 +1,28 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "http://sigscale.org/schema/ECS_ecs.json",
+	"title": "Elastic Common Schema (ECS) ECS",
+	"description": "Meta-information specific to ECS.",
+	"type": "object",
+	"properties": {
+		"ecs": {
+			"type": "object",
+			"properties": {
+				"version": {
+					"description": "ECS version this event conforms to.",
+					"type": "string",
+					"enum": [
+						"8.5",
+						"8.6"
+					]
+				}
+			},
+			"required": [
+				"version"
+			]
+		}
+	},
+	"required": [
+		"ecs"
+	]
+}
