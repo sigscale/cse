@@ -191,13 +191,13 @@ resource_spec_retrieve_static() ->
 resource_spec_retrieve_static(Config) ->
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableId = binary_to_list(cse_rest_res_resource:prefix_table_spec_id()),
 	Request1 = {Host ++ ?specPath ++ TableId, [Accept]},
 	{ok, Result1} = httpc:request(get, Request1, [], []),
 	{{"HTTP/1.1", 200, _}, Headers1, Body1} = Result1,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers1),
 	{ok, TableSpec} = zj:decode(Body1),
-	RowId = cse_rest_res_resource:prefix_row_spec_id(),
+	RowId = binary_to_list(cse_rest_res_resource:prefix_row_spec_id()),
 	Request2 = {Host ++ ?specPath ++ RowId, [Accept]},
 	{ok, Result2} = httpc:request(get, Request2, [], []),
 	{{"HTTP/1.1", 200, _}, Headers2, Body2} = Result2,
@@ -234,7 +234,7 @@ resource_spec_delete_static() ->
 resource_spec_delete_static(Config) ->
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	TableId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableId = binary_to_list(cse_rest_res_resource:prefix_table_spec_id()),
 	Request = {Host ++ ?specPath ++ TableId, [Accept]},
 	{ok, Result} = httpc:request(delete, Request, [], []),
 	{{"HTTP/1.1", 405, _BadRequest}, _Headers, _Body} = Result.
@@ -454,7 +454,7 @@ query_resource(Config) ->
 	ok = Fill(TotalRows, Table2),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
+	SpecId = binary_to_list(cse_rest_res_resource:prefix_row_spec_id()),
 	Accept = {"accept", "application/json"},
 	Filter = "resourceRelationship[?(@.relationshipType=='contained'"
 			"&&@.resource.name=='" ++ TableName1 ++ "')]",
@@ -488,7 +488,7 @@ delete_static_table_resource() ->
 delete_static_table_resource(Config) ->
 	TableName = "samplePrefixTable",
 	ok = cse_gtt:new(TableName, []),
-	TableSpecId = cse_rest_res_resource:prefix_table_spec_id(),
+	TableSpecId = binary_to_list(cse_rest_res_resource:prefix_table_spec_id()),
 	TableRes = #resource{name = list_to_binary(TableName),
 			description = iolist_to_binary([TableName, " prefix table"]),
 			specification = #resource_spec_ref{id = list_to_binary(TableSpecId),
@@ -796,7 +796,7 @@ is_resource_char(_) ->
 static_index_table(Name)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	SpecId = list_to_binary(cse_rest_res_resource:index_table_spec_id()),
+	SpecId = cse_rest_res_resource:index_table_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
 			href = iolist_to_binary([?specPath, SpecId]),
 			name = <<"IndexTable">>},
@@ -821,7 +821,7 @@ dynamic_index_table(Name, TableSpec)
 static_prefix_table(Name)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	SpecId = list_to_binary(cse_rest_res_resource:prefix_table_spec_id()),
+	SpecId = cse_rest_res_resource:prefix_table_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
 			href = iolist_to_binary([?specPath, SpecId]),
 			name = <<"PrefixTable">>},
@@ -846,7 +846,7 @@ dynamic_prefix_table(Name, TableSpec)
 static_range_table(Name)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	SpecId = list_to_binary(cse_rest_res_resource:prefix_range_table_spec_id()),
+	SpecId = cse_rest_res_resource:prefix_range_table_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
 			href = iolist_to_binary([?specPath, SpecId]),
 			name = <<"PrefixRangeTable">>},
@@ -861,7 +861,7 @@ static_index_row(Name, Table, Key, Value)
 	NameB = list_to_binary(Name),
 	KeyB = list_to_binary(Key),
 	ValueB = list_to_binary(Value),
-	SpecId = list_to_binary(cse_rest_res_resource:index_row_spec_id()),
+	SpecId = cse_rest_res_resource:index_row_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
 			href = iolist_to_binary([?specPath, SpecId]),
 			name = <<"IndexRow">>},
@@ -908,7 +908,7 @@ static_prefix_row(Name, Table, Prefix, Value)
 	NameB = list_to_binary(Name),
 	PrefixB = list_to_binary(Prefix),
 	ValueB = list_to_binary(Value),
-	SpecId = list_to_binary(cse_rest_res_resource:prefix_row_spec_id()),
+	SpecId = cse_rest_res_resource:prefix_row_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
 			href = iolist_to_binary([?specPath, SpecId]),
 			name = <<"PrefixRow">>},
@@ -956,7 +956,7 @@ static_range_row(Name, Table, Start, End, Value)
 	StartB = list_to_binary(Start),
 	EndB = list_to_binary(End),
 	ValueB = list_to_binary(Value),
-	SpecId = list_to_binary(cse_rest_res_resource:prefix_range_row_spec_id()),
+	SpecId = cse_rest_res_resource:prefix_range_row_spec_id(),
 	SpecRef = #resource_spec_ref{id = SpecId,
 			href = iolist_to_binary([?specPath, SpecId]),
 			name = <<"PrefixRangeRow">>},
@@ -980,7 +980,7 @@ static_range_row(Name, Table, Start, End, Value)
 dynamic_index_table_spec(Name)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	TableId = list_to_binary(cse_rest_res_resource:index_table_spec_id()),
+	TableId = cse_rest_res_resource:index_table_spec_id(),
 	SpecRel = #resource_spec_rel{id = TableId,
 			href = iolist_to_binary([?specPath, TableId]),
 			name = <<"IndexTable">>,
@@ -994,7 +994,7 @@ dynamic_index_table_spec(Name)
 dynamic_index_row_spec(Name, TableSpec)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	StaticRowId = list_to_binary(cse_rest_res_resource:index_row_spec_id()),
+	StaticRowId = cse_rest_res_resource:index_row_spec_id(),
 	SpecRel1 = #resource_spec_rel{id = StaticRowId,
 			href = iolist_to_binary([?specPath, StaticRowId]),
 			name = <<"IndexRow">>,
@@ -1017,7 +1017,7 @@ dynamic_index_row_spec(Name, TableSpec)
 dynamic_prefix_table_spec(Name)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	TableId = list_to_binary(cse_rest_res_resource:prefix_table_spec_id()),
+	TableId = cse_rest_res_resource:prefix_table_spec_id(),
 	SpecRel = #resource_spec_rel{id = TableId,
 			href = iolist_to_binary([?specPath, TableId]),
 			name = <<"PrefixTable">>,
@@ -1031,7 +1031,7 @@ dynamic_prefix_table_spec(Name)
 dynamic_prefix_row_spec(Name, TableSpec)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
-	StaticRowId = list_to_binary(cse_rest_res_resource:prefix_row_spec_id()),
+	StaticRowId = cse_rest_res_resource:prefix_row_spec_id(),
 	SpecRel1 = #resource_spec_rel{id = StaticRowId,
 			href = iolist_to_binary([?specPath, StaticRowId]),
 			name = <<"PrefixRow">>,

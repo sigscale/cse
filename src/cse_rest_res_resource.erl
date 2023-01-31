@@ -461,51 +461,51 @@ delete_resource_result({error, _Reason}) ->
 
 -spec index_table_spec_id() -> SpecId
 	when
-		SpecId :: string().
+		SpecId :: binary().
 %% @doc Get the identifier of the index table Resource Specification.
 %% @private
 index_table_spec_id() ->
-	binary_to_list(?INDEX_TABLE_SPEC).
+	?INDEX_TABLE_SPEC.
 
 -spec index_row_spec_id() -> SpecId
 	when
-		SpecId :: string().
+		SpecId :: binary().
 %% @doc Get the identifier of the index table row Resource Specification.
 %% @private
 index_row_spec_id() ->
-	binary_to_list(?INDEX_ROW_SPEC).
+	?INDEX_ROW_SPEC.
 
 -spec prefix_table_spec_id() -> SpecId
 	when
-		SpecId :: string().
+		SpecId :: binary().
 %% @doc Get the identifier of the prefix table Resource Specification.
 %% @private
 prefix_table_spec_id() ->
-	binary_to_list(?PREFIX_TABLE_SPEC).
+	?PREFIX_TABLE_SPEC.
 
 -spec prefix_row_spec_id() -> SpecId
 	when
-		SpecId :: string().
+		SpecId :: binary().
 %% @doc Get the identifier of the prefix table row Resource Specification.
 %% @private
 prefix_row_spec_id() ->
-	binary_to_list(?PREFIX_ROW_SPEC).
+	?PREFIX_ROW_SPEC.
 
 -spec prefix_range_table_spec_id() -> SpecId
 	when
-		SpecId :: string().
+		SpecId :: binary().
 %% @doc Get the identifier of the prefix range table Resource Specification.
 %% @private
 prefix_range_table_spec_id() ->
-	binary_to_list(?RANGE_TABLE_SPEC).
+	?RANGE_TABLE_SPEC.
 
 -spec prefix_range_row_spec_id() -> SpecId
 	when
-		SpecId :: string().
+		SpecId :: binary().
 %% @doc Get the identifier of the prefix range table row Resource Specification.
 %% @private
 prefix_range_row_spec_id() ->
-	binary_to_list(?RANGE_ROW_SPEC).
+	?RANGE_ROW_SPEC.
 
 -spec static_spec(SpecId) -> Specification
 	when
