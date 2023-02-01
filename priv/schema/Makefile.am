@@ -3,8 +3,8 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-schema_DATA = $(abs_builddir)/resourceInventoryManagement.swagger.json \
-				$(abs_builddir)/resourceCatalogManagement.swagger.json
+schema_DATA = $(abs_builddir)/resourceInventoryManagement.json \
+				$(abs_builddir)/resourceCatalogManagement.json
 
 
 $(abs_builddir)/%.json: $(srcdir)/%.json
@@ -16,9 +16,9 @@ check_DATA = .validation_ok
 
 .validation_ok:
 	@if ajv help > /dev/null 2>&1; then \
-		if ! ajv compile -s resourceInventoryManagement.swagger.json; \
+		if ! ajv compile -s resourceInventoryManagement.json; \
 			then exit 1; fi; \
-		if ! ajv compile -s resourceCatalogManagement.swagger.json; \
+		if ! ajv compile -s resourceCatalogManagement.json; \
 			then exit 1; fi; \
 	else \
 		echo "ajv-cli needed to validate JSON Schema"; \
