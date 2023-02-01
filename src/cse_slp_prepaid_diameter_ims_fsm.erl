@@ -176,7 +176,7 @@ null({call, _From}, #'3gpp_ro_CCR'{
 				'IMS-Information' = [#'3gpp_ro_IMS-Information'{
 						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE']}]}]},
 		Data) ->
-	NewData = Data#{direction => origininating},
+	NewData = Data#{direction => originating},
 	{next_state, authorize_origination_attempt, NewData, postpone};
 null({call, _From}, #'3gpp_ro_CCR'{
 		'Service-Information' = [#'3gpp_ro_Service-Information'{
