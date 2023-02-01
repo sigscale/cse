@@ -8,7 +8,9 @@
 		"user": {
 			"description": "All the user names or other user identifiers seen on the event.",
 			"type": "array",
-			"items": "string",
+			"items": {
+				"type": "string"
+			},
 			"examples": [
 				["msisdn-62168902651", "imsi-0010019609545793"]
 			]

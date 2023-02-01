@@ -31,7 +31,7 @@
 				"mime_type": {
 					"description": "MIME Content-Type of request body.",
 					"type": "string",
-					"exmples": [
+					"examples": [
 						"application/json"
 					]
 				},
@@ -58,7 +58,7 @@
 				"mime_type": {
 					"description": "MIME Content-Type of response body.",
 					"type": "string",
-					"exmples": [
+					"examples": [
 						"application/json"
 					]
 				},

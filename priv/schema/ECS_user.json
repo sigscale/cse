@@ -9,7 +9,7 @@
 			"description": "Unique identifier of the user.",
 			"type": "string",
 			"examples": [
-				"id": "msisdn-62168902651",
+				"msisdn-62168902651",
 				"imsi-0010019609545793"
 			]
 		},
