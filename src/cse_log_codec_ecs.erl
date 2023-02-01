@@ -466,23 +466,23 @@ ecs_service(Name, Type) ->
 			$", "name", $", $:, $", atom_to_list(node()), $", $}],
 	[$", "service", $", $:, ${, Sname, $,, Stype, $,, Snode, $}].
 
--spec ecs_event(Start, Stop, Duration,
+-spec ecs_event(Start, End, Duration,
 		Kind, Category, Type, Outcome) -> iodata()
 	when
 		Start :: string(),
-		Stop :: string(),
+		End:: string(),
 		Duration :: string(),
 		Kind :: string(),
 		Category :: string(),
 		Type :: [string()],
 		Outcome :: string().
 %% @doc Elastic Common Schema (ECS): Event attributes.
-ecs_event(Start, Stop, Duration, Kind, Category, Type, Outcome) ->
+ecs_event(Start, End, Duration, Kind, Category, Type, Outcome) ->
 	Estart = [$", "start", $", $:, $", Start, $"],
-	Estop = [$", "stop", $", $:, $", Stop, $"],
+	Eend = [$", "end", $", $:, $", End, $"],
 	Eduration = [$", "duration", $", $:, $", Duration, $"],
 	Ekind = [$", "kind", $", $:, $", Kind, $"],
-	Ecategory = [$", "category", $", $:, $", Category, $"],
+	Ecategory = [$", "category", $", $:, $", $[, Category, $], $"],
 	Etypes = case Type of
 		[H] ->
 			[$", H, $"];
@@ -492,7 +492,7 @@ ecs_event(Start, Stop, Duration, Kind, Category, Type, Outcome) ->
 	Etype = [$", "type", $", $:, $[, Etypes, $]],
 	Eoutcome  = [$", "outcome", $", $:, $", Outcome, $"],
 	[$", "event", $", $:, ${,
-			Estart, $,, Estop, $,, Eduration, $,,
+			Estart, $,, Eend, $,, Eduration, $,,
 			Ekind, $,, Ecategory, $,, Etype, $,,
 			Eoutcome, $}].
 
