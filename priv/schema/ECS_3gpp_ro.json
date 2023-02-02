@@ -34,49 +34,55 @@
 		},
 		{
 			"properties": {
-				"session_id": {
-					"description": "The value of the DIAMETER 'Session-Id' AVP",
-					"type": "string",
-					"examples": [
-						"938866875.1399848961.1717881736676773;1;cse@build-focal"
-					]
-				},
-				"cc_request_type": {
-					"description": "The value of the DIAMETER 'CC-Request-Type' AVP",
-					"type": "integer",
-					"examples": [
-						1
-					]
-				},
-				"cc_request_number": {
-					"description": "The value of the DIAMETER 'CC-Request-Number' AVP",
-					"type": "integer",
-					"examples": [
-						0
-					]
-				},
-				"service_context_id": {
-					"description": "The value of the DIAMETER 'Service-Context-Id' AVP",
-					"type": "string",
-					"examples": [
-						"32260@3gpp.org"
-					]
-				},
-				"result_code": {
-					"description": "The value of the DIAMETER 'Result-Code' AVP",
-					"type": "integer",
-					"examples": [
-						2001
+				"3gpp_ro": {
+					"description": "3GPP DIAMETER Ro application fields",
+					"type": "object",
+					"properties": {
+						"session_id": {
+							"description": "The value of the DIAMETER 'Session-Id' AVP",
+							"type": "string",
+							"examples": [
+								"938866875.1399848961.1717881736676773;1;cse@build-focal"
+							]
+						},
+						"cc_request_type": {
+							"description": "The value of the DIAMETER 'CC-Request-Type' AVP",
+							"type": "integer",
+							"examples": [
+								1
+							]
+						},
+						"cc_request_number": {
+							"description": "The value of the DIAMETER 'CC-Request-Number' AVP",
+							"type": "integer",
+							"examples": [
+								0
+							]
+						},
+						"service_context_id": {
+							"description": "The value of the DIAMETER 'Service-Context-Id' AVP",
+							"type": "string",
+							"examples": [
+								"32260@3gpp.org"
+							]
+						},
+						"result_code": {
+							"description": "The value of the DIAMETER 'Result-Code' AVP",
+							"type": "integer",
+							"examples": [
+								2001
+							]
+						}
+					},
+					"required": [
+						"session_id",
+						"cc_request_type",
+						"cc_request_number",
+						"service_context_id",
+						"result_code"
 					]
 				}
-			},
-			"required": [
-				"session_id",
-				"cc_request_type",
-				"cc_request_number",
-				"service_context_id",
-				"result_code"
-			]
+			}
 		}
 	],
 	"examples": [

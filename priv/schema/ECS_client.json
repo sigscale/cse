@@ -49,8 +49,5 @@
 				"mtas.ims.mnc001.mcc001.3gppnetwork.org"
 			]
 		}
-	},
-	"required": [
-		"address"
-	]
+	}
 }
