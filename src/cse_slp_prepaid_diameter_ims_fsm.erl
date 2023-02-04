@@ -221,7 +221,7 @@ authorize_origination_attempt({call, From},
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				req_type := RequestType, mscc := MSCC,
 				called := CalledDN} = Data) ->
@@ -233,8 +233,8 @@ authorize_origination_attempt(cast,
 			try
 				NewData1 = NewData#{nrf_location => Location},
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, CalledDN} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', Destination}
@@ -252,9 +252,8 @@ authorize_origination_attempt(cast,
 							{uri, URI}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, authorize_origination_attempt}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					Reply1 = diameter_error(?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+							RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -265,40 +264,35 @@ authorize_origination_attempt(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, authorize_origination_attempt}]),
-			Reply2 = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
-			Actions2 = [{reply, From, Reply2}],
-			{next_state, null, NewData, Actions2}
+			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
+			Actions1 = [{reply, From, Reply1}],
+			{next_state, null, NewData, Actions1}
 	end;
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
@@ -308,18 +302,16 @@ authorize_origination_attempt(cast,
 			{profile, Profile}, {uri, URI}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, authorize_origination_attempt}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_release, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, nrf_release},
@@ -327,33 +319,30 @@ authorize_origination_attempt(cast,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
 			{state, authorize_origination_attempt}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, session_id := SessionId, ohost := OHost,
-				orealm := ORealm, req_type := RequestType,
-				reqno := RequestNum} = Data) ->
+				nrf_uri := URI, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data) ->
 	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, authorize_origination_attempt}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_release, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
@@ -361,9 +350,8 @@ authorize_origination_attempt(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, authorize_origination_attempt}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
 
@@ -442,25 +430,22 @@ terminating_call_handling({call, From},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'CC-Request-Type' = RequestType,
 				'CC-Request-Number' = RequestNum},
-		#{session_id := SessionId, ohost := OHost, orealm := ORealm} = Data)
+		#{session_id := SessionId} = Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
 	NewData = Data#{from => From,
 			reqno => RequestNum, req_type => RequestType},
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 terminating_call_handling(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_start ->
@@ -473,13 +458,11 @@ terminating_call_handling(cast,
 terminating_call_handling(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_start ->
@@ -492,7 +475,7 @@ terminating_call_handling(cast,
 terminating_call_handling(cast,
 		{nrf_start, {RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				req_type := RequestType, mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
@@ -503,8 +486,8 @@ terminating_call_handling(cast,
 			try
 				NewData1 = NewData#{nrf_location => Location},
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_rsu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
@@ -521,9 +504,8 @@ terminating_call_handling(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, terminating_call_handling}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -534,9 +516,8 @@ terminating_call_handling(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, terminating_call_handling}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -544,17 +525,17 @@ terminating_call_handling(cast,
 		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_rsu(MSCC), is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true} ->
@@ -573,9 +554,8 @@ terminating_call_handling(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, terminating_call_handling}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
@@ -586,9 +566,8 @@ terminating_call_handling(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, terminating_call_handling}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end;
@@ -596,17 +575,16 @@ terminating_call_handling(cast,
 		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC, ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{next_state, null, NewData, Actions}
 			catch
@@ -616,9 +594,8 @@ terminating_call_handling(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, terminating_call_handling}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -629,16 +606,15 @@ terminating_call_handling(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, terminating_call_handling}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 terminating_call_handling(cast,
 		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := LogHTTP, session_id := SessionId,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
@@ -648,16 +624,15 @@ terminating_call_handling(cast,
 			{profile, Profile}, {uri, URI}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, terminating_call_handling}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 terminating_call_handling(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -666,9 +641,8 @@ terminating_call_handling(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, terminating_call_handling}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -680,7 +654,7 @@ terminating_call_handling(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -689,9 +663,8 @@ terminating_call_handling(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, terminating_call_handling}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -738,14 +711,12 @@ collect_information({call, From},
 collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -756,14 +727,12 @@ collect_information(cast,
 collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -775,7 +744,7 @@ collect_information(cast,
 		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType, mscc := MSCC,
 				called := CalledDN} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
@@ -784,8 +753,8 @@ collect_information(cast,
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_rsu(MSCC), is_usu(MSCC), CalledDN} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true, _} ->
@@ -805,9 +774,8 @@ collect_information(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, collect_information}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
@@ -818,9 +786,8 @@ collect_information(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, collect_information}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end;
@@ -828,17 +795,17 @@ collect_information(cast,
 		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{next_state, null, NewData, Actions}
 			catch
@@ -848,9 +815,8 @@ collect_information(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, collect_information}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -861,9 +827,8 @@ collect_information(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, collect_information}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -871,9 +836,8 @@ collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType} = Data)
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -882,9 +846,8 @@ collect_information(cast,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
 			{state, collect_information}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -896,7 +859,7 @@ collect_information(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -905,9 +868,8 @@ collect_information(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, collect_information}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -951,14 +913,12 @@ analyse_information({call, From},
 analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -969,14 +929,12 @@ analyse_information(cast,
 analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -988,17 +946,17 @@ analyse_information(cast,
 		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_rsu(MSCC), is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true} ->
@@ -1015,9 +973,8 @@ analyse_information(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, analyse_information}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
@@ -1028,9 +985,8 @@ analyse_information(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, analyse_information}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end;
@@ -1038,17 +994,17 @@ analyse_information(cast,
 		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{next_state, null, NewData, Actions}
 			catch
@@ -1058,9 +1014,8 @@ analyse_information(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, analyse_information}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -1071,9 +1026,8 @@ analyse_information(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, analyse_information}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -1081,9 +1035,8 @@ analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType} = Data)
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -1092,9 +1045,8 @@ analyse_information(cast,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
 			{state, analyse_information}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1106,7 +1058,7 @@ analyse_information(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -1115,9 +1067,8 @@ analyse_information(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, analyse_information}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1161,14 +1112,12 @@ o_alerting({call, From},
 o_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1179,14 +1128,12 @@ o_alerting(cast,
 o_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1198,17 +1145,17 @@ o_alerting(cast,
 		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
@@ -1223,9 +1170,8 @@ o_alerting(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, o_alerting}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
@@ -1236,9 +1182,8 @@ o_alerting(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, o_alerting}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end;
@@ -1246,17 +1191,17 @@ o_alerting(cast,
 		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{next_state, null, NewData, Actions}
 			catch
@@ -1266,9 +1211,8 @@ o_alerting(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, o_alerting}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -1279,9 +1223,8 @@ o_alerting(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, o_alerting}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -1289,9 +1232,8 @@ o_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType} = Data)
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -1300,9 +1242,8 @@ o_alerting(cast,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
 			{state, o_alerting}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1314,7 +1255,7 @@ o_alerting(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -1323,9 +1264,8 @@ o_alerting(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, o_alerting}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1369,14 +1309,12 @@ t_alerting({call, From},
 t_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1387,14 +1325,12 @@ t_alerting(cast,
 t_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1406,17 +1342,17 @@ t_alerting(cast,
 		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
@@ -1431,9 +1367,8 @@ t_alerting(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, t_alerting}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
@@ -1444,9 +1379,8 @@ t_alerting(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, t_alerting}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end;
@@ -1454,17 +1388,17 @@ t_alerting(cast,
 		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{next_state, null, NewData, Actions}
 			catch
@@ -1474,9 +1408,8 @@ t_alerting(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, t_alerting}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -1487,9 +1420,8 @@ t_alerting(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, t_alerting}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -1497,9 +1429,8 @@ t_alerting(cast,
 		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType} = Data)
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -1508,9 +1439,8 @@ t_alerting(cast,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
 			{state, t_alerting}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1522,7 +1452,7 @@ t_alerting(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -1531,9 +1461,8 @@ t_alerting(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, t_alerting}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1577,14 +1506,12 @@ active({call, From},
 active(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1595,14 +1522,12 @@ active(cast,
 active(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(SessionId, ResultCode,
-			OHost, ORealm, RequestType, RequestNum),
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1614,17 +1539,17 @@ active(cast,
 		{nrf_update, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{keep_state, NewData, Actions}
 			catch
@@ -1634,9 +1559,8 @@ active(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, active}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
@@ -1647,9 +1571,8 @@ active(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, active}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end;
@@ -1657,17 +1580,17 @@ active(cast,
 		{nrf_release, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType, mscc := MSCC} = Data) ->
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType,
+				mscc := MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := ServiceRating}} ->
 			try
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(SessionId, NewMSCC, ResultCode, OHost,
-						ORealm, RequestType, RequestNum),
+				Reply = diameter_answer(NewMSCC,
+						ResultCode, RequestType, RequestNum),
 				Actions = [{reply, From, Reply}],
 				{next_state, null, NewData, Actions}
 			catch
@@ -1677,9 +1600,8 @@ active(cast,
 							{uri, URI}, {location, Location}, {slpi, self()},
 							{origin_host, OHost}, {origin_realm, ORealm},
 							{state, active}]),
-					Reply1 = diameter_error(SessionId,
-							?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-							OHost, ORealm, RequestType, RequestNum),
+					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
@@ -1690,9 +1612,8 @@ active(cast,
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
 					{state, active}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -1700,9 +1621,8 @@ active(cast,
 		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, reqno := RequestNum,
-				req_type := RequestType} = Data)
+				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
+				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -1711,9 +1631,8 @@ active(cast,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
 			{state, active}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1725,7 +1644,7 @@ active(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	NewData = remove_nrf(Data),
@@ -1734,9 +1653,8 @@ active(cast,
 			{uri, URI}, {location, Location}, {slpi, self()},
 			{origin_host, OHost}, {origin_realm, ORealm},
 			{state, active}]),
-	Reply = diameter_error(SessionId,
-			?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			OHost, ORealm, RequestType, RequestNum),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
@@ -1860,7 +1778,7 @@ nrf_start1(ServiceRating, Data) ->
 nrf_start2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				session_id := SessionId, ohost := OHost, orealm := ORealm,
+				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	% @todo synchronous start
@@ -1882,18 +1800,16 @@ nrf_start2(Now, JSON,
 					{profile, Profile}, {uri, URI},
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{slpi, self()}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, Data, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm}]),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, Data, Actions}
 	end.
@@ -1922,9 +1838,8 @@ nrf_update1(ServiceRating, Data) ->
 nrf_update2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				nrf_location := Location, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, req_type := RequestType,
-				reqno := RequestNum} = Data)
+				nrf_location := Location, ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
@@ -1946,9 +1861,8 @@ nrf_update2(Now, JSON,
 					{location, Location}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions};
 		{error, Reason} ->
@@ -1957,9 +1871,8 @@ nrf_update2(Now, JSON,
 					{location, Location}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end.
@@ -1988,9 +1901,9 @@ nrf_release1(ServiceRating, Data) ->
 nrf_release2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				nrf_location := Location, session_id := SessionId,
-				ohost := OHost, orealm := ORealm, req_type := RequestType,
-				reqno := RequestNum} = Data)
+				nrf_location := Location, 
+				ohost := OHost, orealm := ORealm,
+				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
@@ -2012,9 +1925,8 @@ nrf_release2(Now, JSON,
 					{location, Location}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Reason} ->
@@ -2023,9 +1935,8 @@ nrf_release2(Now, JSON,
 					{location, Location}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm}]),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = diameter_error(SessionId,
-					?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					OHost, ORealm, RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end.
@@ -2256,46 +2167,32 @@ final_result(_, ?'DIAMETER_BASE_RESULT-CODE_SUCCESS') ->
 final_result(RC, _) ->
 	RC.
 
--spec diameter_answer(SessionId, MSCC, ResultCode,
-		OriginHost, OriginRealm, RequestType, RequestNum) -> Result
+-spec diameter_answer(MSCC, ResultCode, RequestType, RequestNum) -> Result
 	when
-		SessionId :: binary(),
 		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
 		ResultCode :: pos_integer(),
-		OriginHost :: binary(),
-		OriginRealm :: binary(),
 		RequestType :: integer(),
 		RequestNum :: integer(),
 		Result :: #'3gpp_ro_CCA'{}.
 %% @doc Build CCA response.
 %% @hidden
-diameter_answer(SessionId, MSCC, ResultCode,
-		OHost, ORealm, RequestType, RequestNum) ->
-	#'3gpp_ro_CCA'{'Session-Id' = SessionId,
-			'Multiple-Services-Credit-Control' = MSCC,
-			'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+diameter_answer(MSCC, ResultCode, RequestType, RequestNum) ->
+	#'3gpp_ro_CCA'{'Multiple-Services-Credit-Control' = MSCC,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = RequestType,
 			'CC-Request-Number' = RequestNum,
 			'Result-Code' = ResultCode}.
 
--spec diameter_error(SessionId, ResultCode, OriginHost,
-		OriginRealm, RequestType, RequestNum) -> Reply
+-spec diameter_error(ResultCode, RequestType, RequestNum) -> Reply
 	when
-		SessionId :: binary(),
 		ResultCode :: pos_integer(),
-		OriginHost :: binary(),
-		OriginRealm :: binary(),
 		RequestType :: integer(),
 		RequestNum :: integer(),
 		Reply :: #'3gpp_ro_CCA'{}.
 %% @doc Build CCA response indicating an operation failure.
 %% @hidden
-diameter_error(SessionId, ResultCode, OHost,
-		ORealm, RequestType, RequestNum) ->
-	#'3gpp_ro_CCA'{'Session-Id' = SessionId,
-			'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
-			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+diameter_error(ResultCode, RequestType, RequestNum) ->
+	#'3gpp_ro_CCA'{'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Result-Code' = ResultCode,
 			'CC-Request-Type' = RequestType,
 			'CC-Request-Number' = RequestNum}.

@@ -277,8 +277,10 @@ process_request(_IpAddress, _Port,
 					diameter_error(SessionId,
 							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							OHost, ORealm, RequestType, RequestNum);
-				Reply ->
+				#'3gpp_ro_CCA'{} = CCA ->
 					cse:add_session(SessionId, Child),
+					Reply = CCA#'3gpp_ro_CCA'{'Session-Id' = SessionId,
+							'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
 					{reply, Reply}
 			end;
 		{error, Reason} ->
@@ -316,7 +318,9 @@ process_request(_IpAddress, _Port,
 						diameter_error(SessionId,
 								?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 								OHost, ORealm, RequestType, RequestNum);
-					Reply ->
+					#'3gpp_ro_CCA'{} = CCA ->
+						Reply = CCA#'3gpp_ro_CCA'{'Session-Id' = SessionId,
+								'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
 						{reply, Reply}
 				end;
 			{error, Reason1} ->
@@ -357,8 +361,10 @@ process_request(_IpAddress, _Port,
 					diameter_error(SessionId,
 							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							OHost, ORealm, RequestType, RequestNum);
-				Reply ->
+				#'3gpp_ro_CCA'{} = CCA ->
 					cse:delete_session(SessionId),
+					Reply = CCA#'3gpp_ro_CCA'{'Session-Id' = SessionId,
+							'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
 					{reply, Reply}
 			end;
 		{error, Reason} ->
@@ -401,7 +407,9 @@ process_request(_IpAddress, _Port,
 					diameter_error(SessionId,
 							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							OHost, ORealm, RequestType, RequestNum);
-				Reply ->
+				#'3gpp_ro_CCA'{} = CCA ->
+					Reply = CCA#'3gpp_ro_CCA'{'Session-Id' = SessionId,
+							'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
 					{reply, Reply}
 			end;
 		{error, Reason} ->
