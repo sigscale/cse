@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" viewBox="266 604.5 798.5 496" width="798.5" height="496">
+  <defs/>
+  <g id="CSE_Stacks" fill="none" stroke="none" fill-opacity="1" stroke-opacity="1" stroke-dasharray="none">
+    <title>CSE Stacks</title>
+    <g id="CSE_Stacks_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_26">
+        <path d="M 465.09334 606 L 650.59334 606 C 657.22076 606 662.59334 611.3726 662.59334 618 L 662.59334 1087 C 662.59334 1093.6274 657.22076 1099 650.59334 1099 L 465.09334 1099 C 458.4659 1099 453.09334 1093.6274 453.09334 1087 L 453.09334 618 C 453.09334 611.3726 458.4659 606 465.09334 606 Z" fill="white"/>
+        <path d="M 465.09334 606 L 650.59334 606 C 657.22076 606 662.59334 611.3726 662.59334 618 L 662.59334 1087 C 662.59334 1093.6274 657.22076 1099 650.59334 1099 L 465.09334 1099 C 458.4659 1099 453.09334 1093.6274 453.09334 1087 L 453.09334 618 C 453.09334 611.3726 458.4659 606 465.09334 606 Z" stroke="#ffa900" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(458.09334 626)" fill="black">
+          <tspan font-family="Roboto" font-size="18" fill="black" x="46.73877" y="17">SigScale CSE</tspan>
+        </text>
+      </g>
+      <g id="Graphic_7">
+        <path d="M 750 766 L 1051 766 C 1057.6274 766 1063 771.3726 1063 778 L 1063 937 C 1063 943.6274 1057.6274 949 1051 949 L 750 949 C 743.3726 949 738 943.6274 738 937 L 738 778 C 738 771.3726 743.3726 766 750 766 Z" fill="white"/>
+        <path d="M 750 766 L 1051 766 C 1057.6274 766 1063 771.3726 1063 778 L 1063 937 C 1063 943.6274 1057.6274 949 1051 949 L 750 949 C 743.3726 949 738 943.6274 738 937 L 738 778 C 738 771.3726 743.3726 766 750 766 Z" stroke="#ffa900" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(743 786)" fill="black">
+          <tspan font-family="Roboto" font-size="18" fill="black" x="103.4165" y="17">SigScale OCS</tspan>
+        </text>
+      </g>
+      <g id="Graphic_3">
+        <path d="M 793.5 833.5 L 877.5 833.5 C 881.9183 833.5 885.5 837.0817 885.5 841.5 L 885.5 900.5 C 885.5 904.9183 881.9183 908.5 877.5 908.5 L 793.5 908.5 C 789.0817 908.5 785.5 904.9183 785.5 900.5 L 785.5 841.5 C 785.5 837.0817 789.0817 833.5 793.5 833.5 Z" fill="#ffa900"/>
+        <text transform="translate(790.5 856.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="28.728" y="23">RF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_4">
+        <path d="M 928.5 833.5 L 1012.5 833.5 C 1016.9183 833.5 1020.5 837.0817 1020.5 841.5 L 1020.5 900.5 C 1020.5 904.9183 1016.9183 908.5 1012.5 908.5 L 928.5 908.5 C 924.0817 908.5 920.5 904.9183 920.5 900.5 L 920.5 841.5 C 920.5 837.0817 924.0817 833.5 928.5 833.5 Z" fill="#ffa900"/>
+        <text transform="translate(925.5 856.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="8.292" y="23">ABMF</tspan>
+        </text>
+      </g>
+      <g id="Line_6">
+        <line x1="607.84334" y1="743.09225" x2="785.5" y2="842.9078" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_5">
+        <rect x="677.0373" y="778.3833" width="29.954" height="24" fill="white"/>
+        <text transform="translate(678.0373 779.3833)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="7727152e-19" y="17">Nrf</tspan>
+        </text>
+      </g>
+      <g id="Graphic_11">
+        <path d="M 279.037 719.02825 C 262.875 715 269.32 681.08875 295.102 686.875 C 297.494 675.59575 327.475 677.4265 327.279 686.875 C 346.078 674.79025 370.102 698.887 353.988 710.97175 C 373.324 716.83075 353.744 748.39825 337.875 743.125 C 336.605 751.91425 308.236 754.99 305.746 743.125 C 289.682 755.79625 256.186 736.3135 279.037 719.02825 Z" fill="#ccc"/>
+        <text transform="translate(286 700.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="4.728" y="23">EPC</tspan>
+        </text>
+      </g>
+      <g id="Graphic_12">
+        <path d="M 279.037 823.02825 C 262.875 819 269.32 785.08875 295.102 790.875 C 297.494 779.59575 327.475 781.4265 327.279 790.875 C 346.078 778.79025 370.102 802.887 353.988 814.97175 C 373.324 820.83075 353.744 852.3982 337.875 847.125 C 336.605 855.9142 308.236 858.99 305.746 847.125 C 289.682 859.7962 256.186 840.3135 279.037 823.02825 Z" fill="#ccc"/>
+        <text transform="translate(286 804.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="7.536" y="23">IMS</tspan>
+        </text>
+      </g>
+      <g id="Line_15">
+        <line x1="360.11056" y1="819" x2="507.84334" y2="819" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_14">
+        <rect x="395.1637" y="807" width="26.3" height="24" fill="white"/>
+        <text transform="translate(396.1637 808)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="0" y="17">Ro</tspan>
+        </text>
+      </g>
+      <g id="Line_17">
+        <line x1="360.11056" y1="715" x2="507.84334" y2="715" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_16">
+        <rect x="395.48684" y="703" width="25.67" height="24" fill="white"/>
+        <text transform="translate(396.48684 704)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="0" y="17">Gy</tspan>
+        </text>
+      </g>
+      <g id="Line_19">
+        <line x1="607.84334" y1="828.3641" x2="785.5" y2="861.6359" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_18">
+        <rect x="677.5411" y="832.2221" width="29.954" height="24" fill="white"/>
+        <text transform="translate(678.5411 833.2221)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="7727152e-19" y="17">Nrf</tspan>
+        </text>
+      </g>
+      <g id="Graphic_21">
+        <path d="M 279.037 927.0282 C 262.875 923 269.32 889.0888 295.102 894.875 C 297.494 883.5958 327.475 885.4265 327.279 894.875 C 346.078 882.7902 370.102 906.887 353.988 918.9718 C 373.324 924.8308 353.744 956.3982 337.875 951.125 C 336.605 959.9142 308.236 962.99 305.746 951.125 C 289.682 963.7962 256.186 944.3135 279.037 927.0282 Z" fill="#ccc"/>
+        <text transform="translate(286 908.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="14.04" y="23">CS</tspan>
+        </text>
+      </g>
+      <g id="Line_23">
+        <line x1="360.11056" y1="923" x2="507.84334" y2="923" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_22">
+        <rect x="389.21666" y="911" width="40.448" height="24" fill="white"/>
+        <text transform="translate(390.21666 912)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="15987212e-20" y="17">CAP</tspan>
+        </text>
+      </g>
+      <g id="Line_25">
+        <line x1="607.84334" y1="913.6359" x2="785.5" y2="880.3641" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_24">
+        <rect x="679.0906" y="885.4877" width="29.954" height="24" fill="white"/>
+        <text transform="translate(680.0906 886.4877)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="7727152e-19" y="17">Nrf</tspan>
+        </text>
+      </g>
+      <g id="Graphic_28">
+        <path d="M 279.037 927.0282 C 262.875 923 269.32 889.0888 295.102 894.875 C 297.494 883.5958 327.475 885.4265 327.279 894.875 C 346.078 882.7902 370.102 906.887 353.988 918.9718 C 373.324 924.8308 353.744 956.3982 337.875 951.125 C 336.605 959.9142 308.236 962.99 305.746 951.125 C 289.682 963.7962 256.186 944.3135 279.037 927.0282 Z" fill="#ccc"/>
+        <text transform="translate(286 908.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="14.04" y="23">CS</tspan>
+        </text>
+      </g>
+      <g id="Graphic_2">
+        <path d="M 515.84334 677.5 L 599.84334 677.5 C 604.2616 677.5 607.84334 681.0817 607.84334 685.5 L 607.84334 744.5 C 607.84334 748.9183 604.2616 752.5 599.84334 752.5 L 515.84334 752.5 C 511.42507 752.5 507.84334 748.9183 507.84334 744.5 L 507.84334 685.5 C 507.84334 681.0817 511.42507 677.5 515.84334 677.5 Z" fill="#ffa900"/>
+        <text transform="translate(512.84334 700.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="18.708" y="23">OCF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_13">
+        <path d="M 515.84334 781.5 L 599.84334 781.5 C 604.2616 781.5 607.84334 785.0817 607.84334 789.5 L 607.84334 848.5 C 607.84334 852.9183 604.2616 856.5 599.84334 856.5 L 515.84334 856.5 C 511.42507 856.5 507.84334 852.9183 507.84334 848.5 L 507.84334 789.5 C 507.84334 785.0817 511.42507 781.5 515.84334 781.5 Z" fill="#ffa900"/>
+        <text transform="translate(512.84334 804.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="18.708" y="23">OCF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_20">
+        <path d="M 515.84334 885.5 L 599.84334 885.5 C 604.2616 885.5 607.84334 889.0817 607.84334 893.5 L 607.84334 952.5 C 607.84334 956.9183 604.2616 960.5 599.84334 960.5 L 515.84334 960.5 C 511.42507 960.5 507.84334 956.9183 507.84334 952.5 L 507.84334 893.5 C 507.84334 889.0817 511.42507 885.5 515.84334 885.5 Z" fill="#ffa900"/>
+        <text transform="translate(512.84334 908.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="18.708" y="23">OCF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_30">
+        <path d="M 515.84334 989.5 L 599.84334 989.5 C 604.2616 989.5 607.84334 993.0817 607.84334 997.5 L 607.84334 1056.5 C 607.84334 1060.9183 604.2616 1064.5 599.84334 1064.5 L 515.84334 1064.5 C 511.42507 1064.5 507.84334 1060.9183 507.84334 1056.5 L 507.84334 997.5 C 507.84334 993.0817 511.42507 989.5 515.84334 989.5 Z" fill="#ffa900"/>
+        <text transform="translate(512.84334 1012.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="18.708" y="23">OCF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_29">
+        <path d="M 279.037 1031.0282 C 262.875 1027 269.32 993.0888 295.102 998.875 C 297.494 987.5958 327.475 989.4265 327.279 998.875 C 346.078 986.7902 370.102 1010.887 353.988 1022.9718 C 373.324 1028.8308 353.744 1060.3982 337.875 1055.125 C 336.605 1063.9142 308.236 1066.99 305.746 1055.125 C 289.682 1067.7963 256.186 1048.3135 279.037 1031.0282 Z" fill="#ccc"/>
+        <text transform="translate(286 1012.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="1.212" y="23">NGN</tspan>
+        </text>
+      </g>
+      <g id="Line_32">
+        <line x1="360.11056" y1="1027" x2="507.84334" y2="1027" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_31">
+        <rect x="385.49066" y="1015" width="47.9" height="24" fill="white"/>
+        <text transform="translate(386.49066 1016)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="7283063e-19" y="17">INAP</tspan>
+        </text>
+      </g>
+      <g id="Line_36">
+        <line x1="607.84334" y1="998.9078" x2="785.5" y2="899.0922" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_35">
+        <rect x="679.0906" y="938.4631" width="29.954" height="24" fill="white"/>
+        <text transform="translate(680.0906 939.4631)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="7727152e-19" y="17">Nrf</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
