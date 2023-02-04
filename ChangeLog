@@ -1,3 +1,13 @@
+2023-02-04  Vance Shipley <vances@sigscale.org>
+
+	* correct origin-host in cca
+	* minor corrections to json schemas for ecs
+	* correct typo in direction state of ims slp
+	* correct ecs event attribute name in log codec
+	* validate schemas in make check target
+	* rename openapi schema files for consistency
+	* json schema for elastic stack logs formats
+
 2023-01-31  Vance Shipley <vances@sigscale.org>
 
 	* switch the rest resource module private api to binary

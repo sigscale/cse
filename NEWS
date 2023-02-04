@@ -1,5 +1,11 @@
 January 31, 2023
 ----------------
+	- Refactor DIAMETER Ro callback API for SLPs
+	- Correct Origin-Host and Origin-Realm in CCA
+	- JSON Schemas for ECS Logs
+
+January 31, 2023
+----------------
 	- Optimize space and performance for resources tables
 
 January 18, 2023
