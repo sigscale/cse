@@ -129,7 +129,7 @@ td0([]) ->
 
 %% @hidden
 tables() ->
-	Tables = [cse_service, gtt_as, gtt_ep, gtt_ep, gtt_pc, resource, resource_spec],
+	Tables = [cse_service, gtt_as, gtt_ep, gtt_pc, resource, resource_spec],
 	Other = mnesia:system_info(tables)
 			-- [schema, httpd_user, httpd_group | Tables],
 	tables(Other, lists:reverse(Tables)).
