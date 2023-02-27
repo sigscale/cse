@@ -41,9 +41,22 @@
 		lookup_last/2, lookup_all/2, list/0, list/2, backup/2, restore/2,
 		clear_table/1, add_range/4, delete_range/3, range/2]).
 
+-include("cse.hrl").
+
 -define(CHUNKSIZE, 100).
 
--include("cse.hrl").
+-ifdef(OTP_RELEASE).
+	-if(?OTP_RELEASE >= 23).
+		-define(binary_to_existing_atom(Name),
+				binary_to_existing_atom(Name)).
+	-else.
+		-define(binary_to_existing_atom(Name),
+				list_to_existing_atom(binary_to_list(Name))).
+	-endif.
+-else.
+	-define(binary_to_existing_atom(Name),
+			list_to_existing_atom(binary_to_list(Name))).
+-endif.
 
 %%----------------------------------------------------------------------
 %%  The GTT API
@@ -147,7 +160,7 @@ new1(Table, Options, Items) ->
 insert(Table, Address, Value) when is_list(Table) ->
 	insert(list_to_existing_atom(Table), Address, Value);
 insert(Table, Address, Value) when is_binary(Table) ->
-	insert(binary_to_existing_atom(Table), Address, Value);
+	insert(?binary_to_existing_atom(Table), Address, Value);
 insert(Table, Address, Value) when is_binary(Address) ->
 	insert(Table, binary_to_list(Address), Value);
 insert(Table, Address, Value) when is_atom(Table), is_list(Address) ->
@@ -182,7 +195,7 @@ insert(Table, Address, Value) when is_atom(Table), is_list(Address) ->
 insert(Table, Items) when is_list(Table) ->
 	insert(list_to_existing_atom(Table), Items);
 insert(Table, Items) when is_binary(Table) ->
-	insert(binary_to_existing_atom(Table), Items);
+	insert(?binary_to_existing_atom(Table), Items);
 insert(Table, Items) when is_atom(Table), is_list(Items)  ->
 	InsFun = fun F({Address, Value}) when is_binary(Address) ->
 				F({binary_to_list(Address), Value});
@@ -212,7 +225,7 @@ insert(Table, Items) when is_atom(Table), is_list(Items)  ->
 delete(Table, Address) when is_list(Table) ->
 	delete(list_to_existing_atom(Table), Address);
 delete(Table, Address) when is_binary(Table) ->
-	delete(binary_to_existing_atom(Table), Address);
+	delete(?binary_to_existing_atom(Table), Address);
 delete(Table, Address) when is_binary(Address) ->
 	delete(Table, binary_to_list(Address));
 delete(Table, Address) when is_atom(Table), is_list(Address) ->
@@ -241,7 +254,7 @@ delete(Table, Address) when is_atom(Table), is_list(Address) ->
 lookup_first(Table, Address) when is_list(Table) ->
 	lookup_first(list_to_existing_atom(Table), Address);
 lookup_first(Table, Address) when is_binary(Table) ->
-	lookup_first(binary_to_existing_atom(Table), Address);
+	lookup_first(?binary_to_existing_atom(Table), Address);
 lookup_first(Table, Address) when is_binary(Address) ->
 	lookup_first(Table, binary_to_list(Address));
 lookup_first(Table, [Digit | Rest]) when is_atom(Table) ->
@@ -265,7 +278,7 @@ lookup_first(Table, [Digit | Rest]) when is_atom(Table) ->
 lookup_last(Table, Address) when is_list(Table) ->
 	lookup_last(list_to_existing_atom(Table), Address);
 lookup_last(Table, Address) when is_binary(Table) ->
-	lookup_last(binary_to_existing_atom(Table), Address);
+	lookup_last(?binary_to_existing_atom(Table), Address);
 lookup_last(Table, Address) when is_binary(Address) ->
 	lookup_last(Table, binary_to_list(Address));
 lookup_last(Table, Address) when is_atom(Table), is_list(Address) ->
@@ -293,7 +306,7 @@ lookup_last(Table, Address) when is_atom(Table), is_list(Address) ->
 lookup_all(Table, Address) when is_list(Table) ->
 	lookup_all(list_to_existing_atom(Table), Address);
 lookup_all(Table, Address) when is_binary(Table) ->
-	lookup_all(binary_to_existing_atom(Table), Address);
+	lookup_all(?binary_to_existing_atom(Table), Address);
 lookup_all(Table, Address) when is_binary(Address) ->
 	lookup_all(Table, binary_to_list(Address));
 lookup_all(Table, [Digit | Rest]) when is_atom(Table) ->
@@ -317,7 +330,7 @@ lookup_all(Table, [Digit | Rest]) when is_atom(Table) ->
 backup([H | _] = Tables, File) when is_list(H) ->
 	backup([list_to_existing_atom(T) || T <- Tables], File);
 backup([H | _] = Tables, File) when is_binary(H) ->
-	backup([binary_to_existing_atom(T) || T <- Tables], File);
+	backup([?binary_to_existing_atom(T) || T <- Tables], File);
 backup(Tables, File) when is_atom(Tables) ->
 	backup([Tables], File);
 backup(Tables, File) when is_list(Tables), is_list(File) ->
@@ -345,7 +358,7 @@ backup(Tables, File) when is_list(Tables), is_list(File) ->
 restore([H | _] = Tables, File) when is_list(H) ->
 	restore([list_to_existing_atom(T) || T <- Tables], File);
 restore([H | _] = Tables, File) when is_binary(H) ->
-	restore([binary_to_existing_atom(T) || T <- Tables], File);
+	restore([?binary_to_existing_atom(T) || T <- Tables], File);
 restore(Tables, File) when is_list(Tables), is_integer(hd(Tables)) ->
 	restore(list_to_existing_atom(Tables), File);
 restore(Tables, File) when is_atom(Tables) ->
@@ -410,7 +423,7 @@ list('$end_of_table') ->
 clear_table(Table) when is_list(Table) ->
 	clear_table(list_to_existing_atom(Table));
 clear_table(Table) when is_binary(Table) ->
-	clear_table(binary_to_existing_atom(Table));
+	clear_table(?binary_to_existing_atom(Table));
 clear_table(Table) when is_atom(Table) ->
 	case mnesia:clear_table(Table) of
 		{atomic, ok} ->
@@ -431,7 +444,7 @@ clear_table(Table) when is_atom(Table) ->
 add_range(Table, Start, End, Value) when is_list(Table) ->
 	add_range(list_to_existing_atom(Table), Start, End, Value);
 add_range(Table, Start, End, Value) when is_binary(Table) ->
-	add_range(binary_to_existing_atom(Table), Start, End, Value);
+	add_range(?binary_to_existing_atom(Table), Start, End, Value);
 add_range(Table, Start, End, Value) when is_binary(Start) ->
 	add_range(Table, binary_to_list(Start), End, Value);
 add_range(Table, Start, End, Value) when is_binary(End) ->
@@ -454,7 +467,7 @@ add_range(Table, Start, End, Value) when is_atom(Table),
 delete_range(Table, Start, End) when is_list(Table) ->
 	delete_range(list_to_existing_atom(Table), Start, End);
 delete_range(Table, Start, End) when is_binary(Table) ->
-	delete_range(binary_to_existing_atom(Table), Start, End);
+	delete_range(?binary_to_existing_atom(Table), Start, End);
 delete_range(Table, Start, End) when is_binary(Start) ->
 	delete_range(Table, binary_to_list(Start), End);
 delete_range(Table, Start, End) when is_binary(End) ->

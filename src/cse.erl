@@ -61,6 +61,19 @@
 -define(RANGE_ROW_SPEC,    <<"1651057291061-274">>).
 -define(CHUNKSIZE,         100).
 
+-ifdef(OTP_RELEASE).
+	-if(?OTP_RELEASE >= 23).
+		-define(binary_to_existing_atom(Name),
+				binary_to_existing_atom(Name)).
+	-else.
+		-define(binary_to_existing_atom(Name),
+				list_to_existing_atom(binary_to_list(Name))).
+	-endif.
+-else.
+	-define(binary_to_existing_atom(Name),
+			list_to_existing_atom(binary_to_list(Name))).
+-endif.
+
 -type characteristics() :: #{CharName :: binary() => characteristic()}.
 -type related_resources() :: #{RelType :: binary() => resource_rel()}.
 -type resource_spec() :: #resource_spec{}.
@@ -539,7 +552,7 @@ add_resource10(Resource) ->
 
 %% @hidden
 add_resource_index_table(#resource{name = Name} = Resource) ->
-	case mnesia:table_info(binary_to_existing_atom(Name), attributes) of
+	case mnesia:table_info(?binary_to_existing_atom(Name), attributes) of
 		[key, val] ->
 			F = fun() ->
 					mnesia:write(Resource)
@@ -579,7 +592,7 @@ add_resource_index_row(Table,
 	end.
 %% @hidden
 add_resource_index_row(TableS, Resource, Key, Value) ->
-	TableA = binary_to_existing_atom(TableS),
+	TableA = ?binary_to_existing_atom(TableS),
 	Record = {TableA, Key, Value},
 	F = fun() ->
 			mnesia:write(TableA, Record, write),
@@ -594,7 +607,7 @@ add_resource_index_row(TableS, Resource, Key, Value) ->
 
 %% @hidden
 add_resource_prefix_table(#resource{name = Name} = Resource) ->
-	case mnesia:table_info(binary_to_existing_atom(Name), attributes) of
+	case mnesia:table_info(?binary_to_existing_atom(Name), attributes) of
 		[num, value] ->
 			F = fun() ->
 					mnesia:write(Resource)
@@ -836,7 +849,7 @@ delete_resource(ID) when is_binary(ID) ->
 			{error, Reason};
 		{atomic, {ok, #resource{name = Name,
 				specification = #resource_spec_ref{id = ?INDEX_TABLE_SPEC}}}} ->
-			TableName = binary_to_existing_atom(Name),
+			TableName = ?binary_to_existing_atom(Name),
 			case mnesia:clear_table(TableName) of
 				{atomic, ok} ->
 					ok;
@@ -865,7 +878,7 @@ delete_resource(ID) when is_binary(ID) ->
 					case lists:keyfind(<<"based">>,
 							#resource_spec_rel.rel_type, Related) of
 						#resource_spec_rel{id = ?INDEX_TABLE_SPEC, rel_type = <<"based">>} ->
-							TableName = binary_to_existing_atom(Name),
+							TableName = ?binary_to_existing_atom(Name),
 							case mnesia:clear_table(TableName) of
 								{atomic, ok} ->
 									ok;
@@ -900,7 +913,7 @@ delete_resource_row(_Based, _Resource) ->
 %% @hidden
 delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{
 		characteristic = #{<<"key">> := #characteristic{value = Key}}}) ->
-	TableName = binary_to_existing_atom(Table),
+	TableName = ?binary_to_existing_atom(Table),
 	F = fun()  ->
 			mnesia:delete(TableName, Key, write)
 	end,
@@ -912,12 +925,12 @@ delete_resource_row(?INDEX_ROW_SPEC, Table, #resource{
 	end;
 delete_resource_row(?PREFIX_ROW_SPEC, Table, #resource{
 		characteristic = #{<<"prefix">> := #characteristic{value = Prefix}}}) ->
-	TableName = binary_to_existing_atom(Table),
+	TableName = ?binary_to_existing_atom(Table),
 	cse_gtt:delete(TableName, Prefix);
 delete_resource_row(?RANGE_ROW_SPEC, Table, #resource{
 		characteristic = #{<<"start">> := #characteristic{value = Start},
 		<<"end">> := #characteristic{value = End}}}) ->
-	TableName = binary_to_existing_atom(Table),
+	TableName = ?binary_to_existing_atom(Table),
 	cse_gtt:delete_range(TableName, Start, End);
 delete_resource_row(_Based, _Table, _Resource) ->
 	{error, table_not_found}.
