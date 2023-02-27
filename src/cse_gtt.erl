@@ -47,13 +47,19 @@
 
 -ifdef(OTP_RELEASE).
 	-if(?OTP_RELEASE >= 23).
+		-define(binary_to_atom(Name),
+				binary_to_atom(Name)).
 		-define(binary_to_existing_atom(Name),
 				binary_to_existing_atom(Name)).
 	-else.
+		-define(binary_to_atom(Name),
+				list_to_atom(binary_to_list(Name))).
 		-define(binary_to_existing_atom(Name),
 				list_to_existing_atom(binary_to_list(Name))).
 	-endif.
 -else.
+	-define(binary_to_atom(Name),
+			list_to_atom(binary_to_list(Name))).
 	-define(binary_to_existing_atom(Name),
 			list_to_existing_atom(binary_to_list(Name))).
 -endif.
@@ -78,7 +84,7 @@ new(Table, []) ->
 new(Table, Options) when is_list(Table) ->
 	new(list_to_atom(Table), Options);
 new(Table, Options) when is_binary(Table) ->
-	new(binary_to_atom(Table), Options);
+	new(?binary_to_atom(Table), Options);
 new(Table, Options) when is_list(Options) ->
 	case mnesia:create_table(Table, Options ++
 			[{attributes, record_info(fields, gtt)},
@@ -111,7 +117,7 @@ new(Table, [], Items) ->
 new(Table, Options, Items) when is_list(Table) ->
 	new(list_to_atom(Table), Options, Items);
 new(Table, Options, Items) when is_binary(Table) ->
-	new(binary_to_atom(Table), Options, Items);
+	new(?binary_to_atom(Table), Options, Items);
 new(Table, Options, Items) when is_list(Options), is_list(Items) ->
 	case mnesia:create_table(Table, Options ++
 			[{attributes, record_info(fields, gtt)},
