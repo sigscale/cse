@@ -9,6 +9,10 @@ systemdsystemunit_DATA = scripts/cse.service
 env_DATA = scripts/cse
 endif
 
+script_SCRIPTS = scripts/data_session.escript \
+		scripts/voice_call.escript \
+		scripts/send_sms.escript
+
 .PHONY: release
 release: $(PACKAGE_VERSION).tar.gz
 
