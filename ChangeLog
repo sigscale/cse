@@ -1,3 +1,16 @@
+2023-03-02  Vance Shipley <vances@sigscale.org>
+
+	* configure scripts directory
+	* escript to create an mnesia snapshot backup
+	* escripts for testing diameter 3gpp ro interface
+	* portable binary to atom
+	* portable binary to existing atom
+	* fixed extra gtt_ep table shown in cse shell commands
+	* label re interface
+	* clarify provided slps
+	* diagram ocf with ocs
+	* document provided ocf slps
+
 2023-02-04  Vance Shipley <vances@sigscale.org>
 
 	* correct origin-host in cca
