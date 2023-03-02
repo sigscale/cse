@@ -1,6 +1,6 @@
 March 2, 2023
 -------------
-	- Scripts for emulating a DIAMETER client seding traffic
+	- Scripts for emulating a DIAMETER client sending traffic
 	- Script for performing an mnesia snapshot backup
 
 January 31, 2023
