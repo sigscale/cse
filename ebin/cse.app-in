@@ -84,6 +84,7 @@
 						{0,4,0,1,1,20,5,4}          % INAP CS2 (id-as-ssf-scfGenericAS)
 								=> cse_slp_inap_fsm}}]},
 				{tsl_opts, []},
+				{resource_table_type, disc_copies},
 				{nrf_profile, nrf},
 				{nrf_uri, "http://nrf.5gc.mnc001.mcc001.3gppnetwork.org/nrf-rating/v1"},
 				{nrf_headers, []},

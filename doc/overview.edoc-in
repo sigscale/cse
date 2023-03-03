@@ -418,6 +418,13 @@ Application environment variables configuring SLP logs.
 				(see {@link //cse/cse_log:open/2. cse_log:open/2}). (default: `[]')</dd>
 </dl>
 
+===Tables===
+Application environment variables configuring mnesia tables.
+<dl>
+	<dt>`resource_table_type'</dt>
+		<dd>Storage type of the `resource' table. (default: `disc_copies')</dd>
+</dl>
+
 ===Example sys.config===
 ```
 [{cse,

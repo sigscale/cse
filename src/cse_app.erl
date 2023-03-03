@@ -522,8 +522,9 @@ create_table(resource_spec, Nodes) when is_list(Nodes) ->
 			[{disc_copies, Nodes},
 			{attributes, record_info(fields, resource_spec)}]));
 create_table(resource, Nodes) when is_list(Nodes) ->
+	{ok, Type} = application:get_env(resource_table_type),
 	create_table1(resource, mnesia:create_table(resource,
-			[{disc_copies, Nodes},
+			[{Type, Nodes},
 			{attributes, record_info(fields, resource)}]));
 create_table(cse_service, Nodes) when is_list(Nodes) ->
 	create_table1(cse_service, mnesia:create_table(cse_service,
