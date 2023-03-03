@@ -81,6 +81,7 @@ init_per_suite(Config) ->
 	PrivDir = ?config(priv_dir, Config),
 	application:load(mnesia),
 	ok = application:set_env(mnesia, dir, PrivDir),
+	ok = cse_test_lib:load(cse),
 	ok = cse_test_lib:init_tables(),
 	ok = cse_test_lib:start(),
 	Modules = [mod_responsecontrol,
