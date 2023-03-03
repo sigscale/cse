@@ -421,6 +421,10 @@ Application environment variables configuring SLP logs.
 ===Tables===
 Application environment variables configuring mnesia tables.
 <dl>
+	<dt>`wait_tables'</dt>
+		<dd>Time to wait for tables to load. (default: `60000')</dd>
+</dl>
+<dl>
 	<dt>`resource_table_type'</dt>
 		<dd>Storage type of the `resource' table. (default: `disc_copies')</dd>
 </dl>
