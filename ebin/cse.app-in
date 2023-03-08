@@ -60,6 +60,8 @@
 				cap,
 				inap,
 				map]},
+		{runtime_dependencies,
+				["sigscale_mibs-1.1.0"]},
 		{env,
 				[{diameter, []},
 				% {diameter,
