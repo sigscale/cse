@@ -4,7 +4,7 @@
 ##
 ## Boilerplate:  standard boilerplate code
 ##
-AC_INIT([cse], [1.4.1], [issues@sigscale.org])
+AC_INIT([cse], [1.4.3], [issues@sigscale.org])
 AC_COPYRIGHT([Copyright (c) 2021-2023 SigScale Global Inc.])
 AC_PREREQ(2.64)
 AC_CONFIG_SRCDIR([src/cse_app.erl])
@@ -60,21 +60,23 @@ docdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/doc
 erldir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/src
 beamdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/ebin
 eincludedir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/include
-reldir=$ERLANG_INSTALL_LIB_DIR/../releases
 schemadir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/schema
 emibdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/mibs
 mibsdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/mibs
+scriptdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/bin
+reldir=$ERLANG_INSTALL_LIB_DIR/../releases
 envdir=/etc/default
 AC_SUBST(otpdir)
 AC_SUBST(appdir)
 AC_SUBST(erldir)
 AC_SUBST(beamdir)
 AC_SUBST(eincludedir)
-AC_SUBST(reldir)
 AC_SUBST(privdir)
 AC_SUBST(schemadir)
 AC_SUBST(emibdir)
 AC_SUBST(mibsdir)
+AC_SUBST(scriptdir)
+AC_SUBST(reldir)
 AC_SUBST(envdir)
 
 

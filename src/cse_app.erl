@@ -36,9 +36,6 @@
 
 -record(state, {}).
 
--define(WAITFORSCHEMA, 10000).
--define(WAITFORTABLES, 60000).
-
 %%----------------------------------------------------------------------
 %%  The cse_app aplication callbacks
 %%----------------------------------------------------------------------
@@ -61,7 +58,8 @@ start(normal = _StartType, _Args) ->
 	end,
 	Tables = [resource_spec, resource,
 			cse_service, cse_context] ++ HttpdTables,
-	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
+	{ok, Wait} = application:get_env(wait_tables),
+	case mnesia:wait_for_tables(Tables, Wait) of
 		ok ->
 			start1();
 		{timeout, BadTables} ->
@@ -333,7 +331,8 @@ install1(Nodes) ->
 	end.
 %% @hidden
 install2(Nodes) ->
-	case mnesia:wait_for_tables([schema], ?WAITFORSCHEMA) of
+	{ok, Wait} = application:get_env(cse, wait_tables),
+	case mnesia:wait_for_tables([schema], Wait) of
 		ok ->
 			install3(Nodes, []);
 		{error, Reason} ->
@@ -413,7 +412,8 @@ install10(Nodes, Acc) ->
 	end.
 %% @hidden
 install11(_Nodes, Tables) ->
-	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
+	{ok, Wait} = application:get_env(cse, wait_tables),
+	case mnesia:wait_for_tables(Tables, Wait) of
 		ok ->
 			install12(Tables, lists:member(httpd_user, Tables));
 		{timeout, Tables} ->
@@ -522,8 +522,9 @@ create_table(resource_spec, Nodes) when is_list(Nodes) ->
 			[{disc_copies, Nodes},
 			{attributes, record_info(fields, resource_spec)}]));
 create_table(resource, Nodes) when is_list(Nodes) ->
+	{ok, Type} = application:get_env(cse, resource_table_type),
 	create_table1(resource, mnesia:create_table(resource,
-			[{disc_copies, Nodes},
+			[{Type, Nodes},
 			{attributes, record_info(fields, resource)}]));
 create_table(cse_service, Nodes) when is_list(Nodes) ->
 	create_table1(cse_service, mnesia:create_table(cse_service,

@@ -1,3 +1,12 @@
+March 3, 2023
+-------------
+	- Table configuration options
+
+March 2, 2023
+-------------
+	- Scripts for emulating a DIAMETER client sending traffic
+	- Script for performing an mnesia snapshot backup
+
 January 31, 2023
 ----------------
 	- Refactor DIAMETER Ro callback API for SLPs
