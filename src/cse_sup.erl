@@ -55,6 +55,8 @@ init(_Args) ->
 			supervisor({local, cse_log_sup}, cse_log_sup, []),
 			bridge(cse_tco_sup, [self()]),
 			supervisor(cse_slp_sup, []),
+			supervisor({local, cse_statistics_sup},
+					cse_statistics_sup, []),
 			supervisor({local, cse_diameter_sup}, cse_diameter_sup, []),
 			supervisor({local, cse_rest_pagination_sup},
 					cse_rest_pagination_sup, [])],

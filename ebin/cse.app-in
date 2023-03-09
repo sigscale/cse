@@ -26,6 +26,8 @@
 				cse_slp_prepaid_diameter_ims_fsm,
 				cse_slp_prepaid_diameter_sms_fsm,
 				cse_slp_prepaid_diameter_mms_fsm,
+				cse_statistics_server,
+				cse_statistics_sup,
 				cse_codec,
 				cse_log,
 				cse_log_codec_ecs,
@@ -90,6 +92,7 @@
 				{nrf_http_options, []},
 				{nrf_options, [{keep_alive_timeout, 4000}]},
 				{rest_page_size, 1000},
+				{statistics_interval, 60},
 				{rest_page_timeout, 60000},
 				{log_dir, "log/slp"},
 				{logs, [

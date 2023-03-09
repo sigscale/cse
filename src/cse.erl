@@ -38,6 +38,7 @@
 -export([add_session/2, delete_session/1,
 		get_session/1, find_session/1, get_sessions/0]).
 -export([announce/1]).
+-export([statistics/1]).
 
 -export_type([characteristics/0, related_resources/0, resource_spec/0,
 		resource_spec_rel/0, resource/0, resource_ref/0, resource_rel/0,
@@ -1672,6 +1673,40 @@ announce1(1, Acc) ->
 	Acc ++ [one];
 announce1(0, Acc) ->
 	Acc.
+
+-spec statistics(Item) -> Result
+   when
+      Item :: scheduler_utilization,
+      Result :: {ok, {Etag, Interval, Report}} | {error, Reason},
+      Etag :: string(),
+      Interval :: pos_integer(),
+      Report :: [ItemResult],
+      ItemResult :: {SchedulerId, Utilization},
+      SchedulerId :: pos_integer(),
+      Utilization :: non_neg_integer(),
+      Reason :: term().
+%% @doc Get system statistics.
+statistics(Item) ->
+   case catch gen_server:call(cse_statistics, Item) of
+      {Etag, Interval, Report} ->
+         {ok, {Etag, Interval, Report}};
+      {error, Reason} ->
+         {error, Reason};
+      {'EXIT', {noproc,_}} ->
+         case catch supervisor:start_child(cse_statistics_sup, []) of
+            {ok, Child} ->
+               case catch gen_server:call(Child, Item) of
+                  {Etag, Interval, Report} ->
+                     {ok, {Etag, Interval, Report}};
+                  {error, Reason} ->
+                     {error, Reason}
+               end;
+            {error, Reason} ->
+               {error, Reason};
+            {'EXIT', {noproc,_}} ->
+               {error, cse_down}
+         end
+   end.
 
 %%----------------------------------------------------------------------
 %%  internal functions

@@ -28,7 +28,7 @@
 -copyright('Copyright (c) 2016 - 2022 SigScale Global Inc.').
 
 %% export the user_default public API
--export([help/0, ts/0, td/0, di/0, di/1, di/2, dc/0]).
+-export([help/0, ts/0, td/0, su/0, di/0, di/1, di/2, dc/0]).
 
 -include("cse.hrl").
 -include("diameter_gen_3gpp.hrl").
@@ -48,6 +48,7 @@ help() ->
 	io:fwrite("**cse commands ** \n"),
 	io:fwrite("ts()               -- table sizes\n"),
 	io:fwrite("td()               -- table distribution\n"),
+	io:fwrite("su()               -- scheduler utilization\n"),
 	io:fwrite("di()               -- diameter services info\n"),
 	io:fwrite("di(Info)           -- diameter services info\n"),
 	io:fwrite("di(Service, Info)  -- diameter services info\n"),
@@ -127,6 +128,34 @@ td0([H | T]) ->
 	td0(T);
 td0([]) ->
 	ok.
+
+-spec su() -> ok.
+%% @doc Display scheduler utilization.
+su() ->
+        case cse:statistics(scheduler_utilization) of
+                {ok, {Etag, Interval, Report}} ->
+                        io:fwrite("Scheduler utilization:\n"),
+                        su0(Report, Etag, Interval);
+                {error, Reason} ->
+                        exit(Reason)
+        end.
+%% @hidden
+su0([{Scheduler, Utilization} | T], Etag, Interval) ->
+        io:fwrite("~*b: ~3b%\n", [5, Scheduler, Utilization]),
+        su0(T, Etag, Interval);
+su0([], Etag, Interval) ->
+        {TS, _} = string:take(Etag, lists:seq($0, $9)),
+        Next = (list_to_integer(TS) + Interval),
+        Remaining = Next - erlang:system_time(millisecond),
+        Seconds = case {Remaining div 1000, Remaining rem 1000} of
+                {0, _} ->
+                        1;
+                {N, R} when R < 500 ->
+                        N;
+                {N, _} ->
+                        N + 1
+        end,
+        io:fwrite("Next report available in ~b seconds.\n", [Seconds]).
 
 %% @doc Get information on running diameter services.
 di() ->
