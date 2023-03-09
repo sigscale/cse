@@ -1,3 +1,12 @@
+March 9, 2023
+-------------
+	- Scheduler utilization statistics server
+	- Scheduler utilization in devops shell
+	- DIAMETER information in devops shhell
+	- Pretty print DIAMETER service statistics in devops shell
+	- Shorten default Nrf timeout to avoid DIAMETER/CAP/INAP timeout
+	- ECS log timestamp now time of logging
+
 March 3, 2023
 -------------
 	- Table configuration options
