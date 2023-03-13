@@ -56,35 +56,41 @@ send_sms(Options) ->
 				ok
 		end,
 		SId = diameter:session_id(Hostname),
-		IMSI = #'3gpp_ro_Subscription-Id'{
+		MSISDN = maps:get(msisdn, Options, "14165551234")
+		IMSIr = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
-		MSISDN = #'3gpp_ro_Subscription-Id'{
+		MSISDNr = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
-		SubscriptionId = [IMSI, MSISDN],
-		CallingParty = maps:get(orig, Options, "14165551234"), 
-		CalledParty = maps:get(dest, Options, "14165556789"),
+			'Subscription-Id-Data' = MSISDN},
+		SubscriptionId = [IMSIr, MSISDNr],
+		RSU = #'3gpp_ro_Requested-Service-Unit'{},
+		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Requested-Service-Unit' = [RSU]},
 		ServiceInformation = #'3gpp_ro_Service-Information'{
 				'SMS-Information' = [#'3gpp_ro_SMS-Information'{
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
 				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Data' = [CalledParty]}]}]}]},
+				'Address-Data' = [maps:get(dest, Options, "14165556789")]}]}]}]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
 				'Destination-Realm' = OriginRealm,
 				'Auth-Application-Id' = ?RO_APPLICATION_ID,
 				'Service-Context-Id' = "32274@3gpp.org",
-				'User-Name' = [CallingParty],
+				'User-Name' = [MSISDN],
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST',
 				'CC-Request-Number' = 0,
 				'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
+				'Multiple-Services-Indicator' = [1],
+				'Multiple-Services-Credit-Control' = [MSCC],
 				'Event-Timestamp' = [calendar:universal_time()],
 				'Subscription-Id' = SubscriptionId,
 				'Service-Information' = [ServiceInformation]},
 		Fro = fun('3gpp_ro_CCA', _N) ->
-					record_info(fields, '3gpp_ro_CCA')
+					record_info(fields, '3gpp_ro_CCA');
+				('3gpp_ro_Multiple-Services-Credit-Control', _N) ->
+					record_info(fields, '3gpp_ro_Multiple-Services-Credit-Control')
 		end,
 		Fbase = fun('diameter_base_answer-message', _N) ->
 					record_info(fields, 'diameter_base_answer-message')
@@ -98,8 +104,8 @@ send_sms(Options) ->
 						throw(Reason)
 		end
 	catch
-		Error:Reason3 ->
-			io:fwrite("~w: ~w~n", [Error, Reason3]),
+		Error:Reason1 ->
+			io:fwrite("~w: ~w~n", [Error, Reason1]),
 			usage()
 	end.
 
@@ -109,9 +115,8 @@ usage() ->
 	Option3 = " [--ip 127.0.0.1]",
 	Option4 = " [--raddr 127.0.0.1]",
 	Option5 = " [--rport 3868]",
-	Option6 = " [--origin 14165551234]",
-	Option7 = " [--destination 14165556789]",
-	Options = [Option1, Option2, Option3, Option4, Option5, Option6, Option7],
+	Option6 = " [--recipient 14165556789]",
+	Options = [Option1, Option2, Option3, Option4, Option5, Option6],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -132,9 +137,7 @@ options(["--raddr", Address | T], Acc) ->
 	options(T, Acc#{raddr => IP});
 options(["--rport", Port | T], Acc) ->
 	options(T, Acc#{rport => list_to_integer(Port)});
-options(["--origin", Origin | T], Acc) ->
-	options(T, Acc#{orig => Origin});
-options(["--destination", Destination | T], Acc) ->
+options(["--recipient", Destination | T], Acc) ->
 	options(T, Acc#{dest => Destination});
 options([_H | _T], _Acc) ->
 	usage();
