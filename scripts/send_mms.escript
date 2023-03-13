@@ -122,7 +122,7 @@ usage() ->
 	Option4 = " [--raddr 127.0.0.1]",
 	Option5 = " [--rport 3868]",
 	Option6 = " [--origin 14165551234]",
-	Option7 = " [--destination 14165556789]",
+	Option7 = " [--recipient 14165556789]",
 	Options = [Option1, Option2, Option3, Option4, Option5, Option6, Option7],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
@@ -146,8 +146,8 @@ options(["--rport", Port | T], Acc) ->
 	options(T, Acc#{rport => list_to_integer(Port)});
 options(["--origin", Origin | T], Acc) ->
 	options(T, Acc#{orig => Origin});
-options(["--destination", Destination | T], Acc) ->
-	options(T, Acc#{dest => Destination});
+options(["--recipient", Recipient | T], Acc) ->
+	options(T, Acc#{dest => Recipient});
 options([_H | _T], _Acc) ->
 	usage();
 options([], Acc) ->
