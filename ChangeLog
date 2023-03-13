@@ -1,5 +1,6 @@
 2023-03-13  Vance Shipley <vances@sigscale.org>
 
+	* refactor mms escript for recipient address
 	* add mms escript
 	* refactor sms escript for recipient address
 	* correct (unused) macro for mms
