@@ -9,7 +9,15 @@
 -define(IANA_PEN_3GPP, 10415).
 -define(IANA_PEN_SigScale, 50386).
 
-main([CallingParty, CalledParty]) ->
+main(Args) ->
+	case options(Args) of
+		#{help := true} = _Options ->
+			usage();
+		Options ->
+			send_sms(Options)
+	end.
+
+send_sms(Options) ->
 	try
 		Name = escript:script_name(),
 		ok = diameter:start(),
@@ -38,9 +46,9 @@ main([CallingParty, CalledParty]) ->
 		true = diameter:subscribe(Name),
 		TransportOptions =  [{transport_module, diameter_tcp},
 				{transport_config,
-						[{raddr, {127,0,0,1}},
-						{rport, 3868},
-						{ip, {127,0,0,1}}]}],
+						[{raddr, maps:get(raddr, Options, {127,0,0,1})},
+						{rport, maps:get(rport, Options, 3868)},
+						{ip, maps:get(ip, Options, {127,0,0,1})}]}],
 		{ok, _Ref} = diameter:add_transport(Name, {connect, TransportOptions}),
 		receive
 			#diameter_event{service = Name, info = Info}
@@ -48,9 +56,15 @@ main([CallingParty, CalledParty]) ->
 				ok
 		end,
 		SId = diameter:session_id(Hostname),
-		SubscriptionId = #'3gpp_ro_Subscription-Id'{
-				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-				'Subscription-Id-Data' = CallingParty},
+		IMSI = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+			'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
+		MSISDN = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+			'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
+		SubscriptionId = [IMSI, MSISDN],
+		CallingParty = maps:get(orig, Options, "14165551234"), 
+		CalledParty = maps:get(dest, Options, "14165556789"),
 		ServiceInformation = #'3gpp_ro_Service-Information'{
 				'SMS-Information' = [#'3gpp_ro_SMS-Information'{
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
@@ -67,31 +81,63 @@ main([CallingParty, CalledParty]) ->
 				'CC-Request-Number' = 0,
 				'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
 				'Event-Timestamp' = [calendar:universal_time()],
-				'Subscription-Id' = [SubscriptionId],
+				'Subscription-Id' = SubscriptionId,
 				'Service-Information' = [ServiceInformation]},
+		Fro = fun('3gpp_ro_CCA', _N) ->
+					record_info(fields, '3gpp_ro_CCA')
+		end,
+		Fbase = fun('diameter_base_answer-message', _N) ->
+					record_info(fields, 'diameter_base_answer-message')
+		end,
 		case diameter:call(Name, ro, CCR, []) of
 			#'3gpp_ro_CCA'{} = Answer ->
-				F = fun('3gpp_ro_CCA', _N) ->
-							record_info(fields, '3gpp_ro_CCA')
-				end,
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer, F)]);
+						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
 			#'diameter_base_answer-message'{} = Answer ->
-				F = fun('diameter_base_answer-message', _N) ->
-							record_info(fields, 'diameter_base_answer-message')
-				end,
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer, F)]);
+						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
 			{error, Reason} ->
-				throw(Reason)
+						throw(Reason)
 		end
 	catch
-		Error:Reason1 ->
-			io:fwrite("~w: ~w~n", [Error, Reason1]),
+		Error:Reason3 ->
+			io:fwrite("~w: ~w~n", [Error, Reason3]),
 			usage()
-	end;
-main(_) ->
-	usage().
+	end.
 
 usage() ->
-	io:fwrite("usage: ~s Origin Destination~n", [escript:script_name()]),
+	Option1 = " [--msisdn 14165551234]",
+	Option2 = " [--imsi 001001123456789]",
+	Option3 = " [--ip 127.0.0.1]",
+	Option4 = " [--raddr 127.0.0.1]",
+	Option5 = " [--rport 3868]",
+	Option6 = " [--origin 14165551234]",
+	Option7 = " [--destination 14165556789]",
+	Options = [Option1, Option2, Option3, Option4, Option5, Option6, Option7],
+	Format = lists:flatten(["usage: ~s", Options, "~n"]),
+	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
+
+options(Args) ->
+	options(Args, #{}).
+options(["--help" | T], Acc) ->
+	options(T, Acc#{help => true});
+options(["--imsi", IMSI | T], Acc) ->
+	options(T, Acc#{imsi=> IMSI});
+options(["--msisdn", MSISDN | T], Acc) ->
+	options(T, Acc#{msisdn => MSISDN});
+options(["--ip", Address | T], Acc) ->
+	{ok, IP} = inet:parse_address(Address),
+	options(T, Acc#{ip => IP});
+options(["--raddr", Address | T], Acc) ->
+	{ok, IP} = inet:parse_address(Address),
+	options(T, Acc#{raddr => IP});
+options(["--rport", Port | T], Acc) ->
+	options(T, Acc#{rport => list_to_integer(Port)});
+options(["--origin", Origin | T], Acc) ->
+	options(T, Acc#{orig => Origin});
+options(["--destination", Destination | T], Acc) ->
+	options(T, Acc#{dest => Destination});
+options([_H | _T], _Acc) ->
+	usage();
+options([], Acc) ->
+	Acc.
 
