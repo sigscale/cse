@@ -12,7 +12,8 @@ endif
 script_SCRIPTS = scripts/snapshot.escript \
 		scripts/data_session.escript \
 		scripts/voice_call.escript \
-		scripts/send_sms.escript
+		scripts/send_sms.escript \
+		scripts/send_mms.escript
 
 .PHONY: release
 release: $(PACKAGE_VERSION).tar.gz
