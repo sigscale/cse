@@ -331,7 +331,14 @@ install1(Nodes) ->
 	end.
 %% @hidden
 install2(Nodes) ->
-	{ok, Wait} = application:get_env(cse, wait_tables),
+	Wait = case application:get_env(cse, wait_tables) of
+		{ok, Wait1} ->
+			Wait1;
+		undefined ->
+			ok = application:load(cse),
+			{ok, Wait1} = application:get_env(cse, wait_tables),
+			Wait1
+	end,
 	case mnesia:wait_for_tables([schema], Wait) of
 		ok ->
 			install3(Nodes, []);
