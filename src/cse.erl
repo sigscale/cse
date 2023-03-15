@@ -320,7 +320,7 @@ query_users(Cont, _MatchId, MatchLocale) when is_tuple(Cont) ->
 	F = fun() ->
 			mnesia:select(Cont)
 	end,
-	case mnesia:ets(F) of
+	case mnesia:async_dirty(F) of
 		{Users, Cont1} ->
 			query_users2(MatchLocale, Cont1, Users);
 		'$end_of_table' ->
@@ -337,7 +337,7 @@ query_users1(MatchSpec, MatchLocale) ->
 	F = fun() ->
 			mnesia:select(httpd_user, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	case mnesia:ets(F) of
+	case mnesia:async_dirty(F) of
 		{Users, Cont} ->
 			query_users2(MatchLocale, Cont, Users);
 		'$end_of_table' ->
@@ -726,7 +726,7 @@ get_resource_specs() ->
 			F({L, Cont}, Acc) ->
 				F(mnesia:select(Cont), [L | Acc])
 	end,
-	case catch mnesia:ets(F, [start, []]) of
+	case catch mnesia:async_dirty(F, [start, []]) of
 		[] ->
 			{error, not_found};
 		Acc when is_list(Acc) ->
@@ -751,7 +751,7 @@ get_resources() ->
 			F({L, Cont}, Acc) ->
 				F(mnesia:select(Cont), [L | Acc])
 	end,
-	case catch mnesia:ets(F, [start, []]) of
+	case catch mnesia:async_dirty(F, [start, []]) of
 		[] ->
 			{error, not_found};
 		Acc when is_list(Acc) ->
@@ -1046,12 +1046,12 @@ query_resource_spec2(start, MatchSpec) ->
 	F = fun() ->
 			mnesia:select(resource_spec, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	query_resource_spec3(mnesia:ets(F));
+	query_resource_spec3(mnesia:async_dirty(F));
 query_resource_spec2(Cont, _MatchSpec) ->
 	F = fun() ->
 			mnesia:select(Cont)
 	end,
-	query_resource_spec3(mnesia:ets(F)).
+	query_resource_spec3(mnesia:async_dirty(F)).
 %% @hidden
 query_resource_spec3({Resources, Cont}) ->
 	{Cont, Resources};
@@ -1233,12 +1233,12 @@ query_resource4(start, MatchSpec) ->
 	F = fun() ->
 			mnesia:select(resource, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	query_resource5(mnesia:ets(F));
+	query_resource5(mnesia:async_dirty(F));
 query_resource4(Cont, _MatchSpec) ->
 	F = fun() ->
 			mnesia:select(Cont)
 	end,
-	query_resource5(mnesia:ets(F)).
+	query_resource5(mnesia:async_dirty(F)).
 %% @hidden
 query_resource5({Resources, Cont}) ->
 	{Cont, Resources};
@@ -1333,7 +1333,7 @@ get_services() ->
 			F({L, Cont}, Acc) ->
 				F(mnesia:select(Cont), [L| Acc])
 	end,
-	case mnesia:ets(F, [start, []]) of
+	case mnesia:async_dirty(F, [start, []]) of
 		{ok, Acc} when is_list(Acc) ->
 			lists:flatten(lists:reverse(Acc));
 		{error, Reason} ->
@@ -1454,7 +1454,7 @@ get_contexts() ->
 			F({L, Cont}, Acc) ->
 				F(mnesia:select(Cont), [L| Acc])
 	end,
-	case mnesia:ets(F, [start, []]) of
+	case mnesia:async_dirty(F, [start, []]) of
 		{ok, Acc} when is_list(Acc) ->
 			lists:flatten(lists:reverse(Acc));
 		{error, Reason} ->
