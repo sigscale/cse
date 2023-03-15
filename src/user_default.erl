@@ -256,8 +256,6 @@ service_name([{ServiceName, PeerStat} | T]) ->
         io:fwrite("~w:~n", [ServiceName]),
         peer_stat(PeerStat),
         service_name(T);
-service_name([_H | T]) ->
-        service_name(T);
 service_name([]) ->
         ok.
 
