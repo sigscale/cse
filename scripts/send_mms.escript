@@ -58,23 +58,24 @@ send_mms(Options) ->
 		SId = diameter:session_id(Hostname),
 		MSISDN = maps:get(msisdn, Options, "14165551234"),
 		IMSIr = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-			'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+				'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
 		MSISDNr = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = MSISDN},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+				'Subscription-Id-Data' = MSISDN},
 		SubscriptionId = [IMSIr, MSISDNr],
-   	Originator = #'3gpp_ro_Originator-Address'{
+		Originator = #'3gpp_ro_Originator-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(orig, Options, "14165551234")]},
-   	Recipient = #'3gpp_ro_Recipient-Address'{
+		Recipient = #'3gpp_ro_Recipient-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(dest, Options, "14165556789")]},
 		MMS = #'3gpp_ro_MMS-Information'{
 				'Message-Size' = [rand:uniform(1000)],
 				'Originator-Address' = [Originator],
 				'Recipient-Address' = [Recipient]},
-		ServiceInformation = #'3gpp_ro_Service-Information'{'MMS-Information' = [MMS]},
+		ServiceInformation = #'3gpp_ro_Service-Information'{
+				'MMS-Information' = [MMS]},
 		RSU = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Requested-Service-Unit' = [RSU]},
@@ -103,11 +104,11 @@ send_mms(Options) ->
 		end,
 		case diameter:call(Name, ro, CCR, []) of
 			#'3gpp_ro_CCA'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
 			#'diameter_base_answer-message'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
 			{error, Reason} ->
-						throw(Reason)
+				throw(Reason)
 		end
 	catch
 		Error:Reason1 ->

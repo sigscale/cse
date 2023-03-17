@@ -57,11 +57,11 @@ voice_call(Options) ->
 		end,
 		SId = diameter:session_id(Hostname),
 		IMSI = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-			'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+				'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
 		MSISDN = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
 		MSCC1 = #'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Requested-Service-Unit' = []},
@@ -69,8 +69,8 @@ voice_call(Options) ->
 		CalledParty = maps:get(dest, Options, "14165556789"),
 		CallingPartyAddress = "tel:+" ++ CallingParty,
 		CalledPartyAddress = "tel:+" ++ CalledParty,
-		ServiceInformation = #'3gpp_ro_Service-Information'{'IMS-Information' =
-				[#'3gpp_ro_IMS-Information'{
+		ServiceInformation = #'3gpp_ro_Service-Information'{
+				'IMS-Information' = [#'3gpp_ro_IMS-Information'{
 						'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 						'Calling-Party-Address' = [CallingPartyAddress],
@@ -99,11 +99,11 @@ voice_call(Options) ->
 		end,
 		case diameter:call(Name, ro, CCR, []) of
 			#'3gpp_ro_CCA'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
 			#'diameter_base_answer-message'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
 			{error, Reason} ->
-						throw(Reason)
+				throw(Reason)
 		end,
 		timer:sleep(maps:get(interval, Options, 1000)),
 		Fupdate = fun F(0, ReqNum) ->
@@ -113,17 +113,17 @@ voice_call(Options) ->
 					UsedUnits = rand:uniform(3500) + 100,
 					USU = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits]},
 					MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-						'Used-Service-Unit' = [USU]},
+							'Used-Service-Unit' = [USU]},
 					CCR1 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
-						'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-						'CC-Request-Number' = NewReqNum,
-						'Multiple-Services-Credit-Control' = [MSCC3],
-						'Event-Timestamp' = [calendar:universal_time()]},
+							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+							'CC-Request-Number' = NewReqNum,
+							'Multiple-Services-Credit-Control' = [MSCC3],
+							'Event-Timestamp' = [calendar:universal_time()]},
 					case diameter:call(Name, ro, CCR1, []) of
 						#'3gpp_ro_CCA'{} = Answer1 ->
-									io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
 						#'diameter_base_answer-message'{} = Answer1 ->
-									io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
 						{error, Reason1} ->
 							throw(Reason1)
 					end,
@@ -134,17 +134,17 @@ voice_call(Options) ->
 		UsedUnits1 = rand:uniform(3500) + 100,
 		USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits1]},
 		MSCC4 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Used-Service-Unit' = [USU1]},
+				'Used-Service-Unit' = [USU1]},
 		CCR2 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MSCC4],
-			'Event-Timestamp' = [calendar:universal_time()]},
+				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Number' = RequestNum1,
+				'Multiple-Services-Credit-Control' = [MSCC4],
+				'Event-Timestamp' = [calendar:universal_time()]},
 		case diameter:call(Name, ro, CCR2, []) of
 			#'3gpp_ro_CCA'{} = Answer2 ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
 			#'diameter_base_answer-message'{} = Answer2 ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
 			{error, Reason2} ->
 				throw(Reason2)
 		end

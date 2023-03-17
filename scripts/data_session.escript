@@ -58,36 +58,36 @@ data_session(Options) ->
 		SId = diameter:session_id(Hostname),
 		RequestNum = 0,
 		IMSI = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-			'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+				'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
 		MSISDN = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
 		MSCC1 = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Requested-Service-Unit' = []},
 		ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' =
 				[#'3gpp_ro_PS-Information'{
-					'3GPP-PDP-Type' = [3],
-					'Serving-Node-Type' = [2],
-					'SGSN-Address' = [{10,1,2,3}],
-					'GGSN-Address' = [{10,4,5,6}],
-					'3GPP-IMSI-MCC-MNC' = [<<"001001">>],
-					'3GPP-GGSN-MCC-MNC' = [<<"001001">>],
-					'3GPP-SGSN-MCC-MNC' = [<<"001001">>]}]},
+						'3GPP-PDP-Type' = [3],
+						'Serving-Node-Type' = [2],
+						'SGSN-Address' = [{10,1,2,3}],
+						'GGSN-Address' = [{10,4,5,6}],
+						'3GPP-IMSI-MCC-MNC' = [<<"001001">>],
+						'3GPP-GGSN-MCC-MNC' = [<<"001001">>],
+						'3GPP-SGSN-MCC-MNC' = [<<"001001">>]}]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
-			'Origin-Host' = Hostname,
-			'Origin-Realm' = OriginRealm,
-			'Destination-Realm' = OriginRealm,
-			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32251@3gpp.org",
-			'User-Name' = [list_to_binary(Name)],
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
-			'CC-Request-Number' = RequestNum,
-			'Event-Timestamp' = [calendar:universal_time()],
-			'Subscription-Id' = SubscriptionId,
-			'Multiple-Services-Credit-Control' = [MSCC1],
-			'Service-Information' = [ServiceInformation]},
+				'Origin-Host' = Hostname,
+				'Origin-Realm' = OriginRealm,
+				'Destination-Realm' = OriginRealm,
+				'Auth-Application-Id' = ?RO_APPLICATION_ID,
+				'Service-Context-Id' = "32251@3gpp.org",
+				'User-Name' = [list_to_binary(Name)],
+				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
+				'CC-Request-Number' = RequestNum,
+				'Event-Timestamp' = [calendar:universal_time()],
+				'Subscription-Id' = SubscriptionId,
+				'Multiple-Services-Credit-Control' = [MSCC1],
+				'Service-Information' = [ServiceInformation]},
 		Fro = fun('3gpp_ro_CCA', _N) ->
 					record_info(fields, '3gpp_ro_CCA');
 				('3gpp_ro_Multiple-Services-Credit-Control', _N) ->
@@ -112,17 +112,17 @@ data_session(Options) ->
 					UsedUnits = rand:uniform(1000000),
 					USU = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits]},
 					MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-						'Used-Service-Unit' = [USU]},
+							'Used-Service-Unit' = [USU]},
 					CCR1 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
-						'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
-						'CC-Request-Number' = NewReqNum,
-						'Multiple-Services-Credit-Control' = [MSCC3],
-						'Event-Timestamp' = [calendar:universal_time()]},
+							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
+							'CC-Request-Number' = NewReqNum,
+							'Multiple-Services-Credit-Control' = [MSCC3],
+							'Event-Timestamp' = [calendar:universal_time()]},
 					case diameter:call(Name, ro, CCR1, []) of
 						#'3gpp_ro_CCA'{} = Answer1 ->
-									io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
 						#'diameter_base_answer-message'{} = Answer1 ->
-									io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
 						{error, Reason1} ->
 							throw(Reason1)
 					end,
@@ -133,17 +133,17 @@ data_session(Options) ->
 		UsedUnits1 = rand:uniform(1000000),
 		USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits1]},
 		MSCC4 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Used-Service-Unit' = [USU1]},
+				'Used-Service-Unit' = [USU1]},
 		CCR2 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
-			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MSCC4],
-			'Event-Timestamp' = [calendar:universal_time()]},
+				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
+				'CC-Request-Number' = RequestNum1,
+				'Multiple-Services-Credit-Control' = [MSCC4],
+				'Event-Timestamp' = [calendar:universal_time()]},
 		case diameter:call(Name, ro, CCR2, []) of
 			#'3gpp_ro_CCA'{} = Answer2 ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
 			#'diameter_base_answer-message'{} = Answer2 ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
 			{error, Reason2} ->
 				throw(Reason2)
 		end

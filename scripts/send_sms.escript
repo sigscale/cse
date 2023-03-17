@@ -58,11 +58,11 @@ send_sms(Options) ->
 		SId = diameter:session_id(Hostname),
 		MSISDN = maps:get(msisdn, Options, "14165551234")
 		IMSIr = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-			'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+				'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
 		MSISDNr = #'3gpp_ro_Subscription-Id'{
-			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-			'Subscription-Id-Data' = MSISDN},
+				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+				'Subscription-Id-Data' = MSISDN},
 		SubscriptionId = [IMSIr, MSISDNr],
 		RSU = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -97,11 +97,11 @@ send_sms(Options) ->
 		end,
 		case diameter:call(Name, ro, CCR, []) of
 			#'3gpp_ro_CCA'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
 			#'diameter_base_answer-message'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
 			{error, Reason} ->
-						throw(Reason)
+				throw(Reason)
 		end
 	catch
 		Error:Reason1 ->
