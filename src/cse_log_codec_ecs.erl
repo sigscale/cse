@@ -216,7 +216,6 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
 	Duration = integer_to_list((Stop - Start) * 1000000),
-	#{imsi := IMSI, msisdn := MSISDN} = Subscriber,
 	Outcome = case State of
 		exception ->
 			"failure";
@@ -233,7 +232,7 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
 			ecs_service(ServiceName, "slp"), $,,
 			ecs_network("nrf", "http"), $,,
-			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
+			ecs_user(msisdn(Subscriber), imsi(Subscriber), []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol", "end"], Outcome), $,,
 			ecs_url(URL), $,,
@@ -277,7 +276,6 @@ codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
 	Duration = integer_to_list((Stop - Start) * 1000000),
-	#{imsi := IMSI, msisdn := MSISDN} = Subscriber,
 	Outcome = case ((StatusCode >= 200) and (StatusCode =< 299)) of
 		true ->
 			"success";
@@ -288,7 +286,7 @@ codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
 			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
 			ecs_service(ServiceName, "slp"), $,,
 			ecs_network("nrf", "http"), $,,
-			ecs_user("msisdn-" ++ MSISDN, "imsi-" ++ IMSI, []), $,,
+			ecs_user(msisdn(Subscriber), imsi(Subscriber), []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol"], Outcome),
 			ecs_client([], [], Address, Port), $,,
@@ -668,4 +666,16 @@ get_string(Key, Map) ->
 		Value when is_list(Value) ->
 			Value
 	end.
+
+%% @hidden
+imsi(#{imsi := IMSI} = _Subscriber) when is_list(IMSI) ->
+	"imsi-" ++ IMSI;
+imsi(_Subscriber) ->
+	"".
+
+%% @hidden
+msisdn(#{msisdn := MSISDN} = _Subscriber) when is_list(MSISDN) ->
+	"msisdn-" ++ MSISDN;
+msisdn(_Subscriber) ->
+	"".
 
