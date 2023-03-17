@@ -64,10 +64,11 @@ data_session(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
-		MSCC1 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Requested-Service-Unit' = []},
-		ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' =
-				[#'3gpp_ro_PS-Information'{
+		RSU = #'3gpp_ro_Requested-Service-Unit'{},
+		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Requested-Service-Unit' = [RSU]},
+		ServiceInformation = #'3gpp_ro_Service-Information'{
+				'PS-Information' = [#'3gpp_ro_PS-Information'{
 						'3GPP-PDP-Type' = [3],
 						'Serving-Node-Type' = [2],
 						'SGSN-Address' = [{10,1,2,3}],
@@ -98,11 +99,11 @@ data_session(Options) ->
 		end,
 		case diameter:call(Name, ro, CCR, []) of
 			#'3gpp_ro_CCA'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
 			#'diameter_base_answer-message'{} = Answer ->
-						io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
 			{error, Reason} ->
-						throw(Reason)
+				throw(Reason)
 		end,
 		timer:sleep(maps:get(interval, Options, 1000)),
 		Fupdate = fun F(0, ReqNum) ->
@@ -110,8 +111,10 @@ data_session(Options) ->
 				F(N, ReqNum) ->
 					NewReqNum = ReqNum + 1,
 					UsedUnits = rand:uniform(1000000),
+					RSU = #'3gpp_ro_Requested-Service-Unit'{},
 					USU = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits]},
 					MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
+							'Requested-Service-Unit' = [RSU],
 							'Used-Service-Unit' = [USU]},
 					CCR1 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
 							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
