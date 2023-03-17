@@ -1,5 +1,6 @@
 2023-03-17  Vance Shipley <vances@sigscale.org>
 
+	* refactor escripts to avoid variable name reuse
 	* omit empty service rating on nrf
 	* empty rsu in mscc of data session script
 	* release package filename as cse-<version>.tar.gz
