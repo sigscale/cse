@@ -1,5 +1,6 @@
 2023-03-17  Vance Shipley <vances@sigscale.org>
 
+	* handle missing imsi/msisdn in ecs log codec
 	* refactor escripts to avoid variable name reuse
 	* omit empty service rating on nrf
 	* empty rsu in mscc of data session script

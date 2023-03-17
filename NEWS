@@ -3,6 +3,7 @@ March 17, 2023
 	- Data session script includes empty RSU in MSCC
 	- Prepaid SLPs omit empty serviceRating on Nrf
 	- Release package name now includes cse- prefix
+	- ECS logging handles missing subscription IDs
 
 March 15, 2023
 --------------
