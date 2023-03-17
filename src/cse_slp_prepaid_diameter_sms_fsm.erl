@@ -1067,29 +1067,31 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @hidden
 nrf_start(#{one_time := OneTime, mscc := MSCC,
 		context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(OneTime, MSCC, ServiceContextId),
-	nrf_start1(OneTime, ServiceRating, Data).
+	case service_rating(OneTime, MSCC, ServiceContextId) of
+		ServiceRating when length(ServiceRating) > 0 ->
+			nrf_start1(OneTime, #{"serviceRating" => ServiceRating}, Data);
+		[] ->
+			nrf_start1(OneTime, #{}, Data)
+	end.
 %% @hidden
-nrf_start1(true, ServiceRating, Data) ->
+nrf_start1(true, JSON, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data),
 			"oneTimeEvent" => true,
-			"oneTimeEventType" => "IEC",
-			"serviceRating" => ServiceRating},
-	nrf_start2(Now, JSON, Data);
-nrf_start1(false, ServiceRating, Data) ->
+			"oneTimeEventType" => "IEC"},
+	nrf_start2(Now, JSON1, Data);
+nrf_start1(false, JSON, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => subscription_id(Data),
-			"serviceRating" => ServiceRating},
-	nrf_start2(Now, JSON, Data).
+			"subscriptionId" => subscription_id(Data)},
+	nrf_start2(Now, JSON1, Data).
 %% @hidden
 nrf_start2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
@@ -1138,18 +1140,21 @@ nrf_start2(Now, JSON,
 		From :: {pid(), reference()}.
 %% @doc Update rating a session.
 nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(false, MSCC, ServiceContextId),
-	nrf_update1(ServiceRating, Data).
+	case service_rating(false, MSCC, ServiceContextId) of
+		ServiceRating when length(ServiceRating) > 0 ->
+			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
+		[] ->
+			nrf_update1(#{}, Data)
+	end.
 %% @hidden
-nrf_update1(ServiceRating, Data) ->
+nrf_update1(JSON, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => subscription_id(Data),
-			"serviceRating" => ServiceRating},
-	nrf_update2(Now, JSON, Data).
+			"subscriptionId" => subscription_id(Data)},
+	nrf_update2(Now, JSON1, Data).
 %% @hidden
 nrf_update2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
@@ -1201,18 +1206,21 @@ nrf_update2(Now, JSON,
 		From :: {pid(), reference()}.
 %% @doc Finish rating a session.
 nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(false, MSCC, ServiceContextId),
-	nrf_release1(ServiceRating,  Data).
+	case service_rating(false, MSCC, ServiceContextId) of
+		ServiceRating when length(ServiceRating) > 0 ->
+			nrf_release1(#{"serviceRating" => ServiceRating}, Data);
+		[] ->
+			nrf_release1(#{}, Data)
+	end.
 %% @hidden
-nrf_release1(ServiceRating, Data) ->
+nrf_release1(JSON, Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => subscription_id(Data),
-			"serviceRating" => ServiceRating},
-	nrf_release2(Now, JSON, Data).
+			"subscriptionId" => subscription_id(Data)},
+	nrf_release2(Now, JSON1, Data).
 %% @hidden
 nrf_release2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
