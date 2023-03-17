@@ -21,7 +21,7 @@ voice_call(Options) ->
 	try
 		Name = escript:script_name(),
 		ok = diameter:start(),
-		Hostname = erlang:ref_to_list(make_ref()),
+		Hostname = filename:rootname(filename:basename(Name), ".escript"),
 		OriginRealm = case inet_db:res_option(domain) of
 			Domain when length(Domain) > 0 ->
 				Domain;
