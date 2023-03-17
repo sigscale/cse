@@ -63,8 +63,9 @@ voice_call(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
+		RSU1 = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC1 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Requested-Service-Unit' = []},
+				'Requested-Service-Unit' = [RSU1]},
 		CallingParty = maps:get(orig, Options, "14165551234"), 
 		CalledParty = maps:get(dest, Options, "14165556789"),
 		CallingPartyAddress = "tel:+" ++ CallingParty,
@@ -75,8 +76,8 @@ voice_call(Options) ->
 						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 						'Calling-Party-Address' = [CallingPartyAddress],
 						'Called-Party-Address' = [CalledPartyAddress]}]},
-		RequestNum = 0,
-		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
+		RequestNum1 = 0,
+		CCR1 = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
 				'Destination-Realm' = OriginRealm,
@@ -84,7 +85,7 @@ voice_call(Options) ->
 				'Service-Context-Id' = "32260@3gpp.org",
 				'User-Name' = [list_to_binary(CallingParty)],
 				'CC-Request-Type' = ?'3GPP_RO_CC-REQUEST-TYPE_INITIAL_REQUEST',
-				'CC-Request-Number' = RequestNum,
+				'CC-Request-Number' = RequestNum1,
 				'Event-Timestamp' = [calendar:universal_time()],
 				'Subscription-Id' = SubscriptionId,
 				'Multiple-Services-Credit-Control' = [MSCC1],
@@ -97,60 +98,60 @@ voice_call(Options) ->
 		Fbase = fun('diameter_base_answer-message', _N) ->
 					record_info(fields, 'diameter_base_answer-message')
 		end,
-		case diameter:call(Name, ro, CCR, []) of
-			#'3gpp_ro_CCA'{} = Answer ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
-			#'diameter_base_answer-message'{} = Answer ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
-			{error, Reason} ->
-				throw(Reason)
+		case diameter:call(Name, ro, CCR1, []) of
+			#'3gpp_ro_CCA'{} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
+			#'diameter_base_answer-message'{} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
+			{error, Reason1} ->
+				throw(Reason1)
 		end,
 		timer:sleep(maps:get(interval, Options, 1000)),
 		Fupdate = fun F(0, ReqNum) ->
 					ReqNum;
 				F(N, ReqNum) ->
 					NewReqNum = ReqNum + 1,
-					UsedUnits = rand:uniform(3500) + 100,
-					USU = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits]},
-					MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-							'Used-Service-Unit' = [USU]},
-					CCR1 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
+					UsedUnits1 = rand:uniform(3500) + 100,
+					USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits1]},
+					MSCC2 = #'3gpp_ro_Multiple-Services-Credit-Control'{
+							'Used-Service-Unit' = [USU1]},
+					CCR2 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 							'CC-Request-Number' = NewReqNum,
-							'Multiple-Services-Credit-Control' = [MSCC3],
+							'Multiple-Services-Credit-Control' = [MSCC2],
 							'Event-Timestamp' = [calendar:universal_time()]},
-					case diameter:call(Name, ro, CCR1, []) of
-						#'3gpp_ro_CCA'{} = Answer1 ->
-							io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
-						#'diameter_base_answer-message'{} = Answer1 ->
-							io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
-						{error, Reason1} ->
-							throw(Reason1)
+					case diameter:call(Name, ro, CCR2, []) of
+						#'3gpp_ro_CCA'{} = Answer2 ->
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
+						#'diameter_base_answer-message'{} = Answer2 ->
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
+						{error, Reason2} ->
+							throw(Reason2)
 					end,
 					timer:sleep(maps:get(interval, Options, 1000)),
 					F(N - 1, NewReqNum)
 		end,
-		RequestNum1 = Fupdate(maps:get(updates, Options, 1), RequestNum),
-		UsedUnits1 = rand:uniform(3500) + 100,
-		USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits1]},
-		MSCC4 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Used-Service-Unit' = [USU1]},
-		CCR2 = CCR#'3gpp_ro_CCR'{'Session-Id' = SId,
+		RequestNum2 = Fupdate(maps:get(updates, Options, 1), RequestNum1),
+		UsedUnits2 = rand:uniform(3500) + 100,
+		USU2 = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits2]},
+		MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Used-Service-Unit' = [USU2]},
+		CCR3 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
-				'CC-Request-Number' = RequestNum1,
-				'Multiple-Services-Credit-Control' = [MSCC4],
+				'CC-Request-Number' = RequestNum2,
+				'Multiple-Services-Credit-Control' = [MSCC3],
 				'Event-Timestamp' = [calendar:universal_time()]},
-		case diameter:call(Name, ro, CCR2, []) of
-			#'3gpp_ro_CCA'{} = Answer2 ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
-			#'diameter_base_answer-message'{} = Answer2 ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
-			{error, Reason2} ->
-				throw(Reason2)
+		case diameter:call(Name, ro, CCR3, []) of
+			#'3gpp_ro_CCA'{} = Answer3 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fro)]);
+			#'diameter_base_answer-message'{} = Answer3 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fbase)]);
+			{error, Reason3} ->
+				throw(Reason3)
 		end
 	catch
-		Error:Reason3 ->
-			io:fwrite("~w: ~w~n", [Error, Reason3]),
+		Error:Reason4 ->
+			io:fwrite("~w: ~w~n", [Error, Reason4]),
 			usage()
 	end.
 
