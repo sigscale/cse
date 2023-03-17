@@ -1,3 +1,9 @@
+2023-03-17  Vance Shipley <vances@sigscale.org>
+
+	* omit empty service rating on nrf
+	* empty rsu in mscc of data session script
+	* release package filename as cse-<version>.tar.gz
+
 2023-03-15  Vance Shipley <vances@sigscale.org>
 
 	* perform mnesia read operations in async dirty mode
