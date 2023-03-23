@@ -1287,8 +1287,8 @@ gsu(_) ->
 service_rating(#{mscc := MSCC} = Data) ->
 	service_rating(MSCC, Data, []).
 %% @hidden
-service_rating([MSCC | T], #{context := ServiceContextId,
-		vplmn := VPLMN} = Data, Acc) ->
+service_rating([MSCC | T],
+		#{context := ServiceContextId, vplmn := VPLMN} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),

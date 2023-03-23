@@ -1783,8 +1783,8 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 		From :: {pid(), reference()}.
 %% @doc Start rating a session.
 %% @hidden
-nrf_start(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	case service_rating(MSCC, ServiceContextId) of
+nrf_start(Data) ->
+	case service_rating(Data) of
 		ServiceRating when length(ServiceRating) > 0 ->
 			nrf_start1(#{"serviceRating" => ServiceRating}, Data);
 		[] ->
@@ -1846,8 +1846,8 @@ nrf_start2(Now, JSON,
 		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
 		From :: {pid(), reference()}.
 %% @doc Update rating a session.
-nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	case service_rating(MSCC, ServiceContextId) of
+nrf_update(Data) ->
+	case service_rating(Data) of
 		ServiceRating when length(ServiceRating) > 0 ->
 			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
 		[] ->
@@ -1912,9 +1912,8 @@ nrf_update2(Now, JSON,
 		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
 		From :: {pid(), reference()}.
 %% @doc Finish rating a session.
-nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	ServiceRating = service_rating(MSCC, ServiceContextId),
-	case service_rating(MSCC, ServiceContextId) of
+nrf_release(Data) ->
+	case service_rating(Data) of
 		ServiceRating when length(ServiceRating) > 0 ->
 			nrf_release1(#{"serviceRating" => ServiceRating}, Data);
 		[] ->
@@ -2037,23 +2036,24 @@ gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
 gsu(_) ->
 	[].
 
--spec service_rating(MSCC, ServiceContextId) -> ServiceRating
+-spec service_rating(Data) -> ServiceRating
 	when
-		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-		ServiceContextId :: string(),
+		Data :: statedata(),
 		ServiceRating :: [map()].
 %% @doc Build a `serviceRating' object.
 %% @hidden
-service_rating(MSCC, ServiceContextId) ->
-	service_rating(MSCC, ServiceContextId, []).
+service_rating(#{mscc := MSCC} = Data) ->
+	service_rating(MSCC, Data, []).
 %% @hidden
-service_rating([MSCC | T], ServiceContextId, Acc) ->
-	SR1 = service_rating_si(MSCC, #{"serviceContextId" => ServiceContextId}),
-	SR2 = service_rating_rg(MSCC, SR1),
-	Acc1 = service_rating_rsu(MSCC, SR2, Acc),
-	Acc2 = service_rating_usu(MSCC, SR2, Acc1),
-	service_rating(T, ServiceContextId, Acc2);
-service_rating([], _ServiceContextId, Acc) ->
+service_rating([MSCC | T],
+		#{context := ServiceContextId} = Data, Acc) ->
+	SR1 = #{"serviceContextId" => ServiceContextId},
+	SR2 = service_rating_si(MSCC, SR1),
+	SR3 = service_rating_rg(MSCC, SR2),
+	Acc1 = service_rating_rsu(MSCC, SR3, Acc),
+	Acc2 = service_rating_usu(MSCC, SR3, Acc1),
+	service_rating(T, Data, Acc2);
+service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
 
 %% @hidden

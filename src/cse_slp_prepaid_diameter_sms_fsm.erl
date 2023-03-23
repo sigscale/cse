@@ -1078,16 +1078,15 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 		From :: {pid(), reference()}.
 %% @doc Start rating a session.
 %% @hidden
-nrf_start(#{one_time := OneTime, mscc := MSCC,
-		context := ServiceContextId} = Data) ->
-	case service_rating(OneTime, MSCC, ServiceContextId) of
+nrf_start(Data) ->
+	case service_rating(Data) of
 		ServiceRating when length(ServiceRating) > 0 ->
-			nrf_start1(OneTime, #{"serviceRating" => ServiceRating}, Data);
+			nrf_start1(#{"serviceRating" => ServiceRating}, Data);
 		[] ->
-			nrf_start1(OneTime, #{}, Data)
+			nrf_start1(#{}, Data)
 	end.
 %% @hidden
-nrf_start1(true, JSON, Data) ->
+nrf_start1(JSON, #{one_time := true} = Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
@@ -1097,7 +1096,7 @@ nrf_start1(true, JSON, Data) ->
 			"oneTimeEvent" => true,
 			"oneTimeEventType" => "IEC"},
 	nrf_start2(Now, JSON1, Data);
-nrf_start1(false, JSON, Data) ->
+nrf_start1(JSON, #{one_time := false} = Data) ->
 	Now = erlang:system_time(millisecond),
 	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
@@ -1152,8 +1151,8 @@ nrf_start2(Now, JSON,
 		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
 		From :: {pid(), reference()}.
 %% @doc Update rating a session.
-nrf_update(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	case service_rating(false, MSCC, ServiceContextId) of
+nrf_update(Data) ->
+	case service_rating(Data) of
 		ServiceRating when length(ServiceRating) > 0 ->
 			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
 		[] ->
@@ -1218,8 +1217,8 @@ nrf_update2(Now, JSON,
 		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
 		From :: {pid(), reference()}.
 %% @doc Finish rating a session.
-nrf_release(#{mscc := MSCC, context := ServiceContextId} = Data) ->
-	case service_rating(false, MSCC, ServiceContextId) of
+nrf_release(Data) ->
+	case service_rating(Data) of
 		ServiceRating when length(ServiceRating) > 0 ->
 			nrf_release1(#{"serviceRating" => ServiceRating}, Data);
 		[] ->
@@ -1305,27 +1304,27 @@ gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
 gsu(_) ->
 	[].
 
--spec service_rating(OneTime, MSCC, ServiceContextId) -> ServiceRating
+-spec service_rating(Data) -> ServiceRating
 	when
-		OneTime :: boolean(),
-		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
-		ServiceContextId :: string(),
+		Data :: statedata(),
 		ServiceRating :: [map()].
 %% @doc Build a `serviceRating' object.
 %% @hidden
-service_rating(OneTime, MSCC, ServiceContextId) ->
-	service_rating(OneTime, MSCC, ServiceContextId, []).
+service_rating(#{one_time := OneTime, mscc := MSCC} = Data) ->
+	service_rating(OneTime, MSCC, Data, []).
 %% @hidden
 service_rating(true, [MSCC | T], ServiceContextId, Acc) ->
-	SR1 = service_rating_si(MSCC, #{"serviceContextId" => ServiceContextId}),
-	SR2 = service_rating_rg(MSCC, SR1),
-	Acc1 = service_rating_reserve(true, MSCC, SR2, Acc),
+	SR1 = #{"serviceContextId" => ServiceContextId},
+	SR2 = service_rating_si(MSCC, SR1),
+	SR3 = service_rating_rg(MSCC, SR2),
+	Acc1 = service_rating_reserve(true, MSCC, SR3, Acc),
 	service_rating(true, T, ServiceContextId, Acc1);
 service_rating(false, [MSCC | T], ServiceContextId, Acc) ->
-	SR1 = service_rating_si(MSCC, #{"serviceContextId" => ServiceContextId}),
-	SR2 = service_rating_rg(MSCC, SR1),
-	Acc1 = service_rating_reserve(false, MSCC, SR2, Acc),
-	Acc2 = service_rating_debit(MSCC, SR2, Acc1),
+	SR1 = #{"serviceContextId" => ServiceContextId},
+	SR2 = service_rating_si(MSCC, SR1),
+	SR3 = service_rating_rg(MSCC, SR2),
+	Acc1 = service_rating_reserve(false, MSCC, SR3, Acc),
+	Acc2 = service_rating_debit(MSCC, SR3, Acc1),
 	service_rating(false, T, ServiceContextId, Acc2);
 service_rating(_OneTime, [], _ServiceContextId, Acc) ->
 	lists:reverse(Acc).
