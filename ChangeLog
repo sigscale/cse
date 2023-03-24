@@ -1,3 +1,12 @@
+2023-03-24  Vance Shipley <vances@sigscale.org>
+
+	* ps, ims, sms, mms service information in nrf service rating
+	* additional avps for mms
+	* simple, consistent, service_rating function
+	* store service information in prepaid slp state
+	* statistics server in supervision tree diagram
+	* script name as diameter peer name
+
 2023-03-17  Vance Shipley <vances@sigscale.org>
 
 	* handle missing imsi/msisdn in ecs log codec
