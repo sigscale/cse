@@ -104,16 +104,16 @@
    Priority-Level                                         1046  Unsigned32       V
    TDF-IP-Address                                         1091  Address          VM
    ADC-Rule-Base-Name                                     1095  UTF8String       VM
-;  VASP-Id                                                1101  
-;  VAS-Id                                                 1102  
+   VASP-Id                                                1101  UTF8String       VM
+   VAS-Id                                                 1102  UTF8String       VM
    Domain-Name                                            1200  UTF8String       VM
    Recipient-Address                                      1201  Grouped          VM
    Submission-Time                                        1202  Time             VM
-;  MM-Content-Type                                        1203  Grouped          VM
-;  Type-Number                                            1204  Enumerated       VM
+   MM-Content-Type                                        1203  Grouped          VM
+   Type-Number                                            1204  Enumerated       VM
    Additional-Type-Information                            1205  UTF8String       VM
    Content-Size                                           1206  Unsigned32       VM
-;  Additional-Content-Information                         1207  Grouped          VM
+   Additional-Content-Information                         1207  Grouped          VM
    Addressee-Type                                         1208  Enumerated       VM
    Priority                                               1209  Enumerated       VM
    Message-ID                                             1210  UTF8String       VM
@@ -126,7 +126,7 @@
 ;  Adaptations                                            1217  Enumerated       VM
    Applic-ID                                              1218  UTF8String       VM
    Aux-Applic-Info                                        1219  UTF8String       VM
-;  Content-Class                                          1220  Enumerated       VM
+   Content-Class                                          1220  Enumerated       VM
 ;  DRM-Content                                            1221  Enumerated       VM
 ;  Read-Reply-Report-Requested                            1222  Enumerated       VM
    Reply-Applic-ID                                        1223  UTF8String       VM
@@ -952,7 +952,7 @@
       [ Originator-Address ]
      *[ Recipient-Address ]
       [ Submission-Time ]
-;     [ MM-Content-Type ]
+      [ MM-Content-Type ]
       [ Priority ]
       [ Message-ID ]
       [ Message-Type ]
@@ -961,14 +961,14 @@
       [ Delivery-Report-Requested ]
 ;     [ Read-Reply-Report-Requested ]
 ;     [ MMBox-Storage-Requested ]
-;     [ Applic-ID ]
-;     [ Reply-Applic-ID ]
-;     [ Aux-Applic-Info ]
-;     [ Content-Class ]
+      [ Applic-ID ]
+      [ Reply-Applic-ID ]
+      [ Aux-Applic-Info ]
+      [ Content-Class ]
 ;     [ DRM-Content ]
 ;     [ Adaptations ]
-;     [ VASP-Id ]
-;     [ VAS-Id ]
+      [ VASP-Id ]
+      [ VAS-Id ]
      *[ AVP ]
 
 ;  LCS-Information ::= <AVP Header: 878>
@@ -1554,6 +1554,17 @@
       { Time-Zone }
       { Daylight-Saving-Time }
      *[ AVP ]
+
+   MM-Content-Type ::= <AVP Header: 1203>
+      [ Type-Number ]
+      [ Additional-Type-Information ]
+      [ Content-Size ]
+     *[ Additional-Content-Information ]
+
+   Additional-Content-Information ::= <AVP Header: 1207>
+      [ Type-Number ]
+      [ Additional-Type-Information ]
+      [ Content-Size ]
 
    Message-Class ::= <AVP Header: 1213>
       [ Class-Identifier ]
@@ -2183,6 +2194,14 @@
    SMS-Router_and_IP-SM-GW      2
    SMS-SC                       3
 
+@enum SM-Message-Type
+   SUBMISSION                   0
+   DELIVERY_REPORT              1
+   SM_Service_Request           2
+   T4_Device_Trigger            3
+   SM_Device_Trigger            4
+   MO-SMS_T4_submission         5
+
 @enum Non-3GPP-IP-Access
    NON_3GPP_SUBSCRIPTION_ALLOWED 0
    NON_3GPP_SUBSCRIPTION_BARRED  1
@@ -2263,6 +2282,97 @@
    Normal                       1
    High                         2
 
+@enum Type-Number
+   ALL_ALL                                      0
+   TEXT_ALL                                     1
+   TEXT_HTML                                    2
+   TEXT_PLAIN                                   3
+   TEXT_X-HDML                                  4
+   TEXT_X-TTML                                  5
+   TEXT_X-VCALENDAR                             6
+   TEXT_X-VCARD                                 7
+   TEXT_VND_WAP_WML                             8
+   TEXT_VND_WAP_WMLSCRIPT                       9
+   TEXT_VND_WAP_WTA-EVENT                      10
+   MULTIPART_MIXED                             12
+   MULTIPART_FORM-DATA                         13
+   MULTIPART_BYTERANTES                        14
+   MULTIPART_ALTERNATIVE                       15
+   APPLICATION_ALL                             16
+   APPLICATION_JAVA-VM                         17
+   APPLICATION_X-WWW-FORM-URLENCODED           18
+   APPLICATION_X-HDMLC                         19
+   APPLICATION_VND_WAP_WMLC                    20
+   APPLICATION_VND_WAP_WMLSCRIPTC              21
+   APPLICATION_VND_WAP_WTA-EVENTC              22
+   APPLICATION_VND_WAP_UAPROF                  23
+   APPLICATION_VND_WAP_WTLS-CA-CERTIFICATE     24
+   APPLICATION_VND_WAP_WTLS-USER-CERTIFICATE   25
+   APPLICATION_X-X509-CA-CERT                  26
+   APPLICATION_X-X509-USER-CERT                27
+   IMAGE_ALL                                   28
+   IMAGE_GIF                                   29
+   IMAGE_JPEG                                  30
+   IMAGE_TIFF                                  31
+   IMAGE_PNG                                   32
+   IMAGE_VND_WAP_WBMP                          33
+   APPLICATION_VND_WAP_MULTIPART_ALL           34
+   APPLICATION_VND_WAP_MULTIPART_MIXED         35
+   APPLICATION_VND_WAP_MULTIPART_FORM-DATA     36
+   APPLICATION_VND_WAP_MULTIPART_BYTERANGES    37
+   APPLICATION_VND_WAP_MULTIPART_ALTERNATIVE   38
+   APPLICATION_XML                             39
+   TEXT_XML                                    40
+   APPLICATION_VND_WAP_WBXML                   41
+   APPLICATION_X-X968-CROSS-CERT               42
+   APPLICATION_X-X968-CA-CERT                  43
+   APPLICATION_X-X968-USER-CERT                44
+   TEXT_VND_WAP_SI                             45
+   APPLICATION_VND_WAP_SIC                     46
+   TEXT_VND_WAP_SL                             47
+   APPLICATION_VND_WAP_SLC                     48
+   TEXT_VND_WAP_CO                             49
+   APPLICATION_VND_WAP_COC                     50
+   APPLICATION_VND_WAP_MULTIPART_RELATED       51
+   APPLICATION_VND_WAP_SIA                     52
+   TEXT_VND_WAP_CONNECTIVITY-XML               53
+   APPLICATION_VND_WAP_CONNECTIVITY-WBXML      54
+   APPLICATION_PKCS7-MIME                      55
+   APPLICATION_VND_WAP_HASHED-CERTIFICATE      56
+   APPLICATION_VND_WAP_CERT-RESPONSE           58
+   APPLICATION_XHTML_XML                       59
+   APPLICATION_WML_XML                         60
+   TEXT_CSS                                    61
+   APPLICATION_VND_WAP_MMS-MESSAGE             62
+   APPLICATION_VND_WAP_ROLLOVER-CERTIFICATE    63
+   APPLICATION_VND_WAP_LOCC_WBXML              64
+   APPLICATION_VND_WAP_LOC_XML                 65
+   APPLICATION_VND_SYNCML_DM_WBXML             66
+   APPLICATION_VND_SYNCML_DM_XML               67
+   APPLICATION_VND_SYNCML_NOTIFICATION         68
+   APPLICATION_VND_WAP_XHTML_XML               69
+   APPLICATION_VND_WV_CSP_CIR                  70
+   APPLICATION_VND_OMA_DD_XML                  71
+   APPLICATION_VND_OMA_DRM_MESSAGE             72
+   APPLICATION_VND_OMA_DRM_CONTENT             73
+   APPLICATION_VND_OMA_DRM_RIGHTS_XML          74
+   APPLICATION_VND_OMA_DRM_RIGHTS_WBXML        75
+   APPLICATION_VND_WV_CSP_XML                  76
+   APPLICATION_VND_WV_CSP_WBXML                77
+   APPLICATION_VND_SYNCML_DS_NOTIFICATION      78
+   AUDIO_ALL                                   79
+   VIDEO_ALL                                   80
+   APPLICATION_VND_OMA_DD2_XML                 81
+   APPLICATION_MIKEY                           82
+   APPLICATION_VND_OMA_DCD                     83
+   APPLICATION_VND_OMA_DCDC                    84
+   TEXT_X-VMESSAGE                             85
+   APPLICATION_VND_OMADS-EMAIL_WBXML           86
+   TEXT_X-VBOOKMARK                            87
+   APPLICATION_VND_SYNCML_DM_NOTIFICATION      88
+   APPLICATION_OCTET-STREAM                    90
+   APPLICATION_JSON                            91
+
 @enum Message-Type
    m-send-req                   1
    m-send-conf                  2
@@ -2279,6 +2389,16 @@
    m-mbox-view-conf            13
    m-mbox-upload-conf          14
    m-mbox-delete-conf          15
+
+@enum Content-Class
+   TEXT                         0
+   IMAGE-BASIC                  1
+   IMAGE-RICH                   2
+   VIDEO-BASIC                  3
+   VIDEO-RICH                   4
+   MEGAPIXEL                    5
+   CONTENT-BASIC                6
+   CONTENT-RICH                 7
 
 @enum Class-Identifier
    Personal                     0
