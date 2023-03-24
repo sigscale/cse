@@ -1313,20 +1313,26 @@ gsu(_) ->
 service_rating(#{one_time := OneTime, mscc := MSCC} = Data) ->
 	service_rating(OneTime, MSCC, Data, []).
 %% @hidden
-service_rating(true, [MSCC | T], ServiceContextId, Acc) ->
+service_rating(true, [MSCC | T],
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	Acc1 = service_rating_reserve(true, MSCC, SR3, Acc),
-	service_rating(true, T, ServiceContextId, Acc1);
-service_rating(false, [MSCC | T], ServiceContextId, Acc) ->
+	SR4 = service_rating_sms(ServiceInformation, SR3),
+	Acc1 = service_rating_reserve(true, MSCC, SR4, Acc),
+	service_rating(true, T, Data, Acc1);
+service_rating(false, [MSCC | T],
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	Acc1 = service_rating_reserve(false, MSCC, SR3, Acc),
-	Acc2 = service_rating_debit(MSCC, SR3, Acc1),
-	service_rating(false, T, ServiceContextId, Acc2);
-service_rating(_OneTime, [], _ServiceContextId, Acc) ->
+	SR4 = service_rating_sms(ServiceInformation, SR3),
+	Acc1 = service_rating_reserve(false, MSCC, SR4, Acc),
+	Acc2 = service_rating_debit(MSCC, SR4, Acc1),
+	service_rating(false, T, Data, Acc2);
+service_rating(_OneTime, [], _Data, Acc) ->
 	lists:reverse(Acc).
 
 %% @hidden
@@ -1343,6 +1349,97 @@ service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	ServiceRating#{"ratingGroup" => RG};
 service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Rating-Group' = []}, ServiceRating) ->
+	ServiceRating.
+
+%% @hidden
+service_rating_sms([#'3gpp_ro_Service-Information'{
+		'SMS-Information' = SMS}], ServiceRating) ->
+	service_rating_sms1(SMS, ServiceRating);
+service_rating_sms(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_sms1([#'3gpp_ro_SMS-Information'{
+		'SMS-Node' = [Node]}] = SMS, ServiceRating) ->
+	SmsNode = case Node of
+		?'3GPP_RO_SMS-NODE_SMS-ROUTER' ->
+			 "SMS Router";
+		?'3GPP_RO_SMS-NODE_IP-SM-GW' ->
+			"IP-SM-GW";
+		?'3GPP_RO_SMS-NODE_SMS-ROUTER_AND_IP-SM-GW' ->
+			"SMS Router and IP-SM-GW";
+		?'3GPP_RO_SMS-NODE_SMS-SC' ->
+			"SMS-SC"
+	end,
+	JSON = #{"smsNode" => SmsNode},
+	service_rating_sms2(SMS, ServiceRating, JSON);
+service_rating_sms1(SMS, ServiceRating) ->
+	service_rating_sms2(SMS, ServiceRating, #{}).
+%% @hidden
+service_rating_sms2([#'3gpp_ro_SMS-Information'{
+		'SM-Message-Type' = [Type]}] = SMS, ServiceRating, JSON) ->
+	MessageType = case Type of
+% @todo MACROS
+		0 ->
+			"SUBMISSION";
+		1 ->
+			"DELIVERY_REPORT";
+		2 ->
+			"SM Service Request";
+		3 ->
+			"T4 Device Trigger";
+		4 ->
+			"SM Device Trigger";
+		5 ->
+			"MO-SMS T4 submission"
+	end,
+	JSON1 = JSON#{"messageType" => MessageType},
+	service_rating_sms3(SMS, ServiceRating, JSON1);
+service_rating_sms2(SMS, ServiceRating, JSON) ->
+	service_rating_sms3(SMS, ServiceRating, JSON).
+%% @hidden
+service_rating_sms3([#'3gpp_ro_SMS-Information'{
+		'SM-Service-Type' = [Type]}] = SMS, ServiceRating, JSON) ->
+	ServiceType = case Type of
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSCONTENTPROCESSING' ->
+			"VAS4SMS Short Message content processing";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSFORWARDING' ->
+			"VAS4SMS Short Message forwarding";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSFORWARDINGMULTIPLESUBSCRIPTIONS' ->
+			"VAS4SMS Short Message Forwarding multiple subscriptions";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSFILTERING' ->
+			"VAS4SMS Short Message filtering";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSRECEIPT' ->
+			"VAS4SMS Short Message receipt";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSNETWORKSTORAGE' ->
+			"VAS4SMS Short Message Network Storage";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSMULTIPLEDESTINATIONS' ->
+			"VAS4SMS Short Message to multiple destinations";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSVIRTUALPRIVATENETWORK' ->
+			"VAS4SMS Short Message Virtual Private Network (VPN)";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSAUTOREPLY' ->
+			"VAS4SMS Short Message Auto Reply";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSPERSONALSIGNATURE' ->
+			"VAS4SMS Short Message Personal Signature";
+		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSDEFERREDDELIVERY' ->
+			"VAS4SMS Short Message Deferred Delivery"
+	end,
+	JSON1 = JSON#{"serviceType" => ServiceType},
+	service_rating_sms4(SMS, ServiceRating, JSON1);
+service_rating_sms3(SMS, ServiceRating, JSON) ->
+	service_rating_sms4(SMS, ServiceRating, JSON).
+%% @hidden
+service_rating_sms4([#'3gpp_ro_SMS-Information'{
+		'SMS-Result' = [SmsResult]}],
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"smsResult" => SmsResult},
+	service_rating_sms5(ServiceRating, JSON1);
+service_rating_sms4(_SMS, ServiceRating, JSON) ->
+	service_rating_sms5(ServiceRating, JSON).
+%% @hidden
+service_rating_sms5(ServiceRating, JSON)
+		when map_size(JSON) > 0 ->
+	ServiceRating#{"serviceInformation" => JSON};
+service_rating_sms5(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden

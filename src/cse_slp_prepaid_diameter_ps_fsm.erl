@@ -89,7 +89,6 @@
 		drealm => binary(),
 		imsi => [$0..$9],
 		msisdn => string(),
-		vplmn  => {MCC :: [$0..$9], MNC :: [$0..$9]} | undefined,
 		nrf_profile => atom(),
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
@@ -193,9 +192,8 @@ authorize_origination_attempt({call, From},
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
 	IMSI = imsi(SubscriptionId),
 	MSISDN = msisdn(SubscriptionId),
-	VPLMN = vplmn(ServiceInformation),
 	NewData = Data#{from => From, session_id => SessionId,
-			imsi => IMSI, msisdn => MSISDN, vplmn => VPLMN,
+			imsi => IMSI, msisdn => MSISDN,
 			context => binary_to_list(SvcContextId),
 			mscc => MSCC, service_info => ServiceInformation,
 			ohost => OHost, orealm => ORealm, drealm => DRealm,
@@ -1288,11 +1286,12 @@ service_rating(#{mscc := MSCC} = Data) ->
 	service_rating(MSCC, Data, []).
 %% @hidden
 service_rating([MSCC | T],
-		#{context := ServiceContextId, vplmn := VPLMN} = Data, Acc) ->
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	SR4 = service_rating_ps(VPLMN, SR3),
+	SR4 = service_rating_ps(ServiceInformation, SR3),
 	Acc1 = service_rating_rsu(MSCC, SR4, Acc),
 	Acc2 = service_rating_usu(MSCC, SR4, Acc1),
 	service_rating(T, Data, Acc2);
@@ -1316,11 +1315,50 @@ service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	ServiceRating.
 
 %% @hidden
-service_rating_ps({MCC, MNC}, ServiceRating) ->
+service_rating_ps([#'3gpp_ro_Service-Information'{
+		'PS-Information' = [PS]}] = _ServiceInformation, ServiceRating) ->
+	service_rating_ps1(PS, ServiceRating);
+service_rating_ps(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_ps1(#'3gpp_ro_PS-Information'{
+		'3GPP-SGSN-MCC-MNC' = [MCCMNC]} = PS, ServiceRating) ->
+	MCC = binary:bin_to_list(MCCMNC, 0, 3),
+	MNC = binary:bin_to_list(MCCMNC, 3, byte_size(MCCMNC) - 3),
 	SgsnMccMnc = #{"mcc" => MCC, "mnc" => MNC},
-	ServiceInformation = #{"sgsnMccMnc" => SgsnMccMnc},
-	ServiceRating#{"serviceInformation" => ServiceInformation};
-service_rating_ps(undefined, ServiceRating) ->
+	JSON = #{"sgsnMccMnc" => SgsnMccMnc},
+	service_rating_ps2(PS, ServiceRating, JSON);
+service_rating_ps1(PS, ServiceRating) ->
+	service_rating_ps2(PS, ServiceRating, #{}).
+%% @hidden
+service_rating_ps2(#'3gpp_ro_PS-Information'{
+		'Serving-Node-Type' = [NodeType]} = _PS,
+		ServiceRating, JSON) ->
+	ServingNodeType = case NodeType of
+		?'3GPP_RO_SERVING-NODE-TYPE_SGSN' ->
+			"SGSN";
+		?'3GPP_RO_SERVING-NODE-TYPE_PMIPSGW' ->
+			"PMIPSGW";
+		?'3GPP_RO_SERVING-NODE-TYPE_GTPSGW' ->
+			"GTPSGW";
+		?'3GPP_RO_SERVING-NODE-TYPE_EPDG' ->
+			"ePDG";
+		?'3GPP_RO_SERVING-NODE-TYPE_HSGW' ->
+			"hSGW";
+		?'3GPP_RO_SERVING-NODE-TYPE_MME' ->
+			"MME";
+		?'3GPP_RO_SERVING-NODE-TYPE_TWAN' ->
+			"TWAN"
+	end,
+	JSON1 = JSON#{"servingNodeType" => ServingNodeType},
+	service_rating_ps3(ServiceRating, JSON1);
+service_rating_ps2(_PS, ServiceRating, JSON) ->
+	service_rating_ps3(ServiceRating, JSON).
+%% @hidden
+service_rating_ps3(ServiceRating, JSON)
+		when map_size(JSON) > 0 ->
+	ServiceRating#{"serviceInformation" => JSON};
+service_rating_ps3(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden
@@ -1383,16 +1421,6 @@ msisdn([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Data' = MSISDN,
 msisdn([_H | T]) ->
 	msisdn(T);
 msisdn([]) ->
-	undefined.
-
-%% @hidden
-vplmn([#'3gpp_ro_Service-Information'{
-			'PS-Information' = [#'3gpp_ro_PS-Information'{
-					'3GPP-SGSN-MCC-MNC' = [MCCMNC]}]}]) ->
-	MCC = binary:bin_to_list(MCCMNC, 0, 3),
-	MNC = binary:bin_to_list(MCCMNC, 3, byte_size(MCCMNC) - 3),
-	{MCC, MNC};
-vplmn(_) ->
 	undefined.
 
 -spec build_mscc(MSCC, ServiceRating) -> Result

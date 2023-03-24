@@ -2046,12 +2046,14 @@ service_rating(#{mscc := MSCC} = Data) ->
 	service_rating(MSCC, Data, []).
 %% @hidden
 service_rating([MSCC | T],
-		#{context := ServiceContextId} = Data, Acc) ->
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	Acc1 = service_rating_rsu(MSCC, SR3, Acc),
-	Acc2 = service_rating_usu(MSCC, SR3, Acc1),
+	SR4 = service_rating_ims(ServiceInformation, SR3),
+	Acc1 = service_rating_rsu(MSCC, SR4, Acc),
+	Acc2 = service_rating_usu(MSCC, SR4, Acc1),
 	service_rating(T, Data, Acc2);
 service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -2070,6 +2072,50 @@ service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	ServiceRating#{"ratingGroup" => RG};
 service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Rating-Group' = []}, ServiceRating) ->
+	ServiceRating.
+
+%% @hidden
+service_rating_ims([#'3gpp_ro_Service-Information'{
+		'IMS-Information' = IMS}], ServiceRating) ->
+	service_rating_ims1(IMS, ServiceRating);
+service_rating_ims(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_ims1([#'3gpp_ro_IMS-Information'{
+		'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS'}] = IMS,
+		ServiceRating) ->
+	JSON = #{"nodeFunctionality" => "AS"},
+	service_rating_ims2(IMS, ServiceRating, JSON);
+service_rating_ims1(IMS, ServiceRating) ->
+	service_rating_ims2(IMS, ServiceRating, #{}).
+%% @hidden
+service_rating_ims2([#'3gpp_ro_IMS-Information'{
+		'Role-Of-Node' = [Role]}] = IMS, ServiceRating, JSON) ->
+	RoleOfNode = case Role of
+		?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE' ->
+			"ORIGINATING";
+		?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE' ->
+			"TERMINATING";
+		?'3GPP_RO_ROLE-OF-NODE_FORWARDING_ROLE' ->
+			"FORWARDING"
+	end,
+	JSON1 = JSON#{"roleOfNode" => RoleOfNode},
+	service_rating_ims3(IMS, ServiceRating, JSON1);
+service_rating_ims2(IMS, ServiceRating, JSON) ->
+	service_rating_ims3(IMS, ServiceRating, JSON).
+%% @hidden
+service_rating_ims3([#'3gpp_ro_IMS-Information'{
+		'IMS-Visited-Network-Identifier' = [VisitedNetwork]}],
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"visitedNetworkIdentifier" => VisitedNetwork},
+	service_rating_ims4(ServiceRating, JSON1);
+service_rating_ims3(_IMS, ServiceRating, JSON) ->
+	service_rating_ims4(ServiceRating, JSON).
+%% @hidden
+service_rating_ims4(ServiceRating, JSON)
+		when map_size(JSON) > 0 ->
+	ServiceRating#{"serviceInformation" => JSON};
+service_rating_ims4(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden

@@ -1314,20 +1314,26 @@ gsu(_) ->
 service_rating(#{one_time := OneTime, mscc := MSCC} = Data) ->
 	service_rating(OneTime, MSCC, Data, []).
 %% @hidden
-service_rating(true, [MSCC | T], ServiceContextId, Acc) ->
+service_rating(true, [MSCC | T],
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	Acc1 = service_rating_reserve(true, MSCC, SR3, Acc),
-	service_rating(true, T, ServiceContextId, Acc1);
-service_rating(false, [MSCC | T], ServiceContextId, Acc) ->
+	SR4 = service_rating_mms(ServiceInformation, SR3),
+	Acc1 = service_rating_reserve(true, MSCC, SR4, Acc),
+	service_rating(true, T, Data, Acc1);
+service_rating(false, [MSCC | T],
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	Acc1 = service_rating_reserve(false, MSCC, SR3, Acc),
-	Acc2 = service_rating_debit(MSCC, SR3, Acc1),
-	service_rating(false, T, ServiceContextId, Acc2);
-service_rating(_OneTime, [], _ServiceContextId, Acc) ->
+	SR4 = service_rating_mms(ServiceInformation, SR3),
+	Acc1 = service_rating_reserve(false, MSCC, SR4, Acc),
+	Acc2 = service_rating_debit(MSCC, SR4, Acc1),
+	service_rating(false, T, Data, Acc2);
+service_rating(_OneTime, [], _Data, Acc) ->
 	lists:reverse(Acc).
 
 %% @hidden
@@ -1344,6 +1350,189 @@ service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	ServiceRating#{"ratingGroup" => RG};
 service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Rating-Group' = []}, ServiceRating) ->
+	ServiceRating.
+
+%% @hidden
+service_rating_mms([#'3gpp_ro_Service-Information'{
+		'MMS-Information' = MMS}], ServiceRating) ->
+	service_rating_mms1(MMS, ServiceRating);
+service_rating_mms(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_mms1([#'3gpp_ro_MMS-Information'{
+		'MM-Content-Type' = [#'3gpp_ro_MM-Content-Type'{
+				'Type-Number' = Number,
+				'Additional-Type-Information' = Info,
+				'Content-Size' = Size,
+				'Additional-Content-Information' = Add}]}] = MMS,
+		ServiceRating) ->
+	MmContentType1 = case type_number(Number) of
+		TypeNumber when length(TypeNumber) > 0 ->
+			#{"typeNumber" => TypeNumber};
+		[] ->
+			#{}
+	end,
+	MmContentType2 = case Info of
+		[I] ->
+			MmContentType1#{"additionalTypeInformation" => I};
+		[] ->
+			MmContentType1
+	end,
+	MmContentType3 = case Size of
+		[S] ->
+			MmContentType2#{"contentSize" => S};
+		[] ->
+			MmContentType2
+	end,
+	MmContentType4 = case content_info(Add) of
+		ACI when length(ACI) > 0 ->
+			MmContentType3#{"additionalContentInformation" => ACI};
+		[] ->
+			MmContentType3
+	end,
+	JSON = #{"mmContentType" => MmContentType4},
+	service_rating_mms2(MMS, ServiceRating, JSON);
+service_rating_mms1(MMS, ServiceRating) ->
+	service_rating_mms2(MMS, ServiceRating, #{}).
+%% @hidden
+service_rating_mms2([#'3gpp_ro_MMS-Information'{
+		'Content-Class' = [Class]}] = MMS,
+		ServiceRating, JSON) ->
+	ContentClass = case Class of
+		?'3GPP_RO_CONTENT-CLASS_TEXT' ->
+			"text";
+		?'3GPP_RO_CONTENT-CLASS_IMAGE-BASIC' ->
+			"image-basic";
+		?'3GPP_RO_CONTENT-CLASS_IMAGE-RICH' ->
+			"image-rich";
+		?'3GPP_RO_CONTENT-CLASS_VIDEO-BASIC' ->
+			"video-basic";
+		?'3GPP_RO_CONTENT-CLASS_VIDEO-RICH' ->
+			"video-rich";
+		?'3GPP_RO_CONTENT-CLASS_MEGAPIXEL' ->
+			"megapixel";
+		?'3GPP_RO_CONTENT-CLASS_CONTENT-BASIC' ->
+			"content-basic";
+		?'3GPP_RO_CONTENT-CLASS_CONTENT-RICH' ->
+			"content-rich"
+	end,
+	JSON1 = JSON#{"contentClass" => ContentClass},
+	service_rating_mms3(MMS, ServiceRating, JSON1);
+service_rating_mms2(MMS, ServiceRating, JSON) ->
+	service_rating_mms3(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms3([#'3gpp_ro_MMS-Information'{
+		'Message-ID' = [MessageId]}] = MMS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"messageId" => MessageId},
+	service_rating_mms4(MMS, ServiceRating, JSON1);
+service_rating_mms3(MMS, ServiceRating, JSON) ->
+	service_rating_mms4(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms4([#'3gpp_ro_MMS-Information'{
+		'Message-Type' = [Type]}] = MMS,
+		ServiceRating, JSON) ->
+	MessageType = case Type of
+		?'3GPP_RO_MESSAGE-TYPE_M-SEND-REQ' ->
+			"m-send-req";
+		?'3GPP_RO_MESSAGE-TYPE_M-SEND-CONF' ->
+			"m-send-conf";
+		?'3GPP_RO_MESSAGE-TYPE_M-NOTIFICATION-IND' ->
+			"m-notification-ind";
+		?'3GPP_RO_MESSAGE-TYPE_M-NOTIFYRESP-IND' ->
+			"m-notifyresp-ind";
+		?'3GPP_RO_MESSAGE-TYPE_M-RETRIEVE-CONF' ->
+			"m-retrieve-conf";
+		?'3GPP_RO_MESSAGE-TYPE_M-ACKNOWLEDGE-IND' ->
+			"m-acknowledge-ind";
+		?'3GPP_RO_MESSAGE-TYPE_M-DELIVERY-IND' ->
+			"m-delivery-ind";
+		?'3GPP_RO_MESSAGE-TYPE_M-READ-REC-IND' ->
+			"m-read-rec-ind";
+		?'3GPP_RO_MESSAGE-TYPE_M-READ-ORIG-IND' ->
+			"m-read-orig-ind";
+		?'3GPP_RO_MESSAGE-TYPE_M-FORWARD-REQ' ->
+			"m-forward-req";
+		?'3GPP_RO_MESSAGE-TYPE_M-FORWARD-CONF'->
+			"m-forward-conf";
+		?'3GPP_RO_MESSAGE-TYPE_M-MBOX-STORE-CONF' ->
+			"m-mbox-store-conf";
+		?'3GPP_RO_MESSAGE-TYPE_M-MBOX-VIEW-CONF' ->
+			"m-mbox-view-conf";
+		?'3GPP_RO_MESSAGE-TYPE_M-MBOX-UPLOAD-CONF' ->
+			"m-mbox-upload-conf";
+		?'3GPP_RO_MESSAGE-TYPE_M-MBOX-DELETE-CONF' ->
+			"m-mbox-delete-conf"
+	end,
+	JSON1 = JSON#{"messageType" => MessageType},
+	service_rating_mms5(MMS, ServiceRating, JSON1);
+service_rating_mms4(MMS, ServiceRating, JSON) ->
+	service_rating_mms5(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms5([#'3gpp_ro_MMS-Information'{
+		'Message-Class' = [#'3gpp_ro_Message-Class'{
+				'Class-Identifier' = ClassId,
+				'Token-Text' = TokenText}]}] = MMS,
+		ServiceRating, JSON) ->
+	MessageClass1 = case ClassId of
+		[?'3GPP_RO_CLASS-IDENTIFIER_PERSONAL'] ->
+			#{"classIdentifier" => "Personal"};
+		[?'3GPP_RO_CLASS-IDENTIFIER_ADVERTISEMENT'] ->
+			#{"classIdentifier" => "Advertisement"};
+		[?'3GPP_RO_CLASS-IDENTIFIER_INFORMATIONAL'] ->
+			#{"classIdentifier" => "Informational"};
+		[?'3GPP_RO_CLASS-IDENTIFIER_AUTO'] ->
+			#{"classIdentifier" => "Auto"};
+		[] ->
+			#{}
+	end,
+	MessageClass2 = case TokenText of
+		[Text] ->
+			MessageClass1#{"tokenText" => Text};
+		[] ->
+			MessageClass1
+	end,
+	JSON1 = JSON#{"messageClass" => MessageClass2},
+	service_rating_mms6(MMS, ServiceRating, JSON1);
+service_rating_mms5(MMS, ServiceRating, JSON) ->
+	service_rating_mms6(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms6([#'3gpp_ro_MMS-Information'{
+		'Message-Size' = [MessageSize]}] = MMS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"messageSize" => MessageSize},
+	service_rating_mms7(MMS, ServiceRating, JSON1);
+service_rating_mms6(MMS, ServiceRating, JSON) ->
+	service_rating_mms7(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms7([#'3gpp_ro_MMS-Information'{
+		'Applic-ID' = [ApplicId]}] = MMS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"applicId" => ApplicId},
+	service_rating_mms8(MMS, ServiceRating, JSON1);
+service_rating_mms7(MMS, ServiceRating, JSON) ->
+	service_rating_mms8(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms8([#'3gpp_ro_MMS-Information'{
+		'VAS-Id' = [VasId]}] = MMS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"vasId" => VasId},
+	service_rating_mms9(MMS, ServiceRating, JSON1);
+service_rating_mms8(MMS, ServiceRating, JSON) ->
+	service_rating_mms9(MMS, ServiceRating, JSON).
+%% @hidden
+service_rating_mms9([#'3gpp_ro_MMS-Information'{
+		'VASP-Id' = [VaspId]}],
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"vaspId" => VaspId},
+	service_rating_mms10(ServiceRating, JSON1);
+service_rating_mms9(_MMS, ServiceRating, JSON) ->
+	service_rating_mms10(ServiceRating, JSON).
+%% @hidden
+service_rating_mms10(ServiceRating, JSON)
+		when map_size(JSON) > 0 ->
+	ServiceRating#{"serviceInformation" => JSON};
+service_rating_mms10(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden
@@ -1690,4 +1879,216 @@ remove_nrf(Data) ->
 	Data3 = maps:remove(nrf_req_uri, Data2),
 	Data4 = maps:remove(nrf_http, Data3),
 	maps:remove(nrf_reqid, Data4).
+
+%% @hidden
+type_number([?'3GPP_RO_TYPE-NUMBER_ALL_ALL']) ->
+	"*/*";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_ALL']) ->
+	"text/*";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_HTML']) ->
+	"text/html";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_PLAIN']) ->
+	"text/plain";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_X-HDML']) ->
+	"text/x-hdml";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_X-TTML']) ->
+	"text/x-ttml";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_X-VCALENDAR']) ->
+	"text/x-vCalendar";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_X-VCARD']) ->
+	"text/x-vCard";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_WML']) ->
+	"text/vnd.wap.wml";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_WMLSCRIPT']) ->
+	"text/vnd.wap.wmlscript";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_WTA-EVENT']) ->
+	"text/vnd.wap.wta-event";
+type_number([?'3GPP_RO_TYPE-NUMBER_MULTIPART_MIXED']) ->
+	"multipart/mixed";
+type_number([?'3GPP_RO_TYPE-NUMBER_MULTIPART_FORM-DATA']) ->
+	"multipart/form-data";
+type_number([?'3GPP_RO_TYPE-NUMBER_MULTIPART_BYTERANTES']) ->
+	"multipart/byterantes";
+type_number([?'3GPP_RO_TYPE-NUMBER_MULTIPART_ALTERNATIVE']) ->
+	"multipart/alternative";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_ALL']) ->
+	"application/*";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_JAVA-VM']) ->
+	"application/java-vm";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-WWW-FORM-URLENCODED']) ->
+	"application/x-www-form-urlencoded"; 
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-HDMLC']) ->
+	"application/x-hdmlc";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_WMLC']) ->
+	"application/vnd.wap.wmlc";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_WMLSCRIPTC']) ->
+	"application/vnd.wap.wmlscriptc";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_WTA-EVENTC']) ->
+	"application/vnd.wap.wta-eventc";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_UAPROF']) ->
+	"application/vnd.wap.uaprof";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_WTLS-CA-CERTIFICATE']) ->
+	"application/vnd.wap.wtls-ca-certificate";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_WTLS-USER-CERTIFICATE']) ->
+	"application/vnd.wap.wtls-user-certificate";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-X509-CA-CERT']) ->
+	"application/x-x509-ca-cert";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-X509-USER-CERT']) ->
+	"application/x-x509-user-cert";
+type_number([?'3GPP_RO_TYPE-NUMBER_IMAGE_ALL']) ->
+	"image/*";
+type_number([?'3GPP_RO_TYPE-NUMBER_IMAGE_GIF']) ->
+	"image/gif";
+type_number([?'3GPP_RO_TYPE-NUMBER_IMAGE_JPEG']) ->
+	"image/jpeg";
+type_number([?'3GPP_RO_TYPE-NUMBER_IMAGE_TIFF']) ->
+	"image/tiff";
+type_number([?'3GPP_RO_TYPE-NUMBER_IMAGE_PNG']) ->
+	"image/png";
+type_number([?'3GPP_RO_TYPE-NUMBER_IMAGE_VND_WAP_WBMP']) ->
+	"image/vnd.wap.wbmp";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MULTIPART_ALL']) ->
+	"application/vnd.wap.multipart.*";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MULTIPART_MIXED']) ->
+	"application/vnd.wap.multipart.mixed";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MULTIPART_FORM-DATA']) ->
+	"application/vnd.wap.multipart.form-data";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MULTIPART_BYTERANGES']) ->
+	"application/vnd.wap.multipart.byteranges";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MULTIPART_ALTERNATIVE']) ->
+	"application/vnd.wap.multipart.alternative";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_XML']) ->
+	"application/xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_XML']) ->
+	"text/xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_WBXML']) ->
+	"application/vnd.wap.wbxml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-X968-CROSS-CERT']) ->
+	"application/x-x968-cross-cert";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-X968-CA-CERT']) ->
+	"application/x-x968-ca-cert";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_X-X968-USER-CERT']) ->
+	"application/x-x968-user-cert";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_SI']) ->
+	"text/vnd.wap.si";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_SIC']) ->
+	"application/vnd.wap.sic";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_SL']) ->
+	"text/vnd.wap.sl";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_SLC']) ->
+	"application/vnd.wap.slc";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_CO']) ->
+	"text/vnd.wap.co";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_COC']) ->
+	"application/vnd.wap.coc";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MULTIPART_RELATED']) ->
+	"application/vnd.wap.multipart.related";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_SIA']) ->
+	"application/vnd.wap.sia";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_VND_WAP_CONNECTIVITY-XML']) ->
+	"text/vnd.wap.connectivity-xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_CONNECTIVITY-WBXML']) ->
+	"application/vnd.wap.connectivity-wbxml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_PKCS7-MIME']) ->
+	"application/pkcs7-mime";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_HASHED-CERTIFICATE']) ->
+	"application/vnd.wap.hashed-certificate";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_CERT-RESPONSE']) ->
+	"application/vnd.wap.cert-response"; 
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_XHTML_XML']) ->
+	"application/xhtml+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_WML_XML']) ->
+	"application/wml+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_CSS']) ->
+	"text/css";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_MMS-MESSAGE']) ->
+	"application/vnd.wap.mms-message";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_ROLLOVER-CERTIFICATE']) ->
+	"application/vnd.wap.rollover-certificate";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_LOCC_WBXML']) ->
+	"application/vnd.wap.locc+wbxml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_LOC_XML']) ->
+	"application/vnd.wap.loc+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_SYNCML_DM_WBXML']) ->
+	"application/vnd.syncml.dm+wbxml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_SYNCML_DM_XML']) ->
+	"application/vnd.syncml.dm+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_SYNCML_NOTIFICATION']) ->
+	"application/vnd.syncml.notification";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WAP_XHTML_XML']) ->
+	"application/vnd.wap.xhtml+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WV_CSP_CIR']) ->
+	"application/vnd.wv.csp.cir";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DD_XML']) ->
+	"application/vnd.oma.dd+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DRM_MESSAGE']) ->
+	"application/vnd.oma.drm.message";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DRM_CONTENT']) ->
+	"application/vnd.oma.drm.content";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DRM_RIGHTS_XML']) ->
+	"application/vnd.oma.drm.rights+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DRM_RIGHTS_WBXML']) ->
+	"application/vnd.oma.drm.rights+wbxml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WV_CSP_XML']) ->
+	"application/vnd.wv.csp+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_WV_CSP_WBXML']) ->
+	"application/vnd.wv.csp+wbxml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_SYNCML_DS_NOTIFICATION']) ->
+	"application/vnd.syncml.ds.notification";
+type_number([?'3GPP_RO_TYPE-NUMBER_AUDIO_ALL']) ->
+	"audio/*";
+type_number([?'3GPP_RO_TYPE-NUMBER_VIDEO_ALL']) ->
+	"video/*";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DD2_XML']) ->
+	"application/vnd.oma.dd2+xml";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_MIKEY']) ->
+	"application/mikey";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DCD']) ->
+	"application/vnd.oma.dcd";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMA_DCDC']) ->
+	"application/vnd.oma.dcdc";
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_X-VMESSAGE']) ->
+	"text/x-vMessage";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_OMADS-EMAIL_WBXML']) ->
+	"application/vnd.omads-email+wbxml"; 
+type_number([?'3GPP_RO_TYPE-NUMBER_TEXT_X-VBOOKMARK']) ->
+	"text/x-vBookmark";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_VND_SYNCML_DM_NOTIFICATION']) ->
+	"application/vnd.syncml.dm.notification";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_OCTET-STREAM']) ->
+	"application/octet-stream";
+type_number([?'3GPP_RO_TYPE-NUMBER_APPLICATION_JSON']) ->
+	"application/json";
+type_number([]) ->
+	[].
+
+%% @hidden
+content_info(AdditionalContentInformation) ->
+	content_info(AdditionalContentInformation, []).
+%% @hidden
+content_info([#'3gpp_ro_Additional-Content-Information'{
+		'Type-Number' = Number,
+		'Additional-Type-Information' = Info,
+		'Content-Size' = Size} | T], Acc) ->
+	ContentInfo1 = case type_number(Number) of
+		Mime when length(Mime) > 0 ->
+			#{"typeNumber" => Mime};
+		[] ->
+			#{}
+	end,
+	ContentInfo2 = case Info of
+		[ATI] ->
+			ContentInfo1#{"additionalTypeInformation" => ATI};
+		[] ->
+			ContentInfo1
+	end,
+	ContentInfo3 = case Size of
+		[N] ->
+			ContentInfo2#{"contentSize" => N};
+		[] ->
+			ContentInfo2
+	end,
+	content_info(T, [ContentInfo3 | Acc]);
+content_info([], Acc) ->
+	lists:reverse(Acc).
 
