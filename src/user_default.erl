@@ -159,12 +159,7 @@ su0([], Etag, Interval) ->
 
 %% @doc Get information on running diameter services.
 di() ->
-	try
-	    diameter_service_info(diameter:services(), [])
-	catch
-            _:_Reason ->
-		{error, 500}
-	end.
+	diameter_service_info(diameter:services(), []).
 
 -spec di(Info) -> Result
         when
