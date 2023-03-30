@@ -6,6 +6,7 @@
 check_DATA = .dialyzer_ok .common_test_ok
 
 testmods = cse_api_SUITE \
+		cse_gtt_SUITE \
 		cse_query_parse_SUITE \
 		cse_rest_api_SUITE \
 		cse_log_SUITE \
