@@ -39,7 +39,7 @@
 %% export API
 -export([new/2, new/3, insert/2, insert/3, delete/2, lookup_first/2,
 		lookup_last/2, lookup_all/2, list/0, list/2, backup/2, restore/2,
-		clear_table/1, add_range/4, delete_range/3, range/2]).
+		clear_table/1, add_range/4, delete_range/3, range/2, delete/1]).
 
 -include("cse.hrl").
 
@@ -493,6 +493,22 @@ delete_range(Table, Start, End) when is_atom(Table),
 				ok
 	end,
 	case mnesia:transaction(Fun, [range(Start, End)]) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec delete(Table) -> ok
+	when
+		Table :: atom() | string() | binary().
+%% @doc Delete a table.
+delete(Table) when is_list(Table) ->
+	delete(list_to_existing_atom(Table));
+delete(Table) when is_binary(Table) ->
+	delete(?binary_to_existing_atom(Table));
+delete(Table) when is_atom(Table) ->
+	case mnesia:delete_table(Table) of
 		{atomic, ok} ->
 			ok;
 		{aborted, Reason} ->
