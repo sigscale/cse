@@ -29,14 +29,18 @@
 %% test cases
 -export([add_table/0, add_table/1,
 		delete_table/0, delete_table/1,
+		list_tables/0, list_tables/1,
 		insert/0, insert/1,
 		lookup/0, lookup/1,
+		list/0, list/1,
 		range/0, range/1,
 		add_range/0, add_range/1,
 		delete_range/0, delete_range/1,
 		big_table/0, big_table/1,
+		big_list_tables/0, big_list_tables/1,
 		big_insert/0, big_insert/1,
 		big_lookup/0, big_lookup/1,
+		big_list/0, big_list/1,
 		big_range/0, big_range/1]).
 
 -include("cse.hrl").
@@ -84,7 +88,8 @@ init_per_testcase(TestCase, Config)
 init_per_testcase(range = _TestCase, Config) ->
 	Config;
 init_per_testcase(TestCase, Config)
-		when TestCase == big_insert;
+		when TestCase == big_list_tables;
+		TestCase == big_insert;
 		TestCase == big_lookup;
 		TestCase == big_range ->
 	Table = list_to_atom(cse_test_lib:rand_name()),
@@ -116,8 +121,9 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[add_table, delete_table, insert, lookup, range, add_range,
-			delete_range, big_table, big_insert, big_lookup, big_range].
+	[add_table, delete_table, list_tables, insert, lookup,
+			range, add_range, delete_range,
+			big_table, big_list_tables, big_insert, big_lookup, big_range].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -139,6 +145,13 @@ delete_table(Config) ->
 	Table = ?config(table, Config),
 	ok = cse_gtt:delete(Table).
 
+list_tables() ->
+	[{userdata, [{doc, "List prefix tables."}]}].
+
+list_tables(Config) ->
+	Table = ?config(table, Config),
+	true = lists:member(Table, cse_gtt:list()).
+
 insert() ->
 	[{userdata, [{doc, "Add a key and value to prefix table"}]}].
 
@@ -152,6 +165,13 @@ lookup() ->
 lookup(Config) ->
 	Table = ?config(table, Config),
 	do_lookup(Table).
+
+list() ->
+	[{userdata, [{doc, "List all rows in prefix table"}]}].
+
+list(Config) ->
+	Table = ?config(table, Config),
+	do_list(Table).
 
 range() ->
 	[{userdata, [{doc, "Prefixes for range"}]}].
@@ -208,6 +228,13 @@ big_table(Config) ->
 	gtt = mnesia:table_info(Table, record_name),
 	disc_only_copies = mnesia:table_info(Table, storage_type).
 
+big_list_tables() ->
+	[{userdata, [{doc, "List prefix tables, including disk only."}]}].
+
+big_list_tables(Config) ->
+	Table = ?config(table, Config),
+	true = lists:member(Table, cse_gtt:list()).
+
 big_insert() ->
 	[{userdata, [{doc, "Add a key and value to disk only prefix table"}]}].
 
@@ -217,6 +244,13 @@ big_insert(Config) ->
 
 big_lookup() ->
 	[{userdata, [{doc, "Find a key and value in disk only prefix table"}]}].
+
+big_list() ->
+	[{userdata, [{doc, "List all rows in disk only prefix table"}]}].
+
+big_list(Config) ->
+	Table = ?config(table, Config),
+	do_list(Table).
 
 big_lookup(Config) ->
 	Table = ?config(table, Config),
@@ -244,20 +278,38 @@ do_insert(Table) ->
 	{ok, #gtt{}} = cse_gtt:insert(Table, Digits, Value).
 
 do_lookup(Table) ->
-	F = fun F(N, Acc) when N > 0 ->
-				D = io_lib:fwrite("~7.10.0b",
-						[rand:uniform(10000000) - 1]),
-				V = make_ref(),
-				NewAcc = lists:keystore(D, 1, Acc, {D, V}), 
-				F(N - 1, NewAcc);
-			F(0, Acc) ->
-				Acc
-	end,
-	Items = F(1000, []),
+	Items = do_fill(1000),
 	ok = cse_gtt:insert(Table, Items),
 	Index = rand:uniform(length(Items)),
 	{Prefix, Value} = lists:nth(Index, Items),
 	Address = Prefix ++ io_lib:fwrite("~3.10.0b",
 			[rand:uniform(1000) - 1]),
 	Value = cse_gtt:lookup_last(Table, Address).
+
+do_list(Table) ->
+	N = 1000,
+	Items = do_fill(N),
+	ok = cse_gtt:insert(Table, Items),
+	do_list(Table, N, cse_gtt:list(start, Table)).
+do_list(_Table, N, {eof, L}) ->
+	0 = N - length(L);
+do_list(Table, N, {Cont, L}) ->
+	N1 = N - length(L),
+	do_list(Table, N1, cse_gtt:list(Cont, Table)).
+
+do_fill(N) ->
+	F = fun F(Acc) when length(Acc) < N ->
+				Digits = io_lib:fwrite("~7.10.0b",
+						[rand:uniform(10000000) - 1]),
+				case lists:keymember(Digits, 1, Acc)  of
+					false ->
+						Value = make_ref(),
+						F([{Digits, Value} | Acc]);
+					true ->
+						F(Acc)
+				end;
+			F(Acc) ->
+				Acc
+	end,
+	F([]).
 
