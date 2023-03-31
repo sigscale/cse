@@ -272,7 +272,7 @@ lookup_first(Table, [Digit | Rest]) when is_atom(Table) ->
 				undefined
 	end,
 	Fun2 = fun() -> Fun1(Fun1, Rest, mnesia:read(Table, [Digit], read)) end,
-	mnesia:ets(Fun2).
+	mnesia:async_dirty(Fun2).
 
 -spec lookup_last(Table, Address) -> Value
 	when
@@ -300,7 +300,7 @@ lookup_last(Table, Address) when is_atom(Table), is_list(Address) ->
 	Fun2 = fun() ->
 				Fun1(Fun1, lists:reverse(Address), mnesia:read(Table, Address, read))
 	end,
-	mnesia:ets(Fun2).
+	mnesia:async_dirty(Fun2).
 
 -spec lookup_all(Table, Address) -> Value
 	when
@@ -324,7 +324,7 @@ lookup_all(Table, [Digit | Rest]) when is_atom(Table) ->
 				lists:reverse(Acc)
 	end,
 	Fun2 = fun() -> Fun1(Fun1, Rest, mnesia:read(Table, [Digit], read), []) end,
-	mnesia:ets(Fun2).
+	mnesia:async_dirty(Fun2).
 
 -spec backup(Tables, File) -> ok
 	when
@@ -409,12 +409,12 @@ list(start, Table) when is_atom(Table) ->
 	F = fun() ->
 		mnesia:select(Table, MatchSpec, ?CHUNKSIZE, read)
 	end,
-	list(mnesia:ets(F));
+	list(mnesia:async_dirty(F));
 list(Cont, _Table) ->
 	F = fun() ->
 		mnesia:select(Cont)
 	end,
-	list(mnesia:ets(F)).
+	list(mnesia:async_dirty(F)).
 %% @hidden
 list({[#gtt{} | _] = Gtts, Cont}) ->
 	{Cont, Gtts};
