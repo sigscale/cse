@@ -10,7 +10,7 @@ main(Args) ->
 		#{help := true} = _Options ->
 			usage();
 		#{node := Node} = Options ->
-			connect(Node, Options);
+			connect(list_to_atom(Node), Options);
 		#{hostname := Hostname} = Options ->
 			connect(list_to_atom("cse@" ++ Hostname), Options)
 	end.
@@ -26,7 +26,29 @@ connect(_Node, _Options, false) ->
 
 backup(Node, #{path := Path} = _Options)
 		when is_atom(Node), is_list(Path) ->
-	erpc:call(Node, mnesia, backup, [Path]);
+	try
+		erpc:call(Node, mnesia, backup, [Path])
+	of
+		ok ->
+			io:fwrite("Backup written to ~s~n", [Path]),
+			ok;
+		{error, {'EXIT', {error, {file_error, _, Reason}}}} ->
+			io:fwrite("Backup failed with reason: ~w~n", [Reason]),
+			halt(1);
+		{error, Reason} ->
+			io:fwrite("Backup failed with reason: ~w~n", [Reason]),
+			halt(1)
+	catch
+		exit:{exception, Reason} ->
+			io:fwrite("Backup failed with EXIT reason: ~w~n", [Reason]),
+			halt(1);
+		exit:{exception, Reason, _StackTrace} ->
+			io:fwrite("Backup failed with EXIT reason: ~w~n", [Reason]),
+			halt(1);
+		error:{erpc, Reason} ->
+			io:fwrite("Backup failed with RPC reason: ~w~n", [Reason]),
+			halt(1)
+	end;
 backup(Node, #{} = Options) ->
 	backup(Node, Options#{path => "mnesia.bup"}).
 
