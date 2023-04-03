@@ -1300,7 +1300,7 @@ usu(#'3gpp_ro_Used-Service-Unit'{}) ->
 
 %% @hidden
 gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
-		when CCSpecUnits > 0 ->
+		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
 	[#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}];
 gsu(_) ->
 	[].
