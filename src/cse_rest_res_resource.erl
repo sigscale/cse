@@ -26,7 +26,7 @@
 -export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1,
 		delete_resource_spec/2, resource_spec/1]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/2,
-		resource/1]).
+		resource/1, head_resource/0]).
 % export cse_rest_res_resource private API
 -export([static_spec/1, index_table_spec_id/0, index_row_spec_id/0,
 		prefix_table_spec_id/0, prefix_row_spec_id/0,
@@ -198,6 +198,26 @@ get_resource(Id) ->
 		{error, _Reason} ->
 			{error, 500}
 	end.
+
+
+-spec head_resource() -> Result
+   when
+      Result :: {ok, [], Body :: iolist()}
+            | {error, ErrorCode :: integer()}.
+%% @doc Body producing function for
+%%    `HEAD /resourceInventoryManagement/v4/resource'
+%%    requests.
+head_resource() ->
+   try
+      Size = mnesia:table_info(resource, size),
+      LastItem = integer_to_list(Size),
+      ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
+      Headers = [{content_range, ContentRange}],
+      {ok, Headers, []}
+   catch
+      _:_Reason ->
+         {error, 500}
+   end.
 
 -spec get_resource(Query, Headers) -> Result
 	when

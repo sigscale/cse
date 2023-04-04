@@ -33,6 +33,7 @@ beam_DATA = cse.beam \
 		cse_rest.beam \
 		mod_cse_rest_accepted_content.beam \
 		mod_cse_rest_get.beam \
+		mod_cse_rest_head.beam \
 		mod_cse_rest_post.beam \
 		mod_cse_rest_delete.beam \
 		mod_cse_rest_patch.beam \
