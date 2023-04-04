@@ -1,3 +1,16 @@
+2023-04-04  Vance Shipley <vances@sigscale.org>
+
+	* implemented head module for http requests
+	* guard against invalid json type for gsu
+	* improve exception handling in backup script
+	* expanded gtt test suite coverage
+	* use async_dirty transaction context for gtt
+	* gtt test cases for insert, lookup and disk only
+	* refactor gtt test suite
+	* build and run gtt test suite
+	* api for deleting a prefix table
+	* correct user_default:di/0 error handling (none)
+
 2023-03-24  Vance Shipley <vances@sigscale.org>
 
 	* ps, ims, sms, mms service information in nrf service rating

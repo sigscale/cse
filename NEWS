@@ -1,3 +1,8 @@
+April 4, 2023
+-------------
+	- Backup script exit status improvements
+	- HTTP HEAD operation provides size of resource table
+
 March 24, 2023
 --------------
 	- PS,IMS,SMS,MMS specific service information in Nrf API
