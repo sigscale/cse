@@ -150,25 +150,25 @@
 
 %% @doc Erlang web server API callback function.
 do(#mod{method = Method, parsed_header = _Headers,
-      request_uri = Uri, data = Data} = ModData) ->
-   case Method of
-      "HEAD" ->
-         case proplists:get_value(status, Data) of
-            {_StatusCode, _PhraseArgs, _Reason} ->
-               {proceed, Data};
-            undefined ->
-               case proplists:get_value(response, Data) of
-                  undefined ->
-                     {_, Resource} = lists:keyfind(resource, 1, Data),
-                     Path = ?URI_DECODE(Uri),
-                     do_head(Resource, ModData, string:tokens(Path, "/"));
-                  _Response ->
-                     {proceed,  Data}
-               end
-         end;
-      _ ->
-         {proceed, Data}
-   end.
+			request_uri = Uri, data = Data} = ModData) ->
+	case Method of
+		"HEAD" ->
+			case proplists:get_value(status, Data) of
+				{_StatusCode, _PhraseArgs, _Reason} ->
+					{proceed, Data};
+				undefined ->
+					case proplists:get_value(response, Data) of
+						undefined ->
+							{_, Resource} = lists:keyfind(resource, 1, Data),
+							Path = ?URI_DECODE(Uri),
+							do_head(Resource, ModData, string:tokens(Path, "/"));
+						_Response ->
+							{proceed,  Data}
+					end
+			end;
+		_ ->
+			{proceed, Data}
+	end.
 
 
 %% @hidden

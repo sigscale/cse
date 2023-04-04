@@ -56,7 +56,7 @@ help() ->
 	true.
 
 -spec ts() -> ok.
-%% @doc Display the total number of records in ocs tables.
+%% @doc Display the total number of records in cse tables.
 ts() ->
 	case mnesia:system_info(is_running)  of
 		yes ->
@@ -100,7 +100,7 @@ ts02([], _, _) ->
 	ok.
 
 -spec td() -> ok.
-%% @doc Display the current ocs table distribution.
+%% @doc Display the current cse table distribution.
 td() ->
 	Nodes = mnesia:system_info(db_nodes),
 	Running = mnesia:system_info(running_db_nodes),
