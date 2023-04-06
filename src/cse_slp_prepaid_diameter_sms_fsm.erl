@@ -1320,7 +1320,7 @@ service_rating(true, [MSCC | T],
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_sms(ServiceInformation, SR3),
-	Acc1 = service_rating_reserve(true, MSCC, SR4, Acc),
+	Acc1 = service_rating_debit(MSCC, SR4, Acc),
 	service_rating(true, T, Data, Acc1);
 service_rating(false, [MSCC | T],
 		#{context := ServiceContextId,
