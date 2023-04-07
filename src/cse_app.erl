@@ -577,7 +577,9 @@ create_table1(_Table, {aborted, Reason}) ->
 %%			cse_rest_res_resource:prefix_range_row_spec_id()])
 %% @private
 install_resource_specs() ->
-	SpecIds = [cse_rest_res_resource:prefix_table_spec_id(),
+	SpecIds = [cse_rest_res_resource:index_table_spec_id(),
+			cse_rest_res_resource:index_row_spec_id(),
+			cse_rest_res_resource:prefix_table_spec_id(),
 			cse_rest_res_resource:prefix_row_spec_id(),
 			cse_rest_res_resource:prefix_range_table_spec_id(),
 			cse_rest_res_resource:prefix_range_row_spec_id()],
