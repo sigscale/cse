@@ -1,6 +1,7 @@
-April 11, 2023
+April 7, 2023
 --------------
 	- Fixed Immediate Event Charging (IEC)
+	- Include security in DIAMETER capability negotiation
 
 April 4, 2023
 -------------

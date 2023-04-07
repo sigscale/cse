@@ -1,4 +1,10 @@
-2023-04-11  Vance Shipley <vances@sigscale.org>
+2023-04-07   Vance Shipley <vances@sigscale.org>
+
+	* include inband security id in diameter service
+	* nrf response status code 200 for iec
+	* install index table specifications
+
+2023-04-06  Vance Shipley <vances@sigscale.org>
 
 	* immediate event charging (iec) uses usu, not rsu
 
