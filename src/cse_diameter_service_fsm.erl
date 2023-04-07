@@ -365,6 +365,12 @@ service_options(Options) ->
 		{_ ,{_, SVI}, Opts1} ->
 			{SVI, Opts1}
 	end,
+	Options5 = case lists:keymember('Inband-Security-Id', 1, Options4) of
+		true ->
+			Options4;
+		false ->
+			[{'Inband-Security-Id', [0]} | Options4]
+	end,
 	{ok, Vsn} = application:get_key(vsn),
 	Version = list_to_integer([C || C <- Vsn, C /= $.]),
 	BaseOptions = [{'Vendor-Id', ?IANA_PEN_SigScale},
@@ -373,7 +379,7 @@ service_options(Options) ->
 		{'Supported-Vendor-Id', SVendorIds},
 		{restrict_connections, false},
 		{string_decode, false}],
-	BaseOptions ++ Options4 ++ LocalApps.
+	BaseOptions ++ Options5 ++ LocalApps.
 
 -spec transport_options(Address, Port, Options) -> Options
 	when
