@@ -239,7 +239,7 @@ authorize_event_attempt({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_start(NewData);
 authorize_event_attempt(cast,
-		{nrf_start, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
+		{nrf_start, {RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
