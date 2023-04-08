@@ -43,7 +43,7 @@
 %%% 					| content_type | date | etag | expires | last_modified
 %%% 					| location | pragma | retry_after | server | trailer
 %%% 					| transfer_encoding</tt></li>
-%%% 			<li><tt>Result = {ok, Headers, ResponseBody}
+%%% 			<li><tt>Result = {ok, ResponseHeaders, ResponseBody}
 %%% 					| {error, StatusCode}
 %%% 					| {error, StatusCode, Problem}
 %%% 					| {error, StatusCode, ResponseHeaders, ResponseBody}}
@@ -59,8 +59,8 @@
 %%% 	</div>
 %%% 	Resource handlers for HTTP GET operations on REST Collections.
 %%%
-%%% 	Response `Headers' must include `content_type' if `ResponseBody' is
-%%% 	not en empty list. An optional `Problem' report may be provided in
+%%% 	The `ResponseHeaders' must include `content_type' if `ResponseBody' is
+%%% 	not an empty list. An optional `Problem' report may be provided in
 %%% 	error responses which shall be formatted by
 %%% 	{@link //cse/cse_rest:format_problem/2. format_problem/2} and included
 %%% 	in the response body.
@@ -84,7 +84,7 @@
 %%% 					| content_type | date | etag | expires | last_modified
 %%% 					| location | pragma | retry_after | server | trailer
 %%% 					| transfer_encoding</tt></li>
-%%% 			<li><tt>Result = {ok, Headers, ResponseBody}
+%%% 			<li><tt>Result = {ok, ResponseHeaders, ResponseBody}
 %%% 					| {error, StatusCode}
 %%% 					| {error, StatusCode, Problem}
 %%% 					| {error, StatusCode, ResponseHeaders, ResponseBody}}
@@ -100,8 +100,8 @@
 %%% 	</div>
 %%% 	Resource handlers for HTTP GET operations on REST Resources.
 %%%
-%%% 	Response `Headers' must include `content_type' if `ResponseBody' is
-%%% 	not en empty list. An optional `Problem' report may be provided in
+%%% 	The `ResponseHeaders' must include `content_type' if `ResponseBody' is
+%%% 	not an empty list. An optional `Problem' report may be provided in
 %%% 	error responses which shall be formatted by
 %%% 	{@link //cse/cse_rest:format_problem/2. format_problem/2} and included
 %%% 	in the response body.
