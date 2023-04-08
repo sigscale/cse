@@ -1,3 +1,11 @@
+2023-04-08   Vance Shipley <vances@sigscale.org>
+
+	* correct usu (not rsu) in iec sms and mms test cases
+	* Revert "nrf response status code 200 for iec"
+	* test cases for head requests
+	* head requests on resource catalog
+	* remove unused clause
+
 2023-04-07   Vance Shipley <vances@sigscale.org>
 
 	* include inband security id in diameter service
