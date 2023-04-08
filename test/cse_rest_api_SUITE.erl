@@ -45,7 +45,11 @@
 		delete_range_row/0, delete_range_row/1,
 		add_index_row_resource/0, add_index_row_resource/1,
 		add_range_row_resource/0, add_range_row_resource/1,
-		query_table_row/0, query_table_row/1]).
+		query_table_row/0, query_table_row/1,
+		head_resources/0, head_resources/1,
+		head_resource/0, head_resource/1,
+		head_resource_specs/0, head_resource_specs/1,
+		head_resource_spec/0, head_resource_spec/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -86,8 +90,8 @@ init_per_suite(Config) ->
 	ok = cse_test_lib:start(),
 	Modules = [mod_responsecontrol,
 			mod_cse_rest_accepted_content, mod_cse_rest_get,
-			mod_get, mod_cse_rest_post, mod_cse_rest_delete,
-			mod_cse_rest_patch],
+			mod_cse_rest_head, mod_get, mod_cse_rest_post,
+			mod_cse_rest_delete, mod_cse_rest_patch],
 	Options = [{bind_address, {0,0,0,0}}, {port, 0},
 			{server_name, atom_to_list(?MODULE)},
 			{server_root, PrivDir},
@@ -134,7 +138,9 @@ all() ->
 			get_resource, query_resource, delete_static_table_resource,
 			delete_dynamic_table_resource, delete_row_resource,
 			delete_range_row, delete_row_query, query_table_row,
-			add_index_row_resource, add_range_row_resource].
+			add_index_row_resource, add_range_row_resource,
+			head_resource_specs, head_resource_spec, head_resources,
+			head_resource].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -749,6 +755,67 @@ query_table_row(Config) ->
 	{_, ContentLength} = lists:keyfind("content-length", 1, Headers),
 	{ok, [#{"id" := RowId2}]} = zj:decode(ResponseBody),
 	RowId1 = list_to_binary(RowId2).
+
+head_resource_specs() ->
+	[{userdata, [{doc, "HEAD request on static resource specification collection"}]}].
+
+head_resource_specs(Config) ->
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	Request = {Host ++ ?specPath, [Accept]},
+	{ok, Result} = httpc:request(head, Request, [], []),
+	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	{_, Range} = lists:keyfind("content-range", 1, Headers),
+	[_, N, N] = string:lexemes(Range, [$-, $/]).
+
+head_resource_spec() ->
+	[{userdata, [{doc, "HEAD request on static resource specification"}]}].
+
+head_resource_spec(Config) ->
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	TableId = binary_to_list(cse_rest_res_resource:index_table_spec_id()),
+	Request = {Host ++ ?specPath ++ TableId, [Accept]},
+	{ok, Result} = httpc:request(head, Request, [], []),
+	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	{_, _Length} = lists:keyfind("content-length", 1, Headers).
+
+head_resources() ->
+	[{userdata, [{doc, "HEAD request on Resource collection"}]}].
+
+head_resources(Config) ->
+	TableNameS = cse_test_lib:rand_name(8),
+	TableNameA = list_to_atom(TableNameS),
+	{atomic, ok} = mnesia:create_table(TableNameA, []),
+	TableT = static_index_table(TableNameS),
+	{ok, _Resource} = cse:add_resource(TableT),
+	Host = ?config(host, Config),
+	Accept = {"accept", "application/json"},
+	Request = {Host ++ ?inventoryPath, [Accept]},
+	{ok, Result} = httpc:request(head, Request, [], []),
+	{{"HTTP/1.1", 200, _OK}, Headers, []} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	{_, Range} = lists:keyfind("content-range", 1, Headers),
+	[_, N, N] = string:lexemes(Range, [$-, $/]).
+
+head_resource() ->
+	[{userdata, [{doc, "HEAD request on static resource"}]}].
+
+head_resource(Config) ->
+	Host = ?config(host, Config),
+	TableNameS = cse_test_lib:rand_name(8),
+	TableNameA = list_to_atom(TableNameS),
+	{atomic, ok} = mnesia:create_table(TableNameA, []),
+	TableT = static_index_table(TableNameS),
+	{ok, #resource{id = TableId}} = cse:add_resource(TableT),
+	Accept = {"accept", "application/json"},
+	Request = {Host ++ ?inventoryPath ++ TableId, [Accept]},
+	{ok, Result} = httpc:request(head, Request, [], []),
+	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
+	{_, _Length} = lists:keyfind("content-length", 1, Headers).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
