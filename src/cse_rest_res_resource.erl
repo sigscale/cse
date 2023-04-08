@@ -24,7 +24,7 @@
 % export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
 -export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1,
-		delete_resource_spec/2, resource_spec/1]).
+		delete_resource_spec/2, resource_spec/1, head_resource_spec/0]).
 -export([get_resource/1, get_resource/2, add_resource/1, delete_resource/2,
 		resource/1, head_resource/0]).
 % export cse_rest_res_resource private API
@@ -82,6 +82,26 @@ get_resource_spec(ID) ->
 		{error, _Reason} ->
 			{error, 500}
 	end.
+
+-spec head_resource_spec() -> Result
+   when
+      Result :: {ok, [], Body :: iolist()}
+            | {error, ErrorCode :: integer()}.
+%% @doc Body producing function for
+%%    `HEAD /resourceCatalogManagement/v4/resourceSpecification'
+%%    requests.
+head_resource_spec() ->
+   try
+      Size = mnesia:table_info(resource_spec, size),
+      LastItem = integer_to_list(Size),
+      ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
+      Headers = [{content_type, "application/json"},
+				{content_range, ContentRange}],
+      {ok, Headers, []}
+   catch
+      _:_Reason ->
+         {error, 500}
+   end.
 
 -spec get_resource_specs(Query, Headers) -> Result
 	when
@@ -212,7 +232,8 @@ head_resource() ->
       Size = mnesia:table_info(resource, size),
       LastItem = integer_to_list(Size),
       ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
-      Headers = [{content_range, ContentRange}],
+      Headers = [{content_type, "application/json"},
+				{content_range, ContentRange}],
       {ok, Headers, []}
    catch
       _:_Reason ->

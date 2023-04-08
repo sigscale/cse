@@ -26,31 +26,27 @@
 %%% 	in the pattern described in the example below.
 %%%
 %%% 	<h3 class="function">
-%%% 		<a>get_&lt;Collection&gt;/2</a>
+%%% 		<a>head_&lt;Collection&gt;/0</a>
 %%% 	</h3>
 %%% 	<div class="spec">
 %%% 		<p>
-%%% 			<tt>get_&lt;Collection&gt;(Query, Headers) -&gt; Result</tt>
+%%% 			<tt>head_&lt;Collection&gt;() -&gt; Result</tt>
 %%% 		</p>
 %%% 		<ul class="definitions">
-%%% 			<li><tt>Query = [{Param, Value}]</tt></li>
-%%% 			<li><tt>Param = string()</tt></li>
-%%% 			<li><tt>Value = string()</tt></li>
-%%% 			<li><tt>Headers = [{Option, Value}</tt></li>
+%%% 			<li><tt>Result = {ok, ResponseHeaders, ResponseBody}
+%%% 					| {error, StatusCode}
+%%% 					| {error, StatusCode, Problem}
+%%% 					| {error, StatusCode, ResponseHeaders, ResponseBody}}
+%%% 			</tt></li>
+%%% 			<li><tt>ResponseHeaders = [{Option, Value}</tt></li>
 %%% 			<li><tt>Option = accept_ranges | allow | cache_control
 %%% 					| content_MD5 | content_encoding | content_language
 %%% 					| content_length | content_location | content_range
 %%% 					| content_type | date | etag | expires | last_modified
 %%% 					| location | pragma | retry_after | server | trailer
 %%% 					| transfer_encoding</tt></li>
-%%% 			<li><tt>Result = {ok, Headers, ResponseBody}
-%%% 					| {error, StatusCode}
-%%% 					| {error, StatusCode, Problem}
-%%% 					| {error, StatusCode, ResponseHeaders, ResponseBody}}
-%%% 			</tt></li>
-%%% 			<li><tt>ResponseBody = io_list()</tt></li>
+%%% 			<li><tt>ResponseBody = []</tt></li>
 %%% 			<li><tt>StatusCode = 200..599</tt></li>
-%%% 			<li><tt>ResponseHeaders = [{Option, Value}</tt></li>
 %%% 			<li><tt>Problem = #{type := uri(), title := string(),
 %%% 					code := string(), cause => string(), detail => string(),
 %%% 					invalidParams => [#{param := string(), reason => string()}],
@@ -59,52 +55,49 @@
 %%% 	</div>
 %%% 	Resource handlers for HTTP HEAD operations on REST Collections.
 %%%
-%%% 	Response `Headers' must include `content_type' if `ResponseBody' is
-%%% 	not en empty list. An optional `Problem' report may be provided in
-%%% 	error responses which shall be formatted by
-%%% 	{@link //cse/cse_rest:format_problem/2. format_problem/2} and included
-%%% 	in the response body.
+%%% 	The `ResponseHeaders' must include `content_type' and `content_range'.
+%%% 	An optional `Problem' report may be provided in error responses which
+%%% 	shall be formatted by
+%%% 	{@link //cse/cse_rest:format_problem/2. format_problem/2} and the
+%%% 	result will be used only for `content_type' and `content_length'.
 %%%
 %%% 	<h3 class="function">
-%%% 		<a>get_&lt;Resource&gt;/2</a>
+%%% 		<a>get_&lt;Resource&gt;/1</a>
 %%% 	</h3>
 %%% 	<div class="spec">
 %%% 		<p>
-%%% 			<tt>get_&lt;Resource&gt;(Id, Query, [Headers, ...]) -&gt; Result</tt>
+%%% 			<tt>get_&lt;Resource&gt;(Id) -&gt; Result</tt>
 %%% 		</p>
 %%% 		<ul class="definitions">
 %%% 			<li><tt>Id = string()</tt></li>
-%%% 			<li><tt>Query = [{Param, Value}]</tt></li>
-%%% 			<li><tt>Param = string()</tt></li>
-%%% 			<li><tt>Value = string()</tt></li>
-%%% 			<li><tt>Headers = [{Option, Value}</tt></li>
+%%% 			<li><tt>Result = {ok, ResponseHeaders, ResponseBody}
+%%% 					| {error, StatusCode}
+%%% 					| {error, StatusCode, Problem}
+%%% 					| {error, StatusCode, ResponseHeaders, ResponseBody}}
+%%% 			<li><tt>ResponseHeaders = [{Option, Value}</tt></li>
 %%% 			<li><tt>Option = accept_ranges | allow | cache_control
 %%% 					| content_MD5 | content_encoding | content_language
 %%% 					| content_length | content_location | content_range
 %%% 					| content_type | date | etag | expires | last_modified
 %%% 					| location | pragma | retry_after | server | trailer
 %%% 					| transfer_encoding</tt></li>
-%%% 			<li><tt>Result = {ok, Headers, ResponseBody}
-%%% 					| {error, StatusCode}
-%%% 					| {error, StatusCode, Problem}
-%%% 					| {error, StatusCode, ResponseHeaders, ResponseBody}}
 %%% 			</tt></li>
 %%% 			<li><tt>ResponseBody = io_list()</tt></li>
 %%% 			<li><tt>StatusCode = 200..599</tt></li>
-%%% 			<li><tt>ResponseHeaders = [{Option, Value}</tt></li>
 %%% 			<li><tt>Problem = #{type := uri(), title := string(),
 %%% 					code := string(), cause => string(), detail => string(),
 %%% 					invalidParams => [#{param := string(), reason => string()}],
 %%% 					status => 200..599}</tt></li>
 %%% 		</ul>
 %%% 	</div>
-%%% 	Resource handlers for HTTP HEAD operations on REST Resources.
+%%% 	Resource handlers for HTTP GET operations on REST Resources.
 %%%
-%%% 	Response `Headers' must include `content_type' if `ResponseBody' is
-%%% 	not en empty list. An optional `Problem' report may be provided in
-%%% 	error responses which shall be formatted by
-%%% 	{@link //cse/cse_rest:format_problem/2. format_problem/2} and included
-%%% 	in the response body.
+%%% 	The `ResponseHeaders' must include `content_type' if `ResponseBody' is
+%%% 	not an empty list. The `ResponseBody' shall not be sent in the response,
+%%% 	only used to calculate `content_length'. An optional `Problem' report
+%%% 	may be provided in error responses which shall be formatted by
+%%% 	{@link //cse/cse_rest:format_problem/2. format_problem/2} and the
+%%% 	result will be used only for `content_type' and `content_length'.
 %%%
 %%% @end
 %%%
@@ -129,8 +122,9 @@
 	ModData :: #mod{},
 	Result :: {proceed, OldData} | {proceed, NewData} | {break, NewData} | done,
 	OldData :: list(),
-	NewData :: [{response,{StatusCode,Body}}] | [{response,{response,Head,Body}}]
-			| [{response,{already_sent,StatusCode,Size}}],
+	NewData :: [{response, {StatusCode, Body}}]
+			| [{response, {response, Head, Body}}]
+			| [{response, {already_sent, StatusCode, Size}}],
 	StatusCode :: integer(),
 	Body :: list() | nobody | {Fun, Arg},
 	Head :: [HeaderOption],
@@ -170,16 +164,41 @@ do(#mod{method = Method, parsed_header = _Headers,
 			{proceed, Data}
 	end.
 
+%% @hidden
+do_head(Resource, ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification"]) ->
+	do_response(ModData, Resource:head_resource_spec());
+do_head(Resource, ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification", Id]) ->
+	do_response(ModData, Resource:get_resource_spec(Id));
+do_head(Resource, ModData,
+		["resourceInventoryManagement", "v4", "resource"]) ->
+	do_response(ModData, Resource:head_resource());
+do_head(Resource, ModData,
+		["resourceInventoryManagement", "v4", "resource", Id]) ->
+	do_response(ModData, Resource:get_resource(Id));
+do_head(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _Path) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
+					"rfc7231#section-6.5.4",
+			title => "Not Found",
+			detail => "No resource exists at the path provided",
+			code => "", status => 404},
+	{ContentType, ResponseBody}
+			= cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 404, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 404, 0}} | Data]}.
 
 %% @hidden
-do_head(Resource, ModData, ["resourceInventoryManagement", "v4", "resource"]) ->
-	do_response(ModData, Resource:head_resource()).
-%% @hidden
+do_response(#mod{data = Data} = ModData, {ok, Headers, []}) ->
+	send(ModData, 200, Headers, []),
+	{proceed, [{response, {already_sent, 200, 0}} | Data]};
 do_response(#mod{data = Data} = ModData, {ok, Headers, ResponseBody}) ->
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size} | Headers],
-	send(ModData, 204, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 204, Size}} | Data]};
+	send(ModData, 200, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 200, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 			data = Data} = ModData, {error, 400}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
@@ -190,8 +209,8 @@ do_response(#mod{parsed_header = RequestHeaders,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, 400, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 400, Size}} | Data]};
+	send(ModData, 400, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 400, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 403}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
@@ -201,8 +220,8 @@ do_response(#mod{parsed_header = RequestHeaders,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, 403, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 403, Size}} | Data]};
+	send(ModData, 403, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 403, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 404}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
@@ -212,8 +231,8 @@ do_response(#mod{parsed_header = RequestHeaders,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, 404, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 404, Size}} | Data]};
+	send(ModData, 404, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 404, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 412}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7232#section-4.2",
@@ -224,8 +243,8 @@ do_response(#mod{parsed_header = RequestHeaders,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, 412, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 412, Size}} | Data]};
+	send(ModData, 412, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 412, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 416}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7233#section-4.4",
@@ -236,8 +255,8 @@ do_response(#mod{parsed_header = RequestHeaders,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, 416, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 416, Size}} | Data]};
+	send(ModData, 416, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 416, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders,
 		data = Data} = ModData, {error, 500}) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
@@ -248,8 +267,8 @@ do_response(#mod{parsed_header = RequestHeaders,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, 500, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, 500, Size}} | Data]};
+	send(ModData, 500, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, 500, 0}} | Data]};
 do_response(#mod{parsed_header = RequestHeaders, data = Data} = ModData,
 		{error, StatusCode, Problem}) when is_map(Problem),
 		StatusCode >= 400, StatusCode =< 599 ->
@@ -262,15 +281,15 @@ do_response(#mod{parsed_header = RequestHeaders, data = Data} = ModData,
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem1, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
-	send(ModData, StatusCode, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, StatusCode, Size}} | Data]};
-do_response(#mod{parsed_header = RequestHeaders, data = Data} = ModData,
+	send(ModData, StatusCode, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, StatusCode, 0}} | Data]};
+do_response(#mod{parsed_header = _RequestHeaders, data = Data} = ModData,
 		{error, StatusCode, Headers, ResponseBody}) when is_list(ResponseBody),
 		StatusCode >= 400, StatusCode =< 599 ->
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size} | Headers],
-	send(ModData, StatusCode, ResponseHeaders, ResponseBody),
-	{proceed, [{response, {already_sent, StatusCode, Size}} | Data]}.
+	send(ModData, StatusCode, ResponseHeaders, []),
+	{proceed, [{response, {already_sent, StatusCode, 0}} | Data]}.
 
 %% @hidden
 send(#mod{socket = Socket, socket_type = SocketType} = ModData,
