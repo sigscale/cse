@@ -70,6 +70,7 @@
 		add_prefix_row/0, add_prefix_row/1,
 		add_range_row/0, add_range_row/1,
 		get_index_row/0, get_index_row/1,
+		get_index_row_extra/0, get_index_row_extra/1,
 		get_prefix_row/0, get_prefix_row/1,
 		get_range_row/0, get_range_row/1,
 		delete_index_row/0, delete_index_row/1,
@@ -151,7 +152,7 @@ all() ->
 			get_index_row_spec, get_prefix_row_spec, get_range_row_spec,
 			delete_index_row_spec, delete_prefix_row_spec, delete_range_row_spec,
 			add_index_row, add_prefix_row, add_range_row,
-			get_index_row, get_prefix_row, get_range_row,
+			get_index_row, get_index_row_extra, get_prefix_row, get_range_row,
 			delete_index_row, delete_prefix_row, delete_range_row].
 
 %%---------------------------------------------------------------------
@@ -655,6 +656,34 @@ get_index_row(_Config) ->
 	{ok, #resource{id = Id} = RowR} = cse:add_resource(RowT),
 	{ok, RowR} = cse:find_resource(Id).
 
+get_index_row_extra() ->
+	[{userdata, [{doc, "Get a Resource for an index table row with extra characteristics"}]}].
+
+get_index_row_extra(_Config) ->
+	Name = cse_test_lib:rand_name(10),
+	Key = cse_test_lib:rand_value(),
+	KeyChar = #characteristic{name = <<"key">>, value = Key},
+	CharMap = char_map(rand:uniform(15)),
+	Chars = maps:put(<<"key">>, KeyChar, CharMap),
+	TableSpecT = dynamic_index_table_spec(Name),
+	{ok, TableSpecR} = cse:add_resource_spec(TableSpecT),
+	RowSpecT = dynamic_index_row_spec(Name, TableSpecR),
+	{ok, RowSpecR} = cse:add_resource_spec(RowSpecT),
+	TableT = dynamic_index_table(Name, TableSpecR),
+	ok = new_index_table(Name, []),
+	{ok, TableR} = cse:add_resource(TableT),
+	RowT = dynamic_index_row_extra(Name, RowSpecR, TableR, Key, Chars),
+	{ok, #resource{id = Id} = RowR} = cse:add_resource(RowT),
+	{ok, RowR} = cse:find_resource(Id),
+	Fmap = fun(_K, C) ->
+				C#characteristic.value
+	end,
+	ValueMap = maps:map(Fmap, CharMap),
+	Ftran = fun() ->
+				mnesia:read(list_to_existing_atom(Name), Key, read)
+	end,
+	{atomic, [{_, Key, ValueMap}]} = mnesia:transaction(Ftran).
+
 get_prefix_row() ->
 	[{userdata, [{doc, "Get a Resource for a prefix table row"}]}].
 
@@ -896,6 +925,26 @@ dynamic_index_row(Name, RowSpec, Table, Key, Value)
 			specification = SpecRef,
 			characteristic = #{<<"key">> => Column1, <<"value">> => Column2}}.
 
+dynamic_index_row_extra(Name, RowSpec, Table, Key, Chars)
+		when is_list(Name), is_map(Chars)  ->
+	NameB = list_to_binary(Name),
+	KeyChar = #characteristic{name = <<"key">>, value = Key},
+	SpecRef = #resource_spec_ref{id = RowSpec#resource_spec.id,
+			href = RowSpec#resource_spec.href,
+			name = RowSpec#resource_spec.name},
+	ResourceRef = #resource_ref{id = Table#resource.id,
+			href = Table#resource.href,
+			name = Table#resource.name},
+	ResourceRel = #resource_rel{rel_type = <<"contained">>,
+			resource = ResourceRef},
+	#resource{name = NameB,
+			description = <<"Dynamic index table row">>,
+			category = <<"IndexRow">>,
+			version = <<"1.0">>,
+			related = #{<<"contained">> => ResourceRel},
+			specification = SpecRef,
+			characteristic = maps:put(<<"key">>, KeyChar, Chars)}.
+
 dynamic_prefix_table(Name, TableSpec)
 		when is_list(Name) ->
 	NameB = list_to_binary(Name),
@@ -976,4 +1025,15 @@ new_index_table(Name, Options) when is_list(Name) ->
 		{aborted, Reason} ->
 			{error, Reason}
 	end.
+
+char_map(N) ->
+	char_map(N, #{}).
+char_map(0, Acc) ->
+	Acc;
+char_map(N, Acc) ->
+	Name = list_to_binary(cse_test_lib:rand_name(10)),
+	Value = cse_test_lib:rand_value(),
+	Char = #characteristic{name = Name, value = Value}, 
+	NewAcc = maps:put(Name, Char, Acc), 
+	char_map(N - 1, NewAcc).
 

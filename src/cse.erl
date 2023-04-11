@@ -578,21 +578,10 @@ add_resource_index_row(#resource{related = Related} = Resource) ->
 			{error, table_not_found}
 	end.
 %% @hidden
-add_resource_index_row(Table,
-		#resource{characteristic = Chars} = Resource) ->
-	case maps:find(<<"key">>, Chars) of
-		{ok, #characteristic{name = <<"key">>, value = Key}} ->
-			case maps:find(<<"value">>, Chars) of
-				{ok, #characteristic{name = <<"value">>, value = Value}} ->
-					add_resource_index_row(Table, Resource, Key, Value);
-				error ->
-					{error, missing_chars}
-			end;
-		error ->
-			{error, missing_chars}
-	end.
-%% @hidden
-add_resource_index_row(TableS, Resource, Key, Value) ->
+add_resource_index_row(TableS,
+		#resource{characteristic = #{<<"key">> := #characteristic{value = Key},
+				<<"value">> := #characteristic{value = Value}} = Chars} = Resource)
+		when map_size(Chars) == 2 ->
 	TableA = ?binary_to_existing_atom(TableS),
 	Record = {TableA, Key, Value},
 	F = fun() ->
@@ -604,7 +593,28 @@ add_resource_index_row(TableS, Resource, Key, Value) ->
 			{ok, Resource};
 		{aborted, Reason} ->
 			{error, Reason}
-	end.
+	end;
+add_resource_index_row(TableS,
+		#resource{characteristic = #{<<"key">>
+				:= #characteristic{value = Key}} = Chars} = Resource)
+		when map_size(Chars) >= 2 ->
+	TableA = ?binary_to_existing_atom(TableS),
+	L = [{Char#characteristic.name, Char#characteristic.value}
+			|| Char <- maps:values(Chars), Char#characteristic.name /= <<"key">>],
+	Value = maps:from_list(L),
+	Record = {TableA, Key, Value},
+	Ftran = fun() ->
+			mnesia:write(TableA, Record, write),
+			mnesia:write(Resource)
+	end,
+	case mnesia:transaction(Ftran) of
+		{atomic, ok} ->
+			{ok, Resource};
+		{aborted, Reason} ->
+			{error, Reason}
+	end;
+add_resource_index_row(_Table, _Resource) ->
+	{error, missing_chars}.
 
 %% @hidden
 add_resource_prefix_table(#resource{name = Name} = Resource) ->

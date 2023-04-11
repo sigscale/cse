@@ -8,6 +8,7 @@
 -export([load/1, unload/1]).
 -export([rand_name/0, rand_name/1]).
 -export([rand_dn/0, rand_dn/1]).
+-export([rand_value/0]).
 
 -define(TIMEOUT, 1000).
 
@@ -131,4 +132,33 @@ rand_dn(0, Acc) ->
 	Acc;
 rand_dn(N, Acc) ->
 	rand_dn(N - 1, [47 + rand:uniform(10) | Acc]).
+
+%% @doc Returns a random value.
+rand_value() ->
+	rand_value(rand:uniform(10)).
+rand_value(1) ->
+	true;
+rand_value(2) ->
+	false;
+rand_value(3) ->
+	rand_name();
+rand_value(4) ->
+	rand_dn();
+rand_value(5) ->
+	rand:uniform(1000);
+rand_value(6) ->
+	- rand:uniform(1000);
+rand_value(7) ->
+	rand:uniform();
+rand_value(8) ->
+	- rand:uniform();
+rand_value(9) ->
+	lists:seq(1, rand:uniform(10));
+rand_value(10) ->
+	F = fun F(0, Acc) ->
+				Acc;
+			F(N, Acc) ->
+				F(N - 1, [rand_name() | Acc])
+	end,
+	F(rand:uniform(10), []).
 
