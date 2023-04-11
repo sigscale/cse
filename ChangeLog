@@ -1,3 +1,8 @@
+2023-04-11   Vance Shipley <vances@sigscale.org>
+
+	* handle any columns in index tables
+	* refactor resource codecs for zj:binary_decode/1
+
 2023-04-08   Vance Shipley <vances@sigscale.org>
 
 	* correct usu (not rsu) in iec sms and mms test cases
