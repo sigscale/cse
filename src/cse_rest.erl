@@ -290,7 +290,7 @@ date(DateTime) when is_tuple(DateTime) ->
 
 -spec iso8601(MilliSeconds) -> Result
 	when
-		MilliSeconds	:: pos_integer() | string(),
+		MilliSeconds	:: pos_integer() | string() | binary(),
 		Result			:: string() | pos_integer().
 %% @doc Convert iso8610 to ISO 8601 format date and time.
 iso8601(MilliSeconds) when is_integer(MilliSeconds) ->
@@ -300,6 +300,8 @@ iso8601(MilliSeconds) when is_integer(MilliSeconds) ->
 	Chars = io_lib:fwrite(DateFormat ++ TimeFormat,
 			[Year, Month, Day, Hour, Minute, Second, MilliSeconds rem 1000]),
 	lists:flatten(Chars);
+iso8601(ISODateTime) when is_binary(ISODateTime) ->
+	iso8601(binary_to_list(ISODateTime));
 iso8601(ISODateTime) when is_list(ISODateTime) ->
 	case string:rchr(ISODateTime, $T) of
 		0 ->
