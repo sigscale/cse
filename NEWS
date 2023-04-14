@@ -1,3 +1,8 @@
+April 11, 2023
+--------------
+	- Index tables with value as characteristic value map
+	- Refactored resource CODECs for binary JSON CODEC
+
 April 8, 2023
 --------------
 	- HTTP HEAD operation for resource specification

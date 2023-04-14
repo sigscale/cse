@@ -661,67 +661,82 @@ static_spec(?RANGE_ROW_SPEC = SpecId) ->
 	when
 		Resource :: cse:resource() | map().
 %% @doc CODEC for `Resource'.
-%% @todo After a period of migration remove `string()' support.
 resource(#resource{} = Resource) ->
 	resource(record_info(fields, resource), Resource, #{});
 resource(#{} = Resource) ->
 	resource(record_info(fields, resource), Resource, #resource{}).
 %% @hidden
-resource([id | T], #resource{id = Id} = R, Acc) ->
+resource([id | T], #resource{id = Id} = R, Acc)
+		when is_binary(Id) ->
 	resource(T, R, Acc#{<<"id">> => Id});
 resource([id | T], #{<<"id">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	resource(T, M, Acc#resource{id = Id});
-resource([href | T], #resource{href = Href} = R, Acc) ->
+resource([href | T], #resource{href = Href} = R, Acc)
+		when is_binary(Href) ->
 	resource(T, R, Acc#{<<"href">> => Href});
 resource([href | T], #{<<"href">> := Href} = M, Acc)
 		when is_binary(Href) ->
 	resource(T, M, Acc#resource{href = Href});
-resource([name | T], #resource{name = Name} = R, Acc) ->
+resource([name | T], #resource{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	resource(T, R, Acc#{<<"name">> => Name});
 resource([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	resource(T, M, Acc#resource{name = Name});
 resource([description | T],
-		#resource{description = Description} = R, Acc) ->
+		#resource{description = Description} = R, Acc)
+		when is_binary(Description) ->
 	resource(T, R, Acc#{<<"description">> => Description});
 resource([description | T], #{<<"description">> := Description} = M, Acc)
 		when is_binary(Description) ->
 	resource(T, M, Acc#resource{description = Description});
-resource([category | T], #resource{category = Category} = R, Acc) ->
+resource([category | T], #resource{category = Category} = R, Acc)
+		when is_binary(Category) ->
 	resource(T, R, Acc#{<<"category">> => Category});
 resource([category | T], #{<<"category">> := Category} = M, Acc)
 		when is_binary(Category) ->
 	resource(T, M, Acc#resource{category = Category});
-resource([class_type | T], #resource{class_type = Type} = R, Acc) ->
+resource([class_type | T], #resource{class_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource(T, R, Acc#{<<"@type">> => Type});
 resource([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource(T, M, Acc#resource{class_type = Type});
-resource([base_type | T], #resource{base_type = Type} = R, Acc) ->
+resource([base_type | T], #resource{base_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource(T, R, Acc#{<<"@baseType">> => Type});
 resource([base_type | T], #{<<"@baseType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource(T, M, Acc#resource{base_type = Type});
-resource([schema | T], #resource{schema = Schema} = R, Acc) ->
+resource([schema | T], #resource{schema = Schema} = R, Acc)
+		when is_binary(Schema) ->
 	resource(T, R, Acc#{<<"@schemaLocation">> => Schema});
 resource([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 		when is_binary(Schema) ->
 	resource(T, M, Acc#resource{schema = Schema});
-resource([version | T], #resource{version = Version} = R, Acc) ->
+resource([version | T], #resource{version = Version} = R, Acc)
+		when is_binary(Version) ->
 	resource(T, R, Acc#{<<"version">> => Version});
 resource([version | T], #{<<"version">> := Version} = M, Acc)
 		when is_binary(Version) ->
 	resource(T, M, Acc#resource{version = Version});
+resource([start_date | T], #resource{start_date = Start} = R,
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(Start) ->
+	NewValidFor = ValidFor#{<<"startDateTime">> => cse_rest:iso8601(Start)},
+	resource(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource([start_date | T], #resource{start_date = StartDate} = R, Acc)
 		when is_integer(StartDate) ->
 	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(StartDate)},
 	resource(T, R, Acc#{<<"validFor">> => ValidFor});
 resource([start_date | T],
-		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc) ->
+		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
+		when is_binary(Start) ->
 	resource(T, M, Acc#resource{start_date = cse_rest:iso8601(Start)});
 resource([end_date | T], #resource{end_date = End} = R,
-		#{<<"validFor">> := ValidFor} = Acc) when is_integer(End) ->
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(End) ->
 	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource([end_date | T], #resource{end_date = End} = R, Acc)
@@ -730,25 +745,29 @@ resource([end_date | T], #resource{end_date = End} = R, Acc)
 	resource(T, R, Acc#{<<"validFor">> := ValidFor});
 resource([end_date | T],
 		#{<<"validFor">> := #{<<"endDateTime">> := End}} = M, Acc)
-		when is_list(End) ->
+		when is_binary(End) ->
 	resource(T, M, Acc#resource{end_date = cse_rest:iso8601(End)});
 resource([last_modified | T], #resource{last_modified = {TS, _}} = R, Acc)
 		when is_integer(TS) ->
 	resource(T, R, Acc#{<<"lastUpdate">> => cse_rest:iso8601(TS)});
-resource([last_modified | T], #{<<"lastUpdate">> := DateTime} = M, Acc) ->
+resource([last_modified | T], #{<<"lastUpdate">> := DateTime} = M, Acc)
+		when is_binary(DateTime) ->
 	LM = {cse_rest:iso8601(DateTime), erlang:unique_integer([positive])},
 	resource(T, M, Acc#resource{last_modified = LM});
-resource([admin_state | T], #resource{admin_state = State} = R, Acc) ->
+resource([admin_state | T], #resource{admin_state = State} = R, Acc)
+		when is_binary(State) ->
 	resource(T, R, Acc#{<<"administrativeState">> => State});
 resource([admin_state | T], #{<<"administrativeState">> := State} = M, Acc)
 		when is_binary(State) ->
 	resource(T, M, Acc#resource{admin_state = State});
-resource([oper_state | T], #resource{oper_state = State} = R, Acc) ->
+resource([oper_state | T], #resource{oper_state = State} = R, Acc)
+		when is_binary(State) ->
 	resource(T, R, Acc#{<<"operationalState">> => State});
 resource([oper_state | T], #{<<"operationalState">> := State} = M, Acc)
 		when is_binary(State) ->
 	resource(T, M, Acc#resource{oper_state = State});
-resource([usage_state | T], #resource{usage_state = State} = R, Acc) ->
+resource([usage_state | T], #resource{usage_state = State} = R, Acc)
+		when is_binary(State) ->
 	resource(T, R, Acc#{<<"usageState">> => State});
 resource([usage_state | T], #{<<"usageState">> := State} = M, Acc)
 		when is_binary(State) ->
@@ -792,7 +811,8 @@ resource_rel([#{} | _] = ResourceRelationship) ->
 resource_rel([]) ->
 	#{}.
 %% @hidden
-resource_rel([rel_type | T], #resource_rel{rel_type = Type} = R, Acc) ->
+resource_rel([rel_type | T], #resource_rel{rel_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_rel(T, R, Acc#{<<"relationshipType">> => Type});
 resource_rel([rel_type | T], #{<<"relationshipType">> := Type} = M, Acc)
 		when is_binary(Type) ->
@@ -803,17 +823,20 @@ resource_rel([resource | T], #resource_rel{resource = ResourceRef} = R, Acc)
 resource_rel([resource | T], #{<<"resource">> := ResourceRef} = M, Acc)
 		when is_map(ResourceRef) ->
 	resource_rel(T, M, Acc#resource_rel{resource = resource_ref(ResourceRef)});
-resource_rel([class_type | T], #resource_rel{class_type = Type} = R, Acc) ->
+resource_rel([class_type | T], #resource_rel{class_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_rel(T, R, Acc#{<<"@type">> => Type});
 resource_rel([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_rel(T, M, Acc#resource_rel{class_type = Type});
-resource_rel([base_type | T], #resource_rel{base_type = Type} = R, Acc) ->
+resource_rel([base_type | T], #resource_rel{base_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_rel(T, R, Acc#{<<"@baseType">> => Type});
 resource_rel([base_type | T], #{<<"@baseType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_rel(T, M, Acc#resource_rel{base_type = Type});
-resource_rel([schema | T], #resource_rel{schema = Schema} = R, Acc) ->
+resource_rel([schema | T], #resource_rel{schema = Schema} = R, Acc)
+		when is_binary(Schema) ->
 	resource_rel(T, R, Acc#{<<"@schemaLocation">> => Schema});
 resource_rel([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 		when is_binary(Schema) ->
@@ -834,27 +857,32 @@ resource_ref(#resource_ref{} = ResourceRef) ->
 	Fields = record_info(fields, resource_ref),
 	resource_ref(Fields, ResourceRef, #{}).
 %% @hidden
-resource_ref([id | T], #resource_ref{id = Id} = R, Acc) ->
+resource_ref([id | T], #resource_ref{id = Id} = R, Acc)
+		when is_binary(Id) ->
 	resource_ref(T, R, Acc#{<<"id">> => Id});
 resource_ref([id | T], #{<<"id">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	resource_ref(T, M, Acc#resource_ref{id = Id});
-resource_ref([href | T], #resource_ref{href = Href} = R, Acc) ->
+resource_ref([href | T], #resource_ref{href = Href} = R, Acc)
+		when is_binary(Href) ->
 	resource_ref(T, R, Acc#{<<"href">> => Href});
 resource_ref([href | T], #{<<"href">> := Href} = M, Acc)
 		when is_binary(Href) ->
 	resource_ref(T, M, Acc#resource_ref{href = Href});
-resource_ref([name | T], #resource_ref{name = Name} = R, Acc) ->
+resource_ref([name | T], #resource_ref{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	resource_ref(T, R, Acc#{<<"name">> => Name});
 resource_ref([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	resource_ref(T, M, Acc#resource_ref{name = Name});
-resource_ref([ref_type | T], #resource_ref{ref_type = Type} = R, Acc) ->
+resource_ref([ref_type | T], #resource_ref{ref_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_ref(T, R, Acc#{<<"@referredType">> => Type});
 resource_ref([ref_type| T], #{<<"@referredType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_ref(T, M, Acc#resource_ref{ref_type = Type});
-resource_ref([class_type | T], #resource_ref{class_type = Type} = R, Acc) ->
+resource_ref([class_type | T], #resource_ref{class_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_ref(T, R, Acc#{<<"@type">> => Type});
 resource_ref([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
@@ -862,12 +890,14 @@ resource_ref([class_type | T], #{<<"@type">> := Type} = M, Acc)
 resource_ref([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_ref(T, M, Acc#resource_ref{class_type = Type});
-resource_ref([base_type | T], #resource_ref{base_type = Type} = R, Acc) ->
+resource_ref([base_type | T], #resource_ref{base_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_ref(T, R, Acc#{<<"@baseType">> => Type});
 resource_ref([base_type | T], #{<<"@baseType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_ref(T, M, Acc#resource_ref{base_type = Type});
-resource_ref([schema | T], #resource_ref{schema = Schema} = R, Acc) ->
+resource_ref([schema | T], #resource_ref{schema = Schema} = R, Acc)
+		when is_binary(Schema) ->
 	resource_ref(T, R, Acc#{<<"@schemaLocation">> => Schema});
 resource_ref([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 		when is_binary(Schema) ->
@@ -893,32 +923,38 @@ characteristic([#{} | _] = Characteristics) ->
 characteristic([]) ->
 	#{}.
 %% @hidden
-characteristic([id | T], #characteristic{id = Id} = R, Acc) ->
+characteristic([id | T], #characteristic{id = Id} = R, Acc)
+		when is_binary(Id) ->
 	characteristic(T, R, Acc#{<<"id">> => Id});
 characteristic([id | T], #{<<"id">> := Id} = R, Acc)
 		when is_binary(Id) ->
 	characteristic(T, R, Acc#characteristic{id = Id});
-characteristic([name | T], #characteristic{name = Name} = R, Acc) ->
+characteristic([name | T], #characteristic{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	characteristic(T, R, Acc#{<<"name">> => Name});
 characteristic([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	characteristic(T, M, Acc#characteristic{name = Name});
-characteristic([class_type | T], #characteristic{class_type = Type} = R, Acc) ->
+characteristic([class_type | T], #characteristic{class_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	characteristic(T, R, Acc#{<<"@type">> => Type});
 characteristic([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	characteristic(T, M, Acc#characteristic{class_type = Type});
-characteristic([base_type | T], #characteristic{base_type = Type} = R, Acc) ->
+characteristic([base_type | T], #characteristic{base_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	characteristic(T, R, Acc#{<<"@baseType">> => Type});
 characteristic([base_type | T], #{<<"@baseType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	characteristic(T, M, Acc#characteristic{base_type = Type});
-characteristic([schema | T], #characteristic{schema = Schema} = R, Acc) ->
+characteristic([schema | T], #characteristic{schema = Schema} = R, Acc)
+		when is_binary(Schema) ->
 	characteristic(T, R, Acc#{<<"@schemaLocation">> => Schema});
 characteristic([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 		when is_binary(Schema) ->
 	characteristic(T, M, Acc#characteristic{schema = Schema});
-characteristic([value_type | T], #characteristic{value_type = Type} = R, Acc) ->
+characteristic([value_type | T], #characteristic{value_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	characteristic(T, R, Acc#{<<"valueType">> => Type});
 characteristic([base_type | T], #{<<"valueType">> := Type} = M, Acc)
 		when is_binary(Type) ->
@@ -945,34 +981,26 @@ resource_spec_ref(#{} = ResourceSpecificationRef) ->
 	resource_spec_ref(record_info(fields, resource_spec_ref),
 			ResourceSpecificationRef, #resource_spec_ref{}).
 %% @hidden
-resource_spec_ref([id | T], #resource_spec_ref{id = Id} = R, Acc) ->
+resource_spec_ref([id | T], #resource_spec_ref{id = Id} = R, Acc)
+		when is_binary(Id) ->
 	resource_spec_ref(T, R, Acc#{<<"id">> => Id});
 resource_spec_ref([id | T], #{<<"id">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	resource_spec_ref(T, M, Acc#resource_spec_ref{id = Id});
 resource_spec_ref([href | T], #resource_spec_ref{href = Href} = R, Acc)
 		when is_binary(Href) ->
-	resource_spec_ref(T, R, Acc#{<<"href">> => binary_to_list(Href)});
-resource_spec_ref([href | T], #resource_spec_ref{href = Href} = R, Acc)
-		when is_list(Href) ->
 	resource_spec_ref(T, R, Acc#{<<"href">> => Href});
 resource_spec_ref([href | T], #{<<"href">> := Href} = M, Acc)
 		when is_binary(Href) ->
 	resource_spec_ref(T, M, Acc#resource_spec_ref{href = Href});
 resource_spec_ref([name | T], #resource_spec_ref{name = Name} = R, Acc)
 		when is_binary(Name) ->
-	resource_spec_ref(T, R, Acc#{<<"name">> => binary_to_list(Name)});
-resource_spec_ref([name | T], #resource_spec_ref{name = Name} = R, Acc)
-		when is_list(Name) ->
 	resource_spec_ref(T, R, Acc#{<<"name">> => Name});
 resource_spec_ref([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	resource_spec_ref(T, M, Acc#resource_spec_ref{name = Name});
 resource_spec_ref([version | T], #resource_spec_ref{version = Version} = R, Acc)
 		when is_binary(Version) ->
-	resource_spec_ref(T, R, Acc#{<<"version">> => binary_to_list(Version)});
-resource_spec_ref([version | T], #resource_spec_ref{version = Version} = R, Acc)
-		when is_list(Version) ->
 	resource_spec_ref(T, R, Acc#{<<"version">> => Version});
 resource_spec_ref([version | T], #{<<"version">> := Version} = M, Acc)
 		when is_binary(Version) ->
@@ -994,27 +1022,18 @@ resource_spec(#{} = ResourceSpecification) ->
 %% @hidden
 resource_spec([id | T], #resource_spec{id = Id} = R, Acc)
 		when is_binary(Id) ->
-	resource_spec(T, R, Acc#{<<"id">> => binary_to_list(Id)});
-resource_spec([id | T], #resource_spec{id = Id} = R, Acc)
-		when is_list(Id) ->
 	resource_spec(T, R, Acc#{<<"id">> => Id});
 resource_spec([id | T], #{<<"id">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	resource_spec(T, M, Acc#resource_spec{id = Id});
 resource_spec([href | T], #resource_spec{href = Href} = R, Acc)
 		when is_binary(Href) ->
-	resource_spec(T, R, Acc#{<<"href">> => binary_to_list(Href)});
-resource_spec([href | T], #resource_spec{href = Href} = R, Acc)
-		when is_list(Href) ->
 	resource_spec(T, R, Acc#{<<"href">> => Href});
 resource_spec([href | T], #{<<"href">> := Href} = M, Acc)
 		when is_binary(Href) ->
 	resource_spec(T, M, Acc#resource_spec{href = Href});
 resource_spec([name | T], #resource_spec{name = Name} = R, Acc)
 		when is_binary(Name) ->
-	resource_spec(T, R, Acc#{<<"name">> => binary_to_list(Name)});
-resource_spec([name | T], #resource_spec{name = Name} = R, Acc)
-		when is_list(Name) ->
 	resource_spec(T, R, Acc#{<<"name">> => Name});
 resource_spec([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
@@ -1022,66 +1041,56 @@ resource_spec([name | T], #{<<"name">> := Name} = M, Acc)
 resource_spec([description | T],
 		#resource_spec{description = Description} = R, Acc)
 		when is_binary(Description) ->
-	resource_spec(T, R, Acc#{<<"description">> => binary_to_list(Description)});
-resource_spec([description | T],
-		#resource_spec{description = Description} = R, Acc)
-		when is_list(Description) ->
 	resource_spec(T, R, Acc#{<<"description">> => Description});
 resource_spec([description | T], #{<<"description">> := Description} = M, Acc)
 		when is_binary(Description) ->
 	resource_spec(T, M, Acc#resource_spec{description = Description});
-resource_spec([category | T], #resource_spec{category = Category} = R,
-		Acc) when is_binary(Category) ->
-	resource_spec(T, R, Acc#{<<"category">> => binary_to_list(Category)});
-resource_spec([category | T], #resource_spec{category = Category} = R,
-		Acc) when is_list(Category) ->
+resource_spec([category | T], #resource_spec{category = Category} = R, Acc)
+		when is_binary(Category) ->
 	resource_spec(T, R, Acc#{<<"category">> => Category});
 resource_spec([category | T], #{<<"category">> := Category} = M, Acc)
 		when is_binary(Category) ->
 	resource_spec(T, M, Acc#resource_spec{category = Category});
 resource_spec([class_type | T], #resource_spec{class_type = Type} = R, Acc)
 		when is_binary(Type) ->
-	resource_spec(T, R, Acc#{<<"@type">> => binary_to_list(Type)});
-resource_spec([class_type | T], #resource_spec{class_type = Type} = R, Acc)
-		when is_list(Type) ->
 	resource_spec(T, R, Acc#{<<"@type">> => Type});
 resource_spec([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_spec(T, M, Acc#resource_spec{class_type = Type});
 resource_spec([base_type | T], #resource_spec{base_type = Type} = R, Acc)
-		when is_list(Type) ->
+		when is_binary(Type) ->
 	resource_spec(T, R, Acc#{<<"@baseType">> => Type});
 resource_spec([base_type | T], #{<<"@baseType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_spec(T, M, Acc#resource_spec{base_type = Type});
 resource_spec([schema | T], #resource_spec{schema = Schema} = R, Acc)
 		when is_binary(Schema) ->
-	resource_spec(T, R, Acc#{<<"@schemaLocation">> => binary_to_list(Schema)});
-resource_spec([schema | T], #resource_spec{schema = Schema} = R, Acc)
-		when is_list(Schema) ->
 	resource_spec(T, R, Acc#{<<"@schemaLocation">> => Schema});
 resource_spec([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 		when is_binary(Schema) ->
 	resource_spec(T, M, Acc#resource_spec{schema = Schema});
 resource_spec([version | T], #resource_spec{version = Version} = R, Acc)
 		when is_binary(Version) ->
-	resource_spec(T, R, Acc#{<<"version">> => binary_to_list(Version)});
-resource_spec([version | T], #resource_spec{version = Version} = R, Acc)
-		when is_list(Version) ->
 	resource_spec(T, R, Acc#{<<"version">> => Version});
 resource_spec([version | T], #{<<"version">> := Version} = M, Acc)
 		when is_binary(Version) ->
 	resource_spec(T, M, Acc#resource_spec{version = Version});
+resource_spec([start_date | T], #resource_spec{start_date = Start} = R,
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(Start) ->
+	NewValidFor = ValidFor#{<<"startDateTime">> => cse_rest:iso8601(Start)},
+	resource_spec(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec([start_date | T], #resource_spec{start_date = StartDate} = R, Acc)
 		when is_integer(StartDate) ->
 	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(StartDate)},
 	resource_spec(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
-		when is_list(Start) ->
+		when is_binary(Start) ->
 	resource_spec(T, M, Acc#resource_spec{start_date = cse_rest:iso8601(Start)});
 resource_spec([end_date | T], #resource_spec{end_date = End} = R,
-		#{<<"validFor">> := ValidFor} = Acc) when is_integer(End) ->
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(End) ->
 	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec([end_date | T], #resource_spec{end_date = End} = R, Acc)
@@ -1090,13 +1099,13 @@ resource_spec([end_date | T], #resource_spec{end_date = End} = R, Acc)
 	resource_spec(T, R, Acc#{<<"validFor">> := ValidFor});
 resource_spec([end_date | T],
 		#{<<"validFor">> := #{<<"endDateTime">> := End}} = M, Acc)
-		when is_list(End) ->
+		when is_binary(End) ->
 	resource_spec(T, M, Acc#resource_spec{end_date = cse_rest:iso8601(End)});
-resource_spec([last_modified | T], #resource_spec{last_modified = {TS, _}} = R,
-		Acc) when is_integer(TS) ->
+resource_spec([last_modified | T], #resource_spec{last_modified = {TS, _}} = R, Acc)
+		when is_integer(TS) ->
 	resource_spec(T, R, Acc#{<<"lastUpdate">> => cse_rest:iso8601(TS)});
 resource_spec([last_modified | T], #{<<"lastUpdate">> := DateTime} = M, Acc)
-		when is_list(DateTime) ->
+		when is_binary(DateTime) ->
 	LM = {cse_rest:iso8601(DateTime), erlang:unique_integer([positive])},
 	resource_spec(T, M, Acc#resource_spec{last_modified = LM});
 resource_spec([is_bundle | T], #resource_spec{is_bundle = Bundle} = R, Acc)
@@ -1114,9 +1123,6 @@ resource_spec([party | T], #{<<"relatedParty">> := PartyRefs} = M, Acc)
 			Acc#resource_spec{party = party_rel(PartyRefs)});
 resource_spec([status | T], #resource_spec{status = Status} = R, Acc)
 		when is_binary(Status) ->
-	resource_spec(T, R, Acc#{<<"lifecycleStatus">> => binary_to_list(Status)});
-resource_spec([status | T], #resource_spec{status = Status} = R, Acc)
-		when is_list(Status) ->
 	resource_spec(T, R, Acc#{<<"lifecycleStatus">> => Status});
 resource_spec([status | T], #{<<"lifecycleStatus">> := Status} = M, Acc)
 		when is_binary(Status) ->
@@ -1165,25 +1171,33 @@ resource_spec_rel([#{} | _] = List) ->
 resource_spec_rel([]) ->
 	[].
 %% @hidden
-resource_spec_rel([id | T], #resource_spec_rel{id = Id} = M, Acc) ->
+resource_spec_rel([id | T], #resource_spec_rel{id = Id} = M, Acc)
+		when is_binary(Id) ->
 	resource_spec_rel(T, M, Acc#{<<"id">> => Id});
 resource_spec_rel([id | T], #{<<"id">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	resource_spec_rel(T, M, Acc#resource_spec_rel{id = Id});
-resource_spec_rel([href | T], #resource_spec_rel{href = Href} = R, Acc) ->
+resource_spec_rel([href | T], #resource_spec_rel{href = Href} = R, Acc)
+		when is_binary(Href) ->
 	resource_spec_rel(T, R, Acc#{<<"href">> => Href});
 resource_spec_rel([href | T], #{<<"href">> := Href} = M, Acc)
 		when is_binary(Href) ->
 	resource_spec_rel(T, M, Acc#resource_spec_rel{href = Href});
-resource_spec_rel([name | T], #resource_spec_rel{name = Name} = R, Acc) ->
+resource_spec_rel([name | T], #resource_spec_rel{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	resource_spec_rel(T, R, Acc#{<<"name">> => Name});
 resource_spec_rel([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	resource_spec_rel(T, M, Acc#resource_spec_rel{name = Name});
+resource_spec_rel([start_date | T], #resource_spec_rel{start_date = Start} = R,
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(Start) ->
+	NewValidFor = ValidFor#{<<"startDateTime">> => cse_rest:iso8601(Start)},
+	resource_spec_rel(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_rel([start_date | T],
-		#resource_spec_rel{start_date = StartDate} = R, Acc)
-		when is_integer(StartDate) ->
-	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(StartDate)},
+		#resource_spec_rel{start_date = Start} = R, Acc)
+		when is_integer(Start) ->
+	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(Start)},
 	resource_spec_rel(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec_rel([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
@@ -1191,23 +1205,27 @@ resource_spec_rel([start_date | T],
 	resource_spec_rel(T, M,
 			Acc#resource_spec_rel{start_date = cse_rest:iso8601(Start)});
 resource_spec_rel([end_date | T], #resource_spec_rel{end_date = End} = R,
-		#{<<"validFor">> := ValidFor} = Acc) when is_integer(End) ->
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(End) ->
 	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_rel(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_rel([end_date | T], #resource_spec_rel{end_date = End} = R, Acc)
 		when is_integer(End) ->
 	ValidFor = #{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_rel(T, R, Acc#{<<"validFor">> := ValidFor});
-resource_spec_rel([end_date | T], #{<<"validFor">> := #{<<"endDateTime">> := End}} = M,
-		Acc) when is_binary(End) ->
+resource_spec_rel([end_date | T],
+		#{<<"validFor">> := #{<<"endDateTime">> := End}} = M, Acc)
+		when is_binary(End) ->
 	resource_spec_rel(T, M,
 			Acc#resource_spec_rel{end_date = cse_rest:iso8601(End)});
-resource_spec_rel([rel_type | T], #resource_spec_rel{rel_type = Type} = R, Acc) ->
+resource_spec_rel([rel_type | T], #resource_spec_rel{rel_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_spec_rel(T, R, Acc#{<<"relationshipType">> => Type});
 resource_spec_rel([rel_type | T], #{<<"relationshipType">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_spec_rel(T, M, Acc#resource_spec_rel{rel_type = Type});
-resource_spec_rel([role | T], #resource_spec_rel{role = Role} = R, Acc) ->
+resource_spec_rel([role | T], #resource_spec_rel{role = Role} = R, Acc)
+		when is_binary(Role) ->
 	resource_spec_rel(T, R, Acc#{<<"role">> => Role});
 resource_spec_rel([role | T], #{<<"role">> := Role} = M, Acc)
 		when is_binary(Role) ->
@@ -1259,29 +1277,38 @@ resource_spec_char([#{} | _] = List) ->
 resource_spec_char([]) ->
 	[].
 %% @hidden
-resource_spec_char([name | T], #resource_spec_char{name = Name} = R, Acc) ->
+resource_spec_char([name | T], #resource_spec_char{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	resource_spec_char(T, R, Acc#{<<"name">> => Name});
 resource_spec_char([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	resource_spec_char(T, M, Acc#resource_spec_char{name = Name});
 resource_spec_char([description | T],
-		#resource_spec_char{description = Description} = R, Acc) ->
+		#resource_spec_char{description = Description} = R, Acc)
+		when is_binary(Description) ->
 	resource_spec_char(T, R, Acc#{<<"description">> => Description});
 resource_spec_char([description | T], #{<<"description">> := Description} = M, Acc)
 		when is_binary(Description) ->
 	resource_spec_char(T, M, Acc#resource_spec_char{description = Description});
 resource_spec_char([class_type | T],
-		#resource_spec_char{class_type = Type} = R, Acc) ->
+		#resource_spec_char{class_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_spec_char(T, R, Acc#{<<"@type">> => Type});
 resource_spec_char([class_type | T], #{<<"@type">> := Type} = M, Acc)
 		when is_binary(Type) ->
 	resource_spec_char(T, M, Acc#resource_spec_char{class_type = Type});
 resource_spec_char([schema | T],
-		#resource_spec_char{schema = Schema} = R, Acc) ->
+		#resource_spec_char{schema = Schema} = R, Acc)
+		when is_binary (Schema) ->
 	resource_spec_char(T, R, Acc#{<<"@schemaLocation">> => Schema});
 resource_spec_char([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 		when is_binary (Schema) ->
 	resource_spec_char(T, M, Acc#resource_spec_char{schema = Schema});
+resource_spec_char([start_date | T], #resource_spec_char{start_date = Start} = R,
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(Start) ->
+	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(Start)},
+	resource_spec_char(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char([start_date | T],
 		#resource_spec_char{start_date = StartDate} = R, Acc)
 		when is_integer(StartDate) ->
@@ -1293,7 +1320,8 @@ resource_spec_char([start_date | T],
 	resource_spec_char(T, M,
 			Acc#resource_spec_char{start_date = im_rest:iso8601(Start)});
 resource_spec_char([end_date | T], #resource_spec_char{end_date = End} = R,
-		#{<<"validFor">> := ValidFor} = Acc) when is_integer(End) ->
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(End) ->
 	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(End)},
 	resource_spec_char(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char([end_date | T], #resource_spec_char{end_date = End} = R, Acc)
@@ -1341,7 +1369,8 @@ resource_spec_char([max | T], #{<<"maxCardinality">> := Max} = M, Acc)
 		when is_integer(Max) ->
 	resource_spec_char(T, M, Acc#resource_spec_char{max = Max});
 resource_spec_char([regex | T],
-		#resource_spec_char{regex = RegEx} = R, Acc) ->
+		#resource_spec_char{regex = RegEx} = R, Acc)
+		when is_binary(RegEx) ->
 	resource_spec_char(T, R, Acc#{<<"regex">> => RegEx});
 resource_spec_char([regex | T], #{<<"regex">> := RegEx} = M, Acc)
 		when is_binary(RegEx) ->
@@ -1392,22 +1421,30 @@ resource_spec_char_rel([]) ->
 	[].
 %% @hidden
 resource_spec_char_rel([char_id | T],
-		#resource_spec_char_rel{char_id = Id} = M, Acc) ->
+		#resource_spec_char_rel{char_id = Id} = M, Acc)
+		when is_binary(Id) ->
 	resource_spec_char_rel(T, M, Acc#{<<"characteristicSpecificationId">> => Id});
 resource_spec_char_rel([char_id | T],
 		#{<<"characteristicSpecificationId">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	resource_spec_char_rel(T, M, Acc#resource_spec_char_rel{char_id = Id});
 resource_spec_char_rel([name | T],
-		#resource_spec_char_rel{name = Name} = R, Acc) ->
+		#resource_spec_char_rel{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	resource_spec_char_rel(T, R, Acc#{<<"name">> => Name});
 resource_spec_char_rel([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	resource_spec_char_rel(T, M, Acc#resource_spec_char_rel{name = Name});
 resource_spec_char_rel([start_date | T],
-		#resource_spec_char_rel{start_date = StartDate} = R, Acc)
-		when is_integer(StartDate) ->
-	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(StartDate)},
+		#resource_spec_char_rel{start_date = Start} = R,
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(Start) ->
+	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(Start)},
+	resource_spec_char_rel(T, R, Acc#{<<"validFor">> := NewValidFor});
+resource_spec_char_rel([start_date | T],
+		#resource_spec_char_rel{start_date = Start} = R, Acc)
+		when is_integer(Start) ->
+	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(Start)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec_char_rel([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
@@ -1416,11 +1453,13 @@ resource_spec_char_rel([start_date | T],
 			Acc#resource_spec_char_rel{start_date = im_rest:iso8601(Start)});
 resource_spec_char_rel([end_date | T],
 		#resource_spec_char_rel{end_date = End} = R,
-		#{<<"validFor">> := ValidFor} = Acc) when is_integer(End) ->
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(End) ->
 	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(End)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char_rel([end_date | T],
-		#resource_spec_char_rel{end_date = End} = R, Acc) when is_integer(End) ->
+		#resource_spec_char_rel{end_date = End} = R, Acc)
+		when is_integer(End) ->
 	ValidFor = #{<<"endDateTime">> => im_rest:iso8601(End)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> := ValidFor});
 resource_spec_char_rel([end_date | T],
@@ -1429,13 +1468,16 @@ resource_spec_char_rel([end_date | T],
 	resource_spec_char_rel(T, M,
 			Acc#resource_spec_char_rel{end_date = im_rest:iso8601(End)});
 resource_spec_char_rel([res_spec_id | T],
-		#resource_spec_char_rel{res_spec_id = Id} = R, Acc) ->
+		#resource_spec_char_rel{res_spec_id = Id} = R, Acc)
+		when is_binary(Id) ->
 	resource_spec_char_rel(T, R, Acc#{<<"resourceSpecificationId">> => Id});
 resource_spec_char_rel([res_spec_id | T],
-		#{<<"resourceSpecificationId">> := Id} = M, Acc) when is_binary(Id) ->
+		#{<<"resourceSpecificationId">> := Id} = M, Acc)
+		when is_binary(Id) ->
 	resource_spec_char_rel(T, M, Acc#resource_spec_char_rel{res_spec_id = Id});
 resource_spec_char_rel([res_spec_href | T],
-		#resource_spec_char_rel{res_spec_href = Href} = R, Acc) ->
+		#resource_spec_char_rel{res_spec_href = Href} = R, Acc)
+		when is_binary(Href) ->
 	resource_spec_char_rel(T, R, Acc#{<<"resourceSpecificationHref">> => Href});
 resource_spec_char_rel([res_spec_href | T],
 		#{<<"resourceSpecificationHref">> := Href} = M, Acc)
@@ -1443,7 +1485,8 @@ resource_spec_char_rel([res_spec_href | T],
 	resource_spec_char_rel(T, M,
 			Acc#resource_spec_char_rel{res_spec_href = Href});
 resource_spec_char_rel([rel_type | T],
-		#resource_spec_char_rel{rel_type = Type} = R, Acc) ->
+		#resource_spec_char_rel{rel_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_spec_char_rel(T, R, Acc#{<<"relationshipType">> => Type});
 resource_spec_char_rel([rel_type | T], #{<<"relationshipType">> := Type} = M, Acc)
 		when is_binary(Type) ->
@@ -1497,21 +1540,29 @@ resource_spec_char_val([range_interval | T],
 	resource_spec_char_val(T, M,
 			Acc#resource_spec_char_val{range_interval = open});
 resource_spec_char_val([regex | T],
-		#resource_spec_char_val{regex = RegEx} = R, Acc) ->
+		#resource_spec_char_val{regex = RegEx} = R, Acc)
+		when is_binary(RegEx) ->
 	resource_spec_char_val(T, R, Acc#{<<"regex">> => RegEx});
 resource_spec_char_val([regex | T], #{<<"regex">> := RegEx} = M, Acc)
 		when is_binary(RegEx) ->
 	resource_spec_char_val(T, M, Acc#resource_spec_char_val{regex = RegEx});
 resource_spec_char_val([unit | T],
-		#resource_spec_char_val{unit = Unit} = R, Acc) ->
+		#resource_spec_char_val{unit = Unit} = R, Acc)
+		when is_binary(Unit) ->
 	resource_spec_char_val(T, R, Acc#{<<"unitOfMeasure">> => Unit});
 resource_spec_char_val([unit | T], #{<<"unitOfMeasure">> := Unit} = M, Acc)
 		when is_binary(Unit) ->
 	resource_spec_char_val(T, M, Acc#resource_spec_char_val{unit = Unit});
 resource_spec_char_val([start_date | T],
-		#resource_spec_char_val{start_date = StartDate} = R, Acc)
-		when is_integer(StartDate) ->
-	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(StartDate)},
+		#resource_spec_char_val{start_date = Start} = R,
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(Start) ->
+	NewValidFor = ValidFor#{<<"startDateTime">> => im_rest:iso8601(Start)},
+	resource_spec_char_val(T, R, Acc#{<<"validFor">> := NewValidFor});
+resource_spec_char_val([start_date | T],
+		#resource_spec_char_val{start_date = Start} = R, Acc)
+		when is_integer(Start) ->
+	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(Start)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec_char_val([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
@@ -1520,11 +1571,13 @@ resource_spec_char_val([start_date | T],
 			Acc#resource_spec_char_val{start_date = im_rest:iso8601(Start)});
 resource_spec_char_val([end_date | T],
 		#resource_spec_char_val{end_date = End} = R,
-		#{<<"validFor">> := ValidFor} = Acc) when is_integer(End) ->
+		#{<<"validFor">> := ValidFor} = Acc)
+		when is_integer(End) ->
 	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(End)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char_val([end_date | T],
-		#resource_spec_char_val{end_date = End} = R, Acc) when is_integer(End) ->
+		#resource_spec_char_val{end_date = End} = R, Acc)
+		when is_integer(End) ->
 	ValidFor = #{<<"endDateTime">> => im_rest:iso8601(End)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> := ValidFor});
 resource_spec_char_val([end_date | T],
@@ -1546,13 +1599,15 @@ resource_spec_char_val([value_from | T], #{<<"valueFrom">> := From} = M, Acc)
 		when is_integer(From) ->
 	resource_spec_char_val(T, M, Acc#resource_spec_char_val{value_from = From});
 resource_spec_char_val([value_to | T],
-		#resource_spec_char_val{value_to = To} = R, Acc) when is_integer(To) ->
+		#resource_spec_char_val{value_to = To} = R, Acc)
+		when is_integer(To) ->
 	resource_spec_char_val(T, R, Acc#{<<"valueTo">> => To});
 resource_spec_char_val([value_to | T], #{<<"valueTo">> := To} = M, Acc)
 		when is_integer(To) ->
 	resource_spec_char_val(T, M, Acc#resource_spec_char_val{value_to = To});
 resource_spec_char_val([value_type | T],
-		#resource_spec_char_val{value_type = Type} = R, Acc) ->
+		#resource_spec_char_val{value_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	resource_spec_char_val(T, R, Acc#{<<"valueType">> => Type});
 resource_spec_char_val([value_type | T], #{<<"valueType">> := Type} = M, Acc)
 		when is_binary(Type) ->
@@ -1575,14 +1630,16 @@ target_res_schema(#{} = TargetSchemaRef) ->
 			TargetSchemaRef, #target_res_schema{}).
 %% @hidden
 target_res_schema([location | T],
-		#target_res_schema{location = Location} = R, Acc) ->
+		#target_res_schema{location = Location} = R, Acc)
+		when is_binary(Location) ->
 	target_res_schema(T, R, Acc#{<<"@schemaLocation">> => Location});
 target_res_schema([location | T],
 		#{<<"@schemaLocation">> := Location} = M, Acc)
 		when is_binary(Location) ->
 	target_res_schema(T, M, Acc#target_res_schema{location = Location});
 target_res_schema([type | T],
-		#target_res_schema{type = ClassType} = R, Acc) ->
+		#target_res_schema{type = ClassType} = R, Acc)
+		when is_binary(ClassType) ->
 	target_res_schema(T, R, Acc#{<<"@type">> => ClassType});
 target_res_schema([type | T], #{<<"@type">> := ClassType} = M, Acc)
 		when is_binary(ClassType) ->
@@ -1604,27 +1661,32 @@ party_rel([#{} | _] = List) ->
 	Fields = record_info(fields, party_rel),
 	[party_rel(Fields, RP, #party_rel{}) || RP <- List].
 %% @hidden
-party_rel([id | T], #party_rel{id = Id} = R, Acc) ->
+party_rel([id | T], #party_rel{id = Id} = R, Acc)
+		when is_binary(Id) ->
 	party_rel(T, R, Acc#{<<"id">> => Id});
 party_rel([id | T], #{<<"id">> := Id} = M, Acc)
 		when is_binary(Id) ->
 	party_rel(T, M, Acc#party_rel{id = Id});
-party_rel([href | T], #party_rel{href = Href} = R, Acc) ->
+party_rel([href | T], #party_rel{href = Href} = R, Acc)
+		when is_binary(Href) ->
 	party_rel(T, R, Acc#{<<"href">> => Href});
 party_rel([href | T], #{<<"href">> := Href} = M, Acc)
 		when is_binary(Href) ->
 	party_rel(T, M, Acc#party_rel{href = Href});
-party_rel([name | T], #party_rel{name = Name} = R, Acc) ->
+party_rel([name | T], #party_rel{name = Name} = R, Acc)
+		when is_binary(Name) ->
 	party_rel(T, R, Acc#{<<"name">> => Name});
 party_rel([name | T], #{<<"name">> := Name} = M, Acc)
 		when is_binary(Name) ->
 	party_rel(T, M, Acc#party_rel{name = Name});
-party_rel([role | T], #party_rel{role = Role} = R, Acc) ->
+party_rel([role | T], #party_rel{role = Role} = R, Acc)
+		when is_binary(Role) ->
 	party_rel(T, R, Acc#{<<"role">> => Role});
 party_rel([role | T], #{<<"role">> := Role} = M, Acc)
 		when is_binary(Role) ->
 	party_rel(T, M, Acc#party_rel{role = Role});
-party_rel([ref_type | T], #party_rel{ref_type = Type} = R, Acc) ->
+party_rel([ref_type | T], #party_rel{ref_type = Type} = R, Acc)
+		when is_binary(Type) ->
 	party_rel(T, R, Acc#{<<"@referredType">> => Type});
 party_rel([ref_type | T], #{<<"@referredType">> := Type} = M, Acc)
 		when is_binary(Type) ->
