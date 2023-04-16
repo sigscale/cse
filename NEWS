@@ -1,3 +1,8 @@
+April 16, 2023
+--------------
+	- Add APN to ServiceRating in Nrf API
+	- Deprecate string support in resources tables (migrate vefore upgrade) 
+
 April 11, 2023
 --------------
 	- Index tables with value as characteristic value map

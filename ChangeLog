@@ -1,3 +1,9 @@
+2023-04-16   Vance Shipley <vances@sigscale.org>
+
+	* include apn in ps service rating on nrf
+	* add apn to ps information
+	* deprecate strings in resource tables
+
 2023-04-11   Vance Shipley <vances@sigscale.org>
 
 	* handle any columns in index tables
