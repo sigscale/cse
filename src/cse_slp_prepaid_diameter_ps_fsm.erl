@@ -1332,7 +1332,7 @@ service_rating_ps1(PS, ServiceRating) ->
 	service_rating_ps2(PS, ServiceRating, #{}).
 %% @hidden
 service_rating_ps2(#'3gpp_ro_PS-Information'{
-		'Serving-Node-Type' = [NodeType]} = _PS,
+		'Serving-Node-Type' = [NodeType]} = PS,
 		ServiceRating, JSON) ->
 	ServingNodeType = case NodeType of
 		?'3GPP_RO_SERVING-NODE-TYPE_SGSN' ->
@@ -1351,14 +1351,22 @@ service_rating_ps2(#'3gpp_ro_PS-Information'{
 			"TWAN"
 	end,
 	JSON1 = JSON#{"servingNodeType" => ServingNodeType},
-	service_rating_ps3(ServiceRating, JSON1);
-service_rating_ps2(_PS, ServiceRating, JSON) ->
-	service_rating_ps3(ServiceRating, JSON).
+	service_rating_ps3(PS, ServiceRating, JSON1);
+service_rating_ps2(PS, ServiceRating, JSON) ->
+	service_rating_ps3(PS, ServiceRating, JSON).
 %% @hidden
-service_rating_ps3(ServiceRating, JSON)
+service_rating_ps3(#'3gpp_ro_PS-Information'{
+		'Called-Station-Id' = [APN]} = _PS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"apn" => APN},
+	service_rating_ps4(ServiceRating, JSON1);
+service_rating_ps3(_PS, ServiceRating, JSON) ->
+	service_rating_ps4(ServiceRating, JSON).
+%% @hidden
+service_rating_ps4(ServiceRating, JSON)
 		when map_size(JSON) > 0 ->
 	ServiceRating#{"serviceInformation" => JSON};
-service_rating_ps3(ServiceRating, _JSON) ->
+service_rating_ps4(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden
