@@ -1,3 +1,7 @@
+2023-04-17   Vance Shipley <vances@sigscale.org>
+
+	* include charging charateristics in ps service rating on nrf
+
 2023-04-16   Vance Shipley <vances@sigscale.org>
 
 	* include apn in ps service rating on nrf
