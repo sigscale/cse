@@ -1356,17 +1356,25 @@ service_rating_ps2(PS, ServiceRating, JSON) ->
 	service_rating_ps3(PS, ServiceRating, JSON).
 %% @hidden
 service_rating_ps3(#'3gpp_ro_PS-Information'{
-		'Called-Station-Id' = [APN]} = _PS,
+		'Called-Station-Id' = [APN]} = PS,
 		ServiceRating, JSON) ->
 	JSON1 = JSON#{"apn" => APN},
-	service_rating_ps4(ServiceRating, JSON1);
-service_rating_ps3(_PS, ServiceRating, JSON) ->
-	service_rating_ps4(ServiceRating, JSON).
+	service_rating_ps4(PS, ServiceRating, JSON1);
+service_rating_ps3(PS, ServiceRating, JSON) ->
+	service_rating_ps4(PS, ServiceRating, JSON).
 %% @hidden
-service_rating_ps4(ServiceRating, JSON)
+service_rating_ps4(#'3gpp_ro_PS-Information'{
+		'3GPP-Charging-Characteristics' = [Char]} = _PS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"chargingCharacteristics" => Char},
+	service_rating_ps5(ServiceRating, JSON1);
+service_rating_ps4(_PS, ServiceRating, JSON) ->
+	service_rating_ps5(ServiceRating, JSON).
+%% @hidden
+service_rating_ps5(ServiceRating, JSON)
 		when map_size(JSON) > 0 ->
 	ServiceRating#{"serviceInformation" => JSON};
-service_rating_ps4(ServiceRating, _JSON) ->
+service_rating_ps5(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden
