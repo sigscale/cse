@@ -306,7 +306,7 @@ authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, ohost := OHost, orealm := ORealm, 
-				eq_type := RequestType, reqno := RequestNum} = Data) ->
+				req_type := RequestType, reqno := RequestNum} = Data) ->
 	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
