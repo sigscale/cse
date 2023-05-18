@@ -23,12 +23,14 @@
 %%%
 %%% 	This Service Logic Program (SLP) implements a 3GPP Online
 %%% 	Charging Function (OCF) interfacing across the <i>Re</i> reference
-%%% 	point interafce, using the
+%%% 	point interface, using the
 %%% 	<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">
 %%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
 %%%
 %%% 	This SLP specifically handles IP Multimedia Subsystem (IMS) voice
-%%% 	service usage with `Service-Context-Id' of `32260@3gpp.org'.
+%%% 	service usage with `Service-Context-Id' of `32260@3gpp.org', and
+%%% 	Circuit Switched (CS) Voice Call Service (VCS) (through a proxy)
+%%% 	service usage with `Service-Context-Id' of `32276@3gpp.org'.
 %%%
 %%% 	== Message Sequence ==
 %%% 	The diagram below depicts the normal sequence of exchanged messages:
@@ -2052,8 +2054,9 @@ service_rating([MSCC | T],
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_ims(ServiceInformation, SR3),
-	Acc1 = service_rating_rsu(MSCC, SR4, Acc),
-	Acc2 = service_rating_usu(MSCC, SR4, Acc1),
+	SR5 = service_rating_vcs(ServiceInformation, SR4),
+	Acc1 = service_rating_rsu(MSCC, SR5, Acc),
+	Acc2 = service_rating_usu(MSCC, SR5, Acc1),
 	service_rating(T, Data, Acc2);
 service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -2151,6 +2154,119 @@ service_rating_ims6(ServiceRating, Info)
 	ServiceRating#{"serviceInformation" => Info};
 service_rating_ims6(ServiceRating, _Info) ->
 	ServiceRating.
+
+%% @hidden
+service_rating_vcs([#'3gpp_ro_Service-Information'{
+		'VCS-Information' = VCS}],
+		#{"serviceInformation" := Info} = ServiceRating) ->
+	service_rating_vcs1(VCS, ServiceRating, Info);
+service_rating_vcs([#'3gpp_ro_Service-Information'{
+		'VCS-Information' = VCS}], ServiceRating) ->
+	service_rating_vcs1(VCS, ServiceRating, #{});
+service_rating_vcs(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_vcs1([#'3gpp_ro_VCS-Information'{
+		'Network-Call-Reference-Number' = [RN]}] = VCS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"callReferenceNumber" => binary_to_list(RN)},
+	service_rating_vcs2(VCS, ServiceRating, Info1);
+service_rating_vcs1(VCS, ServiceRating, Info) ->
+	service_rating_vcs2(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs2([#'3gpp_ro_VCS-Information'{
+		'MSC-Address' = [Address]}] = VCS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"mscAddress" => binary_to_list(Address)},
+	service_rating_vcs3(VCS, ServiceRating, Info1);
+service_rating_vcs2(VCS, ServiceRating, Info) ->
+	service_rating_vcs3(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs3([#'3gpp_ro_VCS-Information'{
+		'ISUP-Location-Number' = [Number]}] = VCS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"locationNumber" => binary_to_list(Number)},
+	service_rating_vcs4(VCS, ServiceRating, Info1);
+service_rating_vcs3(VCS, ServiceRating, Info) ->
+	service_rating_vcs4(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs4([#'3gpp_ro_VCS-Information'{
+		'VLR-Number' = [Number]}] = VCS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"vlrNumber" => binary_to_list(Number)},
+	service_rating_vcs5(VCS, ServiceRating, Info1);
+service_rating_vcs4(VCS, ServiceRating, Info) ->
+	service_rating_vcs5(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs5([#'3gpp_ro_VCS-Information'{
+		'ISUP-Cause' = [C]}] = VCS,
+		ServiceRating, Info) ->
+	Cause1 = case C#'3gpp_ro_ISUP-Cause'.'ISUP-Cause-Location' of
+		[0] ->
+			#{"causeLocation" => "user"};
+		[1] ->
+			#{"causeLocation" => "local_private"};
+		[2] ->
+			#{"causeLocation" => "local_public"};
+		[3] ->
+			#{"causeLocation" => "transit"};
+		[4] ->
+			#{"causeLocation" => "remote_public"};
+		[5] ->
+			#{"causeLocation" => "remote_private"};
+		[7] ->
+			#{"causeLocation" => "international"};
+		[10] ->
+			#{"causeLocation" => "beyond"};
+		_ ->
+			#{}
+	end,
+	Cause2 = case C#'3gpp_ro_ISUP-Cause'.'ISUP-Cause-Value' of
+		[Value] when is_integer(Value) ->
+			Cause1#{"causeValue" => Value};
+		_ ->
+			Cause1
+	end,
+	Cause3 = case C#'3gpp_ro_ISUP-Cause'.'ISUP-Cause-Diagnostics'  of
+		[Diag] ->
+			Cause2#{"causeDiagnostics" => binary_to_list(Diag)};
+		_ ->
+			Cause2
+	end,
+	Info1 = Info#{"isupCause" => Cause3},
+	service_rating_vcs6(VCS, ServiceRating, Info1);
+service_rating_vcs5(VCS, ServiceRating, Info) ->
+	service_rating_vcs6(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs6([#'3gpp_ro_VCS-Information'{
+		'Start-Time' = [Time]}] = VCS,
+		ServiceRating, Info) ->
+	TS = cse_rest:date(Time),
+	Info1 = Info#{"startTime" => cse_rest:iso8601(TS)},
+	service_rating_vcs7(VCS, ServiceRating, Info1);
+service_rating_vcs6(VCS, ServiceRating, Info) ->
+	service_rating_vcs7(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs7([#'3gpp_ro_VCS-Information'{
+		'Start-of-Charging' = [Time]}] = VCS,
+		ServiceRating, Info) ->
+	TS = cse_rest:date(Time),
+	Info1 = Info#{"startOfCharging" => cse_rest:iso8601(TS)},
+	service_rating_vcs8(VCS, ServiceRating, Info1);
+service_rating_vcs7(VCS, ServiceRating, Info) ->
+	service_rating_vcs8(VCS, ServiceRating, Info).
+%% @hidden
+service_rating_vcs8([#'3gpp_ro_VCS-Information'{
+		'Stop-Time' = [Time]}],
+		ServiceRating, Info) ->
+	TS = cse_rest:date(Time),
+	Info1 = Info#{"startOfCharging" => cse_rest:iso8601(TS)},
+	service_rating_vcs9(ServiceRating, Info1);
+service_rating_vcs8(_VCS, ServiceRating, Info) ->
+	service_rating_vcs9(ServiceRating, Info).
+%% @hidden
+service_rating_vcs9(ServiceRating, Info) ->
+	ServiceRating#{"serviceInformation" => Info}.
 
 %% @hidden
 service_rating_rsu(#'3gpp_ro_Multiple-Services-Credit-Control'{
