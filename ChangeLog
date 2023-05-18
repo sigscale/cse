@@ -1,3 +1,11 @@
+2023-05-18   Vance Shipley <vances@sigscale.org>
+
+	* add context-id option to diameter client escripts
+	* service context for vcs uses ims slp
+	* voice call service (vcs) info in service rating on nrf
+	* include orig/dest in service rating of nrf
+	* typo in nrf_start reply error handling
+
 2023-04-17   Vance Shipley <vances@sigscale.org>
 
 	* include charging charateristics in ps service rating on nrf

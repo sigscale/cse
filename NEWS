@@ -1,3 +1,10 @@
+May 18, 2023
+------------
+	- Add Context-Id option to DIAMETER escripts
+	- Default Context-Id mapping to IMS SLP
+	- Voice Call Service (VCS) info in Nrf
+	- Origination and destination addresses in Nrf
+
 April 17, 2023
 --------------
 	- Add Charging Characteristics to ServiceRating in Nrf API
