@@ -491,7 +491,7 @@ install15(Tables) ->
 	cse:add_context("32274@3gpp.org",
 			cse_slp_prepaid_diameter_sms_fsm, [], []),
 	cse:add_context("32276@3gpp.org",
-			cse_slp_prepaid_diameter_vcs_fsm, [], []),
+			cse_slp_prepaid_diameter_ims_fsm, [], []),
 	{ok, Tables}.
 
 %%----------------------------------------------------------------------

@@ -72,6 +72,7 @@
 -define(RO_APPLICATION_ID, 4).
 -define(IANA_PEN_SigScale, 50386).
 -define(IMS_CONTEXTID, "32260@3gpp.org").
+-define(VCS_CONTEXTID, "32276@3gpp.org").
 -define(SERVICENAME, "Prepaid Voice").
 -define(FSM_LOGNAME, prepaid).
 -define(NRF_LOGNAME, rating).
