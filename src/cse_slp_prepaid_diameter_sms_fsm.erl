@@ -23,7 +23,7 @@
 %%%
 %%% 	This Service Logic Program (SLP) implements a 3GPP Online
 %%% 	Charging Function (OCF) interfacing across the <i>Re</i> reference
-%%% 	point interafce, using the
+%%% 	point interface, using the
 %%% 	<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">
 %%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
 %%%
