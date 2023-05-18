@@ -81,7 +81,7 @@ data_session(Options) ->
 				'Origin-Realm' = OriginRealm,
 				'Destination-Realm' = OriginRealm,
 				'Auth-Application-Id' = ?RO_APPLICATION_ID,
-				'Service-Context-Id' = "32251@3gpp.org",
+				'Service-Context-Id' = maps:get(context, Options, "32251@3gpp.org"),
 				'User-Name' = [list_to_binary(Name)],
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 				'CC-Request-Number' = RequestNum1,
@@ -157,14 +157,16 @@ data_session(Options) ->
 	end.
 
 usage() ->
-	Option1 = " [--msisdn 14165551234]",
-	Option2 = " [--imsi 001001123456789]",
-	Option3 = " [--interval 1000]",
-	Option4 = " [--updates 1]",
-	Option5 = " [--ip 127.0.0.1]",
-	Option6 = " [--raddr 127.0.0.1]",
-	Option7 = " [--rport 3868]",
-	Options = [Option1, Option2, Option3, Option4, Option5, Option6, Option7],
+	Option1 = " [--context 32251@3gpp.org]",
+	Option2 = " [--msisdn 14165551234]",
+	Option3 = " [--imsi 001001123456789]",
+	Option4 = " [--interval 1000]",
+	Option5 = " [--updates 1]",
+	Option6 = " [--ip 127.0.0.1]",
+	Option7 = " [--raddr 127.0.0.1]",
+	Option8 = " [--rport 3868]",
+	Options = [Option1, Option2, Option3, Option4,
+			Option5, Option6, Option7, Option8],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -173,6 +175,8 @@ options(Args) ->
 	options(Args, #{}).
 options(["--help" | T], Acc) ->
 	options(T, Acc#{help => true});
+options(["--context", Context | T], Acc) ->
+	options(T, Acc#{context => Context});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi=> IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->
