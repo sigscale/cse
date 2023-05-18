@@ -911,14 +911,14 @@ client_reconnect(Config) ->
 %%---------------------------------------------------------------------
 
 scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
-	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
 	scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
 scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
-	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
@@ -952,14 +952,14 @@ scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ims_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
-	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
 	scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
 scur_ims_interim(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
-	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
@@ -995,14 +995,14 @@ scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ims_stop(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
-	Destination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
 	scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
 scur_ims_stop(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
-	Origination = [$+ | cse_test_lib:rand_dn(rand:uniform(10) + 5)],
+	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],

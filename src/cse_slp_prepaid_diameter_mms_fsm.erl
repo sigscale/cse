@@ -1390,14 +1390,14 @@ service_rating_mms1([#'3gpp_ro_MMS-Information'{
 		[] ->
 			MmContentType3
 	end,
-	JSON = #{"mmContentType" => MmContentType4},
-	service_rating_mms2(MMS, ServiceRating, JSON);
+	ServiceInfo = #{"mmContentType" => MmContentType4},
+	service_rating_mms2(MMS, ServiceRating, ServiceInfo);
 service_rating_mms1(MMS, ServiceRating) ->
 	service_rating_mms2(MMS, ServiceRating, #{}).
 %% @hidden
 service_rating_mms2([#'3gpp_ro_MMS-Information'{
 		'Content-Class' = [Class]}] = MMS,
-		ServiceRating, JSON) ->
+		ServiceRating, Info) ->
 	ContentClass = case Class of
 		?'3GPP_RO_CONTENT-CLASS_TEXT' ->
 			"text";
@@ -1416,22 +1416,22 @@ service_rating_mms2([#'3gpp_ro_MMS-Information'{
 		?'3GPP_RO_CONTENT-CLASS_CONTENT-RICH' ->
 			"content-rich"
 	end,
-	JSON1 = JSON#{"contentClass" => ContentClass},
-	service_rating_mms3(MMS, ServiceRating, JSON1);
-service_rating_mms2(MMS, ServiceRating, JSON) ->
-	service_rating_mms3(MMS, ServiceRating, JSON).
+	Info1 = Info#{"contentClass" => ContentClass},
+	service_rating_mms3(MMS, ServiceRating, Info1);
+service_rating_mms2(MMS, ServiceRating, Info) ->
+	service_rating_mms3(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms3([#'3gpp_ro_MMS-Information'{
 		'Message-ID' = [MessageId]}] = MMS,
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"messageId" => MessageId},
-	service_rating_mms4(MMS, ServiceRating, JSON1);
-service_rating_mms3(MMS, ServiceRating, JSON) ->
-	service_rating_mms4(MMS, ServiceRating, JSON).
+		ServiceRating, Info) ->
+	Info1 = Info#{"messageId" => MessageId},
+	service_rating_mms4(MMS, ServiceRating, Info1);
+service_rating_mms3(MMS, ServiceRating, Info) ->
+	service_rating_mms4(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms4([#'3gpp_ro_MMS-Information'{
 		'Message-Type' = [Type]}] = MMS,
-		ServiceRating, JSON) ->
+		ServiceRating, Info) ->
 	MessageType = case Type of
 		?'3GPP_RO_MESSAGE-TYPE_M-SEND-REQ' ->
 			"m-send-req";
@@ -1464,16 +1464,16 @@ service_rating_mms4([#'3gpp_ro_MMS-Information'{
 		?'3GPP_RO_MESSAGE-TYPE_M-MBOX-DELETE-CONF' ->
 			"m-mbox-delete-conf"
 	end,
-	JSON1 = JSON#{"messageType" => MessageType},
-	service_rating_mms5(MMS, ServiceRating, JSON1);
-service_rating_mms4(MMS, ServiceRating, JSON) ->
-	service_rating_mms5(MMS, ServiceRating, JSON).
+	Info1 = Info#{"messageType" => MessageType},
+	service_rating_mms5(MMS, ServiceRating, Info1);
+service_rating_mms4(MMS, ServiceRating, Info) ->
+	service_rating_mms5(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms5([#'3gpp_ro_MMS-Information'{
 		'Message-Class' = [#'3gpp_ro_Message-Class'{
 				'Class-Identifier' = ClassId,
 				'Token-Text' = TokenText}]}] = MMS,
-		ServiceRating, JSON) ->
+		ServiceRating, Info) ->
 	MessageClass1 = case ClassId of
 		[?'3GPP_RO_CLASS-IDENTIFIER_PERSONAL'] ->
 			#{"classIdentifier" => "Personal"};
@@ -1492,47 +1492,107 @@ service_rating_mms5([#'3gpp_ro_MMS-Information'{
 		[] ->
 			MessageClass1
 	end,
-	JSON1 = JSON#{"messageClass" => MessageClass2},
-	service_rating_mms6(MMS, ServiceRating, JSON1);
-service_rating_mms5(MMS, ServiceRating, JSON) ->
-	service_rating_mms6(MMS, ServiceRating, JSON).
+	Info1 = Info#{"messageClass" => MessageClass2},
+	service_rating_mms6(MMS, ServiceRating, Info1);
+service_rating_mms5(MMS, ServiceRating, Info) ->
+	service_rating_mms6(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms6([#'3gpp_ro_MMS-Information'{
 		'Message-Size' = [MessageSize]}] = MMS,
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"messageSize" => MessageSize},
-	service_rating_mms7(MMS, ServiceRating, JSON1);
-service_rating_mms6(MMS, ServiceRating, JSON) ->
-	service_rating_mms7(MMS, ServiceRating, JSON).
+		ServiceRating, Info) ->
+	Info1 = Info#{"messageSize" => MessageSize},
+	service_rating_mms7(MMS, ServiceRating, Info1);
+service_rating_mms6(MMS, ServiceRating, Info) ->
+	service_rating_mms7(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms7([#'3gpp_ro_MMS-Information'{
 		'Applic-ID' = [ApplicId]}] = MMS,
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"applicId" => ApplicId},
-	service_rating_mms8(MMS, ServiceRating, JSON1);
-service_rating_mms7(MMS, ServiceRating, JSON) ->
-	service_rating_mms8(MMS, ServiceRating, JSON).
+		ServiceRating, Info) ->
+	Info1 = Info#{"applicId" => ApplicId},
+	service_rating_mms8(MMS, ServiceRating, Info1);
+service_rating_mms7(MMS, ServiceRating, Info) ->
+	service_rating_mms8(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms8([#'3gpp_ro_MMS-Information'{
 		'VAS-Id' = [VasId]}] = MMS,
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"vasId" => VasId},
-	service_rating_mms9(MMS, ServiceRating, JSON1);
-service_rating_mms8(MMS, ServiceRating, JSON) ->
-	service_rating_mms9(MMS, ServiceRating, JSON).
+		ServiceRating, Info) ->
+	Info1 = Info#{"vasId" => VasId},
+	service_rating_mms9(MMS, ServiceRating, Info1);
+service_rating_mms8(MMS, ServiceRating, Info) ->
+	service_rating_mms9(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms9([#'3gpp_ro_MMS-Information'{
-		'VASP-Id' = [VaspId]}],
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"vaspId" => VaspId},
-	service_rating_mms10(ServiceRating, JSON1);
-service_rating_mms9(_MMS, ServiceRating, JSON) ->
-	service_rating_mms10(ServiceRating, JSON).
+		'VASP-Id' = [VaspId]}] = MMS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"vaspId" => VaspId},
+	service_rating_mms10(MMS, ServiceRating, Info1);
+service_rating_mms9(MMS, ServiceRating, Info) ->
+	service_rating_mms10(MMS, ServiceRating, Info).
 %% @hidden
-service_rating_mms10(ServiceRating, JSON)
-		when map_size(JSON) > 0 ->
-	ServiceRating#{"serviceInformation" => JSON};
-service_rating_mms10(ServiceRating, _JSON) ->
+service_rating_mms10([#'3gpp_ro_MMS-Information'{
+		'Originator-Address' = [#'3gpp_ro_Originator-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+				'Address-Data' = [MSISDN]} | _]}] = MMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "DN",
+			"originationIdData" => binary_to_list(MSISDN)},
+	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	service_rating_mms11(MMS, ServiceRating1, Info);
+service_rating_mms10([#'3gpp_ro_MMS-Information'{
+		'Originator-Address' = [#'3gpp_ro_Originator-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
+				'Address-Data' = [IMSI]} | _]}] = MMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "IMSI",
+			"originationIdData" => binary_to_list(IMSI)},
+	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	service_rating_mms11(MMS, ServiceRating1, Info);
+service_rating_mms10([#'3gpp_ro_MMS-Information'{
+		'Originator-Address' = [#'3gpp_ro_Originator-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+				'Address-Data' = [NAI]} | _]}] = MMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "NAI",
+			"originationIdData" => binary_to_list(NAI)},
+	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	service_rating_mms11(MMS, ServiceRating1, Info);
+service_rating_mms10(MMS, ServiceRating, Info) ->
+	service_rating_mms11(MMS, ServiceRating, Info).
+%% @hidden
+service_rating_mms11([#'3gpp_ro_MMS-Information'{
+		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+				'Address-Data' = [MSISDN]} | _]}],
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "DN",
+			"destinationIdData" => binary_to_list(MSISDN)},
+	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
+	service_rating_mms12(ServiceRating1, Info);
+service_rating_mms11([#'3gpp_ro_MMS-Information'{
+		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
+				'Address-Data' = [IMSI]} | _]}],
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "IMSI",
+			"destinationIdData" => binary_to_list(IMSI)},
+	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
+	service_rating_mms12(ServiceRating1, Info);
+service_rating_mms11([#'3gpp_ro_MMS-Information'{
+		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+				'Address-Data' = [NAI]} | _]}],
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "NAI",
+			"destinationIdData" => binary_to_list(NAI)},
+	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
+	service_rating_mms12(ServiceRating1, Info);
+service_rating_mms11(_MMS, ServiceRating, Info) ->
+	service_rating_mms12(ServiceRating, Info).
+%% @hidden
+service_rating_mms12(ServiceRating, Info)
+		when map_size(Info) > 0 ->
+	ServiceRating#{"serviceInformation" => Info};
+service_rating_mms12(ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden

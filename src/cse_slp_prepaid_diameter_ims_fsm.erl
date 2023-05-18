@@ -2084,13 +2084,13 @@ service_rating_ims(_ServiceInformation, ServiceRating) ->
 service_rating_ims1([#'3gpp_ro_IMS-Information'{
 		'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS'}] = IMS,
 		ServiceRating) ->
-	JSON = #{"nodeFunctionality" => "AS"},
-	service_rating_ims2(IMS, ServiceRating, JSON);
+	Info = #{"nodeFunctionality" => "AS"},
+	service_rating_ims2(IMS, ServiceRating, Info);
 service_rating_ims1(IMS, ServiceRating) ->
 	service_rating_ims2(IMS, ServiceRating, #{}).
 %% @hidden
 service_rating_ims2([#'3gpp_ro_IMS-Information'{
-		'Role-Of-Node' = [Role]}] = IMS, ServiceRating, JSON) ->
+		'Role-Of-Node' = [Role]}] = IMS, ServiceRating, Info) ->
 	RoleOfNode = case Role of
 		?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE' ->
 			"ORIGINATING";
@@ -2099,23 +2099,57 @@ service_rating_ims2([#'3gpp_ro_IMS-Information'{
 		?'3GPP_RO_ROLE-OF-NODE_FORWARDING_ROLE' ->
 			"FORWARDING"
 	end,
-	JSON1 = JSON#{"roleOfNode" => RoleOfNode},
-	service_rating_ims3(IMS, ServiceRating, JSON1);
-service_rating_ims2(IMS, ServiceRating, JSON) ->
-	service_rating_ims3(IMS, ServiceRating, JSON).
+	Info1 = Info#{"roleOfNode" => RoleOfNode},
+	service_rating_ims3(IMS, ServiceRating, Info1);
+service_rating_ims2(IMS, ServiceRating, Info) ->
+	service_rating_ims3(IMS, ServiceRating, Info).
 %% @hidden
 service_rating_ims3([#'3gpp_ro_IMS-Information'{
-		'IMS-Visited-Network-Identifier' = [VisitedNetwork]}],
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"visitedNetworkIdentifier" => VisitedNetwork},
-	service_rating_ims4(ServiceRating, JSON1);
-service_rating_ims3(_IMS, ServiceRating, JSON) ->
-	service_rating_ims4(ServiceRating, JSON).
+		'IMS-Visited-Network-Identifier' = [VisitedNetwork]}] = IMS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"visitedNetworkIdentifier" => VisitedNetwork},
+	service_rating_ims4(IMS, ServiceRating, Info1);
+service_rating_ims3(IMS, ServiceRating, Info) ->
+	service_rating_ims4(IMS, ServiceRating, Info).
 %% @hidden
-service_rating_ims4(ServiceRating, JSON)
-		when map_size(JSON) > 0 ->
-	ServiceRating#{"serviceInformation" => JSON};
-service_rating_ims4(ServiceRating, _JSON) ->
+service_rating_ims4([#'3gpp_ro_IMS-Information'{
+		'Calling-Party-Address' = [<<"sip:", NAI/binary>>]}] = IMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "NAI",
+			"originationIdData" => binary_to_list(NAI)},
+	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
+	service_rating_ims5(IMS, ServiceRating1, Info);
+service_rating_ims4([#'3gpp_ro_IMS-Information'{
+		'Calling-Party-Address' = [<<"tel:", DN/binary>>]}] = IMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "DN",
+			"originationIdData" => binary_to_list(DN)},
+	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
+	service_rating_ims5(IMS, ServiceRating1, Info);
+service_rating_ims4(IMS, ServiceRating, Info) ->
+	service_rating_ims5(IMS, ServiceRating, Info).
+%% @hidden
+service_rating_ims5([#'3gpp_ro_IMS-Information'{
+		'Called-Party-Address' = [<<"sip:", NAI/binary>>]}],
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "NAI",
+			"destinationIdData" => binary_to_list(NAI)},
+	ServiceRating1 = ServiceRating#{"destinationId" => [DestinationId]},
+	service_rating_ims6(ServiceRating1, Info);
+service_rating_ims5([#'3gpp_ro_IMS-Information'{
+		'Called-Party-Address' = [<<"tel:", DN/binary>>]}],
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "DN",
+			"destinationIdData" => binary_to_list(DN)},
+	ServiceRating1 = ServiceRating#{"destinationId" => [DestinationId]},
+	service_rating_ims6(ServiceRating1, Info);
+service_rating_ims5(_IMS, ServiceRating, Info) ->
+	service_rating_ims6(ServiceRating, Info).
+%% @hidden
+service_rating_ims6(ServiceRating, Info)
+		when map_size(Info) > 0 ->
+	ServiceRating#{"serviceInformation" => Info};
+service_rating_ims6(ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden

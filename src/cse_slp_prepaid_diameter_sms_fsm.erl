@@ -1370,13 +1370,76 @@ service_rating_sms1([#'3gpp_ro_SMS-Information'{
 		?'3GPP_RO_SMS-NODE_SMS-SC' ->
 			"SMS-SC"
 	end,
-	JSON = #{"smsNode" => SmsNode},
-	service_rating_sms2(SMS, ServiceRating, JSON);
+	Info = #{"smsNode" => SmsNode},
+	service_rating_sms2(SMS, ServiceRating, Info);
 service_rating_sms1(SMS, ServiceRating) ->
 	service_rating_sms2(SMS, ServiceRating, #{}).
 %% @hidden
 service_rating_sms2([#'3gpp_ro_SMS-Information'{
-		'SM-Message-Type' = [Type]}] = SMS, ServiceRating, JSON) ->
+		'Originator-Received-Address' = [#'3gpp_ro_Originator-Received-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+				'Address-Data' = [MSISDN]} | _]}] = SMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "DN",
+			"originationIdData" => binary_to_list(MSISDN)},
+	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	service_rating_sms3(SMS, ServiceRating1, Info);
+service_rating_sms2([#'3gpp_ro_SMS-Information'{
+		'Originator-Received-Address' = [#'3gpp_ro_Originator-Received-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
+				'Address-Data' = [IMSI]} | _]}] = SMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "IMSI",
+			"originationIdData" => binary_to_list(IMSI)},
+	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	service_rating_sms3(SMS, ServiceRating1, Info);
+service_rating_sms2([#'3gpp_ro_SMS-Information'{
+		'Originator-Received-Address' = [#'3gpp_ro_Originator-Received-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+				'Address-Data' = [NAI]} | _]}] = SMS,
+		ServiceRating, Info) ->
+	OriginationId = #{"originationIdType" => "NAI",
+			"originationIdData" => binary_to_list(NAI)},
+	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	service_rating_sms3(SMS, ServiceRating1, Info);
+service_rating_sms2(SMS, ServiceRating, Info) ->
+	service_rating_sms3(SMS, ServiceRating, Info).
+%% @hidden
+service_rating_sms3([#'3gpp_ro_SMS-Information'{
+		'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
+				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+						'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+						'Address-Data' = [MSISDN]} | _]} | _]}] = SMS,
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "DN",
+			"destinationIdData" => binary_to_list(MSISDN)},
+	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
+	service_rating_sms4(SMS, ServiceRating1, Info);
+service_rating_sms3([#'3gpp_ro_SMS-Information'{
+		'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
+				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+						'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
+						'Address-Data' = [IMSI]} | _]} | _]}] = SMS,
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "IMSI",
+			"destinationIdData" => binary_to_list(IMSI)},
+	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
+	service_rating_sms4(SMS, ServiceRating1, Info);
+service_rating_sms3([#'3gpp_ro_SMS-Information'{
+		'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
+				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+						'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+						'Address-Data' = [NAI]} | _]} | _]}] = SMS,
+		ServiceRating, Info) ->
+	DestinationId = #{"destinationIdType" => "NAI",
+			"destinationIdData" => binary_to_list(NAI)},
+	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
+	service_rating_sms4(SMS, ServiceRating1, Info);
+service_rating_sms3(SMS, ServiceRating, Info) ->
+	service_rating_sms4(SMS, ServiceRating, Info).
+%% @hidden
+service_rating_sms4([#'3gpp_ro_SMS-Information'{
+		'SM-Message-Type' = [Type]}] = SMS, ServiceRating, Info) ->
 	MessageType = case Type of
 % @todo MACROS
 		0 ->
@@ -1392,13 +1455,13 @@ service_rating_sms2([#'3gpp_ro_SMS-Information'{
 		5 ->
 			"MO-SMS T4 submission"
 	end,
-	JSON1 = JSON#{"messageType" => MessageType},
-	service_rating_sms3(SMS, ServiceRating, JSON1);
-service_rating_sms2(SMS, ServiceRating, JSON) ->
-	service_rating_sms3(SMS, ServiceRating, JSON).
+	Info1 = Info#{"messageType" => MessageType},
+	service_rating_sms5(SMS, ServiceRating, Info1);
+service_rating_sms4(SMS, ServiceRating, Info) ->
+	service_rating_sms5(SMS, ServiceRating, Info).
 %% @hidden
-service_rating_sms3([#'3gpp_ro_SMS-Information'{
-		'SM-Service-Type' = [Type]}] = SMS, ServiceRating, JSON) ->
+service_rating_sms5([#'3gpp_ro_SMS-Information'{
+		'SM-Service-Type' = [Type]}] = SMS, ServiceRating, Info) ->
 	ServiceType = case Type of
 		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSCONTENTPROCESSING' ->
 			"VAS4SMS Short Message content processing";
@@ -1423,23 +1486,23 @@ service_rating_sms3([#'3gpp_ro_SMS-Information'{
 		?'3GPP_RO_SM-SERVICE-TYPE_VAS4SMSDEFERREDDELIVERY' ->
 			"VAS4SMS Short Message Deferred Delivery"
 	end,
-	JSON1 = JSON#{"serviceType" => ServiceType},
-	service_rating_sms4(SMS, ServiceRating, JSON1);
-service_rating_sms3(SMS, ServiceRating, JSON) ->
-	service_rating_sms4(SMS, ServiceRating, JSON).
+	Info1 = Info#{"serviceType" => ServiceType},
+	service_rating_sms6(SMS, ServiceRating, Info1);
+service_rating_sms5(SMS, ServiceRating, Info) ->
+	service_rating_sms6(SMS, ServiceRating, Info).
 %% @hidden
-service_rating_sms4([#'3gpp_ro_SMS-Information'{
+service_rating_sms6([#'3gpp_ro_SMS-Information'{
 		'SMS-Result' = [SmsResult]}],
-		ServiceRating, JSON) ->
-	JSON1 = JSON#{"smsResult" => SmsResult},
-	service_rating_sms5(ServiceRating, JSON1);
-service_rating_sms4(_SMS, ServiceRating, JSON) ->
-	service_rating_sms5(ServiceRating, JSON).
+		ServiceRating, Info) ->
+	Info1 = Info#{"smsResult" => SmsResult},
+	service_rating_sms7(ServiceRating, Info1);
+service_rating_sms6(_SMS, ServiceRating, Info) ->
+	service_rating_sms7(ServiceRating, Info).
 %% @hidden
-service_rating_sms5(ServiceRating, JSON)
-		when map_size(JSON) > 0 ->
-	ServiceRating#{"serviceInformation" => JSON};
-service_rating_sms5(ServiceRating, _JSON) ->
+service_rating_sms7(ServiceRating, Info)
+		when map_size(Info) > 0 ->
+	ServiceRating#{"serviceInformation" => Info};
+service_rating_sms7(ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden
