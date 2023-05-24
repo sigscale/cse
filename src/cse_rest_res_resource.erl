@@ -579,8 +579,7 @@ static_spec(?INDEX_ROW_SPEC = SpecId) ->
 				name = <<"IndexTable">>,
 				rel_type = <<"contained">>}],
 		characteristic = [#resource_spec_char{name = <<"key">>,
-				description = <<"Indexed key">>,
-				value_type = <<"String">>},
+				description = <<"Indexed key">>},
 			#resource_spec_char{name = <<"value">>,
 				description = <<"Value for key">>}]};
 static_spec(?PREFIX_TABLE_SPEC = SpecId) ->
