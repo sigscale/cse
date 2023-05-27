@@ -1277,9 +1277,10 @@ nrf_release2(Now, JSON,
 	end.
 
 %% @hidden
-rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
+rsu(#'3gpp_ro_Requested-Service-Unit'{
+		'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
 	#{"serviceSpecificUnit" => CCSpecUnits};
-rsu(#'3gpp_ro_Requested-Service-Unit'{}) ->
+rsu(_RSU) ->
 	#{}.
 
 %% @hidden
@@ -1292,15 +1293,17 @@ is_usu([]) ->
 	false.
 
 %% @hidden
-usu(#'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
+usu(#'3gpp_ro_Used-Service-Unit'{
+		'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
 	#{"serviceSpecificUnit" => CCSpecUnits};
-usu(#'3gpp_ro_Used-Service-Unit'{}) ->
+usu(_USU) ->
 	#{}.
 
 %% @hidden
 gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
 		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
-	[#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}];
+	[#'3gpp_ro_Granted-Service-Unit'{
+			'CC-Service-Specific-Units' = [CCSpecUnits]}];
 gsu(_) ->
 	[].
 

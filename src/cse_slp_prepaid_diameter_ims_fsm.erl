@@ -1985,17 +1985,35 @@ is_rsu([]) ->
 	false.
 
 %% @hidden
-rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Time' = [CCTime]}) ->
-	#{"time" => CCTime};
-rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]}) ->
-	#{"totalVolume" => CCTotalOctets};
-rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Output-Octets' = [CCOutputOctets],
-		'CC-Input-Octets' = [CCInputOctets]}) ->
-	#{"downlinkVolume" => CCOutputOctets, "uplinkVolume" => CCInputOctets};
-rsu(#'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
-	#{"serviceSpecificUnit" => CCSpecUnits};
-rsu(#'3gpp_ro_Requested-Service-Unit'{}) ->
-	#{}.
+rsu(#'3gpp_ro_Requested-Service-Unit'{
+		'CC-Time' = [CCTime]} = RSU) ->
+	rsu1(RSU, #{"time" => CCTime});
+rsu(RSU) ->
+	rsu1(RSU, #{}).
+%% @hidden
+rsu1(#'3gpp_ro_Requested-Service-Unit'{
+		'CC-Total-Octets' = [CCTotalOctets]} = RSU, Acc) ->
+	rsu2(RSU, Acc#{"totalVolume" => CCTotalOctets});
+rsu1(RSU, Acc) ->
+	rsu2(RSU, Acc).
+%% @hidden
+rsu2(#'3gpp_ro_Requested-Service-Unit'{
+		'CC-Output-Octets' = [CCOutputOctets]} = RSU, Acc) ->
+	rsu3(RSU, Acc#{"downlinkVolume" => CCOutputOctets});
+rsu2(RSU, Acc) ->
+	rsu3(RSU, Acc).
+%% @hidden
+rsu3(#'3gpp_ro_Requested-Service-Unit'{
+		'CC-Input-Octets' = [CCInputOctets]} = RSU, Acc) ->
+	rsu4(RSU, Acc#{"uplinkVolume" => CCInputOctets});
+rsu3(RSU, Acc) ->
+	rsu4(RSU, Acc).
+%% @hidden
+rsu4(#'3gpp_ro_Requested-Service-Unit'{
+		'CC-Service-Specific-Units' = [CCSpecUnits]}, Acc) ->
+	Acc#{"serviceSpecificUnit" => CCSpecUnits};
+rsu4(_RSU, Acc) ->
+	Acc.
 
 %% @hidden
 is_usu([#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -2007,37 +2025,72 @@ is_usu([]) ->
 	false.
 
 %% @hidden
-usu(#'3gpp_ro_Used-Service-Unit'{'CC-Time' = [CCTime]}) ->
-	#{"time" => CCTime};
-usu(#'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]}) ->
-	#{"totalVolume" => CCTotalOctets};
-usu(#'3gpp_ro_Used-Service-Unit'{'CC-Output-Octets' = [CCOutputOctets],
-		'CC-Input-Octets' = [CCInputOctets]}) ->
-	#{"downlinkVolume" => CCOutputOctets, "uplinkVolume" => CCInputOctets};
-usu(#'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}) ->
-	#{"serviceSpecificUnit" => CCSpecUnits};
-usu(#'3gpp_ro_Used-Service-Unit'{}) ->
-	#{}.
+usu(#'3gpp_ro_Used-Service-Unit'{
+		'CC-Time' = [CCTime]} = USU) ->
+	usu1(USU, #{"time" => CCTime});
+usu(USU) ->
+	usu1(USU, #{}).
+%% @hidden
+usu1(#'3gpp_ro_Used-Service-Unit'{
+		'CC-Total-Octets' = [CCTotalOctets]} = USU, Acc) ->
+	usu2(USU, Acc#{"totalVolume" => CCTotalOctets});
+usu1(USU, Acc) ->
+	usu2(USU, Acc).
+%% @hidden
+usu2(#'3gpp_ro_Used-Service-Unit'{
+		'CC-Output-Octets' = [CCOutputOctets]} = USU, Acc) ->
+	usu3(USU, Acc#{"downlinkVolume" => CCOutputOctets});
+usu2(USU, Acc) ->
+	usu3(USU, Acc).
+%% @hidden
+usu3(#'3gpp_ro_Used-Service-Unit'{
+		'CC-Input-Octets' = [CCInputOctets]} = USU, Acc) ->
+	usu4(USU, Acc#{"uplinkVolume" => CCInputOctets});
+usu3(USU, Acc) ->
+	usu4(USU, Acc).
+%% @hidden
+usu4(#'3gpp_ro_Used-Service-Unit'{
+		'CC-Service-Specific-Units' = [CCSpecUnits]}, Acc) ->
+	Acc#{"serviceSpecificUnit" => CCSpecUnits};
+usu4(_USU, Acc) ->
+	Acc.
 
 %% @hidden
-gsu({ok, #{"time" := CCTime}})
+gsu({ok, #{"time" := CCTime} = GSU})
 		when is_integer(CCTime), CCTime > 0 ->
-	[#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [CCTime]}];
-gsu({ok, #{"totalVolume" := CCTotalOctets}})
-		when is_integer(CCTotalOctets), CCTotalOctets > 0 ->
-	[#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [CCTotalOctets]}];
-gsu({ok, #{"downlinkVolume" := CCOutputOctets,
-		"uplinkVolume" := CCInputOctets}})
-		when is_integer(CCInputOctets), is_integer(CCOutputOctets),
-				CCInputOctets > 0, CCOutputOctets > 0 ->
-	[#'3gpp_ro_Granted-Service-Unit'{
-		'CC-Output-Octets' = [CCOutputOctets],
-		'CC-Input-Octets' = [CCInputOctets]}];
-gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
-		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
-	[#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [CCSpecUnits]}];
+	gsu1(GSU, #'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [CCTime]});
+gsu({ok, GSU}) when map_size(GSU) > 0 ->
+	gsu1(GSU, #'3gpp_ro_Granted-Service-Unit'{});
 gsu(_) ->
 	[].
+%% @hidden
+gsu1(#{"totalVolume" := CCTotalOctets} = GSU, Acc)
+		when is_integer(CCTotalOctets), CCTotalOctets > 0 ->
+	gsu2(GSU, Acc#'3gpp_ro_Granted-Service-Unit'{
+			'CC-Total-Octets' = [CCTotalOctets]});
+gsu1(GSU, Acc) ->
+	gsu2(GSU, Acc).
+%% @hidden
+gsu2(#{"downlinkVolume" := CCOutputOctets} = GSU, Acc)
+		when is_integer(CCOutputOctets), CCOutputOctets > 0 ->
+	gsu3(GSU, Acc#'3gpp_ro_Granted-Service-Unit'{
+		'CC-Output-Octets' = [CCOutputOctets]});
+gsu2(GSU, Acc) ->
+	gsu3(GSU, Acc).
+%% @hidden
+gsu3(#{"uplinkVolume" := CCInputOctets} = GSU, Acc)
+		when is_integer(CCInputOctets), CCInputOctets > 0 ->
+	gsu4(GSU, Acc#'3gpp_ro_Granted-Service-Unit'{
+		'CC-Input-Octets' = [CCInputOctets]});
+gsu3(GSU, Acc) ->
+	gsu4(GSU, Acc).
+%% @hidden
+gsu4(#{"serviceSpecificUnit" := CCSpecUnits}, Acc)
+		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
+	[Acc#'3gpp_ro_Granted-Service-Unit'{
+			'CC-Service-Specific-Units' = [CCSpecUnits]}];
+gsu4(_GSU, Acc) ->
+	[Acc].
 
 -spec service_rating(Data) -> ServiceRating
 	when
