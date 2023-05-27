@@ -1,3 +1,9 @@
+2023-05-27   Vance Shipley <vances@sigscale.org>
+
+	* unopionated unit mapping
+	* no type on index table key
+	* include address-type in sms recipient-info of escript
+
 2023-05-18   Vance Shipley <vances@sigscale.org>
 
 	* add context-id option to diameter client escripts

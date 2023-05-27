@@ -1,3 +1,8 @@
+May 27, 2023
+------------
+	- Map all service unit types in prepaid DIAMETER SLPs 
+	- SMS escript inludes Address-Type in Recipient-Info
+
 May 18, 2023
 ------------
 	- Add Context-Id option to DIAMETER escripts
