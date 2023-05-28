@@ -70,8 +70,8 @@ send_sms(Options) ->
 		ServiceInformation = #'3gpp_ro_Service-Information'{
 				'SMS-Information' = [#'3gpp_ro_SMS-Information'{
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
-				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
+				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(dest, Options, "14165556789")]}]}]}]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
