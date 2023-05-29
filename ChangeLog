@@ -1,3 +1,7 @@
+2023-05-28   Vance Shipley <vances@sigscale.org>
+
+	* correct address-type in sms recipient-info of escript
+
 2023-05-27   Vance Shipley <vances@sigscale.org>
 
 	* unopionated unit mapping
