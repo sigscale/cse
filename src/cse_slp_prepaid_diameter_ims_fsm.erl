@@ -2390,7 +2390,7 @@ msisdn([]) ->
 		MSCC :: [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
 		Result :: {ResultCode, MSCC},
 		ResultCode :: pos_integer().
-%% @doc Build CCA `MSCC' from Nrf `ServoceRating'.
+%% @doc Build CCA `MSCC' from Nrf `ServiceRating'.
 build_mscc(MSCC, ServiceRating) ->
 	FailRC = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	build_mscc(MSCC, ServiceRating, {FailRC, []}).
