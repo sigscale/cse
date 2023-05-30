@@ -1599,8 +1599,12 @@ result_code("END_USER_SERVICE_DENIED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_END_USER_SERVICE_DENIED';
 result_code("QUOTA_LIMIT_REACHED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED';
+result_code("QUOTA_MANAGEMENT_NOT_APPLICABLE") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_CONTROL_NOT_APPLICABLE';
 result_code("USER_UNKNOWN") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN';
+result_code("END_USER_SERVICE_REJECTED") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_END_USER_SERVICE_DENIED';
 result_code("RATING_FAILED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED'.
 
@@ -1610,7 +1614,7 @@ result_code("RATING_FAILED") ->
 		Body :: binary() | iolist(),
 		HTTP :: map().
 %% @doc Construct ECS JSON `map()' for Nrf request.
-%% @hidden
+ % @hidden
 ecs_http(MIME, Body) ->
 	Body1 = #{"bytes" => iolist_size(Body),
 			%"content" => cse_rest:stringify(zj:encode(Body))},
