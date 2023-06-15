@@ -1,7 +1,5 @@
 2023-06-15   Vance Shipley <vances@sigscale.org>
 
-	* http client pipelining by default
-	* correct documented default for nrf options
 	* correct documented default for nrf http options
 	* increase maximum open file descriptors
 	* release package filename as cse-<version>.tar.gz

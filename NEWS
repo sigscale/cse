@@ -1,7 +1,5 @@
 June 15, 2023
 -------------
-	- Enable Nrf HTTP pipelining by default
-	- Correct documented defaults for Nrf options
 	- Increase maximum files (sockets) for CSE service
 
 May 30, 2023
