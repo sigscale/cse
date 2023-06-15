@@ -376,7 +376,7 @@ API on the 3GPP Re interface to a remote Rating Funtion (RF) (i.e. OCS).
 	<dt>`nrf_http_options'</dt>
 		<dd>HTTP request {@link //inets/httpc:http_options(). options}
 				used by the {@link //inets/httpc. httpc} client.
-				(default: `[]').</dd>
+				(default: `[{timeout, 1500}, {connect_timeout, 1500}]').</dd>
 	<dt>`nrf_headers'</dt>
 		<dd>HTTP {@link //inets/httpc:headers(). headers} added by the
 				{@link //inets/httpc. httpc} client (default: `[]').</dd>
