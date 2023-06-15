@@ -10,6 +10,7 @@ WorkingDirectory=/home/otp
 RuntimeDirectory=cse
 RuntimeDirectoryMode=0750
 EnvironmentFile=/etc/default/cse
+LimitNOFILE=4096
 ExecStart=@ERLANG_ROOT_DIR@/bin/run_erl -daemon /run/cse/ log \
                 'ERL_LIBS=lib exec ${ROOTDIR}/bin/start_erl ${ROOTDIR} releases \
                 ${START_ERL_DATA} -boot_var OTPHOME . +K true +A 32 +Bi -sname ${NODENAME}'
