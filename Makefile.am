@@ -15,31 +15,31 @@ script_SCRIPTS = scripts/snapshot.escript \
 		scripts/send_sms.escript \
 		scripts/send_mms.escript
 
-REALEASE_NAME = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
+RELEASE_NAME = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
 
 .PHONY: release
-release: $(REALEASE_NAME).tar.gz
+release: $(RELEASE_NAME).tar.gz
 
 if SIGTRAN
-$(REALEASE_NAME).rel: $(PACKAGE_NAME).rel sigtran.rel
+$(RELEASE_NAME).rel: $(PACKAGE_NAME).rel sigtran.rel
 	sed -e '/{sigscale_mibs,/r sigtran.rel' $< > $@
 else
-$(REALEASE_NAME).rel: $(PACKAGE_NAME).rel
+$(RELEASE_NAME).rel: $(PACKAGE_NAME).rel
 	cp $< $@
 endif
 
 ERLTMP := $(shell mktemp -d)
 
-$(REALEASE_NAME).tar.gz: $(REALEASE_NAME).rel sys.config
+$(RELEASE_NAME).tar.gz: $(RELEASE_NAME).rel sys.config
 	mkdir -p $(ERLTMP)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
 	cp -r $(DESTDIR)/$(ERLANG_INSTALL_LIB_DIR)/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/* $(ERLTMP)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
 	ERL_LIBS=$(ERLTMP)/lib:$(ERL_LIBS) RELDIR=releases $(ERL) -noinput -boot_var OTPHOME lib \
-			-eval "systools:make_script(\"$(REALEASE_NAME)\", [{variables, [{\"OTPHOME\", \"$(ERLTMP)\"}]}])" \
-			-eval "systools:make_tar(\"$(REALEASE_NAME)\", [{dirs, [include,mibs,doc]}])" \
+			-eval "systools:make_script(\"$(RELEASE_NAME)\", [{variables, [{\"OTPHOME\", \"$(ERLTMP)\"}]}])" \
+			-eval "systools:make_tar(\"$(RELEASE_NAME)\", [{dirs, [include,mibs,doc]}])" \
 			-s init stop
 	rm -rf $(ERLTMP)
 
-install-data-hook: $(REALEASE_NAME).tar.gz
+install-data-hook: $(RELEASE_NAME).tar.gz
 	$(MKDIR_P) $(DESTDIR)/$(reldir)
 	$(INSTALL_DATA) $< $(DESTDIR)/$(reldir)
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/db
@@ -50,7 +50,7 @@ install-data-hook: $(REALEASE_NAME).tar.gz
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/conf
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/db
 
-EXTRA_DIST = $(REALEASE_NAME).tar.gz
+EXTRA_DIST = $(RELEASE_NAME).tar.gz
 
-CLEANFILES = $(REALEASE_NAME).rel $(REALEASE_NAME).script $(REALEASE_NAME).boot $(REALEASE_NAME).tar.gz
+CLEANFILES = $(RELEASE_NAME).rel $(RELEASE_NAME).script $(RELEASE_NAME).boot $(RELEASE_NAME).tar.gz
 
