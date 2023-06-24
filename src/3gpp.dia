@@ -224,7 +224,7 @@
 ;  PoC-Event-Type                                         2025  Enumerated       VM
    Recipient-Info                                         2026  Grouped          VM
    Originator-Received-Address                            2027  Grouped          VM
-;  Recipient-Received-Address                             2028  Grouped          VM
+   Recipient-Received-Address                             2028  Grouped          VM
    SM-Service-Type                                        2029  Enumerated       VM
 ;  MMTel-Information                                      2030  Grouped          VM
    MMTel-SService-Type                                    2031  Unsigned32       VM
@@ -1358,7 +1358,7 @@
    Recipient-Info ::= <AVP Header: 2026>
       [ Destination-Interface ]
      *[ Recipient-Address ]
-;    *[ Recipient-Received-Address ]
+     *[ Recipient-Received-Address ]
 ;     [ Recipient-SCCP-Address ]
 ;     [ SM-Protocol-ID ]
 
@@ -1367,6 +1367,11 @@
       [ Address-Data ]
       [ Address-Domain ]
       [ Addressee-Type ]
+
+   Recipient-Received-Address ::= <AVP Header: 2028>
+      [ Address-Type ]
+      [ Address-Data ]
+      [ Address-Domain ]
 
    Originator-Received-Address ::= <AVP Header: 2027>
       [ Address-Type ]
