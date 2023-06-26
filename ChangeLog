@@ -1,6 +1,9 @@
 2023-06-15   Vance Shipley <vances@sigscale.org>
 
-	* correct documented default for nrf http options
+	* received address avp for sms/mms
+
+2023-06-15   Vance Shipley <vances@sigscale.org>
+
 	* increase maximum open file descriptors
 	* release package filename as cse-<version>.tar.gz
 
@@ -44,7 +47,6 @@
 2023-04-08   Vance Shipley <vances@sigscale.org>
 
 	* correct usu (not rsu) in iec sms and mms test cases
-	* Revert "nrf response status code 200 for iec"
 	* test cases for head requests
 	* head requests on resource catalog
 	* remove unused clause
@@ -52,7 +54,6 @@
 2023-04-07   Vance Shipley <vances@sigscale.org>
 
 	* include inband security id in diameter service
-	* nrf response status code 200 for iec
 	* install index table specifications
 
 2023-04-06  Vance Shipley <vances@sigscale.org>
@@ -593,9 +594,7 @@
 	* use uniform id
 	* correct type specification for add resource
 	* rename resource specification reference
-	* Revert "add 3gpp_ro_application.dia"
 	* hide internal function clauses
-	* add 3gpp_ro_application.dia
 	* uniform identifiers for resource specifications
 	* rest library function for uniform resource id
 	* httpd log module must be last
