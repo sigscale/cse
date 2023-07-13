@@ -1417,17 +1417,25 @@ service_rating_ps3(PS, ServiceRating, JSON) ->
 	service_rating_ps4(PS, ServiceRating, JSON).
 %% @hidden
 service_rating_ps4(#'3gpp_ro_PS-Information'{
-		'3GPP-Charging-Characteristics' = [Char]} = _PS,
+		'3GPP-Charging-Characteristics' = [Char]} = PS,
 		ServiceRating, JSON) ->
 	JSON1 = JSON#{"chargingCharacteristics" => Char},
-	service_rating_ps5(ServiceRating, JSON1);
-service_rating_ps4(_PS, ServiceRating, JSON) ->
-	service_rating_ps5(ServiceRating, JSON).
+	service_rating_ps5(PS, ServiceRating, JSON1);
+service_rating_ps4(PS, ServiceRating, JSON) ->
+	service_rating_ps5(PS, ServiceRating, JSON).
 %% @hidden
-service_rating_ps5(ServiceRating, JSON)
+service_rating_ps5(#'3gpp_ro_PS-Information'{
+		'3GPP-RAT-Type' = [RatType]} = _PS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"ratType" => rat_type(RatType)},
+	service_rating_ps6(ServiceRating, JSON1);
+service_rating_ps5(_PS, ServiceRating, JSON) ->
+	service_rating_ps6(ServiceRating, JSON).
+%% @hidden
+service_rating_ps6(ServiceRating, JSON)
 		when map_size(JSON) > 0 ->
 	ServiceRating#{"serviceInformation" => JSON};
-service_rating_ps5(ServiceRating, _JSON) ->
+service_rating_ps6(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden
@@ -1491,6 +1499,54 @@ msisdn([_H | T]) ->
 	msisdn(T);
 msisdn([]) ->
 	undefined.
+
+%% @hidden
+rat_type(<<1>>) ->
+	"UTRAN";
+rat_type(<<2>>) ->
+	"GERAN";
+rat_type(<<3>>) ->
+	"WLAN";
+rat_type(<<4>>) ->
+	"GAN";
+rat_type(<<5>>) ->
+	"HSPA-evolution";
+rat_type(<<6>>) ->
+	"EUTRAN";
+rat_type(<<7>>) ->
+	"VIRTUAL";
+rat_type(<<8>>) ->
+	"EUTRAN-NB-IoT";
+rat_type(<<9>>) ->
+	"LTE-M";
+rat_type(<<10>>) ->
+	"NR";
+rat_type(<<51>>) ->
+	"NR";
+rat_type(<<52>>) ->
+	"NR-unlicensed";
+rat_type(<<53>>) ->
+	"Trusted-WLAN";
+rat_type(<<54>>) ->
+	"Trusted-non3GPP";
+rat_type(<<55>>) ->
+	"Wireline";
+rat_type(<<56>>) ->
+	"Wireline-cable";
+rat_type(<<57>>) ->
+	"Wireline-BBF";
+rat_type(<<101>>) ->
+	"IEEE-802.16e";
+rat_type(<<102>>) ->
+	"3GPP2-eHRPD";
+rat_type(<<103>>) ->
+	"3GPP2-HRPD";
+rat_type(<<104>>) ->
+	"3GPP2-1xRTT";
+rat_type(<<105>>) ->
+	"3GPP2-UMB";
+rat_type(Other) when is_binary(Other) ->
+	integer_to_list(binary_to_integer(Other)).
 
 -spec build_mscc(MSCC, ServiceRating) -> Result
 	when
