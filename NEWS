@@ -1,3 +1,9 @@
+July 13, 2023
+-------------
+	- Access network type in Nrf PsInformation
+	- Include all destination addresses in Nrf SmsInformation
+	- Include all destination addresses in Nrf MmsInformation
+
 June 24, 2023
 -------------
 	- Received address AVP in SMS/MMS recipient info

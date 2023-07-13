@@ -1,3 +1,9 @@
+2023-07-13   Vance Shipley <vances@sigscale.org>
+
+	* include rat-type in ps-information
+	* sync upstream changes to nrf schema
+	* origination and destination address arrays in sms, mms
+
 2023-06-15   Vance Shipley <vances@sigscale.org>
 
 	* received address avp for sms/mms
