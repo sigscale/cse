@@ -1535,58 +1535,37 @@ service_rating_mms9(MMS, ServiceRating, Info) ->
 service_rating_mms10([#'3gpp_ro_MMS-Information'{
 		'Originator-Address' = [#'3gpp_ro_Originator-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
-				'Address-Data' = [MSISDN]} | _]}] = MMS,
+				'Address-Data' = [MSISDN]}]}] = MMS,
 		ServiceRating, Info) ->
 	OriginationId = #{"originationIdType" => "DN",
 			"originationIdData" => binary_to_list(MSISDN)},
-	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
 	service_rating_mms11(MMS, ServiceRating1, Info);
 service_rating_mms10([#'3gpp_ro_MMS-Information'{
 		'Originator-Address' = [#'3gpp_ro_Originator-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
-				'Address-Data' = [IMSI]} | _]}] = MMS,
+				'Address-Data' = [IMSI]}]}] = MMS,
 		ServiceRating, Info) ->
 	OriginationId = #{"originationIdType" => "IMSI",
 			"originationIdData" => binary_to_list(IMSI)},
-	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
 	service_rating_mms11(MMS, ServiceRating1, Info);
 service_rating_mms10([#'3gpp_ro_MMS-Information'{
 		'Originator-Address' = [#'3gpp_ro_Originator-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
-				'Address-Data' = [NAI]} | _]}] = MMS,
+				'Address-Data' = [NAI]}]}] = MMS,
 		ServiceRating, Info) ->
 	OriginationId = #{"originationIdType" => "NAI",
 			"originationIdData" => binary_to_list(NAI)},
-	ServiceRating1 = ServiceRating#{"originationId" => OriginationId},
+	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
 	service_rating_mms11(MMS, ServiceRating1, Info);
 service_rating_mms10(MMS, ServiceRating, Info) ->
 	service_rating_mms11(MMS, ServiceRating, Info).
 %% @hidden
 service_rating_mms11([#'3gpp_ro_MMS-Information'{
-		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
-				'Address-Data' = [MSISDN]} | _]}],
+		'Recipient-Address' = RecipientAddress}],
 		ServiceRating, Info) ->
-	DestinationId = #{"destinationIdType" => "DN",
-			"destinationIdData" => binary_to_list(MSISDN)},
-	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
-	service_rating_mms12(ServiceRating1, Info);
-service_rating_mms11([#'3gpp_ro_MMS-Information'{
-		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
-				'Address-Data' = [IMSI]} | _]}],
-		ServiceRating, Info) ->
-	DestinationId = #{"destinationIdType" => "IMSI",
-			"destinationIdData" => binary_to_list(IMSI)},
-	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
-	service_rating_mms12(ServiceRating1, Info);
-service_rating_mms11([#'3gpp_ro_MMS-Information'{
-		'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
-				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
-				'Address-Data' = [NAI]} | _]}],
-		ServiceRating, Info) ->
-	DestinationId = #{"destinationIdType" => "NAI",
-			"destinationIdData" => binary_to_list(NAI)},
+	DestinationId = destination(RecipientAddress),
 	ServiceRating1 = ServiceRating#{"destinationId" => DestinationId},
 	service_rating_mms12(ServiceRating1, Info);
 service_rating_mms11(_MMS, ServiceRating, Info) ->
@@ -1824,6 +1803,31 @@ address([_H | T]) ->
 	address(T);
 address([]) ->
 	[].
+
+%% @hidden
+destination(RecipientAddress) ->
+	destination(RecipientAddress, []).
+%% @hidden
+destination([#'3gpp_ro_Recipient-Address'{
+		'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+		'Address-Data' = [MSISDN]} | T], Acc) ->
+	DestinationId = #{"destinationIdType" => "DN",
+			"destinationIdData" => binary_to_list(MSISDN)},
+	destination(T, [DestinationId | Acc]);
+destination([#'3gpp_ro_Recipient-Address'{
+		'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_IMSI'],
+		'Address-Data' = [IMSI]} | T], Acc) ->
+	DestinationId = #{"destinationIdType" => "IMSI",
+			"destinationIdData" => binary_to_list(IMSI)},
+	destination(T, [DestinationId | Acc]);
+destination([#'3gpp_ro_Recipient-Address'{
+		'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_EMAIL_ADDRESS'],
+		'Address-Data' = [NAI]} | T], Acc) ->
+	DestinationId = #{"destinationIdType" => "NAI",
+			"destinationIdData" => binary_to_list(NAI)},
+	destination(T, [DestinationId | Acc]);
+destination([], Acc) ->
+	lists:reverse(Acc).
 
 %% @hidden
 requested_action(?'3GPP_REQUESTED-ACTION_DIRECT_DEBITING') ->
