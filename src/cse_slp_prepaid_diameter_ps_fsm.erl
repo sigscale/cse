@@ -876,6 +876,11 @@ active(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			Reply = diameter_answer([], ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+					RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
