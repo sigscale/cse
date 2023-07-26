@@ -1,3 +1,7 @@
+July 26, 2023
+-------------
+	- Handle missing serviceRating in Nrf response (CCR-T with no usage)
+
 July 13, 2023
 -------------
 	- Access network type in Nrf PsInformation

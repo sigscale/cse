@@ -1,3 +1,8 @@
+2023-07-26   Vance Shipley <vances@sigscale.org>
+
+	* handle release with no final usage in all states
+	* handle release in active state with no final usage
+
 2023-07-13   Vance Shipley <vances@sigscale.org>
 
 	* include rat-type in ps-information
