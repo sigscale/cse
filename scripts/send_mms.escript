@@ -70,11 +70,13 @@ send_mms(Options) ->
 		Recipient = #'3gpp_ro_Recipient-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(dest, Options, "14165556789")]},
+		PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 		MMS = #'3gpp_ro_MMS-Information'{
 				'Message-Size' = [rand:uniform(1000)],
 				'Originator-Address' = [Originator],
 				'Recipient-Address' = [Recipient]},
 		ServiceInformation = #'3gpp_ro_Service-Information'{
+				'PS-Information' = [PS],
 				'MMS-Information' = [MMS]},
 		RSU = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{

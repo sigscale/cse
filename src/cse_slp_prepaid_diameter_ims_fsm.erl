@@ -2137,10 +2137,11 @@ service_rating([MSCC | T],
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	SR4 = service_rating_ims(ServiceInformation, SR3),
-	SR5 = service_rating_vcs(ServiceInformation, SR4),
-	Acc1 = service_rating_rsu(MSCC, SR5, Acc),
-	Acc2 = service_rating_usu(MSCC, SR5, Acc1),
+	SR4 = service_rating_ps(ServiceInformation, SR3),
+	SR5 = service_rating_ims(ServiceInformation, SR4),
+	SR6 = service_rating_vcs(ServiceInformation, SR5),
+	Acc1 = service_rating_rsu(MSCC, SR6, Acc),
+	Acc2 = service_rating_usu(MSCC, SR6, Acc1),
 	service_rating(T, Data, Acc2);
 service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -2159,6 +2160,77 @@ service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	ServiceRating#{"ratingGroup" => RG};
 service_rating_rg(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Rating-Group' = []}, ServiceRating) ->
+	ServiceRating.
+
+%% @hidden
+service_rating_ps([#'3gpp_ro_Service-Information'{
+		'PS-Information' = [PS]}] = _ServiceInformation, ServiceRating) ->
+	service_rating_ps1(PS, ServiceRating);
+service_rating_ps(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_ps1(#'3gpp_ro_PS-Information'{
+		'3GPP-SGSN-MCC-MNC' = [MCCMNC]} = PS, ServiceRating) ->
+	MCC = binary:bin_to_list(MCCMNC, 0, 3),
+	MNC = binary:bin_to_list(MCCMNC, 3, byte_size(MCCMNC) - 3),
+	SgsnMccMnc = #{"mcc" => MCC, "mnc" => MNC},
+	JSON = #{"sgsnMccMnc" => SgsnMccMnc},
+	service_rating_ps2(PS, ServiceRating, JSON);
+service_rating_ps1(PS, ServiceRating) ->
+	service_rating_ps2(PS, ServiceRating, #{}).
+%% @hidden
+service_rating_ps2(#'3gpp_ro_PS-Information'{
+		'Serving-Node-Type' = [NodeType]} = PS,
+		ServiceRating, JSON) ->
+	ServingNodeType = case NodeType of
+		?'3GPP_RO_SERVING-NODE-TYPE_SGSN' ->
+			"SGSN";
+		?'3GPP_RO_SERVING-NODE-TYPE_PMIPSGW' ->
+			"PMIPSGW";
+		?'3GPP_RO_SERVING-NODE-TYPE_GTPSGW' ->
+			"GTPSGW";
+		?'3GPP_RO_SERVING-NODE-TYPE_EPDG' ->
+			"ePDG";
+		?'3GPP_RO_SERVING-NODE-TYPE_HSGW' ->
+			"hSGW";
+		?'3GPP_RO_SERVING-NODE-TYPE_MME' ->
+			"MME";
+		?'3GPP_RO_SERVING-NODE-TYPE_TWAN' ->
+			"TWAN"
+	end,
+	JSON1 = JSON#{"servingNodeType" => ServingNodeType},
+	service_rating_ps3(PS, ServiceRating, JSON1);
+service_rating_ps2(PS, ServiceRating, JSON) ->
+	service_rating_ps3(PS, ServiceRating, JSON).
+%% @hidden
+service_rating_ps3(#'3gpp_ro_PS-Information'{
+		'Called-Station-Id' = [APN]} = PS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"apn" => APN},
+	service_rating_ps4(PS, ServiceRating, JSON1);
+service_rating_ps3(PS, ServiceRating, JSON) ->
+	service_rating_ps4(PS, ServiceRating, JSON).
+%% @hidden
+service_rating_ps4(#'3gpp_ro_PS-Information'{
+		'3GPP-Charging-Characteristics' = [Char]} = PS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"chargingCharacteristics" => Char},
+	service_rating_ps5(PS, ServiceRating, JSON1);
+service_rating_ps4(PS, ServiceRating, JSON) ->
+	service_rating_ps5(PS, ServiceRating, JSON).
+%% @hidden
+service_rating_ps5(#'3gpp_ro_PS-Information'{
+		'3GPP-RAT-Type' = [RatType]} = _PS,
+		ServiceRating, JSON) ->
+	JSON1 = JSON#{"ratType" => codec:rat_type(RatType)},
+	service_rating_ps6(ServiceRating, JSON1);
+service_rating_ps5(_PS, ServiceRating, JSON) ->
+	service_rating_ps6(ServiceRating, JSON).
+%% @hidden
+service_rating_ps6(ServiceRating, JSON)
+		when map_size(JSON) > 0 ->
+	ServiceRating#{"serviceInformation" => JSON};
+service_rating_ps6(ServiceRating, _JSON) ->
 	ServiceRating.
 
 %% @hidden

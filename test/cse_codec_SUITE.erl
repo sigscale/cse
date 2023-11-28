@@ -34,7 +34,8 @@
 		generic_digits/0, generic_digits/1,
 		date_time/0, date_time/1,
 		cause/0, cause/1,
-		ims_sip/0, ims_sip/1, ims_tel/0, ims_tel/1]).
+		ims_sip/0, ims_sip/1, ims_tel/0, ims_tel/1,
+		rat_type/0, rat_type/1]).
 
 -include("cse_codec.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -270,6 +271,14 @@ ims_tel(_Config) ->
 	"+14162220000"= map_get("rn", UserParams),
 	URIString2 = "tel:+14165559876",
 	#ims_uri{user = "+14165559876"} = cse_codec:ims_uri(URIString2).
+
+rat_type() ->
+	[{userdata, [{doc, "Decode 3GPP-RAT-Type"}]}].
+
+rat_type(_Config) ->
+	RatType = rand:bytes(1),
+	String = cse_codec:rat_type(RatType),
+	true = is_list(String).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

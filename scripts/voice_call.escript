@@ -70,12 +70,15 @@ voice_call(Options) ->
 		CalledParty = maps:get(dest, Options, "14165556789"),
 		CallingPartyAddress = "tel:+" ++ CallingParty,
 		CalledPartyAddress = "tel:+" ++ CalledParty,
-		ServiceInformation = #'3gpp_ro_Service-Information'{
-				'IMS-Information' = [#'3gpp_ro_IMS-Information'{
+		PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+		IMS = #'3gpp_ro_IMS-Information'{
 						'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 						'Calling-Party-Address' = [CallingPartyAddress],
-						'Called-Party-Address' = [CalledPartyAddress]}]},
+						'Called-Party-Address' = [CalledPartyAddress]},
+		ServiceInformation = #'3gpp_ro_Service-Information'{
+				'PS-Information' = [PS],
+				'IMS-Information' = [IMS]},
 		RequestNum1 = 0,
 		CCR1 = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,

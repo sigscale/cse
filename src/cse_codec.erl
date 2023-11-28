@@ -25,7 +25,7 @@
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
 		isdn_address/1, tbcd/1, generic_number/1, generic_digits/1,
-		date_time/1, cause/1, ims_uri/1]).
+		date_time/1, cause/1, ims_uri/1, rat_type/1]).
 
 -ifdef(CAP).
 -export([error_code/1]).
@@ -415,6 +415,62 @@ ims_uri5({Host, Rest}, Acc) ->
 	[Port | Params] = string:lexemes(tl(Rest), [$;]),
 	Acc#ims_uri{host = Host, port = list_to_integer(Port),
 			uri_params = params(Params)}.
+
+-spec rat_type(RatType) -> string()
+	when
+		RatType :: binary().
+%% @doc Decode a `3GPP-RAT-Type' value.
+%%
+%% 	Identifies a type of Radio Access Technology (RAT).
+%%
+%% 	See: 3GPP TS 29.061
+%%
+rat_type(<<1>> = _RatType) ->
+	"UTRAN";
+rat_type(<<2>>) ->
+	"GERAN";
+rat_type(<<3>>) ->
+	"WLAN";
+rat_type(<<4>>) ->
+	"GAN";
+rat_type(<<5>>) ->
+	"HSPA-evolution";
+rat_type(<<6>>) ->
+	"EUTRAN";
+rat_type(<<7>>) ->
+	"VIRTUAL";
+rat_type(<<8>>) ->
+	"EUTRAN-NB-IoT";
+rat_type(<<9>>) ->
+	"LTE-M";
+rat_type(<<10>>) ->
+	"NR";
+rat_type(<<51>>) ->
+	"NR";
+rat_type(<<52>>) ->
+	"NR-unlicensed";
+rat_type(<<53>>) ->
+	"Trusted-WLAN";
+rat_type(<<54>>) ->
+	"Trusted-non3GPP";
+rat_type(<<55>>) ->
+	"Wireline";
+rat_type(<<56>>) ->
+	"Wireline-cable";
+rat_type(<<57>>) ->
+	"Wireline-BBF";
+rat_type(<<101>>) ->
+	"IEEE-802.16e";
+rat_type(<<102>>) ->
+	"3GPP2-eHRPD";
+rat_type(<<103>>) ->
+	"3GPP2-HRPD";
+rat_type(<<104>>) ->
+	"3GPP2-1xRTT";
+rat_type(<<105>>) ->
+	"3GPP2-UMB";
+rat_type(Other) when is_binary(Other) ->
+	integer_to_list(binary_to_integer(Other)).
 
 %%----------------------------------------------------------------------
 %%  internal functions

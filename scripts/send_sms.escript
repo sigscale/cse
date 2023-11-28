@@ -67,12 +67,15 @@ send_sms(Options) ->
 		RSU = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Requested-Service-Unit' = [RSU]},
-		ServiceInformation = #'3gpp_ro_Service-Information'{
-				'SMS-Information' = [#'3gpp_ro_SMS-Information'{
+		PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+		SMS = #'3gpp_ro_SMS-Information'{
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
 				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
-				'Address-Data' = [maps:get(dest, Options, "14165556789")]}]}]}]},
+				'Address-Data' = [maps:get(dest, Options, "14165556789")]}]}]},
+		ServiceInformation = #'3gpp_ro_Service-Information'{
+				'PS-Information' = [PS],
+				'SMS-Information' = [SMS]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
