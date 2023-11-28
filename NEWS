@@ -1,3 +1,11 @@
+November 28, 2023
+-----------------
+	- Important change to Service Information (SI) in Nrf_Rating API:
+	  the type of ServiceInformation is now `anyOf` PS, SMS, MMS, IMS, VCS
+	- RAT Type function moved to CODEC module
+	- DIAMETER test suite includes PS in SI for SMS, MMS and IMS test cases
+	- escripts include PS in SI for SMS, MMS and IMS
+
 July 26, 2023
 -------------
 	- Handle missing serviceRating in Nrf response (CCR-T with no usage)
