@@ -1337,8 +1337,9 @@ service_rating(true, [MSCC | T],
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
-	SR4 = service_rating_sms(ServiceInformation, SR3),
-	Acc1 = service_rating_debit(MSCC, SR4, Acc),
+	SR4 = service_rating_ps(ServiceInformation, SR3),
+	SR5 = service_rating_sms(ServiceInformation, SR4),
+	Acc1 = service_rating_debit(MSCC, SR5, Acc),
 	service_rating(true, T, Data, Acc1);
 service_rating(false, [MSCC | T],
 		#{context := ServiceContextId,
@@ -1383,6 +1384,7 @@ service_rating_ps1(#'3gpp_ro_PS-Information'{
 	MNC = binary:bin_to_list(MCCMNC, 3, byte_size(MCCMNC) - 3),
 	SgsnMccMnc = #{"mcc" => MCC, "mnc" => MNC},
 	JSON = #{"sgsnMccMnc" => SgsnMccMnc},
+erlang:display({?MODULE, ?LINE, JSON}),
 	service_rating_ps2(PS, ServiceRating, JSON);
 service_rating_ps1(PS, ServiceRating) ->
 	service_rating_ps2(PS, ServiceRating, #{}).
