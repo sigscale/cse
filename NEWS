@@ -1,3 +1,7 @@
+December 20, 2023
+-----------------
+	- SMS/MMS PS information was only present for ECUR, now IEC also
+
 November 28, 2023
 -----------------
 	- Important change to Service Information (SI) in Nrf_Rating API:

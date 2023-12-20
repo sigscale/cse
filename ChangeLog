@@ -1,3 +1,7 @@
+2023-12-20   Vance Shipley <vances@sigscale.org>
+
+	* ps-information missing for iec sms/mms
+
 2023-11-28   Vance Shipley <vances@sigscale.org>
 
 	* nrf service rating uses any of ps, cs, sms, mms, ims; include ps with sms, mms, ims
