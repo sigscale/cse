@@ -1,3 +1,7 @@
+2023-12-21   Vance Shipley <vances@sigscale.org>
+
+	* merge service information types in nrf service rating
+
 2023-12-20   Vance Shipley <vances@sigscale.org>
 
 	* ps-information missing for iec sms/mms

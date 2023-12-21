@@ -1,3 +1,7 @@
+December 21, 2023
+-----------------
+	- Merge service information types in Nrf Service Rating
+
 December 20, 2023
 -----------------
 	- SMS/MMS PS information was only present for ECUR, now IEC also
