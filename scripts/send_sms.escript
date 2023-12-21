@@ -64,9 +64,9 @@ send_sms(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = MSISDN},
 		SubscriptionId = [IMSI, MSISDNr],
-		RSU = #'3gpp_ro_Requested-Service-Unit'{},
+		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Requested-Service-Unit' = [RSU]},
+				'Used-Service-Unit' = [USU]},
 		PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 		SMS = #'3gpp_ro_SMS-Information'{
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{

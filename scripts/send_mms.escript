@@ -78,9 +78,9 @@ send_mms(Options) ->
 		ServiceInformation = #'3gpp_ro_Service-Information'{
 				'PS-Information' = [PS],
 				'MMS-Information' = [MMS]},
-		RSU = #'3gpp_ro_Requested-Service-Unit'{},
+		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Requested-Service-Unit' = [RSU]},
+				'Used-Service-Unit' = [USU]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
