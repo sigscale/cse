@@ -1,0 +1,51 @@
+
+@id 3
+@name   diameter_gen_3gpp_rf_application
+@vendor 10415 3GPP
+@prefix 3gpp_rf
+@inherits diameter_gen_base_rfc6733
+@inherits diameter_gen_3gpp
+@inherits diameter_gen_ietf
+
+@messages
+
+   ACR ::= < Diameter Header: 271, REQ, PXY >
+         < Session-Id >
+         { Origin-Host }
+         { Origin-Realm }
+         { Destination-Realm }
+         { Accounting-Record-Type }
+         { Accounting-Record-Number }
+         [ Acct-Application-Id ]
+         [ User-Name ]
+        *[ Subscription-Id ]
+         [ Destination-Host ]
+         [ Acct-Interim-Interval ]
+         [ Origin-State-Id ]
+         [ Event-Timestamp ]
+        *[ Proxy-Info ]
+        *[ Route-Record ]
+         [ Service-Context-Id ]
+         [ User-Equipment-Info ]
+         [ Service-Information ]
+        *[ AVP ]
+
+   ACA ::= < Diameter Header: 271, PXY >
+         < Session-Id >
+         { Result-Code }
+         { Origin-Host }
+         { Origin-Realm }
+         { Accounting-Record-Type }
+         { Accounting-Record-Number }
+         [ Experimental-Result ]
+         [ Acct-Application-Id ]
+         [ User-Name ]
+         [ Error-Message ]
+         [ Error-Reporting-Host ]
+         [ Acct-Interim-Interval ]
+         [ Failed-AVP ]
+         [ Origin-State-Id ]
+         [ Event-Timestamp ]
+        *[ Proxy-Info ]
+        *[ AVP ]
+

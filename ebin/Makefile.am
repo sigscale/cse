@@ -17,6 +17,7 @@ beam_DATA = cse.beam \
 		cse_diameter_service_fsm.beam \
 		cse_diameter_base_application_cb.beam \
 		cse_diameter_3gpp_ro_application_cb.beam \
+		cse_diameter_3gpp_rf_application_cb.beam \
 		cse_server.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
@@ -46,6 +47,7 @@ beam_DATA = cse.beam \
 		diameter_gen_etsi.beam \
 		diameter_gen_3gpp.beam \
 		diameter_gen_3gpp_ro_application.beam \
+		diameter_gen_3gpp_rf_application.beam \
 		cse_mib.beam \
 		user_default.beam
 
@@ -83,6 +85,12 @@ diameter_gen_3gpp.beam:$(top_builddir)/src/diameter_gen_3gpp.erl \
 	$(ERLC) $(ERLCFLAGS) -I $(top_builddir)/include $<
 
 diameter_gen_3gpp_ro_application.beam:$(top_builddir)/src/diameter_gen_3gpp_ro_application.erl \
+		$(top_builddir)/include/diameter_gen_ietf.hrl \
+		$(top_builddir)/include/diameter_gen_etsi.hrl \
+		$(top_builddir)/include/diameter_gen_3gpp.hrl
+	$(ERLC) $(ERLCFLAGS) -I $(top_builddir)/include $<
+
+diameter_gen_3gpp_rf_application.beam:$(top_builddir)/src/diameter_gen_3gpp_rf_application.erl \
 		$(top_builddir)/include/diameter_gen_ietf.hrl \
 		$(top_builddir)/include/diameter_gen_etsi.hrl \
 		$(top_builddir)/include/diameter_gen_3gpp.hrl

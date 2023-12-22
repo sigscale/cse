@@ -124,7 +124,7 @@ is depicted in <a href="#figure1-2">Figure 1-2</a>.
 Figure 1-2: T-BCSM</p>
 
 ==Messaging==
-Iinterprocess communication is depicted in
+Interprocess communication is depicted in
 <a href="#figure1-2">Figure 1-2</a>. An SLPI process sends primitive
 requests to Dialogue Handler (DHA) and Component Coordinator (CCO)
 processes of the {@link //tcap. tcap} application's Component Sublayer
@@ -449,11 +449,16 @@ Application environment variables configuring mnesia tables.
      {diameter,
            [{{0,0,0,0}, 3868,
                  [{'Auth-Application-Id', [4]},
-                 {'Supported-Vendor-Id',[193]},
                  {application,
                        [{alias, cse_diameter_3gpp_ro_application},
                        {dictionary, diameter_gen_3gpp_ro_application},
                        {module, cse_diameter_3gpp_ro_application_cb},
+                       {request_errors, callback}]},
+                 {'Acct-Application-Id', [3]},
+                 {application,
+                       [{alias, cse_diameter_3gpp_rf_application},
+                       {dictionary, diameter_gen_3gpp_rf_application},
+                       {module, cse_diameter_3gpp_rf_application_cb},
                        {request_errors, callback}]},
                  {'Origin-Realm',"ims.mnc001.mnc001.3gppnetwork.org"}]}]}]},
 {m3ua,

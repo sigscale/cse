@@ -15,6 +15,7 @@ modhtml = cse.html \
 		cse_diameter_service_fsm.html \
 		cse_diameter_base_application_cb.html \
 		cse_diameter_3gpp_ro_application_cb.html \
+		cse_diameter_3gpp_rf_application_cb.html \
 		cse_server.html \
 		cse_tco_sup.html \
 		cse_slp_sup.html \
@@ -47,6 +48,7 @@ modhtml = cse.html \
 		diameter_gen_etsi.html \
 		diameter_gen_3gpp.html \
 		diameter_gen_3gpp_ro_application.html \
+		diameter_gen_3gpp_rf_application.html \
 		diameter_gen_cc_application_rfc4006.html \
 		diameter_gen_nas_application_rfc7155.html
 
