@@ -24,15 +24,16 @@
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log_codec_ecs  public API
--export([codec_diameter_ecs/1, codec_prepaid_ecs/1, codec_rating_ecs/1]).
+-export([codec_diameter_ecs/1, codec_prepaid_ecs/1, codec_postpaid_ecs/1,
+		codec_rating_ecs/1]).
 -export([ecs_base/1, ecs_server/4, ecs_client/4, ecs_network/2,
 		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7,
 		ecs_url/1]).
 -export([subscriber_id/1]).
 
 -include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_3gpp_rf_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
-%-include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
 %%----------------------------------------------------------------------
 %%  The cse_log_codec_ecs public API
@@ -84,9 +85,15 @@ codec_diameter_ecs({Start, Stop,
 	codec_diameter_ecs1(Request, Reply, StartTime, StopTime, Duration, Acc).
 %% @hidden
 %% @todo TCP/SCTP transport attributes.
-codec_diameter_ecs1(Request, Reply, Start, Stop, Duration, Acc) ->
+codec_diameter_ecs1(#'3gpp_ro_CCR'{} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
 	NewAcc = [Acc, $,,
 			ecs_network("ro", "diameter")],
+	codec_diameter_ecs2(Request, Reply, Start, Stop, Duration, NewAcc);
+codec_diameter_ecs1(#'3gpp_rf_ACR'{} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	NewAcc = [Acc, $,,
+			ecs_network("rf", "diameter")],
 	codec_diameter_ecs2(Request, Reply, Start, Stop, Duration, NewAcc).
 %% @hidden
 codec_diameter_ecs2(#'3gpp_ro_CCR'{
@@ -98,13 +105,38 @@ codec_diameter_ecs2(#'3gpp_ro_CCR'{
 		'Subscription-Id' = SubscriptionId} = Request,
 		Reply, Start, Stop, Duration, Acc) ->
 	EventType = case RequestType of
-		1 ->  % INITIAL_REQUEST
+		?'3GPP_RO_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
 			["protocol", "start"];
-		2 ->  % UPDATE_REQUEST
+		?'3GPP_RO_CC-REQUEST-TYPE_UPDATE_REQUEST' ->
 			["protocol"];
-		3 ->  % TERMINATION_REQUEST
+		?'3GPP_RO_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
 			["protocol", "end"];
-		4 ->  % EVENT_REQUEST
+		?'3GPP_RO_CC-REQUEST-TYPE_EVENT_REQUEST' ->
+			["protocol"]
+	end,
+	UserIds = subscriber_id(SubscriptionId),
+	NewAcc = [Acc, $,,
+			ecs_service("sigscale-cse", "ocf"), $,,
+			ecs_source(OriginHost, OriginHost, OriginRealm,
+					UserName, UserIds), $,,
+			ecs_destination(DestinationRealm)],
+	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc);
+codec_diameter_ecs2(#'3gpp_rf_ACR'{
+		'Accounting-Record-Type' = RecordType,
+		'Origin-Host' = OriginHost,
+		'Origin-Realm' = OriginRealm,
+		'Destination-Realm' = DestinationRealm,
+		'User-Name' = UserName,
+		'Subscription-Id' = SubscriptionId} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	EventType = case RecordType of
+		?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD' ->
+			["protocol", "start"];
+		?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
+			["protocol"];
+		?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
+			["protocol", "end"];
+		?'3GPP_RF_ACCOUNTING-RECORD-TYPE_EVENT_RECORD' ->
 			["protocol"]
 	end,
 	UserIds = subscriber_id(SubscriptionId),
@@ -115,7 +147,7 @@ codec_diameter_ecs2(#'3gpp_ro_CCR'{
 			ecs_destination(DestinationRealm)],
 	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc).
 %% @hidden
-codec_diameter_ecs3(CCR,
+codec_diameter_ecs3(#'3gpp_ro_CCR'{} = CCR,
 		{reply, #'3gpp_ro_CCA'{'Result-Code' = ResultCode} = CCA},
 		EventType, Start, Stop, Duration, Acc)
 		when ResultCode >= 1000, ResultCode < 2000 ->
@@ -123,7 +155,7 @@ codec_diameter_ecs3(CCR,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", EventType, "unknown"), $,,
 			ecs_3gpp_ro(CCR, CCA), $}];
-codec_diameter_ecs3(CCR,
+codec_diameter_ecs3(#'3gpp_ro_CCR'{} = CCR,
 		{reply, #'3gpp_ro_CCA'{'Result-Code' = ResultCode} = CCA},
 		EventType, Start, Stop, Duration, Acc)
 		when ResultCode >= 2000, ResultCode  < 3000 ->
@@ -131,7 +163,7 @@ codec_diameter_ecs3(CCR,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", ["allowed" | EventType], "success"), $,,
 			ecs_3gpp_ro(CCR, CCA), $}];
-codec_diameter_ecs3(CCR,
+codec_diameter_ecs3(#'3gpp_ro_CCR'{} = CCR,
 		{reply, #'3gpp_ro_CCA'{'Result-Code' = ResultCode} = CCA},
 		EventType, Start, Stop, Duration, Acc)
 		when ResultCode >= 3000 ->
@@ -139,7 +171,7 @@ codec_diameter_ecs3(CCR,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", ["denied" | EventType], "failure"), $,,
 			ecs_3gpp_ro(CCR, CCA), $}];
-codec_diameter_ecs3(CCR,
+codec_diameter_ecs3(#'3gpp_ro_CCR'{} = CCR,
 		{answer_message, ResultCode},
 		EventType, Start, Stop, Duration, Acc)
 		when ResultCode >= 1000, ResultCode < 2000 ->
@@ -147,7 +179,7 @@ codec_diameter_ecs3(CCR,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", EventType, "unknown"), $,,
 			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}];
-codec_diameter_ecs3(CCR,
+codec_diameter_ecs3(#'3gpp_ro_CCR'{} = CCR,
 		{answer_message, ResultCode},
 		EventType, Start, Stop, Duration, Acc)
 		when ResultCode >= 2000, ResultCode  < 3000 ->
@@ -155,14 +187,62 @@ codec_diameter_ecs3(CCR,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", ["allowed" | EventType], "success"), $,,
 			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}];
-codec_diameter_ecs3(CCR,
+codec_diameter_ecs3(#'3gpp_ro_CCR'{} = CCR,
 		{answer_message, ResultCode},
 		EventType, Start, Stop, Duration, Acc)
 		when ResultCode >= 3000 ->
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", ["denied" | EventType], "failure"), $,,
-			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}].
+			ecs_3gpp_ro(CCR, #'3gpp_ro_CCA'{'Result-Code' = ResultCode}), $}];
+codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
+		{reply, #'3gpp_rf_ACA'{'Result-Code' = ResultCode} = ACA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_rf(ACR, ACA), $}];
+codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
+		{reply, #'3gpp_rf_ACA'{'Result-Code' = ResultCode} = ACA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_rf(ACR, ACA), $}];
+codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
+		{reply, #'3gpp_rf_ACA'{'Result-Code' = ResultCode} = ACA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_rf(ACR, ACA), $}];
+codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_ro(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
+codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_ro(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
+codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_rf(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}].
 
 -spec codec_prepaid_ecs(Term) -> iodata()
 	when
@@ -237,6 +317,66 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 					"event", "session", ["protocol", "end"], Outcome), $,,
 			ecs_url(URL), $,,
 			ecs_prepaid(State, Call, Network, OCS), $}].
+
+-spec codec_postpaid_ecs(Term) -> iodata()
+	when
+		Term :: {Start, Stop, ServiceName,
+				State, Subscriber, Call, Network},
+		Start :: pos_integer(),
+		Stop :: pos_integer(),
+		ServiceName :: string(),
+		State :: exception | atom(),
+		Subscriber :: #{imsi := IMSI, msisdn := MSISDN},
+		IMSI :: [$0..$9],
+		MSISDN :: [$0..$9],
+		Call :: #{direction := Direction, calling := Calling, called := Called}
+				| #{recipient := Recipient, originator := Originator},
+		Direction :: originating | terminating,
+		Calling :: [$0..$9],
+		Called :: [$0..$9],
+		Recipient :: string(),
+		Originator :: string(),
+		Network :: #{context => Context, session_id => SessionId,
+				hplmn => PLMN, vplmn => PLMN},
+		Context :: string(),
+		SessionId :: binary(),
+		PLMN :: string().
+%% @doc Postpaid SLP event CODEC for Elastic Stack logs.
+%%
+%% 	Formats call detail events for consumption by
+%% 	Elastic Stack by providing a JSON format aligned with The Elastic
+%% 	Common Schema (ECS).
+%%
+%% 	Service Logic Processing Programs (SLP) may use this CODEC function
+%% 	with the {@link //cse/cse_log. cse_log} logging functions and the
+%% 	{@link //cse/cse_log:log_option(). cse_log:log_option()}
+%% 	`{codec, {{@module}, codec_prepaid_ecs}}'.
+%%
+%% 	The `StartTime' should be when the call began and `StopTime' when
+%% 	the call ended. The values are milliseconds since the epoch
+%% 	(e.g. `erlang:system_time(millisecond)'). A duration will be
+%% 	calculated and `event.start', `event.stop' and `event.duration'
+%% 	will be included in the log event.
+%%
+%% @todo Refactor `outcome' after eliminating `exception' state.
+codec_postpaid_ecs({Start, Stop, ServiceName,
+		State, Subscriber, Call, Network} = _Term) ->
+	StartTime = cse_log:iso8601(Start),
+	StopTime = cse_log:iso8601(Stop),
+	Duration = integer_to_list((Stop - Start) * 1000000),
+	Outcome = case State of
+		exception ->
+			"failure";
+		_ ->
+			"success"
+	end,
+	[${,
+			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
+			ecs_service(ServiceName, "slp"), $,,
+			ecs_user(msisdn(Subscriber), imsi(Subscriber), []), $,,
+			ecs_event(StartTime, StopTime, Duration,
+					"event", "session", ["protocol", "end"], Outcome), $,,
+			ecs_postpaid(State, Call, Network), $}].
 
 -spec codec_rating_ecs(Term) -> iodata()
 	when
@@ -609,6 +749,21 @@ ecs_3gpp_ro(#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
 
 %% @hidden
+ecs_3gpp_rf(#'3gpp_rf_ACR'{'Session-Id' = SessionId,
+			'Accounting-Record-Type' = RecordType,
+			'Accounting-Record-Number' = RecordNumber,
+			'Acct-Application-Id' = _ApplicationId,
+			'Service-Context-Id' = ServiceContextId,
+			'Service-Information' = _ServiceInfo},
+		#'3gpp_rf_ACA'{'Result-Code' = ResultCode}) ->
+	[$", "3gpp_ro", $", $:, ${,
+			$", "session_id", $", $:, $", SessionId, $", $,,
+			$", "acct_record_type", $", $:, integer_to_list(RecordType), $,,
+			$", "acct_record_number", $", $:, integer_to_list(RecordNumber), $,,
+			$", "service_context_id", $", $:, $", ServiceContextId, $", $,,
+			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
+
+%% @hidden
 ecs_prepaid(State, Call, Network, OCS) ->
 	Acc = [$", "prepaid", $", $:, ${,
 			$", "state", $", $:, $", atom_to_list(State), $"],
@@ -653,6 +808,45 @@ ecs_prepaid4(OCS, Acc) ->
 	[Acc, $,, $", "ocs", $", $:, ${,
 			$", "result", $", $:, $", get_string(nrf_result, OCS), $", $,,
 			$", "cause", $", $:, $", get_string(nrf_cause, OCS), $", $}, $}].
+
+%% @hidden
+ecs_postpaid(State, Call, Network) ->
+	Acc = [$", "postpaid", $", $:, ${,
+			$", "state", $", $:, $", atom_to_list(State), $"],
+	ecs_postpaid1(Call, Network, Acc).
+%% @hidden
+ecs_postpaid1(#{direction := Direction} = Call, Network, Acc)
+		when is_atom(Direction) ->
+	Acc1 = [Acc, $,,
+			$", "direction", $", $:, $", atom_to_list(Direction), $", $,,
+			$", "calling", $", $:, $", get_string(calling, Call), $", $,,
+			$", "called", $", $:, $", get_string(called, Call), $"],
+	ecs_postpaid2(Network, Acc1);
+
+ecs_postpaid1(#{originator := Originator, recipient := Recipient},
+		Network, Acc) when is_list(Originator), is_list(Recipient) ->
+	Acc1 = [Acc, $,,
+			$", "originator", $", $:, $", Originator, $", $,,
+			$", "recipient", $", $:, $", Recipient, $"],
+	ecs_postpaid2(Network, Acc1);
+ecs_postpaid1(_Call, Network, Acc) ->
+	ecs_postpaid2(Network, Acc).
+%% @hidden
+ecs_postpaid2(#{hplmn := _HPLMN} = Network, Acc) ->
+	Acc1 = [Acc, $,,
+			$", "hplmn", $", $:, $", get_string(hplmn, Network), $", $,,
+			$", "vplmn", $", $:, $", get_string(vplmn, Network), $"],
+	ecs_postpaid3(Network, Acc1);
+ecs_postpaid2(Network, Acc) ->
+	ecs_postpaid3(Network, Acc).
+%% @hidden
+ecs_postpaid3(#{context := Context, session_id := SessionId}, Acc)
+		when is_list(Context), is_binary(SessionId) ->
+	[Acc, $,,
+			$", "context", $", $:, $", Context, $", $,,
+			$", "session", $", $:, $", binary_to_list(SessionId), $", $}];
+ecs_postpaid3(_Network, Acc) ->
+	[Acc, $}].
 
 %% @hidden
 get_string(Key, Map) ->
