@@ -1,0 +1,159 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "http://sigscale.org/schema/ECS_postaid.json",
+	"title": "Elastic Log for Postpaid Services",
+	"description": "Elastic Stack log format for postpaid service with an Offline Charging System (OFCS) in SigScale CSE",
+	"type": "object",
+	"allOf": [
+		{
+			"$ref": "/schema/ECS_base.json"
+		},
+		{
+			"$ref": "/schema/ECS_ecs.json"
+		},
+		{
+			"$ref": "/schema/ECS_service.json"
+		},
+		{
+			"$ref": "/schema/ECS_network.json"
+		},
+		{
+			"$ref": "/schema/ECS_user.json"
+		},
+		{
+			"$ref": "/schema/ECS_event.json"
+		},
+		{
+			"properties": {
+				"state": {
+					"description": "Last state of the service logic finite state machine (FSM).",
+					"type": "string",
+					"examples": [
+						"authorize_origination_attempt",
+						"terminating_call_handling",
+						"collect_information",
+						"analyse_information",
+						"o_alerting",
+						"t_alerting",
+						"active"
+					]
+				},
+				"direction": {
+					"description": " A call or message originates from, or terminates to, a subscriber.",
+					"type": "string",
+					"enum": [
+						"originating",
+						"terminating"
+					]
+				},
+				"calling": {
+					"description": "Address of the originator of a call.",
+					"type": "string",
+					"examples": [
+						"5551234",
+						"+14165551234"
+					]
+				},
+				"called": {
+					"description": "Address of the recipient of a call.",
+					"type": "string",
+					"examples": [
+						"5551234",
+						"+14165551234"
+					]
+				},
+				"originator": {
+					"description": "Address of the originator of a message.",
+					"type": "string",
+					"examples": [
+						"5551234",
+						"+14165551234"
+					]
+				},
+				"recipient": {
+					"description": "Address of the recipient of a message.",
+					"type": "string",
+					"examples": [
+						"5551234",
+						"+14165551234"
+					]
+				},
+				"vplmn": {
+					"description": "Visited Public Land Mobile Network (VPLMN) identifier.",
+					"type": "string",
+					"examples": [
+						"001001"
+					]
+				},
+				"hplmn": {
+					"description": "Home Public Land Mobile Network (HPLMN) identifier.",
+					"type": "string",
+					"examples": [
+						"001001"
+					]
+				},
+				"context": {
+					"description": "The value of a DIAMETER 'Service-Context-Id' AVP.",
+					"type": "string",
+					"examples": [
+						"32260@3gpp.org"
+					]
+				},
+				"session": {
+					"description": "The value of a DIAMETER 'Session-Id' AVP.",
+					"type": "string",
+					"examples": [
+						"938866875.1399848961.172716;1736676773;5;cse@build-focal"
+					]
+				}
+			},
+			"required": [
+			]
+		}
+	],
+	"examples": [
+		{
+			"@timestamp": "2023-12-23T11:07:18.304Z",
+			"labels": {
+				"application": "sigscale-cse"
+			},
+			"tags": [],
+			"ecs": {
+				"version": "8.5"
+			},
+			"service": {
+				"name": "Postpaid Voice",
+				"type": "slp",
+				"node": {
+					"name": "cset@build-focal"
+				}
+			},
+			"user": {
+				"name": "msisdn-21584107516",
+				"id": "imsi-0010010335668343"
+			},
+			"event": {
+				"start": "2023-12-23T11:07:18.304Z",
+				"end": "2023-12-23T11:07:18.396Z",
+				"duration": "92000000",
+				"kind": "event",
+				"category": [
+					"session"
+				],
+				"type": [
+					"protocol",
+					"end"
+				],
+				"outcome": "success"
+			},
+			"postpaid": {
+				"state": "analyse_information",
+				"direction": "originating",
+				"calling": "+21584107516",
+				"called": "+14165551234",
+				"context": "32260@3gpp.org",
+				"session": "938866875.1399848961.172716;1736676773;5;cse@build-focal"
+			}
+		}
+	]
+}

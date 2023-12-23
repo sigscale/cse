@@ -1,0 +1,156 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "http://sigscale.org/schema/ECS_3gpp_rf.json",
+	"title": "Elastic Log for DIAMETER Rf application",
+	"description": "Elastic Stack log format for DIAMETER Rf in SigScale CSE",
+	"type": "object",
+	"allOf": [
+		{
+			"$ref": "/schema/ECS_base.json"
+		},
+		{
+			"$ref": "/schema/ECS_ecs.json"
+		},
+		{
+			"$ref": "/schema/ECS_server.json"
+		},
+		{
+			"$ref": "/schema/ECS_client.json"
+		},
+		{
+			"$ref": "/schema/ECS_network.json"
+		},
+		{
+			"$ref": "/schema/ECS_service.json"
+		},
+		{
+			"$ref": "/schema/ECS_source.json"
+		},
+		{
+			"$ref": "/schema/ECS_destination.json"
+		},
+		{
+			"$ref": "/schema/ECS_event.json"
+		},
+		{
+			"properties": {
+				"3gpp_ro": {
+					"description": "3GPP DIAMETER Rf application fields",
+					"type": "object",
+					"properties": {
+						"session_id": {
+							"description": "The value of the DIAMETER 'Session-Id' AVP",
+							"type": "string",
+							"examples": [
+								"938866875.1399848961.1717881736676773;1;cse@build-focal"
+							]
+						},
+						"acct_record_type": {
+							"description": "The value of the DIAMETER 'Accounting-Record-Type' AVP",
+							"type": "integer",
+							"examples": [
+								1
+							]
+						},
+						"acct_record_number": {
+							"description": "The value of the DIAMETER 'Accounting-Record-Number' AVP",
+							"type": "integer",
+							"examples": [
+								1042
+							]
+						},
+						"service_context_id": {
+							"description": "The value of the DIAMETER 'Service-Context-Id' AVP",
+							"type": "string",
+							"examples": [
+								"32260@3gpp.org"
+							]
+						},
+						"result_code": {
+							"description": "The value of the DIAMETER 'Result-Code' AVP",
+							"type": "integer",
+							"examples": [
+								2001
+							]
+						}
+					},
+					"required": [
+						"session_id",
+						"cc_request_type",
+						"cc_request_number",
+						"service_context_id",
+						"result_code"
+					]
+				}
+			}
+		}
+	],
+	"examples": [
+		{
+			"@timestamp": "2023-01-31T13:27:01.615Z",
+			"labels": {
+					"application": "sigscale-cse"
+			},
+			"tags": [],
+			"ecs": {
+				"version": "8.5"
+			},
+			"server": {
+				"address": "127.0.0.1",
+				"ip": "127.0.0.1",
+				"port": 36731
+			},
+			"network": {
+				"application": "rf",
+				"protocol":"diameter"
+			},
+			"service": {
+				"name": "sigscale-cse",
+				"type": "ocf",
+				"node": {
+					"name": "cse@build-focal"
+				}
+			},
+			"source": {
+				"address": "cse.mnc001.mcc001.3gppnetwork.org",
+				"domain": "cse.mnc001.mcc001.3gppnetwork.org",
+				"subdomain": "mnc001.mcc001.3gppnetwork.org",
+				"user": {
+					"name": "62168902651",
+					"id": "msisdn-62168902651"
+				},
+				"related": {
+					"user": [
+						"msisdn-62168902651",
+						"imsi-0010019609545793"
+					]
+				}
+			},
+			"destination": {
+				"subdomain": "mnc001.mcc001.3gppnetwork.org"
+			},
+			"event": {
+				"start": "2023-01-31T13:27:01.615Z",
+				"end": "2023-01-31T13:27:01.625Z",
+				"duration": "10000000",
+				"kind": "event",
+				"category": [
+					"network"
+				],
+				"type": [
+					"allowed",
+					"protocol",
+					"start"
+				],
+				"outcome": "success"
+			},
+			"3gpp_rf": {
+				"session_id": "938866875.1399848961.1717881736676773;1;cse@build-focal",
+				"acct_record_type": 1,
+				"acct_record_number": 1042,
+				"service_context_id": "32260@3gpp.org",
+				"result_code": 2001
+			}
+		}
+	 ]
+
