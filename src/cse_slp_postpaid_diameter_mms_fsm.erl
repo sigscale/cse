@@ -49,10 +49,7 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([null/3, authorize_origination_attempt/3,
-		collect_information/3, analyse_information/3, active/3]).
-%% export the private api
--export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
+-export([null/3, active/3]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -91,7 +88,7 @@
 		charging_id => 0..4294967295,
 		close_cause => 0..4294967295,
 		bx_format => csv | ipdr | ber | per | uper | xer,
-		bx_codec := {Module, Function},
+		bx_codec := {Module :: atom(), Function :: atom()},
 		bx_log => atom()}.
 
 %%----------------------------------------------------------------------
@@ -165,9 +162,8 @@ active({call, From},
 				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
-				'Service-Context-Id' = SvcContextId,
 				'Accounting-Record-Number' = RecordNum,
-				'User-Name' = UserName,
+				'User-Name' = _UserName,
 				'Event-Timestamp' = EventTimestamp,
 				'Service-Information' = ServiceInformation}, Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD' ->
@@ -183,12 +179,14 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RequestType, RequestNum),
+	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
 				'Service-Context-Id' = SvcContextId,
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
 				'Service-Information' = ServiceInformation},
@@ -199,12 +197,14 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RequestType, RequestNum),
+	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
 				'Service-Context-Id' = SvcContextId,
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
 				'Service-Information' = ServiceInformation},
@@ -215,7 +215,7 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RequestType, RequestNum),
+	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
 
@@ -301,7 +301,7 @@ msisdn([]) ->
 %% hidden
 mms_info(#'3gpp_rf_MMS-Information'{} = MMS, Data) ->
 	Data;
-mms_info(PS, Data) ->
+mms_info(_MMS, Data) ->
 	Data.
 
 -spec diameter_answer(ResultCode, RecordType, RecordNum) -> Result
@@ -343,7 +343,9 @@ log_fsm(State,
 		Data :: statedata().
 %% @doc Write an event to a log.
 %% @hidden
-log_cdr(LogName, #{start := Start) ->
+log_cdr(LogName, #{start := Start}) ->
+	Stop = erlang:system_time(millisecond),
+	State = active,
 	cse_log:blog(LogName, {Start, Stop, ?SERVICENAME,
-			State, Subscriber, Call, Network}).
+			State, undefined, undefined, undefined}).
 

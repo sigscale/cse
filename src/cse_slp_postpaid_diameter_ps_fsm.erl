@@ -49,10 +49,7 @@
 -export([init/1, handle_event/4, callback_mode/0,
 			terminate/3, code_change/4]).
 %% export the callbacks for gen_statem states.
--export([null/3, authorize_origination_attempt/3,
-		collect_information/3, analyse_information/3, active/3]).
-%% export the private api
--export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
+-export([null/3, active/3]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -92,7 +89,7 @@
 		charging_id => 0..4294967295,
 		close_cause => 0..4294967295,
 		bx_format => csv | ipdr | ber | per | uper | xer,
-		bx_codec := {Module, Function},
+		bx_codec := {Module :: atom(), Function :: atom()},
 		bx_log => atom()}.
 
 %%----------------------------------------------------------------------
@@ -166,9 +163,8 @@ active({call, From},
 				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
-				'Service-Context-Id' = SvcContextId,
 				'Accounting-Record-Number' = RecordNum,
-				'User-Name' = UserName,
+				'User-Name' = _UserName,
 				'Event-Timestamp' = EventTimestamp,
 				'Service-Information' = ServiceInformation}, Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD' ->
@@ -184,12 +180,14 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RequestType, RequestNum),
+	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
 				'Service-Context-Id' = SvcContextId,
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
 				'Service-Information' = ServiceInformation},
@@ -200,12 +198,14 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RequestType, RequestNum),
+	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
 				'Service-Context-Id' = SvcContextId,
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
 				'Service-Information' = ServiceInformation},
@@ -216,7 +216,7 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RequestType, RequestNum),
+	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
 
@@ -309,13 +309,13 @@ ps_info(PS, Data) ->
 %% hidden
 ps_info1(#'3gpp_rf_PS-Information'{'SGW-Address' = [Address]} = PS,
 		Data) when is_tuple(Address) ->
-	NewData = Data#{sgw_address => ChargingId},
+	NewData = Data#{sgw_address => Address},
 	ps_info2(PS, NewData);
 ps_info1(PS, Data) ->
 	ps_info2(PS, Data).
 %% hidden
 ps_info2(#'3gpp_rf_PS-Information'{
-			'3GPP-GGSN-MCC-MNC' = [<<MCC1, MCC2, MCC3, MNC1, MNC2, MNC3>>]},
+			'3GPP-GGSN-MCC-MNC' = [<<MCC1, MCC2, MCC3, MNC1, MNC2, MNC3>>]} = PS,
 		Data) ->
 	MCC = [MCC1, MCC2, MCC3],
 	MNC = [MNC1, MNC2, MNC3],
@@ -324,28 +324,28 @@ ps_info2(#'3gpp_rf_PS-Information'{
 ps_info2(PS, Data) ->
 	ps_info3(PS, Data).
 %% hidden
-ps_info3(#'3gpp_rf_PS-Information'{'Traffic-Data-Volumes' = DataVolumes},
+ps_info3(#'3gpp_rf_PS-Information'{'Traffic-Data-Volumes' = DataVolumes} = PS,
 		Data) ->
 	NewData = volumes(DataVolumes, Data),
 	ps_info4(PS, NewData);
 ps_info3(PS, Data) ->
 	ps_info4(PS, Data).
 %% hidden
-ps_info4(#'3gpp_rf_PS-Information'{'Change-Condition' = Cause},
+ps_info4(#'3gpp_rf_PS-Information'{'Change-Condition' = Cause} = _PS,
 		Data) ->
 	Data#{close_cause => Cause};
-ps_info4(PS, Data) ->
+ps_info4(_PS, Data) ->
 	Data.
 
 %% hidden
 volumes([#'3gpp_rf_Traffic-Data-Volumes'{
 		'Accounting-Input-Octets' = Volume} | T], Data) ->
 	Current = maps:get(volume_in, Data, 0),
-	volumes(T, Data#{volume_in => Current + Volume);
+	volumes(T, Data#{volume_in => Current + Volume});
 volumes([#'3gpp_rf_Traffic-Data-Volumes'{
 		'Accounting-Output-Octets' = Volume} | T], Data) ->
 	Current = maps:get(volume_out, Data, 0),
-	volumes(T, Data#{volume_out => Current + Volume);
+	volumes(T, Data#{volume_out => Current + Volume});
 volumes([_H | T], Data) ->
 	volumes(T, Data);
 volumes([], Data) ->
@@ -390,7 +390,9 @@ log_fsm(State,
 		Data :: statedata().
 %% @doc Write an event to a log.
 %% @hidden
-log_cdr(LogName, #{start := Start) ->
+log_cdr(LogName, #{start := Start}) ->
+	Stop = erlang:system_time(millisecond),
+	State = active,
 	cse_log:blog(LogName, {Start, Stop, ?SERVICENAME,
-			State, Subscriber, Call, Network}).
+			State, undefined, undefined, undefined}).
 
