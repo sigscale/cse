@@ -132,8 +132,8 @@ init(Args) when is_list(Args) ->
 	Log = proplists:get_value(bx_log, Args, cdr),
 	Logger = proplists:get_value(bx_logger, Args, {ocs_log, log}),
 	Data = #{start => erlang:system_time(millisecond),
-			data_volume => 0, bx_summary = Summary,
-			bx_log = Log, bx_logger = Logger},
+			data_volume => 0, bx_summary => Summary,
+			bx_log => Log, bx_logger => Logger},
 	{ok, null, Data}.
 
 -spec null(EventType, EventContent, Data) -> Result
