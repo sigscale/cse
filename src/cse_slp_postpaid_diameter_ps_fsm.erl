@@ -174,6 +174,7 @@ active({call, From},
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD' ->
 	TS = case EventTimestamp of
 		[DateTime] ->
+			DateTime;
 		[] ->
 			calendar:universal_time()
 	end,
