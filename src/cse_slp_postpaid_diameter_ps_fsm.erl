@@ -390,7 +390,7 @@ log_fsm(State,
 		Data :: statedata().
 %% @doc Write an event to a log.
 %% @hidden
-log_cdr(LogName, #{start :- Star) ->
+log_cdr(LogName, #{start := Start) ->
 	cse_log:blog(LogName, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network}).
 
