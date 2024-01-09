@@ -276,7 +276,7 @@ service_info([#'3gpp_rf_Service-Information'{'SMS-Information' = SMS,
 	IMSI = imsi(SubScriptionId),
 	MSISDN = msisdn(SubScriptionId),
 	NewData = Data#{imsi => IMSI, msisdn => MSISDN},
-	sms_info(SMS, NewData);
+	sms_info(SMS, NewData).
 
 %% @hidden
 imsi([#'3gpp_rf_Subscription-Id'{
