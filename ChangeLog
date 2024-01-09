@@ -1,3 +1,12 @@
+2024-01-09   Vance Shipley <vances@sigscale.org>
+
+	* include cdr log configuration
+	* postpaid slp state data handling
+	* schemas for ecs logging of diameter rf and postpaid slp
+	* codec functions for ecs logging of diameter rf and postpaid slp
+	* schemas for ecs logging of diameter rf and postpaid slp
+	* diameter rf application dictionary and callback
+
 2023-12-21   Vance Shipley <vances@sigscale.org>
 
 	* usu, not rsu, for iec in escipts for sms/mms

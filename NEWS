@@ -1,3 +1,10 @@
+January 9, 2024
+---------------
+	- Offline Charging System (OFCS)
+		- 3GPP Rf interface
+	- Charging Gateway Function (CGF)
+		- 3GPP Bx interface
+
 December 21, 2023
 -----------------
 	- Merge service information types in Nrf Service Rating
