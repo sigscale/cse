@@ -20,7 +20,9 @@ schema_DATA = $(abs_builddir)/resourceInventoryManagement.json \
 		$(abs_builddir)/ECS_http.json \
 		$(abs_builddir)/ECS_event.json \
 		$(abs_builddir)/ECS_3gpp_ro.json \
+		$(abs_builddir)/ECS_3gpp_rf.json \
 		$(abs_builddir)/ECS_prepaid.json \
+		$(abs_builddir)/ECS_postpaid.json \
 		$(abs_builddir)/ECS_rating.json
 
 
@@ -106,6 +108,21 @@ check_DATA = .validation_ok
 				-r ECS_event.json \
 				--spec=draft2020; \
 				then exit 1; fi; \
+		if ! ajv compile -s ECS_3gpp_rf.json \
+				--validate-formats=false \
+				-r ECS_base.json \
+				-r ECS_ecs.json \
+				-r ECS_server.json \
+				-r ECS_client.json \
+				-r ECS_network.json \
+				-r ECS_service.json \
+				-r ECS_source.json \
+				-r ECS_user.json \
+				-r ECS_related.json \
+				-r ECS_destination.json \
+				-r ECS_event.json \
+				--spec=draft2020; \
+				then exit 1; fi; \
 		if ! ajv compile -s ECS_prepaid.json \
 				--validate-formats=false \
 				-r ECS_base.json \
@@ -115,6 +132,15 @@ check_DATA = .validation_ok
 				-r ECS_user.json \
 				-r ECS_event.json \
 				-r ECS_url.json \
+				--spec=draft2020; \
+				then exit 1; fi; \
+		if ! ajv compile -s ECS_postpaid.json \
+				--validate-formats=false \
+				-r ECS_base.json \
+				-r ECS_ecs.json \
+				-r ECS_service.json \
+				-r ECS_user.json \
+				-r ECS_event.json \
 				--spec=draft2020; \
 				then exit 1; fi; \
 		if ! ajv compile -s ECS_rating.json \
