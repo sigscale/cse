@@ -70,6 +70,7 @@ doc_DATA = overview.edoc $(modhtml) \
 		ocf-ocs.svg \
 		ocf-nrf-msc.svg \
 		ocf-nrf-iec-msc.svg \
+		ctf-cdf-msc.svg \
 		prepaid-diameter-data.svg \
 		prepaid-diameter-voice.svg \
 		prepaid-diameter-event.svg
@@ -103,6 +104,7 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/ocf-ocs.svg .
 	-cp -n $(top_srcdir)/doc/ocf-nrf-msc.svg .
 	-cp -n $(top_srcdir)/doc/ocf-nrf-iec-msc.svg .
+	-cp -n $(top_srcdir)/doc/ctf-cdf-msc.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-data.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-voice.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-event.svg .
