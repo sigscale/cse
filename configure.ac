@@ -4,7 +4,7 @@
 ##
 ## Boilerplate:  standard boilerplate code
 ##
-AC_INIT([cse], [1.6.2], [issues@sigscale.org])
+AC_INIT([cse], [1.6.3], [issues@sigscale.org])
 AC_COPYRIGHT([Copyright (c) 2021-2024 SigScale Global Inc.])
 AC_PREREQ(2.64)
 AC_CONFIG_SRCDIR([src/cse_app.erl])
