@@ -339,13 +339,22 @@ ps_info4(_PS, Data) ->
 
 %% hidden
 volumes([#'3gpp_rf_Traffic-Data-Volumes'{
-		'Accounting-Input-Octets' = Volume} | T], Data) ->
-	Current = maps:get(volume_in, Data, 0),
-	volumes(T, Data#{volume_in => Current + Volume});
+		'Accounting-Input-Octets' = [VolumeIn],
+		'Accounting-Output-Octets' = [VolumeOut]} | T], Data) ->
+	CurrentIn = maps:get(volume_in, Data, 0),
+	CurrentOut = maps:get(volume_out, Data, 0),
+	volumes(T, Data#{volume_in => CurrentIn + VolumeIn,
+			volume_out => CurrentOut + VolumeOut});
 volumes([#'3gpp_rf_Traffic-Data-Volumes'{
-		'Accounting-Output-Octets' = Volume} | T], Data) ->
-	Current = maps:get(volume_out, Data, 0),
-	volumes(T, Data#{volume_out => Current + Volume});
+		'Accounting-Input-Octets' = [VolumeIn],
+		'Accounting-Output-Octets' = []} | T], Data) ->
+	CurrentIn = maps:get(volume_in, Data, 0),
+	volumes(T, Data#{volume_in => CurrentIn + VolumeIn});
+volumes([#'3gpp_rf_Traffic-Data-Volumes'{
+		'Accounting-Input-Octets' = [],
+		'Accounting-Output-Octets' = [VolumeOut]} | T], Data) ->
+	CurrentOut = maps:get(volume_out, Data, 0),
+	volumes(T, Data#{volume_out => CurrentOut + VolumeOut});
 volumes([_H | T], Data) ->
 	volumes(T, Data);
 volumes([], Data) ->
@@ -376,7 +385,7 @@ log_fsm(State,
 		imsi := IMSI,
 		msisdn := MSISDN,
 		context := Context,
-		session_id := SessionId} = Data) ->
+		session_id := SessionId} = _Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
 	Call = #{},
