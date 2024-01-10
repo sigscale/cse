@@ -113,7 +113,7 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-data.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-voice.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-event.svg .
-	-cp -n $(top_srcdir)/doc/ppostpaid-cdf.svg .
+	-cp -n $(top_srcdir)/doc/postpaid-cdf.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 
