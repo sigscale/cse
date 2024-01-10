@@ -77,7 +77,8 @@ doc_DATA = overview.edoc $(modhtml) \
 		ctf-cdf-msc.svg \
 		prepaid-diameter-data.svg \
 		prepaid-diameter-voice.svg \
-		prepaid-diameter-event.svg
+		prepaid-diameter-event.svg \
+		postpaid-cdg.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
@@ -112,6 +113,7 @@ overview.edoc: overview.edoc-in
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-data.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-voice.svg .
 	-cp -n $(top_srcdir)/doc/prepaid-diameter-event.svg .
+	-cp -n $(top_srcdir)/doc/ppostpaid-cdf.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 
