@@ -302,7 +302,7 @@ msisdn([]) ->
 	undefined.
 
 %% hidden
-ims_info(#'3gpp_rf_IMS-Information'{} = IMS, Data) ->
+ims_info(#'3gpp_rf_IMS-Information'{} = _IMS, Data) ->
 	Data;
 ims_info(_IMS, Data) ->
 	Data.
@@ -332,7 +332,7 @@ log_fsm(State,
 		imsi := IMSI,
 		msisdn := MSISDN,
 		context := Context,
-		session_id := SessionId} = Data) ->
+		session_id := SessionId} = _Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
 	Call = #{},
