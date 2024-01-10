@@ -1,0 +1,15 @@
+@startuml
+
+hide empty description
+skinparam shadowing false
+state null #white ##f57f17
+state active #white ##f57f17
+
+[*] --> null : ACR
+null --> active : ACR Start
+null --> [*]
+
+active --> active : ACR Interim
+active --> null : ACR Stop
+
+@enduml

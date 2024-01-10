@@ -35,9 +35,9 @@
 %%%
 %%% 	== State Transitions ==
 %%% 	The following diagram depicts the states, and events which drive state
-%%% 	transitions, in the OCF finite state machine (FSM):
+%%% 	transitions, in the CDF finite state machine (FSM):
 %%%
-%%% 	<img alt="state machine" src="postpaid-diameter-data.svg" />
+%%% 	<img alt="state machine" src="postpaid-cdf.svg" />
 %%%
 -module(cse_slp_postpaid_diameter_sms_fsm).
 -copyright('Copyright (c) 2021-2024 SigScale Global Inc.').
