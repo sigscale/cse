@@ -1,5 +1,7 @@
 2024-01-10   Vance Shipley <vances@sigscale.org>
 
+	* refactor data volumes count
+	* service-context-id and service-information are options avps in acr
 	* add location services (lcs) to 3gpp diameter dictionary
 	* build postpaid slp modules
 
