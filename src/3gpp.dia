@@ -75,7 +75,7 @@
    PS-Information                                          874  Grouped          VM
    IMS-Information                                         876  Grouped          VM
    MMS-Information                                         877  Grouped          VM
-;  LCS-Information                                         878  Grouped          VM
+   LCS-Information                                         878  Grouped          VM
 ;  PoC-Information                                         879  Grouped          VM
 ;  MBMS-Information                                        880  Grouped          VM
    Quota-Consumption-Time                                  881  Unsigned32       VM
@@ -138,19 +138,19 @@
    PoC-Session-Id                                         1229  UTF8String       VM
    Deferred-Location-Event-Type                           1230  UTF8String       VM
    LCS-APN                                                1231  UTF8String       VM
-;  LCS-Client-Id                                          1232  Grouped          VM
+   LCS-Client-ID                                          1232  Grouped          VM
    LCS-Client-Dialed-By-MS                                1233  UTF8String       VM
    LCS-Client-External-ID                                 1234  UTF8String       VM
-;  LCS-Client-Name                                        1235  Grouped          VM
+   LCS-Client-Name                                        1235  Grouped          VM
    LCS-Data-Coding-Scheme                                 1236  UTF8String       VM
-;  LCS-Format-Indicator                                   1237  Enumerated       VM
+   LCS-Format-Indicator                                   1237  Enumerated       VM
    LCS-Name-String                                        1238  UTF8String       VM
-;  LCS-Requestor-ID                                       1239  Grouped          VM
+   LCS-Requestor-ID                                       1239  Grouped          VM
    LCS-Requestor-ID-String                                1240  UTF8String       VM
-;  LCS-Client-Type                                        1241  Enumerated       VM
+   LCS-Client-Type                                        1241  Enumerated       VM
    Location-Estimate                                      1242  OctetString      VM
-;  Location-Estimate-Type                                 1243  Enumerated       VM
-;  Location-Type                                          1244  Grouped          VM
+   Location-Estimate-Type                                 1243  Enumerated       VM
+   Location-Type                                          1244  Grouped          VM
    Positioning-Data                                       1245  UTF8String       VM
    PDP-Context-Type                                       1247  Enumerated       VM
 ;  MMBox-Storage-Requested                                1248  Enumerated       VM
@@ -802,7 +802,7 @@
       [ PS-Information ]
       [ IMS-Information ]
       [ MMS-Information ]
-;     [ LCS-Information ]
+      [ LCS-Information ]
 ;     [ PoC-Information ]
 ;     [ MBMS-Information ]
       [ SMS-Information ]
@@ -971,13 +971,34 @@
       [ VAS-Id ]
      *[ AVP ]
 
-;  LCS-Information ::= <AVP Header: 878>
-;     [ LCS-Client-ID ]
-;     [ Location-Type ]
-;     [ Location-Estimate ]
-;     [ Positioning-Data ]
-;     [ 3GPP-IMSI ]
-;     [ MSISDN ]
+   LCS-Information ::= <AVP Header: 878>
+      [ LCS-Client-ID ]
+      [ Location-Type ]
+      [ Location-Estimate ]
+      [ Positioning-Data ]
+      [ 3GPP-IMSI ]
+      [ MSISDN ]
+
+   LCS-Client-ID ::= <AVP Header: 1232>
+      [ LCS-Client-Type ]
+      [ LCS-Client-External-ID ]
+      [ LCS-Client-Dialed-By-MS ]
+      [ LCS-Client-Name ]
+      [ LCS-APN ]
+      [ LCS-Requestor-ID ]
+
+   LCS-Client-Name ::= <AVP Header: 1235>
+      [ LCS-Data-Coding-Scheme ]
+      [ LCS-Name-String ]
+      [ LCS-Format-Indicator ]
+
+   LCS-Requestor-ID ::= <AVP Header: 1239>
+      [ LCS-Data-Coding-Scheme ]
+      [ LCS-Requestor-ID-String ]
+
+   Location-Type ::= < AVP Header: 1244>
+      [ Location-Estimate-Type ]
+      [ Deferred-Location-Event-Type ]
 
 ;  PoC-Information  ::= <AVP Header: 879>
 ;     [ PoC-Server-Role ]
@@ -2483,4 +2504,24 @@
 @enum Forwarding-Pending
 	FORWARDING_NOT_PENDING         0
 	FORWARDING_PENDING             1
+
+@enum LCS-Client-Type
+   EMERGENCY_SERVICES             0
+   VALUE_ADDED_SERVICES           1
+   PLMN_OPERATOR_SERVICES         2
+   LAWFUL_INTERCEPT_SERVICES      3
+
+@enum LCS-Format-Indicator
+   LOGICAL_NAME                   0
+   EMAIL_ADDRESS                  1
+   MSISDN                         2
+   URL                            3
+   SIP_URL                        4
+
+@enum Location-Estimate-Type
+   CURRENT_LOCATION               0
+   CURRENT_LAST_KNOWN_LOCATION    1
+   INITIAL_LOCATION               2
+   ACTIVATE_DEFERRED_LOCATION     3
+   CANCEL_DEFERRED_LOCATION       4
 
