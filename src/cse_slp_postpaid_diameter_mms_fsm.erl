@@ -158,14 +158,14 @@ active(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
-				'Service-Context-Id' = SvcContextId,
+				'Service-Context-Id' = [SvcContextId],
 				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
 				'User-Name' = _UserName,
 				'Event-Timestamp' = EventTimestamp,
-				'Service-Information' = ServiceInformation}, Data)
+				'Service-Information' = [ServiceInformation]}, Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD' ->
 	TS = case EventTimestamp of
 		[DateTime] ->
@@ -184,12 +184,12 @@ active({call, From},
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
-				'Service-Context-Id' = SvcContextId,
+				'Service-Context-Id' = [SvcContextId],
 				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
-				'Service-Information' = ServiceInformation},
+				'Service-Information' = [ServiceInformation]},
 		#{session_id := SessionId, context := SvcContextId} = Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
 	Data1 = Data#{from => From,
@@ -202,12 +202,12 @@ active({call, From},
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
-				'Service-Context-Id' = SvcContextId,
+				'Service-Context-Id' = [SvcContextId],
 				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
-				'Service-Information' = ServiceInformation},
+				'Service-Information' = [ServiceInformation]},
 		#{session_id := SessionId, context := SvcContextId} = Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
 	Data1 = Data#{from => From,
