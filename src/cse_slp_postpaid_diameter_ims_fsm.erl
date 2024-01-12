@@ -274,7 +274,7 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 
 %% @hidden
 service_info(#'3gpp_rf_Service-Information'{'IMS-Information' = IMS,
-		'Subscription-Id' = [SubScriptionId]}, Data) ->
+		'Subscription-Id' = SubScriptionId}, Data) ->
 	IMSI = imsi(SubScriptionId),
 	MSISDN = msisdn(SubScriptionId),
 	NewData = Data#{imsi => IMSI, msisdn => MSISDN},
