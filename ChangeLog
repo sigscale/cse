@@ -1,5 +1,6 @@
 2024-01-12   Vance Shipley <vances@sigscale.org>
 
+	* handle multiple subscription-id in acr service-information
 	* service-context-id and service-information are options avps in acr
 	* refactor try clause in ro/rf application callback
 	* diagram postpaid cdf state transitions
