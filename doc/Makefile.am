@@ -78,7 +78,7 @@ doc_DATA = overview.edoc $(modhtml) \
 		prepaid-diameter-data.svg \
 		prepaid-diameter-voice.svg \
 		prepaid-diameter-event.svg \
-		postpaid-cdg.svg
+		postpaid-cdf.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
