@@ -1,3 +1,9 @@
+2024-01-12   Vance Shipley <vances@sigscale.org>
+
+	* service-context-id and service-information are options avps in acr
+	* refactor try clause in ro/rf application callback
+	* diagram postpaid cdf state transitions
+
 2024-01-10   Vance Shipley <vances@sigscale.org>
 
 	* subscription-id is optional in (acr) service-information
