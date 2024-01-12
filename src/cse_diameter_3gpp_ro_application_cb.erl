@@ -307,30 +307,30 @@ process_request(_IpAddress, _Port,
 				'CC-Request-Number' = RequestNum} = Request)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST' ->
 	try
-		case cse:find_session(SessionId) of
-			{ok, Pid} ->
-				case catch gen_statem:call(Pid, Request) of
-					{'EXIT', Reason1} ->
-						error_logger:error_report(["Diameter Error",
-								{module, ?MODULE}, {session, SessionId},
-								{fsm, Pid}, {type, event_type(RequestType)},
-								{error, Reason1}]),
-						diameter_error(SessionId,
-								?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-								OHost, ORealm, RequestType, RequestNum);
-					#'3gpp_ro_CCA'{} = CCA ->
-						Reply = CCA#'3gpp_ro_CCA'{'Session-Id' = SessionId,
-								'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
-						{reply, Reply}
-				end;
-			{error, Reason1} ->
-				error_logger:error_report(["Diameter Error",
-						{module, ?MODULE}, {error, Reason1},
-						{origin_host, OHost}, {origin_realm, ORealm},
-						{type, event_type(RequestType)}]),
-				diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-						OHost, ORealm, RequestType, RequestNum)
-		end
+		cse:find_session(SessionId)
+	of
+		{ok, Pid} ->
+			case catch gen_statem:call(Pid, Request) of
+				{'EXIT', Reason1} ->
+					error_logger:error_report(["Diameter Error",
+							{module, ?MODULE}, {session, SessionId},
+							{fsm, Pid}, {type, event_type(RequestType)},
+							{error, Reason1}]),
+					diameter_error(SessionId,
+							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							OHost, ORealm, RequestType, RequestNum);
+				#'3gpp_ro_CCA'{} = CCA ->
+					Reply = CCA#'3gpp_ro_CCA'{'Session-Id' = SessionId,
+							'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
+					{reply, Reply}
+			end;
+		{error, Reason1} ->
+			error_logger:error_report(["Diameter Error",
+					{module, ?MODULE}, {error, Reason1},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{type, event_type(RequestType)}]),
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RequestType, RequestNum)
 	catch
 		?CATCH_STACK ->
 			?SET_STACK,

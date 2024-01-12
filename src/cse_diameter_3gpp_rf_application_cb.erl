@@ -304,30 +304,30 @@ process_request(_IpAddress, _Port,
 				'Accounting-Record-Number' = RecordNum} = Request)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
 	try
-		case cse:find_session(SessionId) of
-			{ok, Pid} ->
-				case catch gen_statem:call(Pid, Request) of
-					{'EXIT', Reason1} ->
-						error_logger:error_report(["Diameter Error",
-								{module, ?MODULE}, {session, SessionId},
-								{fsm, Pid}, {type, event_type(RecordType)},
-								{error, Reason1}]),
-						diameter_error(SessionId,
-								?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-								OHost, ORealm, RecordType, RecordNum);
-					#'3gpp_rf_ACA'{} = ACA ->
-						Reply = ACA#'3gpp_rf_ACA'{'Session-Id' = SessionId,
-								'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
-						{reply, Reply}
-				end;
-			{error, Reason1} ->
-				error_logger:error_report(["Diameter Error",
-						{module, ?MODULE}, {error, Reason1},
-						{origin_host, OHost}, {origin_realm, ORealm},
-						{type, event_type(RecordType)}]),
-				diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-						OHost, ORealm, RecordType, RecordNum)
-		end
+		cse:find_session(SessionId)
+	of
+		{ok, Pid} ->
+			case catch gen_statem:call(Pid, Request) of
+				{'EXIT', Reason1} ->
+					error_logger:error_report(["Diameter Error",
+							{module, ?MODULE}, {session, SessionId},
+							{fsm, Pid}, {type, event_type(RecordType)},
+							{error, Reason1}]),
+					diameter_error(SessionId,
+							?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							OHost, ORealm, RecordType, RecordNum);
+				#'3gpp_rf_ACA'{} = ACA ->
+					Reply = ACA#'3gpp_rf_ACA'{'Session-Id' = SessionId,
+							'Origin-Host' = OHost, 'Origin-Realm' = ORealm},
+					{reply, Reply}
+			end;
+		{error, Reason1} ->
+			error_logger:error_report(["Diameter Error",
+					{module, ?MODULE}, {error, Reason1},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{type, event_type(RecordType)}]),
+			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					OHost, ORealm, RecordType, RecordNum)
 	catch
 		?CATCH_STACK ->
 			?SET_STACK,
