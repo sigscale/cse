@@ -71,7 +71,6 @@
 		from => pid(),
 		session_id => binary(),
 		context => string(),
-		service_info => [#'3gpp_rf_Service-Information'{}],
 		record_type => pos_integer(),
 		record_number =>  integer(),
 		ohost => binary(),
@@ -271,8 +270,8 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 
 %% @hidden
-service_info([#'3gpp_rf_Service-Information'{'MMS-Information' = MMS,
-		'Subscription-Id' = [SubScriptionId]}], Data) ->
+service_info(#'3gpp_rf_Service-Information'{'MMS-Information' = MMS,
+		'Subscription-Id' = [SubScriptionId]}, Data) ->
 	IMSI = imsi(SubScriptionId),
 	MSISDN = msisdn(SubScriptionId),
 	NewData = Data#{imsi => IMSI, msisdn => MSISDN},
