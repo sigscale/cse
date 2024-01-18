@@ -575,12 +575,20 @@ ecs_source(Address, Domain, SubDomain, UserName, UserIds) ->
 	Saddress = [$", "address", $", $:, $", Address, $"],
 	Sdomain = [$", "domain", $", $:, $", Domain, $"],
 	Ssubdomain = [$", "subdomain", $", $:, $", SubDomain, $"],
+	{UserId, OtherIds} = case UserIds of
+		[H]  ->
+			{H, []};
+		[H | T] ->
+			{H, T};
+		[] ->
+			{[], []}
+	end,
 	User = [$", "user", $", $:, ${,
 			$", "name", $", $:, $", UserName, $", $,,
-			$", "id", $", $:, $", hd(UserIds), $", $}],
+			$", "id", $", $:, $", UserId, $", $}],
 	Related = [$", "related", $", $:, ${,
-			$", "user", $", $:, $[, $", hd(UserIds), $",
-			[[$,, $", R, $"] || R <- tl(UserIds)], $], $}],
+			$", "user", $", $:, $[, $", UserId, $",
+			[[$,, $", R, $"] || R <- OtherIds], $], $}],
 	[$", "source", $", $:, ${, Saddress, $,, Sdomain, $,,
 			Ssubdomain, $,, User, $,, Related, $}].
 
