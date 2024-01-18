@@ -314,8 +314,12 @@ See `rest_page_size' and `rest_page_timeout' in the Configuration section
 below.
 
 ==Configuration==
-The {@link //cse. cse} application may be configured using the following
-application environment variables (`~/releases/<VERSION>/sys.config').
+SLP instances may be paramaterized through the arguments included
+when calling {@link //cse/cse:add_context/4. `cse:add_context/4'}.
+
+System wide settings in the {@link //cse. cse} application may be
+configured using the following application environment variables
+(`~/releases/<VERSION>/sys.config').
 
 ===DIAMETER===
 Application environment variables configuring instances of the
@@ -327,7 +331,8 @@ Application environment variables configuring instances of the
 				port (`Port :: 0..65535') and options
 				(`Options :: [diameter:service_opt()
 						| {listen, [diameter:transport_opt()]}
-						| {connect, [diameter:transport_opt()]}]')
+						| {connect, [diameter:transport_opt()]}
+						| diameter]')
 				define a DIAMETER service. (default: `[]')</dd>
 </dl>
 

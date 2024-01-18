@@ -89,7 +89,8 @@
 		close_cause => 0..4294967295,
 		bx_format => csv | ipdr | ber | per | uper | xer,
 		bx_codec := {Module :: atom(), Function :: atom()},
-		bx_log => atom()}.
+		bx_log => atom(),
+		interim_interval := [pos_integer()]}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_postpaid_diameter_ps_fsm gen_statem callbacks
@@ -128,7 +129,13 @@ init(Args) when is_list(Args) ->
 	Data = #{start => erlang:system_time(millisecond),
 			data_volume => 0, bx_summary => Summary,
 			bx_log => Log, bx_logger => Logger},
-	{ok, null, Data}.
+	NewData = case proplists:get_value(interim_interval, Args) of
+		Interval when is_integer(Interval), Interval > 0 ->
+			Data#{interim_interval => [Interval]};
+		undefined ->
+			Data#{interim_interval => []}
+	end,
+	{ok, null, NewData}.
 
 -spec null(EventType, EventContent, Data) -> Result
 	when
@@ -179,7 +186,7 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
+	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
 active({call, From},
@@ -197,7 +204,7 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
+	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
 active({call, From},
@@ -215,7 +222,7 @@ active({call, From},
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	Reply = diameter_answer(ResultCode, RecordType, RecordNum),
+	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
 
@@ -359,18 +366,21 @@ volumes([_H | T], Data) ->
 volumes([], Data) ->
 	Data.
 
--spec diameter_answer(ResultCode, RecordType, RecordNum) -> Result
+-spec diameter_answer(ResultCode, Data) -> Result
 	when
 		ResultCode :: pos_integer(),
-		RecordType :: pos_integer(),
-		RecordNum :: non_neg_integer(),
+		Data :: statedata(),
 		Result :: #'3gpp_rf_ACA'{}.
 %% @doc Build ACA response.
 %% @hidden
-diameter_answer(ResultCode, RecordType, RecordNum) ->
+diameter_answer(ResultCode,
+		#{record_type := RecordType,
+				record_number := RecordNum,
+				interim_interval := AcctInterimInterval}) ->
 	#'3gpp_rf_ACA'{'Acct-Application-Id' = ?RF_APPLICATION_ID,
 			'Accounting-Record-Type' = RecordType,
 			'Accounting-Record-Number' = RecordNum,
+			'Acct-Interim-Interval' = AcctInterimInterval,
 			'Result-Code' = ResultCode}.
 
 -spec log_fsm(OldState, Data) -> ok
