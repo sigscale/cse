@@ -87,10 +87,11 @@
 		volume_out => non_neg_integer(),
 		charging_id => 0..4294967295,
 		close_cause => 0..4294967295,
-		bx_format => csv | ipdr | ber | per | uper | xer,
-		bx_codec := {Module :: atom(), Function :: atom()},
-		bx_log => atom(),
-		interim_interval := [pos_integer()]}.
+		interim_interval := [pos_integer()],
+		bx_summary := boolean(),
+		bx_log := atom(),
+		bx_logger := {Module :: atom(), Function :: atom()},
+		bx_codec := {Module :: atom(), Function :: atom()}}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_postpaid_diameter_ps_fsm gen_statem callbacks
@@ -125,10 +126,11 @@ callback_mode() ->
 init(Args) when is_list(Args) ->
 	Summary = proplists:get_value(bx_summary, Args, true),
 	Log = proplists:get_value(bx_log, Args, cdr),
-	Logger = proplists:get_value(bx_logger, Args, {ocs_log, log}),
+	Logger = proplists:get_value(bx_logger, Args, {cse_log, blog}),
+	LogCodec = proplists:get_value(bx_codec, Args, {cse_log_codec_bx, csv}),
 	Data = #{start => erlang:system_time(millisecond),
-			data_volume => 0, bx_summary => Summary,
-			bx_log => Log, bx_logger => Logger},
+			volume_in => 0, volume_out => 0, bx_summary => Summary,
+			bx_log => Log, bx_logger => Logger, bx_codec => LogCodec},
 	NewData = case proplists:get_value(interim_interval, Args) of
 		Interval when is_integer(Interval), Interval > 0 ->
 			Data#{interim_interval => [Interval]};
@@ -172,7 +174,7 @@ active({call, From},
 				'Accounting-Record-Number' = RecordNum,
 				'User-Name' = _UserName,
 				'Event-Timestamp' = EventTimestamp,
-				'Service-Information' = [ServiceInformation]}, Data)
+				'Service-Information' = [ServiceInformation]} = ACR, Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD' ->
 	TS = case EventTimestamp of
 		[DateTime] ->
@@ -185,7 +187,12 @@ active({call, From},
 			ohost => OHost, orealm => ORealm, drealm => DRealm,
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
-	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	ResultCode = case log_cdr(ACR, NewData) of
+		ok ->
+			?'DIAMETER_BASE_RESULT-CODE_SUCCESS';
+		{error, _Reason} ->
+			?'DIAMETER_BASE_RESULT-CODE_OUT_OF_SPACE'
+	end,
 	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
@@ -196,14 +203,19 @@ active({call, From},
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
-				'Service-Information' = [ServiceInformation]},
+				'Service-Information' = [ServiceInformation]} = ACR,
 		#{session_id := SessionId, context := SvcContextId} = Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
 	Data1 = Data#{from => From,
 			ohost => OHost, orealm => ORealm, drealm => DRealm,
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
-	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	ResultCode = case log_cdr(ACR, NewData) of
+		ok ->
+			?'DIAMETER_BASE_RESULT-CODE_SUCCESS';
+		{error, _Reason} ->
+			?'DIAMETER_BASE_RESULT-CODE_OUT_OF_SPACE'
+	end,
 	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{keep_state, NewData, Actions};
@@ -214,14 +226,19 @@ active({call, From},
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
-				'Service-Information' = [ServiceInformation]},
+				'Service-Information' = [ServiceInformation]} = ACR,
 		#{session_id := SessionId, context := SvcContextId} = Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
 	Data1 = Data#{from => From,
 			ohost => OHost, orealm => ORealm, drealm => DRealm,
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
-	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	ResultCode = case log_cdr(ACR, NewData) of
+		ok ->
+			?'DIAMETER_BASE_RESULT-CODE_SUCCESS';
+		{error, _Reason} ->
+			?'DIAMETER_BASE_RESULT-CODE_OUT_OF_SPACE'
+	end,
 	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
@@ -377,7 +394,7 @@ diameter_answer(ResultCode,
 		#{record_type := RecordType,
 				record_number := RecordNum,
 				interim_interval := AcctInterimInterval}) ->
-	#'3gpp_rf_ACA'{'Acct-Application-Id' = ?RF_APPLICATION_ID,
+	#'3gpp_rf_ACA'{'Acct-Application-Id' = [?RF_APPLICATION_ID],
 			'Accounting-Record-Type' = RecordType,
 			'Accounting-Record-Number' = RecordNum,
 			'Acct-Interim-Interval' = AcctInterimInterval,
@@ -402,15 +419,27 @@ log_fsm(State,
 	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network}).
 
--spec log_cdr(LogName, Data) -> ok
+-spec log_cdr(Record, Data) -> Result
 	when
-		LogName :: atom(),
-		Data :: statedata().
+		Record :: #'3gpp_rf_ACR'{},
+		Data :: statedata(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
 %% @doc Write an event to a log.
 %% @hidden
-log_cdr(LogName, #{start := Start}) ->
-	Stop = erlang:system_time(millisecond),
-	State = active,
-	cse_log:blog(LogName, {Start, Stop, ?SERVICENAME,
-			State, undefined, undefined, undefined}).
+log_cdr(#'3gpp_rf_ACR'{} = Record,
+		#{bx_summary := false, bx_logger := {M1, F1},
+				bx_log := Log, bx_codec := {M2, F2}}) ->
+	M1:F1(Log, M2:F2(Record));
+log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = _Record,
+		#{bx_summary := true})
+		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD';
+		RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
+	ok;
+log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = Record,
+		#{bx_summary := true, bx_logger := {M1, F1},
+				bx_log := Log, bx_codec := {M2, F2}})
+		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
+	% @todo: subsititute ACR values for accumulated counts from statedata()
+	M1:F1(Log, M2:F2(Record)).
 

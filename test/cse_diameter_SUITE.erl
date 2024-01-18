@@ -45,6 +45,7 @@
 		initial_in_call/0, initial_in_call/1,
 		interim_in_call/0, interim_in_call/1,
 		final_in_call/0, final_in_call/1,
+		accounting_ims/0, accounting_ims/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1]).
 
@@ -52,9 +53,11 @@
 -include_lib("inets/include/mod_auth.hrl").
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
+-include_lib("diameter/include/diameter_gen_acct_rfc6733.hrl").
 -include("diameter_gen_ietf.hrl").
 -include("diameter_gen_3gpp.hrl").
 -include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_3gpp_rf_application.hrl").
 -include("diameter_gen_cc_application_rfc4006.hrl").
 
 -define(MILLISECOND, millisecond).
@@ -62,6 +65,10 @@
 -define(RO_APPLICATION_DICT, diameter_gen_3gpp_ro_application).
 -define(RO_APPLICATION_CALLBACK, cse_diameter_3gpp_ro_application_cb).
 -define(RO_APPLICATION_ID, 4).
+-define(RF_APPLICATION, cse_diameter_3gpp_rf_application).
+-define(RF_APPLICATION_DICT, diameter_gen_3gpp_rf_application).
+-define(RF_APPLICATION_CALLBACK, cse_diameter_3gpp_rf_application_cb).
+-define(RF_APPLICATION_ID, 3).
 -define(IANA_PEN_3GPP, 10415).
 -define(IANA_PEN_SigScale, 50386).
 
@@ -87,6 +94,11 @@ suite() ->
 					{'rating',
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_rating_ecs}}]},
+					{'cdr',
+							[{format, external}]},
+					{postpaid,
+							[{format, external},
+							{codec, {cse_log_codec_ecs, codec_postpaid_ecs}}]},
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
@@ -114,21 +126,31 @@ init_per_suite(Config) ->
 	DiameterAddress = ct:get_config({diameter, address}, {127,0,0,1}),
 	DiameterPort = ct:get_config({diameter, auth_port},
 			rand:uniform(64511) + 1024),
-	DiameterApplication = [{alias, ?RO_APPLICATION},
+	Ro = [{alias, ?RO_APPLICATION},
 			{dictionary, ?RO_APPLICATION_DICT},
 			{module, ?RO_APPLICATION_CALLBACK},
+			{request_errors, callback}],
+	Rf = [{alias, ?RF_APPLICATION},
+			{dictionary, ?RF_APPLICATION_DICT},
+			{module, ?RF_APPLICATION_CALLBACK},
 			{request_errors, callback}],
 	Realm = ct:get_config({diameter, realm},
 			"mnc001.mcc001.3gppnetwork.org"),
 	Host = ct:get_config({diameter, host},
 			atom_to_list(?MODULE) ++ "." ++ Realm),
-	DiameterOptions = [{application, DiameterApplication},
-			{'Origin-Realm', Realm},
-			{'Auth-Application-Id', [?RO_APPLICATION_ID]}],
+	DiameterOptions = [{'Origin-Realm', Realm},
+			{application, Ro}, {application, Rf},
+			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
+			{'Acct-Application-Id', [?RF_APPLICATION_ID]}],
 	DiameterAppVar = [{DiameterAddress, DiameterPort, DiameterOptions}],
 	ok = application:set_env(cse, diameter, DiameterAppVar),
+	InterimInterval = 60 * rand:uniform(10),
+	ok = cse:add_context("ct.32260@3gpp.org",
+			cse_slp_postpaid_diameter_ims_fsm,
+			[{interim_interval, InterimInterval}], []),
    Config1 = [{diameter_host, Host}, {realm, Realm},
-         {diameter_address, DiameterAddress} | Config],
+         {diameter_address, DiameterAddress},
+			{interim_interval, InterimInterval} | Config],
 	ok = cse_test_lib:start(),
    Service = {?MODULE, client},
    true = diameter:subscribe(Service),
@@ -225,7 +247,7 @@ all() ->
 			sms_iec, mms_iec,
 			unknown_subscriber, out_of_credit,
 			initial_in_call, interim_in_call, final_in_call,
-			client_connect, client_reconnect].
+			accounting_ims, client_connect, client_reconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -790,6 +812,33 @@ final_in_call(Config) ->
 			'Granted-Service-Unit' = [],
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
 
+accounting_ims() ->
+	[{userdata, [{doc, "Accounting record for IMS voice call"}]}].
+
+accounting_ims(Config) ->
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Realm = ?config(realm, Config),
+	Interval = ?config(interim_interval, Config),
+	RecordNum0 = 0,
+	{ok, Answer0} = acct_ims(Session, IMSI, MSISDN, Realm, start, RecordNum0),
+	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Acct-Interim-Interval' = [Interval],
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_START_RECORD',
+			'Accounting-Record-Number' = RecordNum0} = Answer0,
+	RecordNum1 = RecordNum0 + 1,
+	{ok, Answer1} = acct_ims(Session, IMSI, MSISDN, Realm, interim, RecordNum1),
+	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Acct-Interim-Interval' = [Interval],
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD',
+			'Accounting-Record-Number' = RecordNum1} = Answer1,
+	{ok, Answer2} = acct_ims(Session, IMSI, MSISDN, Realm, stop, RecordNum1),
+	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Acct-Interim-Interval' = [Interval],
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
+			'Accounting-Record-Number' = RecordNum1} = Answer2.
+
 client_connect() ->
 	[{userdata, [{doc, "Connect as client to peer server"}]}].
 
@@ -940,7 +989,7 @@ scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{
 			'IMS-Information' = [IMS],
-			'PS-Information' = PS},
+			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32260@3gpp.org",
@@ -986,7 +1035,7 @@ scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{
 			'IMS-Information' = [IMS],
-			'PS-Information' = PS},
+			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32260@3gpp.org",
@@ -1030,7 +1079,7 @@ scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{
 			'IMS-Information' = [IMS],
-			'PS-Information' = PS},
+			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32260@3gpp.org" ,
@@ -1169,7 +1218,7 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{
 			'SMS-Information' = [SMS],
-			'PS-Information' = PS},
+			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32274@3gpp.org",
@@ -1224,7 +1273,7 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{
 			'MMS-Information' = [MMS],
-			'PS-Information' = PS},
+			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32270@3gpp.org",
@@ -1239,6 +1288,48 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
+acct_ims(Session, IMSI, MSISDN, Realm, start, RecordNum) ->
+	ACR = #'3gpp_rf_ACR'{
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_START_RECORD',
+			'Accounting-Record-Number' = RecordNum},
+	acct_ims(Session, IMSI, MSISDN, Realm, ACR);
+acct_ims(Session, IMSI, MSISDN, Realm, interim, RecordNum) ->
+	ACR = #'3gpp_rf_ACR'{
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD',
+			'Accounting-Record-Number' = RecordNum},
+	acct_ims(Session, IMSI, MSISDN, Realm, ACR);
+acct_ims(Session, IMSI, MSISDN, Realm, stop, RecordNum) ->
+	ACR = #'3gpp_rf_ACR'{
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
+			'Accounting-Record-Number' = RecordNum},
+	acct_ims(Session, IMSI, MSISDN, Realm, ACR).
+acct_ims(Session, IMSI, MSISDN, Realm, ACR) when is_record(ACR, '3gpp_rf_ACR') ->
+	Origination = "tel:+" ++ MSISDN,
+	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
+	MSISDN1 = #'3gpp_rf_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+			'Subscription-Id-Data' = MSISDN},
+	IMSI1 = #'3gpp_rf_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+			'Subscription-Id-Data' = IMSI},
+	PS = #'3gpp_rf_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+	IMS = #'3gpp_rf_IMS-Information'{
+			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
+			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
+			'Calling-Party-Address' = [Origination],
+			'Called-Party-Address' = [Destination]},
+	ServiceInformation = #'3gpp_rf_Service-Information'{
+			'Subscription-Id' = [MSISDN1, IMSI1],
+			'IMS-Information' = [IMS],
+			'PS-Information' = [PS]},
+	ACR1 = ACR#'3gpp_rf_ACR'{'Session-Id' = Session,
+				'Destination-Realm' = Realm,
+				'Service-Context-Id' = ["ct.32260@3gpp.org"],
+				'User-Name' = [MSISDN ++ "@" ++ Realm],
+				'Event-Timestamp' = [calendar:universal_time()],
+				'Service-Information' = [ServiceInformation]},
+	diameter:call({?MODULE, client}, acct_app_test, ACR1, []).
+
 %% @hidden
 client_acct_service_opts(Config) ->
 	[{'Origin-Host', ?config(diameter_host, Config)},
@@ -1246,11 +1337,15 @@ client_acct_service_opts(Config) ->
 			{'Vendor-Id', ?IANA_PEN_SigScale},
 			{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
 			{'Product-Name', "SigScale Test Client"},
+			{'Acct-Application-Id', [?RF_APPLICATION_ID]},
 			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
 			{string_decode, false},
 			{restrict_connections, false},
 			{application, [{alias, base_app_test},
 					{dictionary, diameter_gen_base_rfc6733},
+					{module, cse_test_diameter_cb}]},
+			{application, [{alias, acct_app_test},
+					{dictionary, diameter_gen_3gpp_rf_application},
 					{module, cse_test_diameter_cb}]},
 			{application, [{alias, cc_app_test},
 					{dictionary, diameter_gen_3gpp_ro_application},

@@ -27,7 +27,9 @@
 
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
+-include_lib("diameter/include/diameter_gen_acct_rfc6733.hrl").
 -include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_3gpp_rf_application.hrl").
 
 -record(state, {}).
 
@@ -166,5 +168,9 @@ handle_request(#diameter_packet{msg = Request, errors = []}, _SvcName, {_Peer, _
 generate_diameter_request(Record, OHost, _DHost, ORealm, DRealm)
 		when is_record(Record, '3gpp_ro_CCR') ->
 	Record#'3gpp_ro_CCR'{'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+			'Destination-Realm' = DRealm};
+generate_diameter_request(Record, OHost, _DHost, ORealm, DRealm)
+		when is_record(Record, '3gpp_rf_ACR') ->
+	Record#'3gpp_rf_ACR'{'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 			'Destination-Realm' = DRealm}.
 

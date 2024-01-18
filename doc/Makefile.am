@@ -35,6 +35,7 @@ modhtml = cse.html \
 		cse_codec.html \
 		cse_log.html \
 		cse_log_codec_ecs.html \
+		cse_log_codec_bx.html \
 		cse_gtt.html \
 		cse_rest.html \
 		cse_mib.html \
