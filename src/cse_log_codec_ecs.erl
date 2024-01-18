@@ -226,7 +226,7 @@ codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", EventType, "unknown"), $,,
-			ecs_3gpp_ro(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
+			ecs_3gpp_rf(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
 codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 		{answer_message, ResultCode},
 		EventType, Start, Stop, Duration, Acc)
@@ -234,7 +234,7 @@ codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", ["allowed" | EventType], "success"), $,,
-			ecs_3gpp_ro(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
+			ecs_3gpp_rf(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
 codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 		{answer_message, ResultCode},
 		EventType, Start, Stop, Duration, Acc)
