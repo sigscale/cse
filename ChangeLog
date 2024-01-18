@@ -1,3 +1,14 @@
+2024-01-19   Vance Shipley <vances@sigscale.org>
+
+	* handle empty userids in ecs log codec
+	* include example of configure diameter port in test suite
+	* include 3gpp_rf log in diameter test suite configuration
+	* ignore error logging to 3gpp diameter logs
+	* refactor diameter test suite for origin host/realm
+	* test suite: correct imsi length, session-id mandatory part, accounting record number
+	* escripts for postpaid session cdrs
+	* configurable port in diameter test suite
+
 2024-01-18   Vance Shipley <vances@sigscale.org>
 
 	* test case for postpaid ecs logging
