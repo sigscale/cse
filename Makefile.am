@@ -13,7 +13,9 @@ script_SCRIPTS = scripts/snapshot.escript \
 		scripts/data_session.escript \
 		scripts/voice_call.escript \
 		scripts/send_sms.escript \
-		scripts/send_mms.escript
+		scripts/send_mms.escript \
+		scripts/cdr_ps.escript \
+		scripts/cdr_ims.escript
 
 RELEASE_NAME = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
 
