@@ -28,7 +28,8 @@
 
 %% export test cases
 -export([diameter_ccr_initial/0, diameter_ccr_initial/1,
-		prepaid_originating/0, prepaid_originating/1]).
+		prepaid_originating/0, prepaid_originating/1,
+		postpaid_originating/0, postpaid_originating/1]).
 
 -include("diameter_gen_3gpp_ro_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -78,7 +79,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[diameter_ccr_initial, prepaid_originating].
+	[diameter_ccr_initial, prepaid_originating, postpaid_originating].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -142,7 +143,7 @@ diameter_ccr_initial(_Config) ->
 	{ok, ECS} = zj:decode(JSON).
 
 prepaid_originating() ->
-	[{userdata, [{doc, "Encode preiad originating call event"}]}].
+	[{userdata, [{doc, "Encode prepaid originating call event"}]}].
 
 prepaid_originating(_Config) ->
 	Start = erlang:system_time(millisecond),
@@ -166,6 +167,31 @@ prepaid_originating(_Config) ->
 	OCS = #{nrf_location => NrfUri, nrf_result => "SUCCESS"},
 	Event = {Start, Stop, ServiceName, State, Subscriber, Call, Network, OCS},
 	JSON = cse_log_codec_ecs:codec_prepaid_ecs(Event),
+	{ok, ECS} = zj:decode(JSON).
+
+postpaid_originating() ->
+	[{userdata, [{doc, "Encode postpaid originating call event"}]}].
+
+postpaid_originating(_Config) ->
+	Start = erlang:system_time(millisecond),
+	Stop = Start + rand:uniform(100),
+	ServiceName = atom_to_list(?MODULE),
+	State = active,
+	Realm = "ims.mnc001.mcc001.3gppnetwork.org",
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(),
+	SIPURI = "sip:+" ++ MSISDN ++ "@" ++ Realm,
+	Subscriber = #{imsi => IMSI, msisdn => MSISDN, sip_uri => SIPURI},
+	Direction = originating,
+	Calling = MSISDN,
+	Called = cse_test_lib:rand_dn(),
+	Call = #{direction => Direction, calling => Calling, called => Called},
+	ContextId = "32260@3gpp.org",
+	SessionId = list_to_binary(session_id("ct")),
+	Network = #{context => ContextId, session_id => SessionId,
+			hplmn => Realm, vplmn => Realm},
+	Event = {Start, Stop, ServiceName, State, Subscriber, Call, Network},
+	JSON = cse_log_codec_ecs:codec_postpaid_ecs(Event),
 	{ok, ECS} = zj:decode(JSON).
 
 %%---------------------------------------------------------------------
