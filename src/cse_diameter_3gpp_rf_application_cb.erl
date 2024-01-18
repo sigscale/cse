@@ -165,14 +165,14 @@ handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
 	Start = erlang:system_time(millisecond),
 	Reply = process_request(IpAddress, Port, Capabilities, Request),
 	Stop = erlang:system_time(millisecond),
-	cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
+	catch cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
 	Reply;
 handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
 		ServiceName, {_, Capabilities} = Peer) ->
 	Start = erlang:system_time(millisecond),
 	Reply = errors(ServiceName, Capabilities, Request, Errors),
 	Stop = erlang:system_time(millisecond),
-	cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
+	catch cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
 	Reply.
 
 %%----------------------------------------------------------------------
