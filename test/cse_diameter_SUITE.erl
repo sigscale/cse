@@ -259,13 +259,13 @@ initial_scur_ims() ->
 
 initial_scur_ims(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -288,13 +288,13 @@ initial_scur_ims_nrf() ->
 
 initial_scur_ims_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -310,13 +310,13 @@ interim_scur_ims() ->
 
 interim_scur_ims(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -347,13 +347,13 @@ interim_scur_ims_nrf() ->
 
 interim_scur_ims_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -377,13 +377,13 @@ final_scur_ims() ->
 
 final_scur_ims(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -412,13 +412,13 @@ final_scur_ims_nrf() ->
 
 final_scur_ims_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -449,13 +449,13 @@ initial_scur_ps() ->
 
 initial_scur_ps(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = (rand:uniform(10) + 20) * 1048576,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -478,13 +478,13 @@ initial_scur_ps_nrf() ->
 
 initial_scur_ps_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = (rand:uniform(10) + 20) * 1048576,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -500,13 +500,13 @@ interim_scur_ps() ->
 
 interim_scur_ps(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = (rand:uniform(10) + 50) * 1048576,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -537,13 +537,13 @@ interim_scur_ps_nrf() ->
 
 interim_scur_ps_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = (rand:uniform(10) + 50) * 1048576,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -567,13 +567,13 @@ final_scur_ps() ->
 
 final_scur_ps(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = (rand:uniform(10) + 50) * 1048576,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -602,13 +602,13 @@ final_scur_ps_nrf() ->
 
 final_scur_ps_nrf(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = (rand:uniform(10) + 50) * 1048576,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -639,13 +639,13 @@ sms_iec() ->
 
 sms_iec(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = iec_event_sms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -664,13 +664,13 @@ mms_iec() ->
 
 mms_iec(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = iec_event_mms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -688,11 +688,11 @@ unknown_subscriber() ->
 	[{userdata, [{doc, "SCUR Nrf start with unknown user"}]}].
 
 unknown_subscriber(_Config) ->
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
@@ -702,12 +702,12 @@ out_of_credit() ->
 
 out_of_credit(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	{ok, {0, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, 0}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED'} = Answer0.
@@ -717,13 +717,13 @@ initial_in_call() ->
 
 initial_in_call(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -746,13 +746,13 @@ interim_in_call() ->
 
 interim_in_call(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -783,13 +783,13 @@ final_in_call() ->
 
 final_in_call(Config) ->
 	OCS = ?config(ocs, Config),
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Balance = rand:uniform(100000),
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
@@ -817,9 +817,9 @@ accounting_ims() ->
 	[{userdata, [{doc, "Accounting record for IMS voice call"}]}].
 
 accounting_ims(Config) ->
-	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
-	Session = diameter:session_id(erlang:ref_to_list(make_ref())),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
 	Realm = ?config(realm, Config),
 	Interval = ?config(interim_interval, Config),
 	RecordNum0 = 0,
@@ -834,11 +834,12 @@ accounting_ims(Config) ->
 			'Acct-Interim-Interval' = [Interval],
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD',
 			'Accounting-Record-Number' = RecordNum1} = Answer1,
-	{ok, Answer2} = acct_ims(Session, IMSI, MSISDN, Realm, stop, RecordNum1),
+	RecordNum2 = RecordNum1 + 1,
+	{ok, Answer2} = acct_ims(Session, IMSI, MSISDN, Realm, stop, RecordNum2),
 	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Acct-Interim-Interval' = [Interval],
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
-			'Accounting-Record-Number' = RecordNum1} = Answer2.
+			'Accounting-Record-Number' = RecordNum2} = Answer2.
 
 client_connect() ->
 	[{userdata, [{doc, "Connect as client to peer server"}]}].
