@@ -1,3 +1,10 @@
+2024-01-18   Vance Shipley <vances@sigscale.org>
+
+	* test case for postpaid ecs logging
+	* cgf bx interface cdr logging
+	* correct state examples for postpaid ecs schema
+	* paramaterize acct-interim-interval in postpaid slps
+
 2024-01-12   Vance Shipley <vances@sigscale.org>
 
 	* handle multiple subscription-id in acr service-information
