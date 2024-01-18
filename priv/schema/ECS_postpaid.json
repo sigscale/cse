@@ -29,12 +29,6 @@
 					"description": "Last state of the service logic finite state machine (FSM).",
 					"type": "string",
 					"examples": [
-						"authorize_origination_attempt",
-						"terminating_call_handling",
-						"collect_information",
-						"analyse_information",
-						"o_alerting",
-						"t_alerting",
 						"active"
 					]
 				},
@@ -147,7 +141,7 @@
 				"outcome": "success"
 			},
 			"postpaid": {
-				"state": "analyse_information",
+				"state": "active",
 				"direction": "originating",
 				"calling": "+21584107516",
 				"called": "+14165551234",
