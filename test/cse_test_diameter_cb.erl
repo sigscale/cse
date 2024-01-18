@@ -89,15 +89,8 @@ pick_peer([Peer | _], _, _SvcName, _State) ->
 		Reason :: term(),
 		PostF :: diameter:evaluable().
 %% @doc Invoked to return a request for encoding and transport
-prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
-	#diameter_caps{origin_host = {OH, DH}, origin_realm = {OR, DR}} = Caps,
-	{send, [T, {'Origin-Host', OH}, {'Origin-Realm', OR},
-		{'Destination-Host', DH}, {'Destination-Realm', DR}
-		| Avps]};
-prepare_request(#diameter_packet{msg = Record}, _, {_, Caps}) ->
-	#diameter_caps{origin_host = {OH, DH}, origin_realm = {OR, DR}} = Caps,
-	Request = generate_diameter_request(Record, OH, DH, OR, DR),
-	{send, Request}.
+prepare_request(Packet, _SvcName, _Peer) ->
+	{send, Packet}.
 
 -spec prepare_retransmit(Packet, SvcName, Peer) -> Action
 	when
@@ -163,14 +156,4 @@ handle_request(#diameter_packet{msg = Request, errors = []}, _SvcName, {_Peer, _
 %%---------------------------------------------------------------------
 %% Internal functions
 %%---------------------------------------------------------------------
-
-%% @hidden
-generate_diameter_request(Record, OHost, _DHost, ORealm, DRealm)
-		when is_record(Record, '3gpp_ro_CCR') ->
-	Record#'3gpp_ro_CCR'{'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
-			'Destination-Realm' = DRealm};
-generate_diameter_request(Record, OHost, _DHost, ORealm, DRealm)
-		when is_record(Record, '3gpp_rf_ACR') ->
-	Record#'3gpp_rf_ACR'{'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
-			'Destination-Realm' = DRealm}.
 

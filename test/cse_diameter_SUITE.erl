@@ -137,19 +137,33 @@ init_per_suite(Config) ->
 			{request_errors, callback}],
 	Realm = ct:get_config({diameter, realm},
 			"mnc001.mcc001.3gppnetwork.org"),
-	Host = ct:get_config({diameter, host},
-			atom_to_list(?MODULE) ++ "." ++ Realm),
-	DiameterOptions = [{'Origin-Realm', Realm},
+	SutRealm = "sut." ++ Realm,
+	CtRealm = "ct." ++ Realm,
+	CtHost = atom_to_list(?MODULE) ++ "." ++ CtRealm,
+	DiameterOptions = [{'Origin-Realm', SutRealm},
 			{application, Ro}, {application, Rf},
 			{'Auth-Application-Id', [?RO_APPLICATION_ID]},
 			{'Acct-Application-Id', [?RF_APPLICATION_ID]}],
 	DiameterAppVar = [{DiameterAddress, DiameterPort, DiameterOptions}],
 	ok = application:set_env(cse, diameter, DiameterAppVar),
 	InterimInterval = 60 * rand:uniform(10),
-	ok = cse:add_context("ct.32260@3gpp.org",
+	ok = cse:add_context("rf.32251@3gpp.org",
+			cse_slp_postpaid_diameter_ps_fsm,
+			[{interim_interval, InterimInterval}], []),
+	ok = cse:add_context("rf.32260@3gpp.org",
 			cse_slp_postpaid_diameter_ims_fsm,
 			[{interim_interval, InterimInterval}], []),
-   Config1 = [{diameter_host, Host}, {realm, Realm},
+	ok = cse:add_context("rf.32270@3gpp.org",
+			cse_slp_postpaid_diameter_mms_fsm,
+			[{interim_interval, InterimInterval}], []),
+	ok = cse:add_context("rf.32274@3gpp.org",
+			cse_slp_postpaid_diameter_sms_fsm,
+			[{interim_interval, InterimInterval}], []),
+	ok = cse:add_context("rf.32278@3gpp.org",
+			cse_slp_postpaid_diameter_ims_fsm,
+			[{interim_interval, InterimInterval}], []),
+   Config1 = [{realm, Realm}, {ct_host, CtHost},
+			{ct_realm, CtRealm}, {sut_realm, SutRealm},
          {diameter_address, DiameterAddress},
 			{interim_interval, InterimInterval} | Config],
 	ok = cse_test_lib:start(),
@@ -267,7 +281,7 @@ initial_scur_ims(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, 0),
+	{ok, Answer} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
@@ -296,7 +310,7 @@ initial_scur_ims_nrf(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
+	{ok, Answer} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -318,7 +332,7 @@ interim_scur_ims(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -326,7 +340,7 @@ interim_scur_ims(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ims_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
+	{ok, Answer1} = scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
@@ -355,7 +369,7 @@ interim_scur_ims_nrf(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -363,7 +377,7 @@ interim_scur_ims_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ims_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
+	{ok, Answer1} = scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -385,7 +399,7 @@ final_scur_ims(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -393,7 +407,7 @@ final_scur_ims(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used =  rand:uniform(Grant0),
-	{ok, Answer1} = scur_ims_stop(Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
+	{ok, Answer1} = scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
@@ -420,7 +434,7 @@ final_scur_ims_nrf(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
@@ -431,7 +445,7 @@ final_scur_ims_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used1 = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ims_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used1),
+	{ok, Answer1} = scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum1, Used1),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -439,7 +453,7 @@ final_scur_ims_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant1]} = GSU1,
 	RequestNum2 = RequestNum1 + 1,
 	Used2 = rand:uniform(Grant1),
-	{ok, Answer2} = scur_ims_stop(Session, SI, RG, IMSI, MSISDN, originate, RequestNum2, Used2),
+	{ok, Answer2} = scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum2, Used2),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
 	{ok, {NewBalance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
@@ -457,7 +471,7 @@ initial_scur_ps(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, 0),
+	{ok, Answer} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
@@ -486,7 +500,7 @@ initial_scur_ps_nrf(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum),
+	{ok, Answer} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -508,7 +522,7 @@ interim_scur_ps(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -516,7 +530,7 @@ interim_scur_ps(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
+	{ok, Answer1} = scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
@@ -545,7 +559,7 @@ interim_scur_ps_nrf(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -553,7 +567,7 @@ interim_scur_ps_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
+	{ok, Answer1} = scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -575,7 +589,7 @@ final_scur_ps(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -583,7 +597,7 @@ final_scur_ps(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used =  rand:uniform(Grant0),
-	{ok, Answer1} = scur_ps_stop(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
+	{ok, Answer1} = scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
@@ -610,7 +624,7 @@ final_scur_ps_nrf(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum0),
+	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
@@ -621,7 +635,7 @@ final_scur_ps_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used1 = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum1, Used1),
+	{ok, Answer1} = scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum1, Used1),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -629,7 +643,7 @@ final_scur_ps_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant1]} = GSU1,
 	RequestNum2 = RequestNum1 + 1,
 	Used2 = rand:uniform(Grant1),
-	{ok, Answer2} = scur_ps_stop(Session, SI, RG, IMSI, MSISDN, RequestNum2, Used2),
+	{ok, Answer2} = scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum2, Used2),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
 	{ok, {NewBalance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
@@ -647,7 +661,7 @@ sms_iec(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = iec_event_sms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
+	{ok, Answer} = iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -672,7 +686,7 @@ mms_iec(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = iec_event_mms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
+	{ok, Answer} = iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC]} = Answer,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -687,14 +701,14 @@ mms_iec(Config) ->
 unknown_subscriber() ->
 	[{userdata, [{doc, "SCUR Nrf start with unknown user"}]}].
 
-unknown_subscriber(_Config) ->
+unknown_subscriber(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
 	RG = rand:uniform(99) + 100,
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
 
 out_of_credit() ->
@@ -709,7 +723,7 @@ out_of_credit(Config) ->
 	{ok, {0, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, 0}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED'} = Answer0.
 
 initial_in_call() ->
@@ -725,7 +739,7 @@ initial_in_call(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
-	{ok, Answer} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, 0),
+	{ok, Answer} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, 0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
@@ -754,7 +768,7 @@ interim_in_call(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -762,7 +776,7 @@ interim_in_call(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used = rand:uniform(Grant0),
-	{ok, Answer1} = scur_ims_interim(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum1, Used),
+	{ok, Answer1} = scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
@@ -791,7 +805,7 @@ final_in_call(Config) ->
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
-	{ok, Answer0} = scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
+	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -799,7 +813,7 @@ final_in_call(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
 	RequestNum1 = RequestNum0 + 1,
 	Used =  rand:uniform(Grant0),
-	{ok, Answer1} = scur_ims_stop(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum1, Used),
+	{ok, Answer1} = scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
@@ -820,22 +834,21 @@ accounting_ims(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
-	Realm = ?config(realm, Config),
 	Interval = ?config(interim_interval, Config),
 	RecordNum0 = 0,
-	{ok, Answer0} = acct_ims(Session, IMSI, MSISDN, Realm, start, RecordNum0),
+	{ok, Answer0} = acct_ims(Config, Session, IMSI, MSISDN, start, RecordNum0),
 	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Acct-Interim-Interval' = [Interval],
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_START_RECORD',
 			'Accounting-Record-Number' = RecordNum0} = Answer0,
 	RecordNum1 = RecordNum0 + 1,
-	{ok, Answer1} = acct_ims(Session, IMSI, MSISDN, Realm, interim, RecordNum1),
+	{ok, Answer1} = acct_ims(Config, Session, IMSI, MSISDN, interim, RecordNum1),
 	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Acct-Interim-Interval' = [Interval],
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD',
 			'Accounting-Record-Number' = RecordNum1} = Answer1,
 	RecordNum2 = RecordNum1 + 1,
-	{ok, Answer2} = acct_ims(Session, IMSI, MSISDN, Realm, stop, RecordNum2),
+	{ok, Answer2} = acct_ims(Config, Session, IMSI, MSISDN, stop, RecordNum2),
 	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Acct-Interim-Interval' = [Interval],
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
@@ -845,7 +858,7 @@ client_connect() ->
 	[{userdata, [{doc, "Connect as client to peer server"}]}].
 
 client_connect(Config) ->
-	Realm = ?config(realm, Config),
+	Realm = "ct." ++ ?config(realm, Config),
 	Address = ?config(diameter_address, Config),
 	Port = rand:uniform(64511) + 1024,
    Service = {?MODULE, server},
@@ -890,7 +903,7 @@ client_reconnect() ->
 	[{userdata, [{doc, "Reconnect disconnected client to peer server"}]}].
 
 client_reconnect(Config) ->
-	Realm = ?config(realm, Config),
+	Realm = "ct." ++ ?config(realm, Config),
 	Address = ?config(diameter_address, Config),
 	Port = rand:uniform(64511) + 1024,
    Service = {?MODULE, server},
@@ -961,22 +974,26 @@ client_reconnect(Config) ->
 %%  Internal functions
 %%---------------------------------------------------------------------
 
-scur_ims_start(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
-	scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
-scur_ims_start(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
+scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
 			'Calling-Party-Address' = [Origination]},
-	scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
-scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
+	scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
+scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 		when is_record(IMS, '3gpp_ro_IMS-Information') ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -993,9 +1010,12 @@ scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 			'IMS-Information' = [IMS],
 			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32260@3gpp.org",
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1005,22 +1025,26 @@ scur_ims_start(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ims_interim(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
+scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
-	scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_interim(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
+	scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
 	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
 			'Calling-Party-Address' = [Origination]},
-	scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
+	scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 		when is_record(IMS, '3gpp_ro_IMS-Information') ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1039,9 +1063,12 @@ scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'IMS-Information' = [IMS],
 			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32260@3gpp.org",
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1051,22 +1078,26 @@ scur_ims_interim(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ims_stop(Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
+scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
-	scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_stop(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
+	scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
 	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
 			'Calling-Party-Address' = [Origination]},
-	scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
+	scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 		when is_record(IMS, '3gpp_ro_IMS-Information') ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1083,9 +1114,12 @@ scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'IMS-Information' = [IMS],
 			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32260@3gpp.org" ,
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1095,7 +1129,11 @@ scur_ims_stop(Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum) ->
+scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum) ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
@@ -1110,9 +1148,12 @@ scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 			'Requested-Service-Unit' = [RSU]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32251@3gpp.org",
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1122,7 +1163,11 @@ scur_ps_start(Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
@@ -1139,9 +1184,12 @@ scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 			'Requested-Service-Unit' = [RSU]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32251@3gpp.org",
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1151,7 +1199,11 @@ scur_ps_interim(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ps_stop(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
@@ -1166,9 +1218,12 @@ scur_ps_stop(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 			'Used-Service-Unit' = [USU]},
 	ServiceInformation = #'3gpp_ro_Service-Information'{'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32251@3gpp.org" ,
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1178,7 +1233,7 @@ scur_ps_stop(Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-iec_event_sms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
    Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [MSISDN]},
@@ -1190,8 +1245,8 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 	SMS = #'3gpp_ro_SMS-Information'{
 			'Originator-Received-Address' = [Originator],
 			'Recipient-Info' = [Info]},
-	iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
-iec_event_sms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	Origination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
    Originator = #'3gpp_ro_Originator-Received-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
@@ -1203,9 +1258,13 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	SMS = #'3gpp_ro_SMS-Information'{
 			'Originator-Received-Address' = [Originator],
 			'Recipient-Info' = [Info]},
-	iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
-iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
+	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
 		when is_record(SMS, '3gpp_ro_SMS-Information') ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1222,9 +1281,12 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
 			'SMS-Information' = [SMS],
 			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32274@3gpp.org",
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1235,7 +1297,7 @@ iec_event_sms(Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-iec_event_mms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
    Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [MSISDN]},
@@ -1246,8 +1308,8 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 	MMS = #'3gpp_ro_MMS-Information'{
 			'Originator-Address' = [Originator],
 			'Recipient-Address' = [Recipient]},
-	iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
-iec_event_mms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	Origination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
    Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
@@ -1258,9 +1320,13 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	MMS = #'3gpp_ro_MMS-Information'{
 			'Originator-Address' = [Originator],
 			'Recipient-Address' = [Recipient]},
-	iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
-iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
+	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 		when is_record(MMS, '3gpp_ro_MMS-Information') ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	MSISDN1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1277,9 +1343,12 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 			'MMS-Information' = [MMS],
 			'PS-Information' = [PS]},
 	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'Service-Context-Id' = "32270@3gpp.org",
-			'User-Name' = [MSISDN],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_EVENT_REQUEST',
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
@@ -1290,22 +1359,26 @@ iec_event_mms(Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-acct_ims(Session, IMSI, MSISDN, Realm, start, RecordNum) ->
+acct_ims(Config, Session, IMSI, MSISDN, start, RecordNum) ->
 	ACR = #'3gpp_rf_ACR'{
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_START_RECORD',
 			'Accounting-Record-Number' = RecordNum},
-	acct_ims(Session, IMSI, MSISDN, Realm, ACR);
-acct_ims(Session, IMSI, MSISDN, Realm, interim, RecordNum) ->
+	acct_ims(Config, Session, IMSI, MSISDN, ACR);
+acct_ims(Config, Session, IMSI, MSISDN, interim, RecordNum) ->
 	ACR = #'3gpp_rf_ACR'{
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD',
 			'Accounting-Record-Number' = RecordNum},
-	acct_ims(Session, IMSI, MSISDN, Realm, ACR);
-acct_ims(Session, IMSI, MSISDN, Realm, stop, RecordNum) ->
+	acct_ims(Config, Session, IMSI, MSISDN, ACR);
+acct_ims(Config, Session, IMSI, MSISDN, stop, RecordNum) ->
 	ACR = #'3gpp_rf_ACR'{
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
 			'Accounting-Record-Number' = RecordNum},
-	acct_ims(Session, IMSI, MSISDN, Realm, ACR).
-acct_ims(Session, IMSI, MSISDN, Realm, ACR) when is_record(ACR, '3gpp_rf_ACR') ->
+	acct_ims(Config, Session, IMSI, MSISDN, ACR).
+acct_ims(Config, Session, IMSI, MSISDN, ACR) when is_record(ACR, '3gpp_rf_ACR') ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
 	Origination = "tel:+" ++ MSISDN,
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	MSISDN1 = #'3gpp_rf_Subscription-Id'{
@@ -1325,17 +1398,21 @@ acct_ims(Session, IMSI, MSISDN, Realm, ACR) when is_record(ACR, '3gpp_rf_ACR') -
 			'IMS-Information' = [IMS],
 			'PS-Information' = [PS]},
 	ACR1 = ACR#'3gpp_rf_ACR'{'Session-Id' = Session,
-				'Destination-Realm' = Realm,
-				'Service-Context-Id' = ["ct.32260@3gpp.org"],
-				'User-Name' = [MSISDN ++ "@" ++ Realm],
-				'Event-Timestamp' = [calendar:universal_time()],
-				'Service-Information' = [ServiceInformation]},
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
+			'Service-Context-Id' = ["rf.32260@3gpp.org"],
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
+			'Event-Timestamp' = [calendar:universal_time()],
+			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, acct_app_test, ACR1, []).
 
 %% @hidden
 client_acct_service_opts(Config) ->
-	[{'Origin-Host', ?config(diameter_host, Config)},
-			{'Origin-Realm', ?config(realm, Config)},
+	Realm = ?config(ct_realm, Config),
+	Host = ?config(ct_host, Config),
+	[{'Origin-Host', Host},
+			{'Origin-Realm', Realm},
 			{'Vendor-Id', ?IANA_PEN_SigScale},
 			{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
 			{'Product-Name', "SigScale Test Client"},
@@ -1354,9 +1431,9 @@ client_acct_service_opts(Config) ->
 					{module, cse_test_diameter_cb}]}].
 
 %% @hidden
-server_acct_service_opts(Config) ->
-	[{'Origin-Host', ?config(diameter_host, Config)},
-			{'Origin-Realm', ?config(realm, Config)},
+server_acct_service_opts(_Config) ->
+	[{'Origin-Host', cse_test_lib:rand_name()},
+			{'Origin-Realm', cse_test_lib:rand_name() ++ ".net"},
 			{'Vendor-Id', ?IANA_PEN_SigScale},
 			{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
 			{'Product-Name', "SigScale Test Server"},
