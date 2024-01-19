@@ -109,7 +109,14 @@ callback_mode() ->
 
 -spec init(Args) -> Result
 	when
-		Args :: [term()],
+		Args :: [Property],
+		Property :: {interim_interval, pos_integer()}
+				| {bx_summary, boolean()}
+				| {bx_log, atom()}
+				| {bx_logger, {Module, Function}}
+				| {bx_codec, {Module, Function}},
+		Module :: atom(),
+		Function :: atom(),
 		Result :: {ok, State, Data} | {ok, State, Data, Actions}
 				| ignore | {stop, Reason},
 		State :: state(),
