@@ -15,3 +15,6 @@ SigScale OCS.
  
 ![screenshot](https://raw.githubusercontent.com/sigscale/cse/master/doc/ocf-ocs.svg)
 
+Also provided are SLPs for Charging Data Function (CDF) on the
+DIAMETER Rf interface.
+
