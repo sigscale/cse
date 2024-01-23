@@ -41,7 +41,6 @@
                  {size, {10485760, 10}}]},
            {cdr,
                  [{format, external},
-                 {codec, {cse_log_codec_bx, csv}},
                  {type, wrap},
                  {size, {10485760, 10}}]}]}]},
 {m3ua,
