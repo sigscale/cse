@@ -373,12 +373,11 @@ diameter_answer(ResultCode,
 		Data :: statedata().
 %% @doc Write an event to a log.
 %% @hidden
-log_fsm(State,
-		#{start := Start,
-		imsi := IMSI,
-		msisdn := MSISDN,
-		context := Context,
-		session_id := SessionId} = _Data) ->
+log_fsm(State, #{start := Start} = Data) ->
+	IMSI = maps:get(imsi, Data, []),
+	MSISDN = maps:get(msisdn, Data, []),
+	Context = maps:get(context, Data, []),
+	SessionId = maps:get(session_id, Data, []),
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
 	Call = #{},
