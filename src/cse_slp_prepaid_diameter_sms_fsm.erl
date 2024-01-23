@@ -176,7 +176,7 @@ init1([], Data) ->
 null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
 null(enter = _EventType, OldState, Data) ->
-	log_fsm(OldState,Data),
+	catch log_fsm(OldState,Data),
 	{stop, shutdown};
 null({call, _From}, #'3gpp_ro_CCR'{} = _EventContent, Data) ->
 	{next_state, authorize_event_attempt, Data, postpone}.

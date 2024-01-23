@@ -159,7 +159,7 @@ init(Args) when is_list(Args) ->
 null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
 null(enter = _EventType, OldState, Data) ->
-	log_fsm(OldState, Data),
+	catch log_fsm(OldState, Data),
 	{stop, shutdown};
 null({call, _From}, #'3gpp_rf_ACR'{}, Data) ->
 	{next_state, active, Data, postpone}.
