@@ -1,3 +1,11 @@
+2024-01-23   Vance Shipley <vances@sigscale.org>
+
+	* handle missing state in postpaid slp fsm log
+	* correct postpaid log codec function in application environment
+	* ignore error logging to {pre,post}paid logs
+	* add cgf slps to readme
+	* document postpaid slp module init/1 arguments
+
 2024-01-19   Vance Shipley <vances@sigscale.org>
 
 	* handle empty userids in ecs log codec
