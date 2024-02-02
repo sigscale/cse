@@ -88,6 +88,7 @@
 		orealm => binary(),
 		drealm => binary(),
 		imsi => [$0..$9],
+		imei => [$0..$9],
 		msisdn => string(),
 		nrf_profile => atom(),
 		nrf_address => inet:ip_address(),
@@ -188,12 +189,14 @@ authorize_origination_attempt({call, From},
 				'CC-Request-Number' = RequestNum,
 				'Subscription-Id' = SubscriptionId,
 				'Multiple-Services-Credit-Control' = MSCC,
+				'User-Equipment-Info' = UserInfo,
 				'Service-Information' = ServiceInformation}, Data)
 		when RequestType == ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
 	IMSI = imsi(SubscriptionId),
 	MSISDN = msisdn(SubscriptionId),
+	IMEI = imei(UserInfo),
 	NewData = Data#{from => From, session_id => SessionId,
-			imsi => IMSI, msisdn => MSISDN,
+			imsi => IMSI, msisdn => MSISDN, imei => IMEI,
 			context => binary_to_list(SvcContextId),
 			mscc => MSCC, service_info => ServiceInformation,
 			ohost => OHost, orealm => ORealm, drealm => DRealm,
@@ -1383,8 +1386,9 @@ service_rating([MSCC | T],
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_ps(ServiceInformation, SR3),
-	Acc1 = service_rating_rsu(MSCC, SR4, Acc),
-	Acc2 = service_rating_usu(MSCC, SR4, Acc1),
+	SR5 = service_rating_imei(Data, SR4),
+	Acc1 = service_rating_rsu(MSCC, SR5, Acc),
+	Acc2 = service_rating_usu(MSCC, SR5, Acc1),
 	service_rating(T, Data, Acc2);
 service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -1510,6 +1514,14 @@ service_rating_usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	Acc.
 
 %% @hidden
+service_rating_imei(#{imei := IMEI}, ServiceRating)
+		when is_list(IMEI) ->
+	Pei = "imei-" ++ IMEI,
+	ServiceRating#{"userInformation" => #{"servedPei" => Pei}};
+service_rating_imei(_, ServiceRating) ->
+	ServiceRating.
+
+%% @hidden
 subscription_id(Data) ->
 	subscription_id1(Data, []).
 %% @hidden
@@ -1541,6 +1553,15 @@ msisdn([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Data' = MSISDN,
 msisdn([_H | T]) ->
 	msisdn(T);
 msisdn([]) ->
+	undefined.
+
+%% @hidden
+imei([#'3gpp_ro_User-Equipment-Info'{
+		'User-Equipment-Info-Type' = ?'3GPP_RO_USER-EQUIPMENT-INFO-TYPE_IMEISV',
+		'User-Equipment-Info-Value' = IMEISV}])
+		when is_binary(IMEISV), size(IMEISV) >= 15 ->
+	lists:sublist(integer_to_list(binary_to_integer(IMEISV, 16)), 15);
+imei(_) ->
 	undefined.
 
 -spec build_mscc(MSCC, ServiceRating) -> Result
