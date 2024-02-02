@@ -1345,6 +1345,22 @@ gsu4(_GSU, Acc) ->
 	[Acc].
 
 %% @hidden
+quota_threshold(#{"validUnits" := ValidUnits,
+		"grantedUnit" := GSU})
+		when is_integer(ValidUnits), ValidUnits > 0,
+		is_map_key("time", GSU) ->
+	{[ValidUnits], []};
+quota_threshold(#{"validUnits" := ValidUnits,
+		"grantedUnit" := GSU})
+		when is_integer(ValidUnits), ValidUnits > 0,
+		(is_map_key("totalVolume", GSU)
+				orelse is_map_key("uplinkVolume", GSU)
+				orelse is_map_key("downlinkVolume", GSU)) ->
+	{[], [ValidUnits]};
+quota_threshold(_) ->
+	{[], []}.
+
+%% @hidden
 vality_time(#{"expiryTime" := ValidityTime})
 		when is_integer(ValidityTime), ValidityTime > 0 ->
 	[ValidityTime];
@@ -1548,44 +1564,56 @@ build_mscc([], _ServiceRating, {FinalRC, Acc}) ->
 build_mscc1([SI], [RG], [#{"serviceId" := SI, "ratingGroup" := RG,
 		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	{QT, QV} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
 			'Rating-Group' = [RG],
 			'Granted-Service-Unit' = GSU,
+			'Time-Quota-Threshold' = QT,
+			'Volume-Quota-Threshold' = QV,
 			'Validity-Time' = Validity,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([SI], [], [#{"serviceId" := SI,
 		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	{QT, QV} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
 			'Granted-Service-Unit' = GSU,
+			'Time-Quota-Threshold' = QT,
+			'Volume-Quota-Threshold' = QV,
 			'Validity-Time' = Validity,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([], [RG], [#{"ratingGroup" := RG,
 		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	{QT, QV} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Rating-Group' = [RG],
 			'Granted-Service-Unit' = GSU,
+			'Time-Quota-Threshold' = QT,
+			'Volume-Quota-Threshold' = QV,
 			'Validity-Time' = Validity,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
 		{FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	{QT, QV} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Granted-Service-Unit' = GSU,
+			'Time-Quota-Threshold' = QT,
+			'Volume-Quota-Threshold' = QV,
 			'Validity-Time' = Validity,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
