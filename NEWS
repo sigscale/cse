@@ -1,3 +1,9 @@
+February 2, 2024
+----------------
+	- Include IMEI in rating requests
+	- Include quota thresholds in CCA if present in Nrf response
+	- Include validity time in CCA if present in Nrf response
+
 January 18, 2024
 ----------------
 	- Postpaid Bx logging

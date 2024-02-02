@@ -1,3 +1,11 @@
+2024-02-02   Vance Shipley <vances@sigscale.org>
+
+	* handle user-equipment-info avp in prepaid slps (IN-147)
+	* add user equipment information to nrf oas (IN-146)
+	* include quota-threshold avps in prepaid slps (IN-145)
+	* handle validity-time avp in prepaid slps (IN-143)
+	* correct postpaid cdr log configuration
+
 2024-01-23   Vance Shipley <vances@sigscale.org>
 
 	* handle missing state in postpaid slp fsm log
