@@ -1,6 +1,9 @@
 #!/bin/false
 # Not a shell script!
 
+# Instructions for building in an adjacent directory
+# of the source directory (i.e. ../cse.build)
+
 ## Configure new build directory
 mkdir -p shell/lib
 ln -st shell/lib ../../$(ls -d ../cap.build/shell/lib/cap-*)
@@ -15,7 +18,7 @@ ZJ=$(basename $(ls -d ../zj-*))
 mkdir -p shell/lib/$ZJ/ebin
 cp -r ../$ZJ/ebin shell/lib/$ZJ/
 
-## Make edoc available
+## Make documentation and test reports available
 mkdir -p ~/public_html/cse
 ln -st ~/public_html/cse ../../cse.build/doc
 ln -st ~/public_html/cse ../../cse.build/test/log
