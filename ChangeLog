@@ -1,3 +1,8 @@
+2024-02-12   Vance Shipley <vances@sigscale.org>
+
+	* application upgrade instructions for release package upgrades
+	* clarify step in build readme
+
 2024-02-02   Vance Shipley <vances@sigscale.org>
 
 	* handle user-equipment-info avp in prepaid slps (IN-147)
