@@ -12,7 +12,7 @@
 %                      {dictionary, diameter_gen_3gpp_rf_application},
 %                      {module, cse_diameter_3gpp_rf_application_cb},
 %                      {request_errors, callback}]},
-%                {'Origin-Realm',"cse.mnc001.mnc001.3gppnetwork.org"}]}]},
+%                {'Origin-Realm',"cse.mnc001.mcc001.3gppnetwork.org"}]}]},
      {logs,
            [{'3gpp_ro',
                  [{format, external},
