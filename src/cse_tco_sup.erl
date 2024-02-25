@@ -62,18 +62,12 @@ init1(Sup, Name, Callback)
 		orelse (element(1, Callback) == tcap_tco_cb)) ->
 	{ok, TcoArgs} = application:get_env(tsl_args),
 	{ok, Options} = application:get_env(tsl_opts),
-	case application:ensure_all_started([tcap, gtt]) of
-		{ok, _Started} ->
-			case tcap:start_tsl({local, Name}, Callback,
-					[Sup | TcoArgs], Options) of
-				{ok, TCO} ->
-					{ok, TCO, #state{sup = Sup, tco = TCO}};
-				{error, Reason} ->
-					{error, Reason}
-			end;
+	case tcap:start_tsl({local, Name}, Callback, [Sup | TcoArgs], Options) of
+		{ok, TCO} ->
+			{ok, TCO, #state{sup = Sup, tco = TCO}};
 		{error, Reason} ->
 			{error, Reason}
-	end; 
+	end;
 init1(_Sup, _Name, _Callback) ->
 	ignore.
 
