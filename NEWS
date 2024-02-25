@@ -1,6 +1,6 @@
 February 25, 2024
 -----------------
-	- Start TCAP stack if TCO configured
+	- Start TCAP snd M3UA stacks
 	- Start SASL for release upgrades
 
 February 12, 2024

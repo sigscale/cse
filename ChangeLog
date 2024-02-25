@@ -1,6 +1,6 @@
 2024-02-25   Vance Shipley <vances@sigscale.org>
 
-	* start tcap when tco configured
+	* start tcap and m3ua
 	* start sasl in release
 
 2024-02-12   Vance Shipley <vances@sigscale.org>
