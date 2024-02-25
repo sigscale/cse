@@ -1,3 +1,8 @@
+February 25, 2024
+-----------------
+	- Start TCAP stack if TCO configured
+	- Start SASL for release upgrades
+
 February 12, 2024
 -----------------
 	- Handle in service release upgrades
