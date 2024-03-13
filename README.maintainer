@@ -15,7 +15,7 @@ Note:
 
 ## Building
 	1. mkdir ../cse.build        (create build directory)
-	2. cp README.build ../cse.build/README
+	2. cp README.build ../cse.build/README (detailed build instructions)
 	3. cd ../cse.build           (change working directory for build)
 	4. ../cse/configure          (creates Makefiles)
 	5. make                      (builds entire package)
