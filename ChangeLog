@@ -1,5 +1,6 @@
 2024-03-18   Vance Shipley <vances@sigscale.org>
 
+	* missing macros for mnesia table operations
 	* escripts for join and install tables
 	* health check api
 	* clarify readme.build purpose
