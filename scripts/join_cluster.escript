@@ -2,27 +2,25 @@
 %% vim: syntax=erlang
 
 main([Node]) ->
-	case catch mnesia:system_info(db_nodes) of
-		[] ->
-			case cse_app:join(list_to_atom(Node)) of
-				{ok, Tables} ->
-					io:fwrite("{ok, ~p}~n", [Tables]);
-				{error, Reason} ->
-					io:fwrite("error: ~w~n", [Reason]),
-					erlang:halt(1)
-			end;
-		Nodes ->
+	Nodes = mnesia:system_info(db_nodes),
+	case length(Nodes) of
+		N when N > 0 ->
 			case mnesia:set_master_nodes(Nodes) of
 				ok ->
-					case cse_app:join(list_to_atom(Node)) of
-						{ok, Tables} ->
-							io:fwrite("{ok, ~p}~n", [Tables]);
-						{error, Reason} ->
-							io:fwrite("error: ~w~n", [Reason]),
-							erlang:halt(1)
-					end;
-				{error, Reason} ->
-					io:fwrite("error: ~w~n", [Reason]),
+					ok;
+				{error, Reason1} ->
+					stopped = mnesia:stop(),
+					io:fwrite("error: ~w~n", [Reason1]),
 					erlang:halt(1)
-			end
+			end;
+		0 ->
+			ok
+	end,
+	case cse_app:join(list_to_atom(Node)) of
+		{ok, Tables} ->
+			io:fwrite("{ok, ~p}~n", [Tables]);
+		{error, Reason2} ->
+			io:fwrite("error: ~w~n", [Reason2]),
+			erlang:halt(1)
 	end.
+
