@@ -43,6 +43,7 @@ beam_DATA = cse.beam \
 		mod_cse_rest_post.beam \
 		mod_cse_rest_delete.beam \
 		mod_cse_rest_patch.beam \
+		cse_rest_res_health.beam \
 		cse_rest_res_resource.beam \
 		cse_rest_pagination_server.beam \
 		cse_rest_pagination_sup.beam \

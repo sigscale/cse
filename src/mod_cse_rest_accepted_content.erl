@@ -96,6 +96,12 @@ do(#mod{request_uri = Uri, data = Data} = ModData) ->
 				undefined ->
 					#{path := Path} = uri_string:parse(Uri),
 					case string:lexemes(Path, [$/]) of
+						["health"] ->
+							check_content_type_header(cse_rest_res_health, ModData);
+						["health", "application"] ->
+							check_content_type_header(cse_rest_res_health, ModData);
+						["health", "application", _] ->
+							check_content_type_header(cse_rest_res_health, ModData);
 						["resourceCatalogManagement", "v4", "resourceSpecification" | _] ->
 							check_content_type_header(cse_rest_res_resource, ModData);
 						["resourceInventoryManagement", "v4", "resource" | _] ->

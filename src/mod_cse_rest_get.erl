@@ -184,6 +184,15 @@ parse_query(_, #mod{parsed_header = RequestHeaders,
 
 %% @hidden
 do_get(Resource, #mod{parsed_header = Headers} = ModData,
+		["health"], Query) ->
+	do_response(ModData, Resource:get_health(Query, Headers));
+do_get(Resource, #mod{parsed_header = Headers} = ModData,
+		["health", "application"], Query) ->
+	do_response(ModData, Resource:get_applications(Query, Headers));
+do_get(Resource, #mod{parsed_header = Headers} = ModData,
+		["health", "application", Id], _Query) ->
+	do_response(ModData, Resource:get_application(Id, Headers));
+do_get(Resource, #mod{parsed_header = Headers} = ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification"], Query) ->
 	do_response(ModData, Resource:get_resource_specs(Query, Headers));
 do_get(Resource, ModData, ["resourceCatalogManagement",

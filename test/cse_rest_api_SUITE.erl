@@ -49,7 +49,9 @@
 		head_resources/0, head_resources/1,
 		head_resource/0, head_resource/1,
 		head_resource_specs/0, head_resource_specs/1,
-		head_resource_spec/0, head_resource_spec/1]).
+		head_resource_spec/0, head_resource_spec/1,
+		get_health/0, get_health/1]).
+		head_health/0, head_health/1]).
 
 -include("cse.hrl").
 -include_lib("common_test/include/ct.hrl").
@@ -140,7 +142,7 @@ all() ->
 			delete_range_row, delete_row_query, query_table_row,
 			add_index_row_resource, add_range_row_resource,
 			head_resource_specs, head_resource_spec, head_resources,
-			head_resource].
+			head_resource, get_health, head_health].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -816,6 +818,39 @@ head_resource(Config) ->
 	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
 	{_, _Length} = lists:keyfind("content-length", 1, Headers).
+
+get_health() ->
+	[{userdata, [{doc,"Get health in rest interface"}]}].
+
+get_health(Config) ->
+	HostUrl = ?config(host_url, Config),
+	HttpOpt = ?config(http_options, Config),
+	Accept = {"accept", "application/health+json"},
+	Request = {HostUrl ++ "/health", [Accept, auth_header()]},
+	{ok, Result} = httpc:request(get, Request, HttpOpt, []),
+	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
+	{_, "application/health+json"} = lists:keyfind("content-type", 1, Headers),
+	{struct, [Status, ServiceId, Description, Checks]} = mochijson:decode(Body),
+	{"status", "pass"} = Status,
+	{"serviceId", _Node} = ServiceId,
+	{"description", "Health of SigScale OCS"} = Description,
+	{"checks", {struct, Checked}} = Checks,
+	{"uptime", {array, Time}} = lists:keyfind("uptime", 1, Checked),
+	[{struct, [{"componentType", "system"},
+			{"observedUnit", "s"}, {"observedValue", Uptime}]}] = Time,
+	Uptime > 0.
+
+head_health() ->
+	[{userdata, [{doc,"Get headers (only) of health in rest interface"}]}].
+
+head_health(Config) ->
+	HostUrl = ?config(host_url, Config),
+	HttpOpt = ?config(http_options, Config),
+	Accept = {"accept", "application/health+json"},
+	Request = {HostUrl ++ "/health", [Accept, auth_header()]},
+	{ok, Result} = httpc:request(head, Request, HttpOpt, []),
+	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
+	{_, "application/health+json"} = lists:keyfind("content-type", 1, Headers).
 
 %%---------------------------------------------------------------------
 %%  Internal functions

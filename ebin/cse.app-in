@@ -45,6 +45,7 @@
 				mod_cse_rest_head,
 				mod_cse_rest_delete,
 				mod_cse_rest_patch,
+				cse_rest_res_health,
 				cse_rest_res_resource,
 				cse_rest_pagination_server,
 				cse_rest_pagination_sup,
