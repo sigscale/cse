@@ -1,5 +1,12 @@
 2024-02-25   Vance Shipley <vances@sigscale.org>
 
+	* health check api
+	* clarify readme.build purpose
+	* include skip systemd in build intructions
+	* reuse release name macro
+
+2024-02-25   Vance Shipley <vances@sigscale.org>
+
 	* start tcap and m3ua
 	* start sasl in release
 
