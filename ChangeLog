@@ -1,5 +1,6 @@
 2024-03-18   Vance Shipley <vances@sigscale.org>
 
+	* include m3ua and gtt tables in initialize and join
 	* missing macros for mnesia table operations
 	* escripts for join and install tables
 	* health check api
