@@ -1,5 +1,6 @@
-2024-02-25   Vance Shipley <vances@sigscale.org>
+2024-03-18   Vance Shipley <vances@sigscale.org>
 
+	* escripts for join and install tables
 	* health check api
 	* clarify readme.build purpose
 	* include skip systemd in build intructions

@@ -1,6 +1,7 @@
 March 18, 2024
 --------------
-	* Health check API (IETF draft-inadarei-api-health-check)
+	- Health check API (IETF draft-inadarei-api-health-check)
+	- Escripts for initialization and scaling
 
 February 25, 2024
 -----------------
