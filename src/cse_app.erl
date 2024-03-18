@@ -616,17 +616,17 @@ join7(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join8(Node, Nodes, Acc) ->
-	case rpc:call(Node, mnesia, add_table_copy, [cse_session, node(), disc_copies]) of
+	case rpc:call(Node, mnesia, add_table_copy, [cse_service, node(), disc_copies]) of
 		{atomic, ok} ->
-			error_logger:info_msg("Copied cse_session table from ~s.~n", [Node]),
-			join9(Node, Nodes, [cse_session | Acc]);
-		{aborted, {already_exists, cse_session, _}} ->
-			error_logger:info_msg("Found existing cse_session table on ~s.~n", [Node]),
-			join9(Node, Nodes, [cse_session | Acc]);
-		{aborted, {no_exists, {cse_session, _}}} ->
-			case create_table(cse_session, Nodes) of
+			error_logger:info_msg("Copied cse_service table from ~s.~n", [Node]),
+			join9(Node, Nodes, [cse_service | Acc]);
+		{aborted, {already_exists, cse_service, _}} ->
+			error_logger:info_msg("Found existing cse_service table on ~s.~n", [Node]),
+			join9(Node, Nodes, [cse_service | Acc]);
+		{aborted, {no_exists, {cse_service, _}}} ->
+			case create_table(cse_service, Nodes) of
 				ok ->
-					join9(Node, Nodes, [cse_session | Acc]);
+					join9(Node, Nodes, [cse_service | Acc]);
 				{error, Reason} ->
 					{error, Reason}
 			end;
