@@ -29,7 +29,7 @@
 %% optional callbacks for application behaviour
 -export([prep_stop/1, start_phase/3]).
 %% export the cse private API for installation
--export([install/0, install/1]).
+-export([install/0, install/1, join/1]).
 
 -include_lib("inets/include/mod_auth.hrl").
 -include("cse.hrl").
@@ -493,6 +493,243 @@ install15(Tables) ->
 	cse:add_context("32276@3gpp.org",
 			cse_slp_prepaid_diameter_ims_fsm, [], []),
 	{ok, Tables}.
+
+-spec join(Node) -> Result
+	when
+		Node :: atom(),
+		Result :: {ok, Tables} | {error, Reason},
+		Tables :: [atom()],
+		Reason :: term().
+%% @doc Join an existing cluster.
+%%
+%% 	Tables will be copied from the given `Node'.
+%%
+join(Node) when is_atom(Node)  ->
+	case mnesia:system_info(is_running) of
+		no ->
+			join1(Node);
+		Running ->
+			error_logger:error_report(["mnesia running", {is_running, Running}]),
+			{error, mnesia_running}
+	end.
+%% @hidden
+join1(Node) ->
+	case net_kernel:connect_node(Node) of
+		true ->
+			join2(Node);
+		Connect ->
+			error_logger:error_report(["Failed to connect node",
+					{result, Connect}]),
+			{error, Connect}
+	end.
+%% @hidden
+join2(Node) ->
+	case rpc:call(Node, mnesia, add_table_copy, [schema, node(), ram_copies]) of
+		{atomic, ok} ->
+			join3(Node);
+		{aborted, {already_exists, schema, _}} ->
+			error_logger:info_msg("Found existing schema table on ~s.~n", [Node]),
+			join3(Node);
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join3(Node) ->
+	case application:start(mnesia) of
+		ok ->
+			join4(Node);
+		{error, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+					{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join4(Node) ->
+	case mnesia:change_config(extra_db_nodes, [Node]) of
+		{ok, _Nodes} ->
+			join5(Node);
+		{error, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+					{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join5(Node) ->
+	case mnesia:change_table_copy_type(schema, node(), disc_copies) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied schema table from ~s.~n", [Node]),
+			join6(Node, mnesia:system_info(db_nodes), [schema]);
+		{aborted, {already_exists, schema, _, disc_copies}} ->
+			error_logger:info_msg("Found existing schema table on ~s.~n", [Node]),
+			join6(Node, mnesia:system_info(db_nodes), [schema]);
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join6(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [resource_spec, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied resource_spec table from ~s.~n", [Node]),
+			join7(Node, Nodes, [resource_spec | Acc]);
+		{aborted, {already_exists, resource_spec, _}} ->
+			error_logger:info_msg("Found existing resource_spec table on ~s.~n", [Node]),
+			join7(Node, Nodes, [resource_spec | Acc]);
+		{aborted, {no_exists, {resource_spec, _}}} ->
+			case create_table(resource_spec, Nodes) of
+				ok ->
+					join7(Node, Nodes, [resource_spec | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join7(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [resource, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied resource table from ~s.~n", [Node]),
+			join8(Node, Nodes, [resource | Acc]);
+		{aborted, {already_exists, resource, _}} ->
+			error_logger:info_msg("Found existing resource table on ~s.~n", [Node]),
+			join8(Node, Nodes, [resource | Acc]);
+		{aborted, {no_exists, {resource, _}}} ->
+			case create_table(resource, Nodes) of
+				ok ->
+					join8(Node, Nodes, [resource | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join8(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [cse_session, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied cse_session table from ~s.~n", [Node]),
+			join9(Node, Nodes, [cse_session | Acc]);
+		{aborted, {already_exists, cse_session, _}} ->
+			error_logger:info_msg("Found existing cse_session table on ~s.~n", [Node]),
+			join9(Node, Nodes, [cse_session | Acc]);
+		{aborted, {no_exists, {cse_session, _}}} ->
+			case create_table(cse_session, Nodes) of
+				ok ->
+					join9(Node, Nodes, [cse_session | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join9(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [cse_context, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied cse_context table from ~s.~n", [Node]),
+			join10(Node, Nodes, [cse_context | Acc]);
+		{aborted, {already_exists, cse_context, _}} ->
+			error_logger:info_msg("Found existing cse_context table on ~s.~n", [Node]),
+			join10(Node, Nodes, [cse_context | Acc]);
+		{aborted, {no_exists, {cse_context, _}}} ->
+			case create_table(cse_context, Nodes) of
+				ok ->
+					join10(Node, Nodes, [cse_context | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join10(Node, Nodes, Acc) ->
+   case application:load(inets) of
+      ok ->
+         error_logger:info_msg("Loaded inets.~n"),
+         join11(Node, Nodes, Acc);
+      {error, {already_loaded, inets}} ->
+         join11(Node, Nodes, Acc);
+      {error, Reason} ->
+         {error, Reason}
+   end.
+%% @hidden
+join11(Node, Exist, Acc) ->
+   case is_mod_auth_mnesia() of
+      true ->
+         join12(Node, Exist, Acc);
+      false ->
+         error_logger:info_msg("Httpd service not defined. "
+               "User table not created~n"),
+         join12(Node, Exist, Acc)
+   end.
+%% @hidden
+join12(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [httpd_user, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied httpd_user table from ~s.~n", [Node]),
+			join13(Node, Nodes, [httpd_user | Acc]);
+		{aborted, {already_exists, httpd_user, _}} ->
+			error_logger:info_msg("Found existing httpd_user table on ~s.~n", [Node]),
+			join13(Node, Nodes, [httpd_user | Acc]);
+		{aborted, {no_exists, {httpd_user, _}}} ->
+			case create_table(httpd_user, Nodes) of
+				ok ->
+					join13(Node, Nodes, [httpd_user | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join13(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [httpd_group, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied httpd_group table from ~s.~n", [Node]),
+			join14(Node, Nodes, [httpd_group | Acc]);
+		{aborted, {already_exists, httpd_group, _}} ->
+			error_logger:info_msg("Found existing httpd_group table on ~s.~n", [Node]),
+			join14(Node, Nodes, [httpd_group | Acc]);
+		{aborted, {no_exists, {httpd_group, _}}} ->
+			case create_table(httpd_group, Nodes) of
+				ok ->
+					join14(Node, Nodes, [httpd_group | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join14(_Node, _Nodes, Tables) ->
+	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
+		ok ->
+			{ok, Tables};
+		{timeout, BadTables} ->
+			error_logger:error_report(["Timeout waiting for tables",
+					{tables, BadTables}]),
+			{error, timeout};
+		{error, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+					{error, Reason}]),
+			{error, Reason}
+	end.
 
 %%----------------------------------------------------------------------
 %%  Internal functions

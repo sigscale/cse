@@ -11,7 +11,9 @@ systemdsystemunit_DATA = scripts/cse.service
 env_DATA = scripts/cse
 endif
 
-script_SCRIPTS = scripts/snapshot.escript \
+script_SCRIPTS = scripts/install_tables.escript \
+		scripts/join_cluster.escript \
+		scripts/snapshot.escript \
 		scripts/data_session.escript \
 		scripts/voice_call.escript \
 		scripts/send_sms.escript \
