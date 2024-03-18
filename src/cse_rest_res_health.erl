@@ -1,4 +1,4 @@
-%%% cse_rest_res_health.erl
+%%% Cse_rest_res_health.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2022 - 2024 SigScale Global Inc.
@@ -263,7 +263,7 @@ table_size([], Acc) ->
 
 -spec up() -> Time
 	when
-		Time :: map().
+		Time :: [map()].
 %% @doc Check uptime in seconds.
 %% @hidden
 up() ->
@@ -311,12 +311,12 @@ diameter_dictionaries([Application | T], Acc) ->
 diameter_dictionaries([], Acc) ->
 	Acc.
 
--spec get_diameter_counters(Dictionary, Services, Counters) -> DiameterCheck
+-spec get_diameter_counters(Dictionary, Services, Counters) -> Components
 	when
 		Dictionary :: atom(),
 		Services :: [diameter:service_name()],
 		Counters :: map(),
-		DiameterCheck :: [tuple()].
+		Components :: tuple().
 %% @doc Get Diameter count.
 %% @hidden
 get_diameter_counters(diameter_gen_base_rfc6733, [Service | T], Counters) ->
