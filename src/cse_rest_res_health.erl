@@ -27,7 +27,9 @@
 -copyright('Copyright (c) 2022 - 2024 SigScale Global Inc.').
 
 -export([content_types_accepted/0, content_types_provided/0,
-		get_health/2, get_applications/2, get_application/2]).
+		get_health/2, head_health/2,
+		get_applications/2, head_applications/2,
+		get_application/2, head_application/2]).
 
 -spec content_types_accepted() -> ContentTypes
 	when
@@ -51,8 +53,9 @@ content_types_provided() ->
 				| {error, 503, ResponseHeaders, ResponseBody},
 		ResponseHeaders :: [tuple()],
 		ResponseBody :: iolist().
-%% @doc Body producing function for `GET /health'
-%% requests.
+%% @doc Body producing function for
+%% 	`GET /health'
+%% 	requests.
 get_health([] = _Query, _RequestHeaders) ->
 	try
 		Applications = application([cse,
@@ -105,6 +108,46 @@ get_health([] = _Query, _RequestHeaders) ->
 			{error, 500}
 	end.
 
+-spec head_health(Query, RequestHeaders) -> Result
+	when
+		Query :: [{Key :: string(), Value :: string()}],
+		RequestHeaders :: [tuple()],
+		Result :: {ok, ResponseHeaders, ResponseBody}
+				| {error, 503, ResponseHeaders, ResponseBody},
+		ResponseHeaders :: [tuple()],
+		ResponseBody :: [].
+%% @doc Body producing function for
+%% 	`HEAD /health'
+%% 	requests.
+head_health([] = _Query, _RequestHeaders) ->
+	try
+		Applications = application([cse]),
+		Checks = #{"application" => Applications},
+		Status = case hd(Applications) of
+			#{"status" := S} ->
+				S;
+			_ ->
+				undefined
+		end,
+		case scheduler() of
+			{ok, HeadOptions, _Scheds} ->
+				{HeadOptions, Status, Checks};
+			{error, _Reason1} ->
+				{[], Status, Checks}
+		end
+	of
+		{CacheControl, "up" = Status, _Checks} ->
+			ResponseHeaders = [{content_type, "application/health+json"}
+					| CacheControl],
+			{ok, ResponseHeaders, []};
+		{_CacheControl, _Status, _Checks} ->
+			ResponseHeaders = [{content_type, "application/health+json"}],
+			{error, 503, ResponseHeaders, []}
+	catch
+		_:_Reason2 ->
+			{error, 500}
+	end.
+
 -spec get_applications(Query, RequestHeaders) -> Result
 	when
 		Query :: [{Key :: string(), Value :: string()}],
@@ -113,8 +156,9 @@ get_health([] = _Query, _RequestHeaders) ->
 				| {error, 503, ResponseHeaders, ResponseBody},
 		ResponseHeaders :: [tuple()],
 		ResponseBody :: iolist().
-%% @doc Body producing function for `GET /health/application'
-%% requests.
+%% @doc Body producing function for
+%% 	`GET /health/application'
+%% 	requests.
 get_applications([] = _Query, _RequestHeaders) ->
 	try
 		application([ocs, inets, diameter, m3ua, gtt, snmp])
@@ -148,6 +192,40 @@ get_applications([] = _Query, _RequestHeaders) ->
 			{error, 500}
 	end.
 
+-spec head_applications(Query, RequestHeaders) -> Result
+	when
+		Query :: [{Key :: string(), Value :: string()}],
+		RequestHeaders :: [tuple()],
+		Result :: {ok, ResponseHeaders, ResponseBody}
+				| {error, 503, ResponseHeaders, ResponseBody},
+		ResponseHeaders :: [tuple()],
+		ResponseBody :: [].
+%% @doc Body producing function for
+%% 	`HEAD /health/application'
+%% 	requests.
+head_applications([] = _Query, _RequestHeaders) ->
+	try
+		application([ocs, inets, diameter, m3ua, gtt, snmp])
+	of
+		Applications ->
+			F = fun(#{"status" := "up"}) ->
+						false;
+					(#{"status" := "down"}) ->
+						true
+			end,
+			case lists:any(F, Applications) of
+				false ->
+					ResponseHeaders = [{content_type, "application/health+json"}],
+					{ok, ResponseHeaders, []};
+				true ->
+					ResponseHeaders = [{content_type, "application/health+json"}],
+					{error, 503, ResponseHeaders, []}
+			end
+	catch
+		_:_Reason ->
+			{error, 500}
+	end.
+
 -spec get_application(Id, RequestHeaders) -> Result
 	when
 		Id :: string(),
@@ -156,8 +234,9 @@ get_applications([] = _Query, _RequestHeaders) ->
 				| {error, 503, ResponseHeaders, ResponseBody},
 		ResponseHeaders :: [tuple()],
 		ResponseBody :: iolist().
-%% @doc Body producing function for `GET /health/application/{Id}'
-%% requests.
+%% @doc Body producing function for
+%% 	`GET /health/application/{Id}'
+%% 	requests.
 get_application(Id, _RequestHeaders) ->
 	try
 		Running = application:which_applications(),
@@ -178,7 +257,36 @@ get_application(Id, _RequestHeaders) ->
 			{error, 404};
 		_:_Reason ->
 			{error, 500}
-	end.                                                                                                                                                                                                                                 
+	end.
+
+-spec head_application(Id, RequestHeaders) -> Result
+	when
+		Id :: string(),
+		RequestHeaders :: [tuple()],
+		Result :: {ok, ResponseHeaders, ResponseBody}
+				| {error, 503, ResponseHeaders, ResponseBody},
+		ResponseHeaders :: [tuple()],
+		ResponseBody :: iolist().
+%% @doc Body producing function for
+%% 	`HEAD /health/application/{Id}'
+%% 	requests.
+head_application(Id, _RequestHeaders) ->
+	try
+		Running = application:which_applications(),
+		case lists:keymember(list_to_existing_atom(Id), 1, Running) of
+			true ->
+				ResponseHeaders = [{content_type, "application/health+json"}],
+				{ok, ResponseHeaders, []};
+			false ->
+				ResponseHeaders = [{content_type, "application/health+json"}],
+				{error, 503, ResponseHeaders, []}
+		end
+	catch
+		_:badarg ->
+			{error, 404};
+		_:_Reason ->
+			{error, 500}
+	end.
 
 %%----------------------------------------------------------------------
 %%  internal functions
@@ -321,14 +429,14 @@ diameter_dictionaries([], Acc) ->
 %% @hidden
 get_diameter_counters(diameter_gen_base_rfc6733, [Service | T], Counters) ->
 	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(0, Statistics, Counters), 
+	NewCounters = service_counters(0, Statistics, Counters),
 	get_diameter_counters(diameter_gen_base_rfc6733, T, NewCounters);
 get_diameter_counters(diameter_gen_base_rfc6733, [], Counters) ->
 	Components = get_components(Counters),
 	{"diameter-base:counters", Components};
 get_diameter_counters(diameter_gen_3gpp_ro_application, [Service | T], Counters) ->
 	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(4, Statistics, Counters), 
+	NewCounters = service_counters(4, Statistics, Counters),
 	get_diameter_counters(diameter_gen_3gpp_ro_application, T, NewCounters);
 get_diameter_counters(diameter_gen_3gpp_ro_application, [], Counters) ->
 	Components = get_components(Counters),
@@ -432,7 +540,7 @@ peer_stat1(Application, [_ | T], Acc) ->
 peer_stat1(_Application, [], Acc) ->
 	Acc.
 
--spec dia_count(CommandCode, ResultCode, Count) -> Component 
+-spec dia_count(CommandCode, ResultCode, Count) -> Component
 	when
 		CommandCode :: non_neg_integer(),
 		ResultCode :: non_neg_integer(),

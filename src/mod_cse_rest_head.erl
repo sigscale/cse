@@ -165,18 +165,27 @@ do(#mod{method = Method, parsed_header = _Headers,
 	end.
 
 %% @hidden
+do_head(Resource, #mod{parsed_header = Headers} = ModData,
+		["health"]) ->
+	do_response(ModData, Resource:head_health([], Headers));
+do_head(Resource, #mod{parsed_header = Headers} = ModData,
+		["health", "application"]) ->
+	do_response(ModData, Resource:head_applications([], Headers));
+do_head(Resource, #mod{parsed_header = Headers} = ModData,
+		["health", "application", Id]) ->
+	do_response(ModData, Resource:head_application(Id, Headers));
 do_head(Resource, ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification"]) ->
 	do_response(ModData, Resource:head_resource_spec());
 do_head(Resource, ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification", Id]) ->
-	do_response(ModData, Resource:get_resource_spec(Id));
+	do_response(ModData, Resource:head_resource_spec(Id));
 do_head(Resource, ModData,
 		["resourceInventoryManagement", "v4", "resource"]) ->
 	do_response(ModData, Resource:head_resource());
 do_head(Resource, ModData,
 		["resourceInventoryManagement", "v4", "resource", Id]) ->
-	do_response(ModData, Resource:get_resource(Id));
+	do_response(ModData, Resource:head_resource(Id));
 do_head(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _Path) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.4",
