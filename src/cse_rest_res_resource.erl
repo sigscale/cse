@@ -23,10 +23,13 @@
 
 % export cse_rest_res_resource public API
 -export([content_types_accepted/0, content_types_provided/0]).
--export([get_resource_spec/1, get_resource_specs/2, add_resource_spec/1,
-		delete_resource_spec/2, resource_spec/1, head_resource_spec/0]).
--export([get_resource/1, get_resource/2, add_resource/1, delete_resource/2,
-		resource/1, head_resource/0]).
+-export([get_resource_spec/1, head_resource_spec/1,
+		head_resource_spec/0, get_resource_specs/2,
+		add_resource_spec/1, delete_resource_spec/2,
+		resource_spec/1]).
+-export([get_resource/1, head_resource/1, head_resource/0,
+		get_resource/2, add_resource/1, delete_resource/2,
+		resource/1]).
 % export cse_rest_res_resource private API
 -export([static_spec/1, index_table_spec_id/0, index_row_spec_id/0,
 		prefix_table_spec_id/0, prefix_row_spec_id/0,
@@ -68,9 +71,9 @@ content_types_provided() ->
 		Headers :: [tuple()],
 		Body :: string(),
 		Status :: 404 | 500.
-%% @doc Retrieve a Resource Specification.
-%%
-%% 	Respond to `GET /resourceCatalogManagement/v4/resourceSpecification/{id}'.
+%% @doc Body producing function for
+%% 	`GET /resourceCatalogManagement/v4/resourceSpecification/{id}'
+%% 	request.
 get_resource_spec(ID) ->
 	case cse:find_resource_spec(ID) of
 		{ok, #resource_spec{} = Specification} ->
@@ -83,25 +86,45 @@ get_resource_spec(ID) ->
 			{error, 500}
 	end.
 
--spec head_resource_spec() -> Result
-   when
-      Result :: {ok, [], Body :: iolist()}
-            | {error, ErrorCode :: integer()}.
+-spec head_resource_spec(ID) -> Result
+	when
+		ID :: string(),
+		Result :: {ok, Headers, []} | {error, Status},
+		Headers :: [tuple()],
+		Status :: 404 | 500.
 %% @doc Body producing function for
-%%    `HEAD /resourceCatalogManagement/v4/resourceSpecification'
-%%    requests.
+%% 	`HEAD /resourceCatalogManagement/v4/resourceSpecification/{id}'
+%% 	request.
+head_resource_spec(ID) ->
+	case cse:find_resource_spec(ID) of
+		{ok, #resource_spec{} = _Specification} ->
+			Headers = [{content_type, "application/json"}],
+			{ok, Headers, []};
+		{error, not_found} ->
+			{error, 404};
+		{error, _Reason} ->
+			{error, 500}
+	end.
+
+-spec head_resource_spec() -> Result
+	when
+		Result :: {ok, [], Body :: iolist()}
+				| {error, ErrorCode :: integer()}.
+%% @doc Body producing function for
+%% 	`HEAD /resourceCatalogManagement/v4/resourceSpecification'
+%% 	requests.
 head_resource_spec() ->
-   try
-      Size = mnesia:table_info(resource_spec, size),
-      LastItem = integer_to_list(Size),
-      ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
-      Headers = [{content_type, "application/json"},
+	try
+		Size = mnesia:table_info(resource_spec, size),
+		LastItem = integer_to_list(Size),
+		ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
+		Headers = [{content_type, "application/json"},
 				{content_range, ContentRange}],
-      {ok, Headers, []}
-   catch
-      _:_Reason ->
-         {error, 500}
-   end.
+		{ok, Headers, []}
+	catch
+		_:_Reason ->
+			{error, 500}
+	end.
 
 -spec get_resource_specs(Query, Headers) -> Result
 	when
@@ -110,8 +133,9 @@ head_resource_spec() ->
 		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
 				| {error, ErrorCode},
 		ErrorCode :: 400 | 404 | 500.
-%% @doc Respond to `GET /resourceCatalogManagement/v4/resourceSpecification'.
-%% 	Retrieve all Resource Specifications.
+%% @doc Body producing function for
+%% 	`GET /resourceCatalogManagement/v4/resourceSpecification'.
+%% 	requests.
 get_resource_specs(Query, Headers) ->
 	try
 		{Query1, MatchName} = get_param("name", Query, '_'),
@@ -175,7 +199,7 @@ add_resource_spec(RequestBody) ->
 		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
 				| {error, ErrorCode :: integer()} .
 %% @doc Respond to `DELETE /resourceCatalogyManagement/v4/resourceSpecification/{id}'
-%%    request to remove a Resource Specification.
+%% 	request to remove a Resource Specification.
 delete_resource_spec(Id, Query) when is_list(Id )->
 	delete_resource_spec1(list_to_binary(Id), Query).
 %% @hidden
@@ -219,26 +243,46 @@ get_resource(Id) ->
 			{error, 500}
 	end.
 
-
 -spec head_resource() -> Result
-   when
-      Result :: {ok, [], Body :: iolist()}
-            | {error, ErrorCode :: integer()}.
+	when
+		Result :: {ok, [], Body :: iolist()}
+				| {error, ErrorCode :: integer()}.
 %% @doc Body producing function for
-%%    `HEAD /resourceInventoryManagement/v4/resource'
-%%    requests.
+%% 	`HEAD /resourceInventoryManagement/v4/resource'
+%% 	requests.
 head_resource() ->
-   try
-      Size = mnesia:table_info(resource, size),
-      LastItem = integer_to_list(Size),
-      ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
-      Headers = [{content_type, "application/json"},
+	try
+		Size = mnesia:table_info(resource, size),
+		LastItem = integer_to_list(Size),
+		ContentRange = "items 1-" ++ LastItem ++ "/" ++ LastItem,
+		Headers = [{content_type, "application/json"},
 				{content_range, ContentRange}],
-      {ok, Headers, []}
-   catch
-      _:_Reason ->
-         {error, 500}
-   end.
+		{ok, Headers, []}
+	catch
+		_:_Reason ->
+			{error, 500}
+	end.
+
+-spec head_resource(Id) -> Result
+	when
+		Id :: string(),
+		Result   :: {ok, Headers, []} | {error, Status},
+		Headers  :: [tuple()],
+		Status   :: 400 | 404 | 500.
+%% @doc Body producing function for
+%% 	`HEAD /resourceInventoryManagement/v4/resource/{id}'.
+%% 	requests.
+head_resource(Id) ->
+	case cse:find_resource(Id) of
+		{ok, #resource{last_modified = LM} = _Resource} ->
+			Headers = [{content_type, "application/json"},
+					{etag, cse_rest:etag(LM)}],
+			{ok, Headers, []};
+		{error, not_found} ->
+			{error, 404};
+		{error, _Reason} ->
+			{error, 500}
+	end.
 
 -spec get_resource(Query, Headers) -> Result
 	when
@@ -431,7 +475,7 @@ add_resource(RequestBody) ->
 	end.
 
 -spec delete_resource(Id, Query) -> Result
-   when
+	when
       Id :: string(),
 		Query :: [{unicode:chardata(), unicode:chardata() | true}],
       Result :: {ok, Headers :: [tuple()], Body :: iolist()}
