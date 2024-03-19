@@ -74,7 +74,7 @@ get_health([] = _Query, _RequestHeaders) ->
 		end,
 		Checks2 = Checks1#{"table:size" => table_size([resource,
 				resource_spec, cse_service, cse_context,
-				m3ua_as, m3ua_asp, gtt_as, gtt_ep, gtt_ep])},
+				m3ua_as, m3ua_asp, gtt_as, gtt_ep, gtt_pc])},
 		Checks3 = Checks2#{"uptime" => up()},
 		Checks4 = maps:merge(Checks3,
 				maps:from_list(get_diameter_statistics())),
@@ -161,7 +161,7 @@ head_health([] = _Query, _RequestHeaders) ->
 %% 	requests.
 get_applications([] = _Query, _RequestHeaders) ->
 	try
-		application([ocs, inets, diameter, m3ua, gtt, snmp])
+		application([cse, inets, diameter, m3ua, gtt, snmp])
 	of
 		Applications ->
 			F = fun(#{"status" := "up"}) ->
@@ -205,7 +205,7 @@ get_applications([] = _Query, _RequestHeaders) ->
 %% 	requests.
 head_applications([] = _Query, _RequestHeaders) ->
 	try
-		application([ocs, inets, diameter, m3ua, gtt, snmp])
+		application([cse, inets, diameter, m3ua, gtt, snmp])
 	of
 		Applications ->
 			F = fun(#{"status" := "up"}) ->
@@ -361,7 +361,7 @@ table_size(Names) ->
 	table_size(Names, []).
 %% @hidden
 table_size([Name | T], Acc) ->
-	TableSize = #{"componentId" => Name,
+	TableSize = #{"componentId" => atom_to_list(Name),
 			"componentType" => "component",
 			"observedUnit" => "rows",
 			"observedValue" => mnesia:table_info(Name, size)},
