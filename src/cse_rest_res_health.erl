@@ -86,7 +86,7 @@ get_health([] = _Query, _RequestHeaders) ->
 				{[], Status, Checks4}
 		end
 	of
-		{CacheControl, "up" = Status, Checks} ->
+		{CacheControl, "up" = _Status, Checks} ->
 			Health = #{"status" => "pass",
 					"serviceId" => atom_to_list(node()),
 					"description" => "Health of SigScale CSE",
@@ -136,7 +136,7 @@ head_health([] = _Query, _RequestHeaders) ->
 				{[], Status, Checks}
 		end
 	of
-		{CacheControl, "up" = Status, _Checks} ->
+		{CacheControl, "up" = _Status, _Checks} ->
 			ResponseHeaders = [{content_type, "application/health+json"}
 					| CacheControl],
 			{ok, ResponseHeaders, []};
