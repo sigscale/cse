@@ -1,3 +1,12 @@
+2024-03-19   Vance Shipley <vances@sigscale.org>
+
+	* head operations on health api resources
+	* correct head functions for rest resources
+	* correct head test cases
+	* type specification corrections
+	* revert change of ets table name
+	* refactor health rest api for zj codec
+
 2024-03-18   Vance Shipley <vances@sigscale.org>
 
 	* include m3ua and gtt tables in initialize and join
