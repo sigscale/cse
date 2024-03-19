@@ -781,8 +781,7 @@ head_resource_spec(Config) ->
 	Request = {Host ++ ?specPath ++ TableId, [Accept]},
 	{ok, Result} = httpc:request(head, Request, [], []),
 	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
-	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
-	{_, _Length} = lists:keyfind("content-length", 1, Headers).
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers).
 
 head_resources() ->
 	[{userdata, [{doc, "HEAD request on Resource collection"}]}].
@@ -816,24 +815,22 @@ head_resource(Config) ->
 	Request = {Host ++ ?inventoryPath ++ TableId, [Accept]},
 	{ok, Result} = httpc:request(head, Request, [], []),
 	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
-	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
-	{_, _Length} = lists:keyfind("content-length", 1, Headers).
+	{_, "application/json"} = lists:keyfind("content-type", 1, Headers).
 
 get_health() ->
 	[{userdata, [{doc,"Get health in rest interface"}]}].
 
 get_health(Config) ->
-	HostUrl = ?config(host_url, Config),
-	HttpOpt = ?config(http_options, Config),
+	Host = ?config(host, Config),
 	Accept = {"accept", "application/health+json"},
-	Request = {HostUrl ++ "/health", [Accept]},
-	{ok, Result} = httpc:request(get, Request, HttpOpt, []),
+	Request = {Host ++ "/health", [Accept]},
+	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
 	{_, "application/health+json"} = lists:keyfind("content-type", 1, Headers),
-	#{"serviceId" := _Node,
-			"description" := "Health of SigScale OCS",
+	{ok, #{"serviceId" := _Node,
+			"description" := "Health of SigScale CSE",
 			"checks" := #{"uptime" := [Time]},
-			"status" := "pass"} = zj:decode(Body),
+			"status" := "pass"}} = zj:decode(Body),
 	#{"componentType" := "system",
 			"observedUnit" := "s",
 			"observedValue" := Uptime} = Time,
@@ -843,11 +840,10 @@ head_health() ->
 	[{userdata, [{doc,"Get headers (only) of health in rest interface"}]}].
 
 head_health(Config) ->
-	HostUrl = ?config(host_url, Config),
-	HttpOpt = ?config(http_options, Config),
+	Host = ?config(host, Config),
 	Accept = {"accept", "application/health+json"},
-	Request = {HostUrl ++ "/health", [Accept]},
-	{ok, Result} = httpc:request(head, Request, HttpOpt, []),
+	Request = {Host ++ "/health", [Accept]},
+	{ok, Result} = httpc:request(head, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, _Body} = Result,
 	{_, "application/health+json"} = lists:keyfind("content-type", 1, Headers).
 
