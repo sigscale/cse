@@ -1,5 +1,7 @@
 2024-03-19   Vance Shipley <vances@sigscale.org>
 
+	* start diameter stack application
+	* load (only) library application sccp
 	* head operations on health api resources
 	* correct head functions for rest resources
 	* correct head test cases
