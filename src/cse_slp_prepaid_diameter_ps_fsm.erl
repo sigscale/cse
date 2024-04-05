@@ -804,7 +804,7 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
