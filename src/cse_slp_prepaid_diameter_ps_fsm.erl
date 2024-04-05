@@ -296,7 +296,7 @@ authorize_origination_attempt(cast,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
-	?LOG_WARNING([{?MODULE, release},
+	?LOG_WARNING([{?MODULE, nrf_release},
 			{code, Code}, {reason, Phrase}, {request_id, RequestId},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
