@@ -265,7 +265,7 @@ authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
-	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -394,7 +394,7 @@ collect_information(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -602,7 +602,7 @@ analyse_information(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
