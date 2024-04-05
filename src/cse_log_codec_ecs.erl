@@ -628,7 +628,7 @@ ecs_event(Start, End, Duration, Kind, Category, Type, Outcome) ->
 	Eend = [$", "end", $", $:, $", End, $"],
 	Eduration = [$", "duration", $", $:, $", Duration, $"],
 	Ekind = [$", "kind", $", $:, $", Kind, $"],
-	Ecategory = [$", "category", $", $:, $", $[, Category, $], $"],
+	Ecategory = [$", "category", $", $:, $[, $", Category, $", $]],
 	Etypes = case Type of
 		[H] ->
 			[$", H, $"];
