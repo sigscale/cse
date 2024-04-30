@@ -1384,6 +1384,10 @@ acct_ims(Config, Session, IMSI, MSISDN, ACR) when is_record(ACR, '3gpp_rf_ACR') 
 	Realm = ?config(realm, Config),
 	Origination = "tel:+" ++ MSISDN,
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
+	SIP = "sip:+" ++ MSISDN ++ "@ims." ++ Realm,
+	SIP1 = #'3gpp_rf_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_SIP_URI',
+			'Subscription-Id-Data' = SIP},
 	MSISDN1 = #'3gpp_rf_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 			'Subscription-Id-Data' = MSISDN},
@@ -1391,13 +1395,27 @@ acct_ims(Config, Session, IMSI, MSISDN, ACR) when is_record(ACR, '3gpp_rf_ACR') 
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = IMSI},
 	PS = #'3gpp_rf_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+	SipMethod = #'3gpp_rf_Event-Type'{'SIP-Method' = ["INVITE"]},
+	TimeStamps = #'3gpp_rf_Time-Stamps'{
+			'SIP-Request-Timestamp' = [calendar:universal_time()],
+			'SIP-Request-Timestamp-Fraction' = [rand:uniform(4294967296) - 1]},
+	ICCID = "ims." ++ Realm ++ cse_test_lib:rand_dn(12),
+	IOI = #'3gpp_rf_Inter-Operator-Identifier'{
+			'Originating-IOI' = ["ims." ++ Realm],
+			'Terminating-IOI' = [cse_test_lib:rand_dn(4) ++ "." ++ Realm]},
 	IMS = #'3gpp_rf_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
-			'Calling-Party-Address' = [Origination],
-			'Called-Party-Address' = [Destination]},
+			'Event-Type' = [SipMethod],
+			'User-Session-Id' = [cse_test_lib:rand_dn(25)],
+			'Calling-Party-Address' = [SIP, Origination],
+			'Called-Party-Address' = [Destination],
+			'Time-Stamps' = [TimeStamps],
+			'IMS-Charging-Identifier' = [ICCID],
+			'Outgoing-Session-Id' = [cse_test_lib:rand_dn(20)],
+			'Inter-Operator-Identifier' = [IOI]},
 	ServiceInformation = #'3gpp_rf_Service-Information'{
-			'Subscription-Id' = [MSISDN1, IMSI1],
+			'Subscription-Id' = [SIP1, MSISDN1, IMSI1],
 			'IMS-Information' = [IMS],
 			'PS-Information' = [PS]},
 	ACR1 = ACR#'3gpp_rf_ACR'{'Session-Id' = Session,

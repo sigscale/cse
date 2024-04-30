@@ -35,11 +35,11 @@
 	when
 		CDR:: map().
 %% @doc Bx interface CODEC for comma seperated values (CSV).
-csv(#{recordType := aSRecord} = CDR) ->
+csv(#{recordType := <<"aSRecord">>} = CDR) ->
 	[<<"aSRecord">>, $,,
 			maps:get('role-of-Node', CDR, []), $,,
 			maps:get(nodeAddress, CDR, []), $,,
-			maps:get('session-id', CDR, []), $,,
+			maps:get('session-Id', CDR, []), $,,
 			maps:get('outgoingSessionId', CDR, []), $,,
 			maps:get('sIP-Method', CDR, []), $,,
 			maps:get('list-Of-Calling-Party-Address', CDR, []), $,,
