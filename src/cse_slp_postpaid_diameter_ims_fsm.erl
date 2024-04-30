@@ -75,7 +75,7 @@
 		session_id => binary(),
 		context => string(),
 		record_type => pos_integer(),
-		record_number =>  integer(),
+		record_number => integer(),
 		ohost => binary(),
 		orealm => binary(),
 		drealm => binary(),
@@ -235,10 +235,17 @@ active({call, From},
 				'Destination-Realm' = DRealm,
 				'Accounting-Record-Type' = RecordType,
 				'Accounting-Record-Number' = RecordNum,
+				'Event-Timestamp' = EventTimestamp,
 				'Service-Information' = [ServiceInformation]} = ACR,
 		#{session_id := SessionId, context := SvcContextId} = Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
-	Data1 = Data#{from => From,
+	TS = case EventTimestamp of
+		[DateTime] ->
+			DateTime;
+		[] ->
+			calendar:universal_time()
+	end,
+	Data1 = Data#{from => From, end_time => TS,
 			ohost => OHost, orealm => ORealm, drealm => DRealm,
 			record_number => RecordNum, record_type => RecordType},
 	NewData = service_info(ServiceInformation, Data1),
@@ -385,27 +392,144 @@ log_fsm(State, #{start := Start} = Data) ->
 	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network}).
 
--spec log_cdr(Record, Data) -> Result
+-spec log_cdr(ACR, Data) -> Result
 	when
-		Record :: #'3gpp_rf_ACR'{},
+		ACR :: #'3gpp_rf_ACR'{},
 		Data :: statedata(),
 		Result :: ok | {error, Reason},
 		Reason :: term().
-%% @doc Write an event to a log.
+%% @doc Write a CDR to a log.
 %% @hidden
-log_cdr(#'3gpp_rf_ACR'{} = Record,
+log_cdr(#'3gpp_rf_ACR'{
+			'Service-Information' = [#'3gpp_rf_Service-Information'{
+					'IMS-Information' = [IMS]}]},
 		#{bx_summary := false, bx_logger := {M1, F1},
-				bx_log := Log, bx_codec := {M2, F2}}) ->
-	M1:F1(Log, M2:F2(Record));
-log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = _Record,
+				bx_log := Log, bx_codec := {M2, F2}} = Data) ->
+	M1:F1(Log, M2:F2(bx(IMS, Data, #{})));
+log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType},
 		#{bx_summary := true})
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD';
 		RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
 	ok;
-log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = Record,
+log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType,
+			'Service-Information' = [#'3gpp_rf_Service-Information'{
+					'IMS-Information' = [IMS]}]},
 		#{bx_summary := true, bx_logger := {M1, F1},
-				bx_log := Log, bx_codec := {M2, F2}})
+				bx_log := Log, bx_codec := {M2, F2}} = Data)
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
 	% @todo: subsititute ACR values for accumulated counts from statedata()
-	M1:F1(Log, M2:F2(Record)).
+	M1:F1(Log, M2:F2(bx(IMS, Data, #{}))).
+
+%% @hidden
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [0]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"sCSCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [1]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"pCSCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [2]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"iCSCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [3]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"mRFCRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [4]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"mGCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [5]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"bGCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [6]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"aSRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [7]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"iBCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [11]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"eCSCFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [13]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"tRFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [14]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"tFRecord">>});
+bx(#'3gpp_rf_IMS-Information'{'Node-Functionality' = [15]} = IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR#{recordType => <<"aTCFRecord">>});
+bx(IMS, Data, CDR) ->
+	bx1(IMS, Data, CDR).
+%% @hidden
+bx1(#'3gpp_rf_IMS-Information'{'Role-Of-Node' = [0]} = IMS, Data, CDR) ->
+	bx2(IMS, Data, CDR#{'role-of-Node' => <<"originating">>});
+bx1(#'3gpp_rf_IMS-Information'{'Role-Of-Node' = [1]} = IMS, Data, CDR) ->
+	bx2(IMS, Data, CDR#{'role-of-Node' => <<"terminating">>});
+bx1(IMS, Data, CDR) ->
+	bx2(IMS, Data, CDR).
+%% @hidden
+bx2(#'3gpp_rf_IMS-Information'{'User-Session-Id' = [Value]} = IMS, Data, CDR) ->
+	bx3(IMS, Data, CDR#{'session-Id' => <<$", Value/binary, $">>});
+bx2(IMS, Data, CDR) ->
+	bx3(IMS, Data, CDR).
+%% @hidden
+bx3(#'3gpp_rf_IMS-Information'{'Outgoing-Session-Id' = [Value]} = IMS, Data, CDR) ->
+	bx4(IMS, Data, CDR#{outgoingSessionId => <<$", Value/binary, $">>});
+bx3(IMS, Data, CDR) ->
+	bx4(IMS, Data, CDR).
+%% @hidden
+bx4(#'3gpp_rf_IMS-Information'{'Event-Type' = [#'3gpp_rf_Event-Type'{'SIP-Method' = [Value]}]} = IMS, Data, CDR) ->
+	bx5(IMS, Data, CDR#{'sIP-Method' => <<$", Value/binary, $">>});
+bx4(IMS, Data, CDR) ->
+	bx5(IMS, Data, CDR).
+%% @hidden
+bx5(#'3gpp_rf_IMS-Information'{'Calling-Party-Address' = [Calling]} = IMS, Data, CDR) ->
+	bx6(IMS, Data, CDR#{'list-Of-Calling-Party-Address' => <<$", Calling/binary, $">>});
+bx5(#'3gpp_rf_IMS-Information'{'Calling-Party-Address' = [H | T]} = IMS, Data, CDR) ->
+	bx6(IMS, Data, CDR#{'list-Of-Calling-Party-Address' => iolist_to_binary([$", H, [[$,, A] || A <- T], $"])});
+bx5(IMS, Data, CDR) ->
+	bx6(IMS, Data, CDR).
+%% @hidden
+bx6(#'3gpp_rf_IMS-Information'{'Called-Party-Address' = [Called]} = IMS, Data, CDR) ->
+	bx7(IMS, Data, CDR#{'called-Party-Address' => <<$", Called/binary, $">>});
+bx6(IMS, Data, CDR) ->
+	bx7(IMS, Data, CDR).
+%% @hidden
+bx7(IMS, #{start_time := Timestamp} = Data, CDR) ->
+	bx8(IMS, Data, CDR#{recordOpeningTime => integer_to_binary(Timestamp)});
+bx7(IMS, Data, CDR) ->
+	bx8(IMS, Data, CDR).
+%% @hidden
+bx8(IMS, #{end_time := Timestamp} = Data, CDR) ->
+	bx9(IMS, Data, CDR#{recordClosureTime => integer_to_binary(Timestamp)});
+bx8(IMS, Data, CDR) ->
+	bx9(IMS, Data, CDR).
+%% @hidden
+bx9(#'3gpp_rf_IMS-Information'{
+		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
+				'Originating-IOI' = [Orig], 'Terminating-IOI' = [Term]}]} = IMS,
+		Data, CDR) ->
+	IOIs = <<$", Orig/binary, $,, Term/binary, $">>,
+	bx10(IMS, Data, CDR#{interOperatorIdentifiers => IOIs});
+bx9(#'3gpp_rf_IMS-Information'{
+		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
+				'Originating-IOI' = [Orig]}]} = IMS,
+		Data, CDR) ->
+	IOIs = <<$", Orig/binary, $,, $">>,
+	bx10(IMS, Data, CDR#{interOperatorIdentifiers => IOIs});
+bx9(#'3gpp_rf_IMS-Information'{
+		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
+				'Terminating-IOI' = [Term]}]} = IMS,
+		Data, CDR) ->
+	IOIs = <<$", $,, Term/binary, $">>,
+	bx10(IMS, Data, CDR#{interOperatorIdentifiers => IOIs});
+bx9(IMS, Data, CDR) ->
+	bx10(IMS, Data, CDR).
+%% @hidden
+bx10(IMS, #{record_number := RecordNumber} = Data, CDR) ->
+	bx11(IMS, Data, CDR#{recordSequenceNumber => integer_to_binary(RecordNumber)});
+bx10(IMS, Data, CDR) ->
+	bx11(IMS, Data, CDR).
+%% @hidden
+bx11(IMS, #{close_cause := Cause} = Data, CDR) ->
+	bx12(IMS, Data, CDR#{causeForRecordClosing => integer_to_binary(Cause)});
+bx11(IMS, Data, CDR) ->
+	bx12(IMS, Data, CDR).
+%% @hidden
+bx12(#'3gpp_rf_IMS-Information'{'IMS-Charging-Identifier' = [ICCID]} = IMS, Data, CDR) ->
+	bx13(IMS, Data, CDR#{'iMS-Charging-Identifier' => ICCID});
+bx12(IMS, Data, CDR) ->
+	bx13(IMS, Data, CDR).
+%% @hidden
+bx13(_IMS, #{context := Context} = _Data, CDR) ->
+	CDR#{serviceContextID => Context};
+bx13(_IMS, _Data, CDR) ->
+	CDR.
 

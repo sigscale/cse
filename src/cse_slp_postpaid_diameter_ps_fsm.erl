@@ -425,27 +425,29 @@ log_fsm(State, #{start := Start} = Data) ->
 	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network}).
 
--spec log_cdr(Record, Data) -> Result
+-spec log_cdr(ACR, Data) -> Result
 	when
-		Record :: #'3gpp_rf_ACR'{},
+		ACR :: #'3gpp_rf_ACR'{},
 		Data :: statedata(),
 		Result :: ok | {error, Reason},
 		Reason :: term().
-%% @doc Write an event to a log.
+%% @doc Write a CDR to a log.
 %% @hidden
-log_cdr(#'3gpp_rf_ACR'{} = Record,
+log_cdr(#'3gpp_rf_ACR'{} = _ACR,
 		#{bx_summary := false, bx_logger := {M1, F1},
 				bx_log := Log, bx_codec := {M2, F2}}) ->
-	M1:F1(Log, M2:F2(Record));
-log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = _Record,
+	CDR = #{},
+	M1:F1(Log, M2:F2(CDR));
+log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = _ACR,
 		#{bx_summary := true})
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_START_RECORD';
 		RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_INTERIM_RECORD' ->
 	ok;
-log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = Record,
+log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType} = _ACR,
 		#{bx_summary := true, bx_logger := {M1, F1},
 				bx_log := Log, bx_codec := {M2, F2}})
 		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
 	% @todo: subsititute ACR values for accumulated counts from statedata()
-	M1:F1(Log, M2:F2(Record)).
+	CDR = #{},
+	M1:F1(Log, M2:F2(CDR)).
 

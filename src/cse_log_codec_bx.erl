@@ -26,18 +26,37 @@
 %% export the cse_log_codec_bx public API
 -export([csv/1]).
 
--include("diameter_gen_3gpp_rf_application.hrl").
--include_lib("diameter/include/diameter.hrl").
 
 %%----------------------------------------------------------------------
 %%  The cse_log_codec_bx public API
 %%----------------------------------------------------------------------
 
--spec csv(ACR) -> iodata()
+-spec csv(CDR) -> iodata()
 	when
-		ACR :: #'3gpp_rf_ACR'{}.
-%% @doc DIAMETER accounting CODEC for comma seperated values (CSV).
-csv(#'3gpp_rf_ACR'{}) ->
+		CDR:: map().
+%% @doc Bx interface CODEC for comma seperated values (CSV).
+csv(#{recordType := aSRecord} = CDR) ->
+	[<<"aSRecord">>, $,,
+			maps:get('role-of-Node', CDR, []), $,,
+			maps:get(nodeAddress, CDR, []), $,,
+			maps:get('session-id', CDR, []), $,,
+			maps:get('outgoingSessionId', CDR, []), $,,
+			maps:get('sIP-Method', CDR, []), $,,
+			maps:get('list-Of-Calling-Party-Address', CDR, []), $,,
+			maps:get('called-Party-Address', CDR, []), $,,
+			maps:get('list-of-subscription-ID', CDR, []), $,,
+			maps:get('serviceRequestTimeStamp', CDR, []), $,,
+			maps:get('serviceRequestTimeStampFraction', CDR, []), $,,
+			maps:get('serviceDeliveryEndTimeStamp', CDR, []), $,,
+			maps:get('serviceDeliveryEndFraction', CDR, []), $,,
+			maps:get('recordOpeningTime', CDR, []), $,,
+			maps:get('interOperatorIdentifiers', CDR, []), $,,
+			maps:get('localRecordSequenceNumber', CDR, []), $,,
+			maps:get('recordSequenceNumber', CDR, []), $,,
+			maps:get('causeForRecordClosing', CDR, []), $,,
+			maps:get('iMS-Charging-Identifier', CDR, []), $,,
+			maps:get('serviceContextID', CDR, [])];
+csv(#{} = _CDR) ->
 	[].
 
 %%----------------------------------------------------------------------
