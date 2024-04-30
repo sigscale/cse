@@ -55,7 +55,8 @@ csv(#{recordType := <<"aSRecord">>} = CDR) ->
 			maps:get('recordSequenceNumber', CDR, []), $,,
 			maps:get('causeForRecordClosing', CDR, []), $,,
 			maps:get('iMS-Charging-Identifier', CDR, []), $,,
-			maps:get('serviceContextID', CDR, [])];
+			maps:get('serviceContextID', CDR, []), $,,
+			maps:get('iMSVisitedNetworkIdentifier', CDR, [])];
 csv(#{} = _CDR) ->
 	[].
 

@@ -1403,6 +1403,7 @@ acct_ims(Config, Session, IMSI, MSISDN, ACR) when is_record(ACR, '3gpp_rf_ACR') 
 	IOI = #'3gpp_rf_Inter-Operator-Identifier'{
 			'Originating-IOI' = ["ims." ++ Realm],
 			'Terminating-IOI' = [cse_test_lib:rand_dn(4) ++ "." ++ Realm]},
+	Visited = cse_test_lib:rand_dn(4) ++ ".mnc999.mcc999.3gppnetworks.org",
 	IMS = #'3gpp_rf_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
@@ -1413,7 +1414,8 @@ acct_ims(Config, Session, IMSI, MSISDN, ACR) when is_record(ACR, '3gpp_rf_ACR') 
 			'Time-Stamps' = [TimeStamps],
 			'IMS-Charging-Identifier' = [ICCID],
 			'Outgoing-Session-Id' = [cse_test_lib:rand_dn(20)],
-			'Inter-Operator-Identifier' = [IOI]},
+			'Inter-Operator-Identifier' = [IOI],
+			'IMS-Visited-Network-Identifier' = [Visited]},
 	ServiceInformation = #'3gpp_rf_Service-Information'{
 			'Subscription-Id' = [SIP1, MSISDN1, IMSI1],
 			'IMS-Information' = [IMS],

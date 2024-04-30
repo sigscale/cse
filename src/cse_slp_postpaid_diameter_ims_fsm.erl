@@ -569,6 +569,12 @@ bx19(#'3gpp_rf_IMS-Information'{'IMS-Charging-Identifier' = [ICCID]} = IMS, Data
 bx19(IMS, Data, CDR) ->
 	bx20(IMS, Data, CDR).
 %% @hidden
-bx20(_IMS, #{context := Context} = _Data, CDR) ->
-	CDR#{serviceContextID => Context}.
+bx20(IMS, #{context := Context} = Data, CDR) ->
+	bx21(IMS, Data, CDR#{serviceContextID => Context}).
+%% @hidden
+bx21(#'3gpp_rf_IMS-Information'{'IMS-Visited-Network-Identifier' = [Visited]},
+		_Data, CDR) ->
+	CDR#{iMSVisitedNetworkIdentifier => Visited};
+bx21(_IMS, _Data, CDR) ->
+	CDR.
 
