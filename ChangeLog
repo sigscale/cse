@@ -1,3 +1,11 @@
+2024-04-30   Vance Shipley <vances@sigscale.org>
+
+	* refactor postpaid cdr logging
+	* correct handling out-of-credit in active state
+	* correct logged status code
+	* correct ecs event category as array
+	* registered process names in application specification
+
 2024-03-19   Vance Shipley <vances@sigscale.org>
 
 	* correct reuse of variable

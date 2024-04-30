@@ -1,3 +1,11 @@
+April 30, 2024
+--------------
+
+	- Postpaid CDR logging
+	- Prepaid out-of-credit in active state corrected
+	- Correct logged Nrf status code
+	- Correct ECS event category as array
+
 March 19, 2024
 --------------
 	- Support HEAD operation on REST resources
