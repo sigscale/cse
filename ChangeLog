@@ -1,3 +1,10 @@
+2024-05-01   Vance Shipley <vances@sigscale.org>
+
+	* correct service delivery end timestamp in postpaid bx cdr
+	* bx csv codec missing record closure time field
+	* include ims visited network identifier in bx csv
+	* corrects for bx csv ims logging
+
 2024-04-30   Vance Shipley <vances@sigscale.org>
 
 	* refactor postpaid cdr logging
