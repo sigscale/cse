@@ -50,6 +50,7 @@ csv(#{recordType := <<"aSRecord">>} = CDR) ->
 			maps:get('serviceDeliveryEndTimeStamp', CDR, []), $,,
 			maps:get('serviceDeliveryEndFraction', CDR, []), $,,
 			maps:get('recordOpeningTime', CDR, []), $,,
+			maps:get('recordClosureTime', CDR, []), $,,
 			maps:get('interOperatorIdentifiers', CDR, []), $,,
 			maps:get('localRecordSequenceNumber', CDR, []), $,,
 			maps:get('recordSequenceNumber', CDR, []), $,,
