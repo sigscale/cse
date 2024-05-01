@@ -1,5 +1,6 @@
 2024-05-01   Vance Shipley <vances@sigscale.org>
 
+	* log unknown cdr record type in csv log
 	* correct service delivery end timestamp in postpaid bx cdr
 	* bx csv codec missing record closure time field
 	* include ims visited network identifier in bx csv
