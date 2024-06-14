@@ -1,3 +1,7 @@
+2024-06-14   Vance Shipley <vances@sigscale.org>
+
+	* allow unauthenticated health check
+
 2024-05-01   Vance Shipley <vances@sigscale.org>
 
 	* log unknown cdr record type in csv log
