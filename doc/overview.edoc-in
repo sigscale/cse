@@ -154,7 +154,7 @@ it is necessary to initialize {@link //mnesia. mnesia} tables.
 
 ===Initialize CSE===
 ```
-otp@cse:~$ ERL_LIBS=lib erl -sname cse -config releases/%VERSION%/sys
+otp@cse:~$ ERL_LIBS=lib erl -sname cse -config releases/cse-%VERSION%/sys
 (cse@cse)1> cse_app:install().
 '''
 
@@ -319,7 +319,7 @@ when calling {@link //cse/cse:add_context/4. `cse:add_context/4'}.
 
 System wide settings in the {@link //cse. cse} application may be
 configured using the following application environment variables
-(`~/releases/<VERSION>/sys.config').
+(`~/releases/cse-<VERSION>/sys.config').
 
 ===DIAMETER===
 Application environment variables configuring instances of the
