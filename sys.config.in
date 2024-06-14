@@ -53,6 +53,7 @@
       [{services,
          [{httpd,
             [{server_name, "cse"},
+            {directory, {"/health", []}},
             {directory, {"/",
                   [{auth_type, mnesia},
                   {auth_name, "cse.sigscale.org"},
