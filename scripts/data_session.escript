@@ -111,10 +111,8 @@ data_session(Options) ->
 				F(N, ReqNum) ->
 					NewReqNum = ReqNum + 1,
 					UsedUnits1 = rand:uniform(1000000),
-					RSU2 = #'3gpp_ro_Requested-Service-Unit'{},
 					USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits1]},
-					MSCC2 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-							'Requested-Service-Unit' = [RSU2],
+					MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
 							'Used-Service-Unit' = [USU1]},
 					CCR2 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',

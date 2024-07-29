@@ -116,7 +116,7 @@ voice_call(Options) ->
 					NewReqNum = ReqNum + 1,
 					UsedUnits1 = rand:uniform(3500) + 100,
 					USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits1]},
-					MSCC2 = #'3gpp_ro_Multiple-Services-Credit-Control'{
+					MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
 							'Used-Service-Unit' = [USU1]},
 					CCR2 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
