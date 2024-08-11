@@ -103,7 +103,7 @@ unload(Application) ->
 			ok
 	end.
 
-%% @doc Returns 5-3 random printable characters.
+%% @doc Returns 5-13 random printable characters.
 rand_name() ->
 	rand_name(rand:uniform(8) + 5).
 
