@@ -8,7 +8,7 @@
 %%% you may not use this file except in compliance with the License.
 %%% You may obtain a copy of the License at
 %%%
-%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%% 	http://www.apache.org/licenses/LICENSE-2.0
 %%%
 %%% Unless required by applicable law or agreed to in writing, software
 %%% distributed under the License is distributed on an "AS IS" BASIS,
@@ -91,6 +91,7 @@
 		did => 0..4294967295,
 		iid => 0..127,
 		ac => tuple(),
+		sequence => pos_integer(),
 		tr_state => idle | init_sent | init_received | active,
 		scf => sccp_codec:party_address(),
 		ssf => sccp_codec:party_address(),
@@ -157,8 +158,8 @@ init(_Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null, _Data) ->
-	keep_state_and_data;
+null(enter, null, Data) ->
+	{keep_state, Data#{sequence => 1}};
 null(enter, _EventContent,
 		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
@@ -1656,20 +1657,18 @@ nrf_start1(ServiceInformation,
 			"requestSubType" => "RESERVE"},
 	nrf_start2(ServiceRating, Data).
 %% @hidden
-nrf_start2(ServiceRating,
-		#{direction := originating, calling := CallingNumber} = Data) ->
+nrf_start2(ServiceRating, #{direction := originating,
+		calling := CallingNumber, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CallingNumber],
 			"serviceRating" => [ServiceRating]},
 	nrf_start3(JSON, Data);
-nrf_start2(ServiceRating,
-		#{direction := terminating, called := CalledNumber} = Data) ->
+nrf_start2(ServiceRating, #{direction := terminating,
+		called := CalledNumber, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
@@ -1731,34 +1730,36 @@ nrf_update1(Consumed, ServiceInformation,
 			"serviceInformation" => ServiceInformation},
 	nrf_update2(Consumed, ServiceRating, Data).
 %% @hidden
-nrf_update2(Consumed, ServiceRating,
-		#{direction := originating, calling := CallingNumber} = Data)
+nrf_update2(Consumed, ServiceRating, #{direction := originating,
+		calling := CallingNumber, sequence := Sequence} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
 			"requestSubType" => "DEBIT"},
 	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CallingNumber],
 			"serviceRating" => [Debit, Reserve]},
-	nrf_update3(JSON, Data);
-nrf_update2(Consumed, ServiceRating,
-		#{direction := terminating, called := CalledNumber} = Data)
+	NewData = Data#{sequence => NewSequence},
+	nrf_update3(JSON, NewData);
+nrf_update2(Consumed, ServiceRating, #{direction := terminating,
+		called := CalledNumber, sequence := Sequence} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
 			"requestSubType" => "DEBIT"},
 	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CalledNumber],
 			"serviceRating" => [Debit, Reserve]},
-	nrf_update3(JSON, Data).
+	NewData = Data#{sequence => NewSequence},
+	nrf_update3(JSON, NewData).
 %% @hidden
 nrf_update3(JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		nrf_location := Location, nrf_http_options := HttpOptions,
@@ -1838,30 +1839,32 @@ nrf_release3(ServiceInformation,
 %% @hidden
 nrf_release4(ServiceRating,
 		#{direction := originating, calling := CallingNumber,
-      		pending := Consumed} = Data) ->
+		pending := Consumed, sequence := Sequence} = Data) ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
 			"requestSubType" => "DEBIT"},
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CallingNumber],
 			"serviceRating" => [Debit]},
-	nrf_release5(JSON, Data);
+	NewData = Data#{sequence => NewSequence},
+	nrf_release5(JSON, NewData);
 nrf_release4(ServiceRating,
 		#{direction := terminating, called := CalledNumber,
-      		pending := Consumed} = Data) ->
+		pending := Consumed, sequence := Sequence} = Data) ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
 			"requestSubType" => "DEBIT"},
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CalledNumber],
 			"serviceRating" => [Debit]},
-	nrf_release5(JSON, Data).
+	NewData = Data#{sequence => NewSequence},
+	nrf_release5(JSON, NewData).
 %% @hidden
 nrf_release5(JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		nrf_location := Location, nrf_http_options := HttpOptions,

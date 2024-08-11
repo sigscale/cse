@@ -87,6 +87,7 @@
 		from => pid(),
 		session_id => binary(),
 		context => string(),
+		sequence => pos_integer(),
 		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
 		service_info => [#'3gpp_ro_Service-Information'{}],
 		req_type => pos_integer(),
@@ -150,7 +151,8 @@ init(_Args) ->
 	{ok, Headers} = application:get_env(nrf_headers),
 	Data = #{nrf_profile => Profile, nrf_uri => URI,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
-			start => erlang:system_time(millisecond)},
+			start => erlang:system_time(millisecond),
+			sequence => 1},
 	case httpc:get_options([ip, port], Profile) of
 		{ok, Options} ->
 			init1(Options, Data);
@@ -1101,9 +1103,8 @@ nrf_start(Data) ->
 			nrf_start1(#{}, Data)
 	end.
 %% @hidden
-nrf_start1(JSON, #{one_time := true} = Data) ->
+nrf_start1(JSON, #{one_time := true, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
@@ -1111,9 +1112,8 @@ nrf_start1(JSON, #{one_time := true} = Data) ->
 			"oneTimeEvent" => true,
 			"oneTimeEventType" => "IEC"},
 	nrf_start2(Now, JSON1, Data);
-nrf_start1(JSON, #{one_time := false} = Data) ->
+nrf_start1(JSON, #{one_time := false, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
@@ -1174,14 +1174,15 @@ nrf_update(Data) ->
 			nrf_update1(#{}, Data)
 	end.
 %% @hidden
-nrf_update1(JSON, Data) ->
+nrf_update1(JSON, #{sequence := Sequence} = Data) ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
-	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data)},
-	nrf_update2(Now, JSON1, Data).
+	NewData = Data#{sequence => NewSequence},
+	nrf_update2(Now, JSON1, NewData).
 %% @hidden
 nrf_update2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,
@@ -1240,14 +1241,15 @@ nrf_release(Data) ->
 			nrf_release1(#{}, Data)
 	end.
 %% @hidden
-nrf_release1(JSON, Data) ->
+nrf_release1(JSON, #{sequence := Sequence} = Data) ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
-	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => subscription_id(Data)},
-	nrf_release2(Now, JSON1, Data).
+	NewData = Data#{sequence => NewSequence},
+	nrf_release2(Now, JSON1, NewData).
 %% @hidden
 nrf_release2(Now, JSON,
 		#{from := From, nrf_profile := Profile, nrf_uri := URI,

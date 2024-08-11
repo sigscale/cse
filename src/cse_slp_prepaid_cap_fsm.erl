@@ -8,7 +8,7 @@
 %%% you may not use this file except in compliance with the License.
 %%% You may obtain a copy of the License at
 %%%
-%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%% 	http://www.apache.org/licenses/LICENSE-2.0
 %%%
 %%% Unless required by applicable law or agreed to in writing, software
 %%% distributed under the License is distributed on an "AS IS" BASIS,
@@ -88,6 +88,7 @@
 		did => 0..4294967295,
 		iid => 0..127,
 		ac => tuple(),
+		sequence => pos_integer(),
 		scf => sccp_codec:party_address(),
 		ssf => sccp_codec:party_address(),
 		imsi => [$0..$9],
@@ -155,8 +156,8 @@ init(_Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null = _EventContent, _Data) ->
-	keep_state_and_data;
+null(enter, null = _EventContent, Data) ->
+	{keep_state, Data#{sequence => 1}};
 null(enter, _EventContent,
 		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
@@ -2064,9 +2065,8 @@ nrf_start4(SI, #{charging_start := DateTime} = Data)
 nrf_start4(SI, Data) ->
 	nrf_start5(SI, Data).
 %% @hidden
-nrf_start5(ServiceInformation,
-		#{msisdn := MSISDN, calling := MSISDN,
-				called := CalledNumber} = Data) ->
+nrf_start5(ServiceInformation, #{msisdn := MSISDN,
+		calling := MSISDN, called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
@@ -2074,9 +2074,8 @@ nrf_start5(ServiceInformation,
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
 	nrf_start6(ServiceRating, Data);
-nrf_start5(ServiceInformation,
-		#{msisdn := MSISDN, called := MSISDN,
-				calling := CallingNumber} = Data) ->
+nrf_start5(ServiceInformation, #{msisdn := MSISDN,
+		called := MSISDN, calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
@@ -2085,9 +2084,9 @@ nrf_start5(ServiceInformation,
 			"requestSubType" => "RESERVE"},
 	nrf_start6(ServiceRating, Data).
 %% @hidden
-nrf_start6(ServiceRating, #{imsi := IMSI, msisdn := MSISDN} = Data) ->
+nrf_start6(ServiceRating, #{imsi := IMSI, msisdn := MSISDN,
+		sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
@@ -2175,20 +2174,21 @@ nrf_update5(Consumed, ServiceInformation,
 			"serviceInformation" => ServiceInformation},
 	nrf_update6(Consumed, ServiceRating, Data).
 %% @hidden
-nrf_update6(Consumed, ServiceRating,
-		#{imsi := IMSI, msisdn := MSISDN} = Data)
+nrf_update6(Consumed, ServiceRating, #{imsi := IMSI,
+		msisdn := MSISDN, sequence := Sequence} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
 			"requestSubType" => "DEBIT"},
 	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
-	nrf_update7(JSON, Data).
+	NewData = Data#{sequence => NewSequence},
+	nrf_update7(JSON, NewData).
 %% @hidden
 nrf_update7(JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			nrf_location := Location, nrf_http_options := HttpOptions,
@@ -2304,19 +2304,19 @@ nrf_release7(ServiceInformation,
 			"serviceInformation" => ServiceInformation},
 	nrf_release8(ServiceRating, Data).
 %% @hidden
-nrf_release8(ServiceRating,
-		#{imsi := IMSI, msisdn := MSISDN,
-				pending := Consumed} = Data) ->
+nrf_release8(ServiceRating, #{imsi := IMSI, msisdn := MSISDN,
+				pending := Consumed, sequence := Sequence} = Data) ->
+	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	Sequence = ets:update_counter(cse_counters, nrf_seq, 1),
 	ServiceRating1 = ServiceRating#{"requestSubType" => "DEBIT",
 			"consumedUnit" => #{"time" => Consumed}},
-	JSON = #{"invocationSequenceNumber" => Sequence,
+	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating1]},
-	nrf_release9(JSON, Data).
+	NewData = Data#{sequence => NewSequence},
+	nrf_release9(JSON, NewData).
 %% @hidden
 nrf_release9(JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			nrf_location := Location, nrf_http_options := HttpOptions,
