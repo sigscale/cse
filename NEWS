@@ -1,3 +1,10 @@
+August 13, 2024
+---------------
+	* Nrf_Rating OAS v1.1.1
+	* PDP address in PS service information
+	* Nrf invocation sequence now not global
+	* RSU included in CCR-U of session scripts
+
 June 14, 2024
 -------------
 	- Allow unauthenticated health checks (GET /health)

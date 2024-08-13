@@ -1,3 +1,12 @@
+2024-08-13   Vance Shipley <vances@sigscale.org>
+
+	* nrf api schema updated to v1.1.1
+	* pdp address in ps service information (IN-149 #close)
+	* nrf api schema updated to v1.1.0
+	* nrf invocation sequence should not be global
+	* rsu in ccr-u of session scripts
+	* correct release path in documentation examples
+
 2024-06-14   Vance Shipley <vances@sigscale.org>
 
 	* allow unauthenticated health check
