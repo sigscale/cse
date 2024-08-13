@@ -1475,17 +1475,25 @@ service_rating_ps4(PS, ServiceRating, Info) ->
 	service_rating_ps5(PS, ServiceRating, Info).
 %% @hidden
 service_rating_ps5(#'3gpp_ro_PS-Information'{
-		'3GPP-RAT-Type' = [RatType]} = _PS,
+		'3GPP-RAT-Type' = [RatType]} = PS,
 		ServiceRating, Info) ->
 	Info1 = Info#{"ratType" => cse_codec:rat_type(RatType)},
-	service_rating_ps6(ServiceRating, Info1);
-service_rating_ps5(_PS, ServiceRating, Info) ->
-	service_rating_ps6(ServiceRating, Info).
+	service_rating_ps6(PS, ServiceRating, Info1);
+service_rating_ps5(PS, ServiceRating, Info) ->
+	service_rating_ps6(PS, ServiceRating, Info).
 %% @hidden
-service_rating_ps6(ServiceRating, Info)
+service_rating_ps6(#'3gpp_ro_PS-Information'{
+		'PDP-Address' = [PdpAddress]} = PS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"pdpAddress" => inet:ntoa(PdpAddress)},
+	service_rating_ps7(PS, ServiceRating, Info1);
+service_rating_ps6(PS, ServiceRating, Info) ->
+	service_rating_ps7(PS, ServiceRating, Info).
+%% @hidden
+service_rating_ps7(_PS, ServiceRating, Info)
 		when map_size(Info) > 0 ->
 	ServiceRating#{"serviceInformation" => Info};
-service_rating_ps6(ServiceRating, _Info) ->
+service_rating_ps7(_PS, ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden
