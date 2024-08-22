@@ -288,12 +288,13 @@ handle_event(_EventType, _EventContent, _State, _Data) ->
 %% @see //stdlib/gen_statem:terminate/3
 %% @private
 %%
-terminate(_Reason1, _StateName, #{transport_ref := TransRef,
+terminate(_Reason, _StateName, #{transport_ref := TransRef,
 		address := Address, port := Port} = _Data) ->
 	SvcName = ?DIAMETER_SERVICE(Address, Port),
+	ok = diameter:stop_service(SvcName),
 	case diameter:remove_transport(SvcName, TransRef) of
 		ok ->
-			diameter:stop_service(SvcName);
+			ok;
 		{error, Reason1} ->
 			error_logger:error_report(["Failed to remove transport",
 					{module, ?MODULE}, {error, Reason1}])
