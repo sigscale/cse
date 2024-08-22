@@ -1,9 +1,13 @@
+August 22, 2024
+---------------
+	- DIAMETER disconnect cause changed to REBOOTING
+ 
 August 13, 2024
 ---------------
-	* Nrf_Rating OAS v1.1.1
-	* PDP address in PS service information
-	* Nrf invocation sequence now not global
-	* RSU included in CCR-U of session scripts
+	- Nrf_Rating OAS v1.1.1
+	- PDP address in PS service information
+	- Nrf invocation sequence now not global
+	- RSU included in CCR-U of session scripts
 
 June 14, 2024
 -------------

@@ -1,3 +1,7 @@
+2024-08-22   Vance Shipley <vances@sigscale.org>
+
+	* close diameter service before transport; changes dpr disconnect-reason from goaway to rebooting
+
 2024-08-13   Vance Shipley <vances@sigscale.org>
 
 	* nrf api schema updated to v1.1.1
