@@ -1,5 +1,10 @@
 # [SigScale](http://www.sigscale.org) Custom/CAMEL Service Environment (CSE)
 
+Prebuilt packages available for [Ubuntu](https://raw.githubusercontent.com/sigscale/cse/master/README.ubuntu),
+[Debian](https://raw.githubusercontent.com/sigscale/cse/master/README.debian),
+[Docker](https://raw.githubusercontent.com/sigscale/cse/master/README.docker)
+and [Kubernetes](https://raw.githubusercontent.com/sigscale/cse/master/README.kubernetes).
+
 This application provides a Service Logic Execution Environment (SLEE)
 for Service Logic Processing Programs (SLP) implementing a network
 operator's custom services. Several protocol stacks are supported

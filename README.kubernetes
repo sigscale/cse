@@ -1,0 +1,11 @@
+# Don't knock yourself out! Production ready Helm chart is available.
+
+# Install SigScale CSE:
+	helm install cse oci://asia-east1-docker.pkg.dev/sigscale-sigtran/charts/sigscale-cse
+
+The chart is available on ArtifactHub: https://artifacthub.io/packages/helm/sigscale-cse/sigscale-cse
+
+The source project is cse-helm: https://github.com/sigscale/cse-helm
+
+Contact <support@sigscale.com> for further assistance.
+
