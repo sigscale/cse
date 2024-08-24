@@ -12,7 +12,7 @@
 	sudo dpkg -i sigscale-release_*.deb
 	sudo apt update
 
-## Install SigScale OCS:
+## Install SigScale CSE:
 	sudo apt install sigscale-cse
 	sudo systemctl enable sigscale-cse
 	sudo systemctl start sigscale-cse
