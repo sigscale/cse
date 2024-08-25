@@ -177,8 +177,9 @@ add_service() ->
 add_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	Module = cse_slp_prepaid_cap_fsm,
-	EDP = edp(),
-	ok = cse:add_service(ServiceKey, Module, EDP).
+	Data = #{edp => edp()},
+	Opts = [],
+	ok = cse:add_service(ServiceKey, Module, Data, Opts).
 
 get_service() ->
 	[{userdata, [{doc, "Get an IN service logic processing program (SLP)"}]}].
@@ -186,10 +187,11 @@ get_service() ->
 get_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	Module = cse_slp_prepaid_cap_fsm,
-	EDP = edp(),
-	cse:add_service(ServiceKey, Module, EDP),
+	Data = #{edp => edp()},
+	Opts = [],
+	cse:add_service(ServiceKey, Module, Data, Opts),
 	#in_service{key = ServiceKey, module = Module,
-			edp = EDP} = cse:get_service(ServiceKey).
+			data = Data, opts = Opts} = cse:get_service(ServiceKey).
 
 find_service() ->
 	[{userdata, [{doc, "Find an IN service logic processing program (SLP)"}]}].
@@ -197,18 +199,20 @@ find_service() ->
 find_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	Module = cse_slp_prepaid_cap_fsm,
-	EDP = edp(),
-	cse:add_service(ServiceKey, Module, EDP),
+	Data = #{edp => edp()},
+	Opts = [],
+	cse:add_service(ServiceKey, Module, Data, Opts),
 	{ok, Service} = cse:find_service(ServiceKey),
-	#in_service{key = ServiceKey, module = Module, edp = EDP} = Service.
+	#in_service{key = ServiceKey, module = Module,
+			data = Data, opts = Opts} = Service.
 
 get_services() ->
 	[{userdata, [{doc, "List all IN service logic processing programs (SLP)"}]}].
 
 get_services(_Config) ->
-	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
-	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
-	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, edp()),
+	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, #{}, []),
+	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, #{}, []),
+	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, #{}, []),
 	F = fun(S) -> is_record(S, in_service) end,
 	lists:all(F, cse:get_services()).
 
@@ -217,7 +221,7 @@ delete_service() ->
 
 delete_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
-	cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, edp()),
+	cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, #{}, []),
 	ok = cse:delete_service(ServiceKey).
 
 add_context() ->
