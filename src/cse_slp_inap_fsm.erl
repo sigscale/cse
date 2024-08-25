@@ -140,7 +140,7 @@ null(cast, {'TC', 'INVOKE', indication,
 					NewData = maps:merge(ServiceData, Data),
 					Actions = [{push_callback_module, CbModule},
 							{next_event, internal, {Invoke, InitialDPArg}}],
-					{keep_state, NewData, Actions};
+					{repeat_state, NewData, Actions};
 				{error, not_found} ->
 					Error = #'TC-U-ERROR'{dialogueID = DialogueID,
 							invokeID = InvokeID,
