@@ -1,5 +1,16 @@
 2024-08-22   Vance Shipley <vances@sigscale.org>
 
+	* in slp start modules callback mode state enter
+	* repeat state on callback module push
+	* refactor test cases for in service table api
+	* handle national subscriber number conversion to e.164 (IN-153 #done)
+	* refactor test cases for in service table api
+	* refactor in service table for parameterization and debug option (IN-152 #done)
+	* docker install readme
+	* package install instructions
+
+2024-08-22   Vance Shipley <vances@sigscale.org>
+
 	* close diameter service before transport; changes dpr disconnect-reason from goaway to rebooting
 
 2024-08-13   Vance Shipley <vances@sigscale.org>

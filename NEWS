@@ -1,3 +1,10 @@
+August 25, 2024
+---------------
+	- Fixed fatal bug IN SLP modules
+	- Handle national subscriber number conversion to E.164
+	- Support for IN service configuration and debug
+	- Instructions for Debian, Docker and Kubernetes packages
+
 August 22, 2024
 ---------------
 	- DIAMETER disconnect cause changed to REBOOTING
