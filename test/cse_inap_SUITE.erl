@@ -94,7 +94,9 @@ init_per_suite(Config) ->
 			no_answer => interrupted,
 			route_fail => interrupted},
 	ServiceKey = rand:uniform(2147483647),
-	ok = cse:add_service(ServiceKey, cse_slp_prepaid_inap_fsm, EDP),
+	Data = #{edp => EDP},
+	Opts = [],
+	ok = cse:add_service(ServiceKey, cse_slp_prepaid_inap_fsm, Data, Opts),
 	{ok, TCO} = application:get_env(cse, tsl_name),
 	Config1 = [{tco, TCO}, {service_key, ServiceKey} | Config],
 	init_per_suite1(Config1).
