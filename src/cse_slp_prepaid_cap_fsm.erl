@@ -93,6 +93,7 @@
 		ssf => sccp_codec:party_address(),
 		imsi => [$0..$9],
 		msisdn => [$0..$9],
+		country_code => [$0..$9],
 		called =>  [$0..$9],
 		calling => [$0..$9],
 		call_ref => binary(),
@@ -156,8 +157,16 @@ init(_Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null = _EventContent, Data) ->
+null(enter, null = _EventContent, #{edp := EDP} = Data)
+		when is_map(EDP) ->
 	{keep_state, Data#{sequence => 1}};
+null(enter, null = _EventContent, Data) ->
+	EDP = #{route_fail => interrupted, busy => interrupted,
+			no_answer => interrupted, abandon => notifyAndContinue,
+			answer => notifyAndContinue, disconnect1 => interrupted,
+			disconnect2 => interrupted},
+	NewData = Data#{edp => EDP},
+	{keep_state, NewData#{sequence => 1}};
 null(enter, _EventContent,
 		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
@@ -253,17 +262,12 @@ collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	end,
 	MSC = isdn_address(Msc1, MscAddress),
 	VLR = isdn_address(Vlr1),
-	ISUP = calling_number(Isup1, LocationNumber),
-	MSISDN = calling_number(CallingPartyNumber),
+	ISUP = calling_number(Isup1, LocationNumber, Data),
+	MSISDN = calling_number(CallingPartyNumber, Data),
 	DN = called_number(OriginalCalledPartyID, CalledPartyBCDNumber),
-	%% @todo EDP shall be dynamically determined by SLP selection
-	EDP = #{route_fail => interrupted, busy => interrupted,
-			no_answer => interrupted, abandon => notifyAndContinue,
-			answer => notifyAndContinue, disconnect1 => interrupted,
-			disconnect2 => interrupted},
 	NewData = Data#{imsi => cse_codec:tbcd(IMSI),
 			msisdn => MSISDN, called => DN, calling => MSISDN,
-			isup => ISUP, vlr => VLR, msc => MSC, edp => EDP,
+			isup => ISUP, vlr => VLR, msc => MSC,
 			call_ref => CallReferenceNumber,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	nrf_start(NewData);
@@ -569,17 +573,12 @@ terminating_call_handling(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP
 	end,
 	MSC = isdn_address(Msc1, MscAddress),
 	VLR = isdn_address(Vlr1),
-	ISUP = calling_number(Isup1, LocationNumber),
-	MSISDN = calling_number(CallingPartyNumber),
+	ISUP = calling_number(Isup1, LocationNumber, Data),
+	MSISDN = calling_number(CallingPartyNumber, Data),
 	DN = called_number(CalledPartyNumber, asn1_NOVALUE),
-	%% @todo EDP shall be dynamically determined by SLP selection
-	EDP = #{route_fail => interrupted, busy => interrupted,
-			no_answer => interrupted, abandon => notifyAndContinue,
-			answer => notifyAndContinue, disconnect1 => interrupted,
-			disconnect2 => interrupted},
 	NewData = Data#{imsi => cse_codec:tbcd(IMSI),
 			msisdn => MSISDN, called => MSISDN, calling => DN,
-			isup => ISUP, vlr => VLR, msc => MSC, edp => EDP,
+			isup => ISUP, vlr => VLR, msc => MSC,
 			call_ref => CallReferenceNumber,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	nrf_start(NewData);
@@ -2346,31 +2345,42 @@ nrf_release9(JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			{next_state, null, NewData}
 	end.
 
--spec calling_number(Address) -> Number
+-spec calling_number(Address, Data) -> Number
 	when
 		Address :: binary() | asn1_NOVALUE,
+		Data :: statedata(),
 		Number :: string() | undefined.
 %% @doc Convert Calling Party Address to E.164 string.
 %% @hidden
-calling_number(Address) when is_binary(Address) ->
-	#calling_party{nai = 4, npi = 1,
-			address = A} = cse_codec:calling_party(Address),
-	lists:flatten([integer_to_list(D) || D <- A]);
-calling_number(asn1_NOVALUE) ->
+calling_number(Address, Data)
+		when is_binary(Address), is_map(Data) ->
+	calling_number1(cse_codec:calling_party(Address), Data);
+calling_number(asn1_NOVALUE, _Data) ->
 	undefined.
+%% @hidden
+calling_number1(#calling_party{nai = 4, npi = 1, address = A},
+		_Data) ->
+	lists:flatten([integer_to_list(D) || D <- A]);
+calling_number1(#calling_party{nai = 3, npi = 1, address = A},
+		#{country_code := CountryCode} = _Data)
+		when length(CountryCode) > 0 ->
+	lists:flatten([CountryCode, [integer_to_list(D) || D <- A]]).
 
--spec calling_number(Address1, Address2) -> Number
+-spec calling_number(Address1, Address2, Data) -> Number
 	when
 		Address1 :: binary() | asn1_NOVALUE,
 		Address2 :: binary() | asn1_NOVALUE,
+		Data :: statedata(),
 		Number :: string() | undefined.
 %% @doc Convert Calling Party Address to E.164 string.
 %% 	Prefer `Address1', fallback to `Address2'.
-calling_number(Address1, _Address2) when is_binary(Address1) ->
-	calling_number(Address1);
-calling_number(asn1_NOVALUE, Address) when is_binary(Address) ->
-	calling_number(Address);
-calling_number(asn1_NOVALUE, asn1_NOVALUE) ->
+calling_number(Address1, _Address2, Data)
+		when is_binary(Address1) ->
+	calling_number(Address1, Data);
+calling_number(asn1_NOVALUE, Address, Data)
+		when is_binary(Address) ->
+	calling_number(Address, Data);
+calling_number(asn1_NOVALUE, asn1_NOVALUE, _Data) ->
 	undefined.
 
 -spec isdn_address(Address) -> Number

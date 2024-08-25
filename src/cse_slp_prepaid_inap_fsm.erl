@@ -98,6 +98,7 @@
 		direction => originating | terminating,
 		called =>  [$0..$9],
 		calling => [$0..$9],
+		country_code => [$0..$9],
 		call_ref => binary(),
 		edp => #{event_type() => monitor_mode()},
 		call_info => #{attempt | connect | stop | cause =>
@@ -158,8 +159,16 @@ init(_Args) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
-null(enter, null, Data) ->
+null(enter, null = _EventContent, #{edp := EDP} = Data)
+		when is_map(EDP) ->
 	{keep_state, Data#{sequence => 1}};
+null(enter, null = _EventContent, Data) ->
+	EDP = #{route_fail => interrupted, busy => interrupted,
+			no_answer => interrupted, abandon => notifyAndContinue,
+			answer => notifyAndContinue, disconnect1 => interrupted,
+			disconnect2 => interrupted},
+	NewData = Data#{edp => EDP},
+	{keep_state, NewData#{sequence => 1}};
 null(enter, _EventContent,
 		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
@@ -258,7 +267,7 @@ analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				callingPartyNumber := CallingPartyNumber,
 				calledPartyNumber := CalledPartyNumber} = InitialDPArg},
 		#{did := DialogueID} = Data) ->
-	CallingDN = calling_number(CallingPartyNumber),
+	CallingDN = calling_number(CallingPartyNumber, Data),
 	CalledDN = called_number(CalledPartyNumber),
 ?LOG_INFO([{state, analyse_information}, {slpi, self()}, {service_key, ServiceKey}, {event, EventTypeBCSM}, {category, CallingPartyCategory}, {calling, CallingDN}, {called, CalledDN}, {initalDPArg, InitialDPArg}]),
 	NewData = Data#{direction => originating,
@@ -419,7 +428,7 @@ select_facility(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				callingPartyNumber := CallingPartyNumber,
 				calledPartyNumber := CalledPartyNumber} = InitialDPArg},
 		#{did := DialogueID} = Data) ->
-	CallingDN = calling_number(CallingPartyNumber),
+	CallingDN = calling_number(CallingPartyNumber, Data),
 	CalledDN = called_number(CalledPartyNumber),
 ?LOG_INFO([{state, analyse_information}, {slpi, self()}, {service_key, ServiceKey}, {event, EventTypeBCSM}, {category, CallingPartyCategory}, {calling, CallingDN}, {called, CalledDN}, {initalDPArg, InitialDPArg}]),
 	NewData = Data#{direction => terminating,
@@ -1893,17 +1902,26 @@ nrf_release5(JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			{next_state, null, NewData}
 	end.
 
--spec calling_number(Address) -> Number
+-spec calling_number(Address, Data) -> Number
 	when
 		Address :: binary() | asn1_NOVALUE,
+		Data :: statedata(),
 		Number :: string() | undefined.
 %% @doc Convert Calling Party Address to E.164 string.
 %% @hidden
-calling_number(Address) when is_binary(Address) ->
-	#calling_party{address = A} = cse_codec:calling_party(Address),
-	lists:flatten([integer_to_list(D) || D <- A]);
-calling_number(asn1_NOVALUE) ->
+calling_number(Address, Data)
+		when is_binary(Address), is_map(Data) ->
+	calling_number1(cse_codec:calling_party(Address), Data);
+calling_number(asn1_NOVALUE, _Data) ->
 	undefined.
+%% @hidden
+calling_number1(#calling_party{nai = 4, npi = 1, address = A},
+		_Data) ->
+	lists:flatten([integer_to_list(D) || D <- A]);
+calling_number1(#calling_party{nai = 3, npi = 1, address = A},
+		#{country_code := CountryCode} = _Data)
+		when length(CountryCode) > 0 ->
+	lists:flatten([CountryCode, [integer_to_list(D) || D <- A]]).
 
 -spec called_number(Address) -> Number
 	when
