@@ -77,7 +77,7 @@
 %% @private
 %%
 callback_mode() ->
-	[state_functions].
+	[state_functions, state_enter].
 
 -spec init(Args) -> Result
 	when
@@ -107,6 +107,8 @@ init([_APDU]) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>null</em> state.
 %% @private
+null(enter, null = _EventContent, _Data) ->
+	keep_state_and_data;
 null(cast, {register_csl, DHA, CCO} = _EventContent, Data) ->
 	link(DHA),
 	NewData = Data#{dha => DHA, cco => CCO},
