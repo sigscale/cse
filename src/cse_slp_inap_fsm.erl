@@ -133,9 +133,11 @@ null(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_InitialDPArg', Argument) of
 		{ok, #{serviceKey := ServiceKey} = InitialDPArg} ->
 			case cse:find_service(ServiceKey) of
-				{ok, #in_service{key = ServiceKey, module = CbModule, edp = EDP}}
-						when is_atom(CbModule), is_map(EDP) ->
-					NewData = Data#{edp => EDP},
+				{ok, #in_service{key = ServiceKey, module = CbModule,
+						data = ServiceData, opts = Opts}}
+						when is_atom(CbModule), is_map(Data), is_list(Opts) ->
+					apply_opts(Opts),
+					NewData = maps:merge(ServiceData, Data),
 					Actions = [{push_callback_module, CbModule},
 							{next_event, internal, {Invoke, InitialDPArg}}],
 					{keep_state, NewData, Actions};
@@ -240,4 +242,40 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
+
+%% @hidden
+apply_opts([{debug, Dbgs} | T]) ->
+	apply_debug(Dbgs),
+	apply_opts(T);
+apply_opts([]) ->
+	ok.
+
+%% @hidden
+apply_debug([trace | T]) ->
+	spawn(sys, trace, [self(), true]),
+	apply_debug(T);
+apply_debug([log | T]) ->
+	spawn(sys, log, [self(), true]),
+	apply_debug(T);
+apply_debug([{log, N} | T])
+		when is_integer(N), N > 0 ->
+	spawn(sys, log, [self(), {true, N}]),
+	apply_debug(T);
+apply_debug([{log_to_file, Filename} | T])
+		when is_list(Filename) ->
+	spawn(sys, log_to_file, [self(), Filename]),
+	apply_debug(T);
+apply_debug([statistics | T]) ->
+	spawn(sys, statistics, [self(), true]),
+	apply_debug(T);
+apply_debug([{install, {Func, _FuncState} = FuncSpec} | T])
+		when is_function(Func) ->
+	spawn(sys, install, [self(), FuncSpec]),
+	apply_debug(T);
+apply_debug([{install, {_FuncId, Func, _FuncState} = FuncSpec} | T])
+		when is_function(Func) ->
+	spawn(sys, install, [self(), FuncSpec]),
+	apply_debug(T);
+apply_debug([]) ->
+	ok.
 

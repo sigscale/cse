@@ -176,7 +176,8 @@
 -record(in_service,
 		{key :: 0..2147483647,
 		module :: atom(),
-		edp :: #{cse:event_type() => cse:monitor_mode()}}).
+		data = #{} :: map(),
+		opts = [] :: [term()]}).
 
 -record(diameter_context,
 		{id :: binary(),

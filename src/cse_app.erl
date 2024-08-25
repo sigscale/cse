@@ -378,6 +378,7 @@ install5(Nodes, Acc) ->
 		{error, Reason} ->
 			{error, Reason}
 	end.
+%% @hidden
 install6(Nodes, Acc) ->
 	case create_table(cse_context, Nodes) of
 		ok ->
@@ -882,6 +883,19 @@ create_table(httpd_group, Nodes) when is_list(Nodes) ->
 create_table1(Table, {atomic, ok}) ->
 	error_logger:info_msg("Created new ~w table.~n", [Table]),
 	ok;
+create_table1(cse_service = Table, {aborted, {already_exists, Table}}) ->
+	Arity = record_info(size, in_service),
+	case mnesia:table_info(Table, arity) of
+		Arity ->
+			error_logger:info_msg("Found existing ~w table.~n", [Table]),
+			ok;
+		_ ->
+			F = fun({in_service, Key, Module, EDP}) ->
+					#in_service{key = Key, module = Module, data = #{edp => EDP}}
+			end,
+			Attributes = record_info(fields, in_service),
+			transform_table(Table, F, Attributes)
+	end;
 create_table1(Table, {aborted, {already_exists, Table}}) ->
 	error_logger:info_msg("Found existing ~w table.~n", [Table]),
 	ok;
@@ -891,6 +905,27 @@ create_table1(_Table, {aborted, {not_active, _, Node} = Reason}) ->
 create_table1(_Table, {aborted, Reason}) ->
 	error_logger:error_report([mnesia:error_description(Reason), {error, Reason}]),
 	{error, Reason}.
+
+-spec transform_table(Table, Fun, Attributes) -> Result
+	when
+		Table :: atom(),
+		Fun :: fun(),
+		Attributes :: [atom()],
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Upgrade a table with new record definition.
+%% @hidden
+transform_table(Table, Fun, Attributes) ->
+	case mnesia:transform_table(Table, Fun, Attributes) of
+		{atomic, ok} ->
+			error_logger:info_msg("Upgraded existing ~w table.~n", [Table]),
+			ok;
+		{aborted, Reason} ->
+			Message = io_lib:fwrite("Failed to upgrade ~w table", [Table]),
+			error_logger:error_report([Message,
+					mnesia:error_description(Reason), {error, Reason}]),
+			{error, Reason}
+	end.
 
 -spec install_resource_specs() -> Result
 	when

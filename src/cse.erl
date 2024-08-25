@@ -31,7 +31,7 @@
 		get_resources/0, find_resource/1, query_resource/6]).
 -export([add_user/3, delete_user/1,
 		get_user/1, query_users/3, update_user/3, list_users/0]).
--export([add_service/3, delete_service/1,
+-export([add_service/4, delete_service/1,
 		get_service/1, find_service/1, get_services/0]).
 -export([add_context/4, delete_context/1,
 		get_context/1, find_context/1, get_contexts/0]).
@@ -46,7 +46,6 @@
 		resource_spec_char_val/0, char_rel/0, characteristic/0,
 		target_res_schema/0, party_rel/0, in_service/0, diameter_context/0]).
 
--export_type([event_type/0, monitor_mode/0]).
 -export_type([word/0]).
 
 -include("cse.hrl").
@@ -1255,39 +1254,34 @@ query_resource5({Resources, Cont}) ->
 query_resource5('$end_of_table') ->
 	{eof, []}.
 
--type event_type() :: collected_info | analysed_info | route_fail
-		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
-		| abandon | term_attempt.
--type monitor_mode() :: interrupted | notifyAndContinue | transparent.
-
--spec add_service(Key, Module, EDP) -> ok
+-spec add_service(Key, Module, Data, Opts) -> ok
 	when
 		Key :: 0..2147483647,
 		Module :: atom(),
-		EDP :: #{event_type() => monitor_mode()}.
+		Data :: map(),
+		Opts :: [Opt],
+		Opt :: {debug, Dbgs},
+		Dbgs :: [sys:debug_option()].
 %% @doc Register an IN Service Logic Processing Program (SLP).
 %%
 %% 	The `serviceKey' of an `InitialDP' identifies the IN service
 %% 	logic which should be provided for the call.  An SLP is
-%%		implemented in a `Module'. Event Detection Points (`EDP')
-%% 	required by the SLP are provided to control the `SSF'.
+%%		implemented in a `Module'. Extra SLP state data may be
+%% 	provide in `Data'. Options in `Opts' will be applied to
+%% 	the SLP process.
 %%
-add_service(Key, Module, EDP) when is_integer(Key),
-		is_atom(Module), is_map(EDP)  ->
-	case is_edp(EDP) of
-		true ->
-			Service = #in_service{key = Key, module = Module, edp = EDP},
-			F = fun() ->
-					mnesia:write(cse_service, Service, write)
-			end,
-			case mnesia:transaction(F) of
-				{atomic, ok} ->
-					ok;
-				{aborted, Reason} ->
-					exit(Reason)
-			end;
-		false ->
-			error(function_clause, [Key, Module, EDP])
+add_service(Key, Module, Data, Opts) when is_integer(Key),
+		is_atom(Module), is_map(Data), is_list(Opts) ->
+	Service = #in_service{key = Key,
+			module = Module, data = Data, opts = Opts},
+	F = fun() ->
+			mnesia:write(cse_service, Service, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
 	end.
 
 -spec get_service(Key) -> Result
@@ -1370,7 +1364,7 @@ delete_service(Key) when is_integer(Key) ->
 		ContextId :: diameter:'UTF8String'(),
 		Module :: atom(),
 		Args :: [term()],
-		Opts :: [term()].
+		Opts :: [gen_statem:start_opt()].
 %% @doc Register a DIAMETER Service Logic Processing Program (SLP).
 %%
 %% 	The `Service-Context-Id' of a `Credit-Control-Request'
@@ -1808,31 +1802,4 @@ match_condition(Var, {gt, Term}) ->
 	{'>', Var, Term};
 match_condition(Var, {gte, Term}) ->
 	{'>=', Var, Term}.
-
--spec is_edp(EDP) -> boolean()
-	when
-		EDP :: #{event_type() => monitor_mode()}.
-%% @doc Checks whether `EDP' is correct.
-%% @hidden
-is_edp(EDP) when is_map(EDP) ->
-	EventTypes = [collected_info, analysed_info, route_fail, busy, no_answer,
-			answer, mid_call, disconnect1, disconnect2, abandon, term_attempt],
-	F = fun(E) ->
-		lists:member(E, EventTypes)
-	end,
-	is_edp(lists:all(F, maps:keys(EDP)), EDP).
-%% @hidden
-is_edp(true, EDP) ->
-	MonitorModes = [interrupted, notifyAndContinue, transparent],
-	F = fun(E) ->
-		lists:member(E, MonitorModes)
-	end,
-	is_edp1(lists:all(F, maps:values(EDP)));
-is_edp(false, _EDP) ->
-	false.
-%% @hidden
-is_edp1(true) ->
-	true;
-is_edp1(false) ->
-	false.
 
