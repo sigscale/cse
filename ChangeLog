@@ -1,3 +1,10 @@
+2024-08-28   Vance Shipley <vances@sigscale.org>
+
+	* release call on nrf http request failure
+	* correct cause handling in unknown imsi test case
+	* release call when subscriber not found by rating function
+	* document isup cause type
+
 2024-08-22   Vance Shipley <vances@sigscale.org>
 
 	* in slp start modules callback mode state enter
