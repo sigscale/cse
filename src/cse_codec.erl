@@ -40,6 +40,7 @@
 -type generic_number() :: #generic_number{}.
 -type generic_digits() :: #generic_digits{}.
 -type cause() :: #cause{}.
+%% Use of ISUP cause values is described in ITU-T Q.850.
 -type ims_uri() :: #ims_uri{}.
 -export_types([called_party/0, called_party_bcd/0, calling_party/0,
 		isdn_address/0, generic_number/0, generic_digits/0, cause/0,
