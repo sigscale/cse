@@ -151,8 +151,10 @@ null(cast, {'TC', 'INVOKE', indication,
 							termination = basic},
 					gen_statem:cast(DHA, {'TC', 'END', request, End}),
 					?LOG_WARNING([{ac, AC}, {did, DialogueID},
-							{ssf, sccp_codec:party_address(SSF)}, {scf,sccp_codec:party_address(SCF)},
-							{serviceKey, ServiceKey}, {slp, not_found}]),
+							{ssf, sccp_codec:party_address(SSF)},
+							{scf,sccp_codec:party_address(SCF)},
+							{serviceKey, ServiceKey},
+							{slp, not_found}]),
 					keep_state_and_data
 			end;
 		{ok, #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{}} ->
@@ -190,7 +192,9 @@ null(cast, {'TC', 'INVOKE', indication,
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	?LOG_WARNING([{ac, AC}, {did, DialogueID},
-			{ssf, sccp_codec:party_address(SSF)}, {scf,sccp_codec:party_address(SCF)}, {operation, Other},
+			{ssf, sccp_codec:party_address(SSF)},
+			{scf,sccp_codec:party_address(SCF)},
+			{operation, Other},
 			{error, unrecognizedOperation}]),
 	keep_state_and_data;
 null(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
