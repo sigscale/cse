@@ -41,7 +41,8 @@
 		mo_answer/0, mo_answer/1,
 		mt_answer/0, mt_answer/1,
 		mo_disconnect/0, mo_disconnect/1,
-		mt_disconnect/0, mt_disconnect/1]).
+		mt_disconnect/0, mt_disconnect/1,
+		unknown_imsi/0, unknown_imsi/1]).
 
 -include_lib("sccp/include/sccp.hrl").
 -include_lib("tcap/include/sccp_primitive.hrl").
@@ -159,7 +160,7 @@ all() ->
 	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
 			continue, dp_arming, apply_charging, call_info_request,
 			mo_abandon, mt_abandon, mo_answer, mt_answer,
-			mo_disconnect, mt_disconnect].
+			mo_disconnect, mt_disconnect, unknown_imsi].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -668,6 +669,39 @@ mt_disconnect(Config) ->
 	end,
 	#'N-UNITDATA'{userData = UserData5} = SccpParams5,
 	{ok, {'end', _End}} = ?Pkgs:decode(?PDUs, UserData5),
+	receive
+		{'DOWN', MonitorRef, _, _, normal} -> ok
+	end.
+
+unknown_imsi() ->
+	[{userdata, [{doc, "InitialDP received for unknown IMSI"}]}].
+
+unknown_imsi(Config) ->
+	ServiceKey = ?config(service_key, Config),
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	UserData1 = pdu_initial_mo(SsfTid, AC, ServiceKey, IMSI),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	MonitorRef = receive
+		{csl, _DHA, TCU} -> TCU
+	end,
+	SccpParams2 = receive
+		{'N', 'UNITDATA', request, UD} -> UD
+	end,
+	#'N-UNITDATA'{userData = UserData2} = SccpParams2,
+	{ok, {'end', End}} = ?Pkgs:decode(?PDUs, UserData2),
+	#'GenericSSF-gsmSCF-PDUs_end'{components = Components} = End,
+	[{basicROS, {invoke, Invoke}}] = Components,
+	#'GenericSSF-gsmSCF-PDUs_end_components_SEQOF_basicROS_invoke'{
+			opcode = ?'opcode-releaseCall',
+			argument = Cause} = Invoke,
+	#cause{location = local_public, value = 50} = cse_codec:cause(Cause),
 	receive
 		{'DOWN', MonitorRef, _, _, normal} -> ok
 	end.

@@ -374,6 +374,20 @@ collect_information(cast, {nrf_start,
 			{next_state, exception, NewData}
 	end;
 collect_information(cast, {nrf_start,
+		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
+		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
+	NewIID = IID + 1,
+	Data1 = maps:remove(nrf_reqid, Data),
+	NewData = Data1#{iid => NewIID},
+	Cause = #cause{location = local_public, value = 50},
+	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+			{allCallSegments, cse_codec:cause(Cause)}),
+	Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+			invokeID = NewIID, dialogueID = DialogueID,
+			class = 4, parameters = ReleaseCallArg},
+	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+	{next_state, exception, NewData, 0};
+collect_information(cast, {nrf_start,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
