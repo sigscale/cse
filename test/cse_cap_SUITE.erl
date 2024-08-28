@@ -689,7 +689,8 @@ unknown_imsi(Config) ->
 	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
 	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
 	MonitorRef = receive
-		{csl, _DHA, TCU} -> TCU
+		{csl, DHA, _TCU} ->
+			monitor(process, DHA)
 	end,
 	SccpParams2 = receive
 		{'N', 'UNITDATA', request, UD} -> UD
@@ -700,7 +701,7 @@ unknown_imsi(Config) ->
 	[{basicROS, {invoke, Invoke}}] = Components,
 	#'GenericSSF-gsmSCF-PDUs_end_components_SEQOF_basicROS_invoke'{
 			opcode = ?'opcode-releaseCall',
-			argument = Cause} = Invoke,
+			argument = {allCallSegments, Cause}} = Invoke,
 	#cause{location = local_public, value = 50} = cse_codec:cause(Cause),
 	receive
 		{'DOWN', MonitorRef, _, _, normal} -> ok
