@@ -853,31 +853,37 @@ force([]) ->
 create_table(resource_spec, Nodes) when is_list(Nodes) ->
 	create_table1(resource_spec, mnesia:create_table(resource_spec,
 			[{disc_copies, Nodes},
+			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, resource_spec)}]));
 create_table(resource, Nodes) when is_list(Nodes) ->
 	{ok, Type} = application:get_env(cse, resource_table_type),
 	create_table1(resource, mnesia:create_table(resource,
 			[{Type, Nodes},
+			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, resource)}]));
 create_table(cse_service, Nodes) when is_list(Nodes) ->
 	create_table1(cse_service, mnesia:create_table(cse_service,
 			[{disc_copies, Nodes},
 			{record_name, in_service},
+			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, in_service)}]));
 create_table(cse_context, Nodes) when is_list(Nodes) ->
 	create_table1(cse_context, mnesia:create_table(cse_context,
 			[{disc_copies, Nodes},
 			{record_name, diameter_context},
+			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, diameter_context)}]));
 create_table(httpd_user, Nodes) when is_list(Nodes) ->
 	create_table1(httpd_user,
 			mnesia:create_table(httpd_user, [{type, bag},
 			{disc_copies, Nodes},
+			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, httpd_user)}]));
 create_table(httpd_group, Nodes) when is_list(Nodes) ->
 	create_table1(httpd_group,
 			mnesia:create_table(httpd_group,
 			[{type, bag}, {disc_copies, Nodes},
+			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, httpd_group)}])).
 %% @hidden
 create_table1(Table, {atomic, ok}) ->
