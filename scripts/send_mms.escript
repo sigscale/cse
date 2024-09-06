@@ -70,7 +70,9 @@ send_mms(Options) ->
 		Recipient = #'3gpp_ro_Recipient-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(dest, Options, "14165556789")]},
-		PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+		PS = #'3gpp_ro_PS-Information'{
+				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
+				'3GPP-SGSN-MCC-MNC' = ["001001"]},
 		MMS = #'3gpp_ro_MMS-Information'{
 				'Message-Size' = [rand:uniform(1000)],
 				'Originator-Address' = [Originator],
@@ -80,8 +82,8 @@ send_mms(Options) ->
 				'MMS-Information' = [MMS]},
 		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
 		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Service-Identifier' = maps:get(service_id, Options, [5]),
-				'Rating-Group' = maps:get(rating_group, Options, [32]),
+				'Service-Identifier' = [maps:get(service_id, Options, 5)],
+				'Rating-Group' = [maps:get(rating_group, Options, 32)],
 				'Used-Service-Unit' = [USU]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
@@ -124,15 +126,17 @@ usage() ->
 	Option1 = " [--context 32270@3gpp.org]",
 	Option2 = " [--service-id 5]",
 	Option3 = " [--rating-group 32]",
-	Option4 = " [--msisdn 14165551234]",
-	Option5 = " [--imsi 001001123456789]",
-	Option6 = " [--ip 127.0.0.1]",
-	Option7 = " [--raddr 127.0.0.1]",
-	Option8 = " [--rport 3868]",
-	Option9 = " [--origin 14165551234]",
-	Option10 = " [--recipient 14165556789]",
+	Option4 = " [--apn internet]",
+	Option5 = " [--msisdn 14165551234]",
+	Option6 = " [--imsi 001001123456789]",
+	Option7 = " [--ip 127.0.0.1]",
+	Option8 = " [--raddr 127.0.0.1]",
+	Option9 = " [--rport 3868]",
+	Option10 = " [--origin 14165551234]",
+	Option11 = " [--recipient 14165556789]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
-			Option6, Option7, Option8, Option9, Option10],
+			Option6, Option7, Option8, Option9, Option10,
+			Option11],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -144,9 +148,11 @@ options(["--help" | T], Acc) ->
 options(["--context", Context | T], Acc) ->
 	options(T, Acc#{context => Context});
 options(["--service-id", ServiceId | T], Acc) ->
-	options(T, Acc#{service_id => [ServiceId]});
+	options(T, Acc#{service_id => ServiceId});
 options(["--rating-group", RatingGroup | T], Acc) ->
-	options(T, Acc#{rating_group => [RatingGroup]});
+	options(T, Acc#{rating_group => RatingGroup});
+options(["--apn", APN | T], Acc) ->
+	options(T, Acc#{apn => APN});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi=> IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->
