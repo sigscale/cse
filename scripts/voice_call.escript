@@ -65,6 +65,8 @@ voice_call(Options) ->
 		SubscriptionId = [IMSI, MSISDN],
 		RSU1 = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC1 = #'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Service-Identifier' = maps:get(service_id, Options, [5]),
+				'Rating-Group' = maps:get(rating_group, Options, [32]),
 				'Requested-Service-Unit' = [RSU1]},
 		CallingParty = maps:get(orig, Options, "14165551234"), 
 		CalledParty = maps:get(dest, Options, "14165556789"),
@@ -138,6 +140,8 @@ voice_call(Options) ->
 		UsedUnits2 = rand:uniform(3500) + 100,
 		USU2 = #'3gpp_ro_Used-Service-Unit'{'CC-Time' = [UsedUnits2]},
 		MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Service-Identifier' = maps:get(service_id, Options, [5]),
+				'Rating-Group' = maps:get(rating_group, Options, [32]),
 				'Used-Service-Unit' = [USU2]},
 		CCR3 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
@@ -160,17 +164,20 @@ voice_call(Options) ->
 
 usage() ->
 	Option1 = " [--context 32260@3gpp.org]",
-	Option2 = " [--msisdn 14165551234]",
-	Option3 = " [--imsi 001001123456789]",
-	Option4 = " [--interval 1000]",
-	Option5 = " [--updates 1]",
-	Option6 = " [--ip 127.0.0.1]",
-	Option7 = " [--raddr 127.0.0.1]",
-	Option8 = " [--rport 3868]",
-	Option9 = " [--origin 14165551234]",
-	Option10 = " [--destination 14165556789]",
+	Option2 = " [--service-id 5]",
+	Option3 = " [--rating-group 32]",
+	Option4 = " [--msisdn 14165551234]",
+	Option5 = " [--imsi 001001123456789]",
+	Option6 = " [--interval 1000]",
+	Option7 = " [--updates 1]",
+	Option8 = " [--ip 127.0.0.1]",
+	Option9 = " [--raddr 127.0.0.1]",
+	Option10 = " [--rport 3868]",
+	Option11 = " [--origin 14165551234]",
+	Option12 = " [--destination 14165556789]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
-			Option6, Option7, Option8, Option9, Option10],
+			Option6, Option7, Option8, Option9, Option10,
+			Option11, Option12],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -181,6 +188,10 @@ options(["--help" | T], Acc) ->
 	options(T, Acc#{help => true});
 options(["--context", Context | T], Acc) ->
 	options(T, Acc#{context => Context});
+options(["--service-id", ServiceId | T], Acc) ->
+	options(T, Acc#{service_id => [ServiceId]});
+options(["--rating-group", RatingGroup | T], Acc) ->
+	options(T, Acc#{rating_group => [RatingGroup]});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi => IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->
