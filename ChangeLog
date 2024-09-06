@@ -1,3 +1,10 @@
+2024-09-06   Vance Shipley <vances@sigscale.org>
+
+	* remove runtime dependencies specification
+	* access point name (apn) in diameter client escripts
+	* service-id and rating-group in diameter escripts
+	* product name of diameter client in escripts
+
 2024-09-05   Vance Shipley <vances@sigscale.org>
 
 	* tag mnesia tables with application name
