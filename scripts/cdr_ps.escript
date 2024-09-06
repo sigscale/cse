@@ -34,7 +34,7 @@ cdr_ps(Options) ->
 				{'Origin-Realm', OriginRealm},
 				{'Vendor-Id', ?IANA_PEN_SigScale},
 				{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
-				{'Product-Name', "SigScale Test Script"},
+				{'Product-Name', "SigScale CSE (test script)"},
 				{'Acct-Application-Id', [?RF_APPLICATION_ID]},
 				{string_decode, false},
 				{restrict_connections, false},
