@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  @doc Test suite for public API of the {@link //cse. cse} application.
+%%%  @doc Test suite for diameter protocoll n the {@link //cse. cse} application.
 %%%
 -module(cse_diameter_SUITE).
 -copyright('Copyright (c) 2016 - 2023 SigScale Global Inc.').
@@ -47,7 +47,8 @@
 		final_in_call/0, final_in_call/1,
 		accounting_ims/0, accounting_ims/1,
 		client_connect/0, client_connect/1,
-		client_reconnect/0, client_reconnect/1]).
+		client_reconnect/0, client_reconnect/1,
+		location_tai_ecgi/0, location_tai_ecgi/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("inets/include/mod_auth.hrl").
@@ -265,7 +266,8 @@ all() ->
 			sms_iec, mms_iec,
 			unknown_subscriber, out_of_credit,
 			initial_in_call, interim_in_call, final_in_call,
-			accounting_ims, client_connect, client_reconnect].
+			accounting_ims, client_connect, client_reconnect,
+			location_tai_ecgi].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -972,6 +974,31 @@ client_reconnect(Config) ->
             when element(1, Info2) == up ->
 			ok = cse:stop_diameter(Pid)
 	end.
+
+location_tai_ecgi() ->
+	[{userdata, [{doc, "User location CODEC for TAI and ECGI"}]}].
+
+location_tai_ecgi(_Config) ->
+	MCC = 302,
+	MNC = 720,
+	<<MCC2:4, MCC1:4, 15:4, MCC3:4>> = cse_codec:tbcd(MCC),
+	<<MNC2:4, MNC1:4, 15:4, MNC3:4>> = cse_codec:tbcd(MNC),
+	Length = 14,
+	TAC = 30210,
+	ECI = 8941333,
+	Bin = <<22, Length, MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4,
+			MNC1:4, TAC:16, MCC2:4, MCC1:4, MNC3:4, MCC3:4,
+			MNC2:4, MNC1:4, ECI:28>>,
+	{ok, UserLocation} = cse_diameter:user_location(Bin),
+	Mcc = io_lib:fwrite("~3.10.0b", [MCC]),
+	Mnc = io_lib:fwrite("~3.10.0b", [MNC]),
+	Plmn =#{mcc => Mcc, mnc => Mnc},
+	Tac = io_lib:fwrite("~4.16.0b", [TAC]),
+	Eci = io_lib:fwrite("~7.16.0b", [TAC]),
+	#{eutraLocation := EutranLocation} = UserLocation,
+	#{tai := TAI, ecgi := ECGI} = EutranLocation,
+	#{plmnId := Plmn, tac := Tac} = TAI,
+	#{plmnId := Plmn, eutraCellId := Eci} = ECGI.
 
 %%---------------------------------------------------------------------
 %%  Internal functions

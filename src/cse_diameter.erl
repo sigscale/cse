@@ -25,7 +25,7 @@
 -copyright('Copyright (c) 2016 - 2024 SigScale Global Inc.').
 
 %% export the cse_diameter public API
--export([plmn/1]).
+-export([plmn/1, user_location/1]).
 
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
@@ -5225,6 +5225,177 @@ plmn("64801" ++ MSN) ->
 %% Zimbabwe, Telecel
 plmn("64803" ++ MSN) ->
 	{"648", "03", MSN}.
+
+-spec user_location(Binary) -> Result
+	when
+		Binary :: binary(),
+		Result :: {ok, UserLocation} | {error, Reason},
+		UserLocation :: map(),
+		Reason :: undefined.
+%% @doc CODEC for `3GPP-User-Location-Info'.
+%%
+%% See 3GPP TS 29.061.
+% CGI (3GPP TS 29.274 8.21.1)
+user_location(<<22, Length, 0,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		LAC:16, CI:16>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	CGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			lac => io_lib:fwrite("~4.16.0b", [LAC]),
+			utraCellId => io_lib:fwrite("~4.16.0b", [CI])},
+	UserLocation = #{utraLocation => #{cgi => CGI}},
+	{ok, UserLocation};
+% SAI (3GPP TS 29.274 8.21.2)
+user_location(<<22, Length, 1,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		LAC:16, SAC:16>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	SAI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			lac => io_lib:fwrite("~4.16.0b", [LAC]),
+			sac => io_lib:fwrite("~4.16.0b", [SAC])},
+	UserLocation = #{utraLocation => #{sai => SAI}},
+	{ok, UserLocation};
+% RAI (3GPP TS 29.274 8.21.3)
+user_location(<<22, Length, 1,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		LAC:16, RAC:16>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	RAI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			lac => io_lib:fwrite("~4.16.0b", [LAC]),
+			rac => io_lib:fwrite("~4.16.0b", [RAC])},
+	UserLocation = #{utraLocation => #{rai => RAI}},
+	{ok, UserLocation};
+% TAI (3GPP TS 29.274 8.21.4)
+user_location(<<22, Length, 128,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		TAC:16>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	TAI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			tac => io_lib:fwrite("~4.16.0b", [TAC])},
+	UserLocation = #{eutraLocation => #{tai => TAI}},
+	{ok, UserLocation};
+% ECGI (3GPP TS 29.274 8.21.5)
+user_location(<<22, Length, 129,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		ECI:28>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	ECGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			eutraCellId => io_lib:fwrite("~7.16.0b", [ECI])},
+	UserLocation = #{eutraLocation => #{ecgi => ECGI}},
+	{ok, UserLocation};
+% TAI and ECGI
+user_location(<<22, Length, 130,
+		MCC12:4, MCC11:4, MNC13:4, MCC13:4, MNC12:4, MNC11:4,
+		TAC:16,
+		MCC22:4, MCC21:4, MNC23:4, MCC23:4, MNC22:4, MNC21:4,
+		ECI:28>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC1 = cse_code:tbcd(<<MCC12:4, MCC11:4, 15:4, MCC13:4>>),
+	MNC1 = cse_code:tbcd(<<MNC12:4, MNC11:4, 15:4, MNC13:4>>),
+	TAI = #{plmnId => #{mcc => MCC1, mnc => MNC1},
+			tac => io_lib:fwrite("~4.16.0b", [TAC])},
+	MCC2 = cse_code:tbcd(<<MCC22:4, MCC21:4, 15:4, MCC23:4>>),
+	MNC2 = cse_code:tbcd(<<MNC22:4, MNC21:4, 15:4, MNC23:4>>),
+	ECGI = #{plmnId => #{mcc => MCC2, mnc => MNC2},
+			eutraCellId => io_lib:fwrite("~7.16.0b", [ECI])},
+	UserLocation = #{eutraLocation => #{tai => TAI, ecgi => ECGI}},
+	{ok, UserLocation};
+% Macro eNodeB ID (3GPP TS 29.274 8.21.7)
+user_location(<<22, Length, 131,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		ENBID:20>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	ECGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			globalENbId => io_lib:fwrite("~5.16.0b", [ENBID])},
+	UserLocation = #{eutraLocation => #{ecgi => ECGI}},
+	{ok, UserLocation};
+% TAI and eNodeB ID
+user_location(<<22, Length, 132,
+		MCC12:4, MCC11:4, MNC13:4, MCC13:4, MNC12:4, MNC11:4,
+		TAC:16,
+		MCC22:4, MCC21:4, MNC23:4, MCC23:4, MNC22:4, MNC21:4,
+		ENBID:20>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC1 = cse_code:tbcd(<<MCC12:4, MCC11:4, 15:4, MCC13:4>>),
+	MNC1 = cse_code:tbcd(<<MNC12:4, MNC11:4, 15:4, MNC13:4>>),
+	TAI = #{plmnId => #{mcc => MCC1, mnc => MNC1},
+			tac => io_lib:fwrite("~4.16.0b", [TAC])},
+	MCC2 = cse_code:tbcd(<<MCC22:4, MCC21:4, 15:4, MCC23:4>>),
+	MNC2 = cse_code:tbcd(<<MNC22:4, MNC21:4, 15:4, MNC23:4>>),
+	ECGI = #{plmnId => #{mcc => MCC2, mnc => MNC2},
+			globalENbId => io_lib:fwrite("~5.16.0b", [ENBID])},
+	UserLocation = #{eutraLocation => #{tai => TAI, ecgi => ECGI}},
+	{ok, UserLocation};
+% Extended long macro eNodeB ID (3GPP TS 29.274 8.21.8)
+user_location(<<22, Length, 133,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		0:1, _:2, ENBID:21>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	ECGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			globalENbId => io_lib:fwrite("~6.16.0b", [ENBID])},
+	UserLocation = #{eutraLocation => #{ecgi => ECGI}},
+	{ok, UserLocation};
+% Extended short macro eNodeB ID (3GPP TS 29.274 8.21.8)
+user_location(<<22, Length, 133,
+		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
+		1:1, _:5, ENBID:18>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC = cse_code:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_code:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	ECGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			globalENbId => io_lib:fwrite("~5.16.0b", [ENBID])},
+	UserLocation = #{eutraLocation => #{ecgi => ECGI}},
+	{ok, UserLocation};
+% TAI and extended long macro eNodeB ID
+user_location(<<22, Length, 134,
+		MCC12:4, MCC11:4, MNC13:4, MCC13:4, MNC12:4, MNC11:4,
+		TAC:16,
+		MCC22:4, MCC21:4, MNC23:4, MCC23:4, MNC22:4, MNC21:4,
+		0:1, _:2, ENBID:21>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC1 = cse_code:tbcd(<<MCC12:4, MCC11:4, 15:4, MCC13:4>>),
+	MNC1 = cse_code:tbcd(<<MNC12:4, MNC11:4, 15:4, MNC13:4>>),
+	TAI = #{plmnId => #{mcc => MCC1, mnc => MNC1},
+			tac => io_lib:fwrite("~4.16.0b", [TAC])},
+	MCC2 = cse_code:tbcd(<<MCC22:4, MCC21:4, 15:4, MCC23:4>>),
+	MNC2 = cse_code:tbcd(<<MNC22:4, MNC21:4, 15:4, MNC23:4>>),
+	ECGI = #{plmnId => #{mcc => MCC2, mnc => MNC2},
+			globalENbId => io_lib:fwrite("~6.16.0b", [ENBID])},
+	UserLocation = #{eutraLocation => #{tai => TAI, ecgi => ECGI}},
+	{ok, UserLocation};
+% TAI and extended short macro eNodeB ID
+user_location(<<22, Length, 134,
+		MCC12:4, MCC11:4, MNC13:4, MCC13:4, MNC12:4, MNC11:4,
+		TAC:16,
+		MCC22:4, MCC21:4, MNC23:4, MCC23:4, MNC22:4, MNC21:4,
+		1:1, _:5, ENBID:18>> = Binary)
+		when byte_size(Binary) =:= Length ->
+	MCC1 = cse_code:tbcd(<<MCC12:4, MCC11:4, 15:4, MCC13:4>>),
+	MNC1 = cse_code:tbcd(<<MNC12:4, MNC11:4, 15:4, MNC13:4>>),
+	TAI = #{plmnId => #{mcc => MCC1, mnc => MNC1},
+			tac => io_lib:fwrite("~4.16.0b", [TAC])},
+	MCC2 = cse_code:tbcd(<<MCC22:4, MCC21:4, 15:4, MCC23:4>>),
+	MNC2 = cse_code:tbcd(<<MNC22:4, MNC21:4, 15:4, MNC23:4>>),
+	ECGI = #{plmnId => #{mcc => MCC2, mnc => MNC2},
+			globalENbId => io_lib:fwrite("~5.16.0b", [ENBID])},
+	UserLocation = #{eutraLocation => #{tai => TAI, ecgi => ECGI}},
+	{ok, UserLocation};
+user_location(_Binary) ->
+	{error, undefined}.
 
 %%----------------------------------------------------------------------
 %%  internal functions

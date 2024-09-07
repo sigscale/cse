@@ -1480,10 +1480,23 @@ service_rating_ps6(#'3gpp_ro_PS-Information'{
 service_rating_ps6(PS, ServiceRating, Info) ->
 	service_rating_ps7(PS, ServiceRating, Info).
 %% @hidden
-service_rating_ps7(_PS, ServiceRating, Info)
+service_rating_ps7(#'3gpp_ro_PS-Information'{
+		'3GPP-User-Location-Info' = [ULI]} = PS,
+		ServiceRating, Info) ->
+	case cse_diameter:user_location(ULI) of
+		{ok, UserLocation} ->
+			Info1 = Info#{"userLocationinfo" => UserLocation},
+			service_rating_ps8(PS, ServiceRating, Info1);
+		{error, unknown} ->
+			service_rating_ps8(PS, ServiceRating, Info)
+	end;
+service_rating_ps7(PS, ServiceRating, Info) ->
+	service_rating_ps8(PS, ServiceRating, Info).
+%% @hidden
+service_rating_ps8(_PS, ServiceRating, Info)
 		when map_size(Info) > 0 ->
 	ServiceRating#{"serviceInformation" => Info};
-service_rating_ps7(_PS, ServiceRating, _Info) ->
+service_rating_ps8(_PS, ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden
