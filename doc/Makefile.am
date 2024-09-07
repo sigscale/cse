@@ -7,6 +7,7 @@ modhtml = cse.html \
 		cse_app.html \
 		cse_sup.html \
 		cse_log_sup.html \
+		cse_diameter.html \
 		cse_diameter_sup.html \
 		cse_log_server_sup.html \
 		cse_log_server.html \

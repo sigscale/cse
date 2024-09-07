@@ -12,6 +12,7 @@ beam_DATA = cse.beam \
 		cse_log_server_sup.beam \
 		cse_log_server.beam \
 		cse_log_job_sup.beam \
+		cse_diameter.beam \
 		cse_diameter_sup.beam \
 		cse_diameter_service_fsm_sup.beam \
 		cse_diameter_service_fsm.beam \

@@ -9,6 +9,7 @@
 				cse_log_server_sup,
 				cse_log_server,
 				cse_log_job_sup,
+				cse_diameter,
 				cse_diameter_sup,
 				cse_diameter_service_fsm_sup,
 				cse_diameter_service_fsm,
