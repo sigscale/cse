@@ -72,7 +72,9 @@ send_mms(Options) ->
 				'Address-Data' = [maps:get(dest, Options, "14165556789")]},
 		PS = #'3gpp_ro_PS-Information'{
 				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
-				'3GPP-SGSN-MCC-MNC' = ["001001"]},
+				'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
+				'3GPP-GGSN-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
+				'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")]},
 		MMS = #'3gpp_ro_MMS-Information'{
 				'Message-Size' = [rand:uniform(1000)],
 				'Originator-Address' = [Originator],
@@ -127,16 +129,18 @@ usage() ->
 	Option2 = " [--service-id 5]",
 	Option3 = " [--rating-group 32]",
 	Option4 = " [--apn internet]",
-	Option5 = " [--msisdn 14165551234]",
-	Option6 = " [--imsi 001001123456789]",
-	Option7 = " [--ip 127.0.0.1]",
-	Option8 = " [--raddr 127.0.0.1]",
-	Option9 = " [--rport 3868]",
-	Option10 = " [--origin 14165551234]",
-	Option11 = " [--recipient 14165556789]",
+	Option5 = " [--hplmn 001001]",
+	Option6 = " [--vplmn 001001]",
+	Option7 = " [--msisdn 14165551234]",
+	Option8 = " [--imsi 001001123456789]",
+	Option9 = " [--ip 127.0.0.1]",
+	Option10 = " [--raddr 127.0.0.1]",
+	Option11 = " [--rport 3868]",
+	Option12 = " [--origin 14165551234]",
+	Option13 = " [--recipient 14165556789]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
 			Option6, Option7, Option8, Option9, Option10,
-			Option11],
+			Option11, Option12, Option13],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -153,6 +157,10 @@ options(["--rating-group", RatingGroup | T], Acc) ->
 	options(T, Acc#{rating_group => RatingGroup});
 options(["--apn", APN | T], Acc) ->
 	options(T, Acc#{apn => APN});
+options(["--hplmn", HPLMN | T], Acc) ->
+	options(T, Acc#{hplmn => HPLMN});
+options(["--vplmn", VPLMN | T], Acc) ->
+	options(T, Acc#{vplmn => VPLMN});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi=> IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->

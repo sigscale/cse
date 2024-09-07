@@ -76,9 +76,9 @@ data_session(Options) ->
 						'Serving-Node-Type' = [2],
 						'SGSN-Address' = [{10,1,2,3}],
 						'GGSN-Address' = [{10,4,5,6}],
-						'3GPP-IMSI-MCC-MNC' = [<<"001001">>],
-						'3GPP-GGSN-MCC-MNC' = [<<"001001">>],
-						'3GPP-SGSN-MCC-MNC' = [<<"001001">>]}]},
+						'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
+						'3GPP-GGSN-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
+						'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")]}]},
 		CCR1 = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -138,7 +138,7 @@ data_session(Options) ->
 		USU2 = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits2]},
 		MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Service-Identifier' = [maps:get(service_id, Options, 5)],
-				'Rating-Group' = [maps:get(rating_group, Options, 32),
+				'Rating-Group' = [maps:get(rating_group, Options, 32)],
 				'Used-Service-Unit' = [USU2]},
 		CCR3 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
@@ -164,16 +164,18 @@ usage() ->
 	Option2 = " [--service-id 5]",
 	Option3 = " [--rating-group 32]",
 	Option4 = " [--apn internet]",
-	Option5 = " [--msisdn 14165551234]",
-	Option6 = " [--imsi 001001123456789]",
-	Option7 = " [--interval 1000]",
-	Option8 = " [--updates 1]",
-	Option9 = " [--ip 127.0.0.1]",
-	Option10 = " [--raddr 127.0.0.1]",
-	Option11 = " [--rport 3868]",
+	Option5 = " [--hplmn 001001]",
+	Option6 = " [--vplmn 001001]",
+	Option7 = " [--msisdn 14165551234]",
+	Option8 = " [--imsi 001001123456789]",
+	Option9 = " [--interval 1000]",
+	Option10 = " [--updates 1]",
+	Option11 = " [--ip 127.0.0.1]",
+	Option12 = " [--raddr 127.0.0.1]",
+	Option13 = " [--rport 3868]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
-			Option6, Option7, Option8, Option9, Options10,
-			Options11],
+			Option6, Option7, Option8, Option9, Option10,
+			Option11, Option12, Option13],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -190,6 +192,10 @@ options(["--rating-group", RatingGroup | T], Acc) ->
 	options(T, Acc#{rating_group => RatingGroup});
 options(["--apn", APN | T], Acc) ->
 	options(T, Acc#{apn => APN});
+options(["--hplmn", HPLMN | T], Acc) ->
+	options(T, Acc#{hplmn => HPLMN});
+options(["--vplmn", VPLMN | T], Acc) ->
+	options(T, Acc#{vplmn => VPLMN});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi=> IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->
