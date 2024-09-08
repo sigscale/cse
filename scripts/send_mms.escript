@@ -71,7 +71,7 @@ send_mms(Options) ->
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(dest, Options, "14165556789")]},
 		Location = << <<(list_to_integer([C], 16)):4>>
-				|| C <- maps:get(vplmn, Options, "160f82001100beef0011000deadbee") >>,
+				|| C <- maps:get(location, Options, "160f82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
 				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
 				'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],

@@ -73,7 +73,7 @@ voice_call(Options) ->
 		CallingPartyAddress = "tel:+" ++ CallingParty,
 		CalledPartyAddress = "tel:+" ++ CalledParty,
 		Location = << <<(list_to_integer([C], 16)):4>>
-				|| C <- maps:get(vplmn, Options, "160f82001100beef0011000deadbee") >>,
+				|| C <- maps:get(location, Options, "160f82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
 				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
 				'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
