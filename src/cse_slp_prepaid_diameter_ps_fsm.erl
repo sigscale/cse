@@ -1489,6 +1489,7 @@ service_rating_ps6(#'3gpp_ro_PS-Information'{
 	service_rating_ps7(PS, ServiceRating, Info1);
 service_rating_ps6(PS, ServiceRating, Info) ->
 	service_rating_ps7(PS, ServiceRating, Info).
+%% @hidden
 service_rating_ps7(#'3gpp_ro_PS-Information'{
 		'3GPP-User-Location-Info' = [ULI]} = PS,
 		ServiceRating, Info) ->
