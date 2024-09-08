@@ -69,11 +69,14 @@ send_sms(Options) ->
 				'Service-Identifier' = [maps:get(service_id, Options, 5)],
 				'Rating-Group' = [maps:get(rating_group, Options, 32)],
 				'Used-Service-Unit' = [USU]},
+		Location = << <<(list_to_integer([C], 16)):4>>
+				|| C <- maps:get(vplmn, Options, "160f82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
 				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
 				'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
 				'3GPP-GGSN-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
-				'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")]},
+				'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")],
+				'3GPP-User-Location-Info' = [Location]},
 		SMS = #'3gpp_ro_SMS-Information'{
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
 				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
@@ -126,15 +129,16 @@ usage() ->
 	Option4 = " [--apn internet]",
 	Option5 = " [--hplmn 001001]",
 	Option6 = " [--vplmn 001001]",
-	Option7 = " [--msisdn 14165551234]",
-	Option8 = " [--imsi 001001123456789]",
-	Option9 = " [--ip 127.0.0.1]",
-	Option10 = " [--raddr 127.0.0.1]",
-	Option11 = " [--rport 3868]",
-	Option12 = " [--recipient 14165556789]",
+	Option7 = " [--location 160f82001100beef0011000deadbee]",
+	Option8 = " [--msisdn 14165551234]",
+	Option9 = " [--imsi 001001123456789]",
+	Option10 = " [--ip 127.0.0.1]",
+	Option11 = " [--raddr 127.0.0.1]",
+	Option12 = " [--rport 3868]",
+	Option13 = " [--recipient 14165556789]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
 			Option6, Option7, Option8, Option9, Option10,
-			Option11, Option12],
+			Option11, Option12, Option13],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -155,6 +159,8 @@ options(["--hplmn", HPLMN | T], Acc) ->
 	options(T, Acc#{hplmn => HPLMN});
 options(["--vplmn", VPLMN | T], Acc) ->
 	options(T, Acc#{vplmn => VPLMN});
+options(["--location", Location | T], Acc) ->
+	options(T, Acc#{location  => Location});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi=> IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->

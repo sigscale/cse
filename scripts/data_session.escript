@@ -69,16 +69,20 @@ data_session(Options) ->
 				'Service-Identifier' = [maps:get(service_id, Options, 5)],
 				'Rating-Group' = [maps:get(rating_group, Options, 32)],
 				'Requested-Service-Unit' = [RSU1]},
+		Location = << <<(list_to_integer([C], 16)):4>>
+				|| C <- maps:get(vplmn, Options, "160f82001100beef0011000deadbee") >>,
+		PS = #'3gpp_ro_PS-Information'{
+				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
+				'3GPP-PDP-Type' = [3],
+				'Serving-Node-Type' = [2],
+				'SGSN-Address' = [{10,1,2,3}],
+				'GGSN-Address' = [{10,4,5,6}],
+				'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
+				'3GPP-GGSN-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
+				'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")],
+				'3GPP-User-Location-Info' = [Location]},
 		ServiceInformation = #'3gpp_ro_Service-Information'{
-				'PS-Information' = [#'3gpp_ro_PS-Information'{
-						'Called-Station-Id' = [maps:get(apn, Options, "internet")],
-						'3GPP-PDP-Type' = [3],
-						'Serving-Node-Type' = [2],
-						'SGSN-Address' = [{10,1,2,3}],
-						'GGSN-Address' = [{10,4,5,6}],
-						'3GPP-IMSI-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
-						'3GPP-GGSN-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
-						'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")]}]},
+				'PS-Information' = [PS]},
 		CCR1 = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -166,16 +170,17 @@ usage() ->
 	Option4 = " [--apn internet]",
 	Option5 = " [--hplmn 001001]",
 	Option6 = " [--vplmn 001001]",
-	Option7 = " [--msisdn 14165551234]",
-	Option8 = " [--imsi 001001123456789]",
-	Option9 = " [--interval 1000]",
-	Option10 = " [--updates 1]",
-	Option11 = " [--ip 127.0.0.1]",
-	Option12 = " [--raddr 127.0.0.1]",
-	Option13 = " [--rport 3868]",
+	Option7 = " [--location 160f82001100beef0011000deadbee]",
+	Option8 = " [--msisdn 14165551234]",
+	Option9 = " [--imsi 001001123456789]",
+	Option10 = " [--interval 1000]",
+	Option11 = " [--updates 1]",
+	Option12 = " [--ip 127.0.0.1]",
+	Option13 = " [--raddr 127.0.0.1]",
+	Option14 = " [--rport 3868]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
 			Option6, Option7, Option8, Option9, Option10,
-			Option11, Option12, Option13],
+			Option11, Option12, Option13, Option14],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -196,6 +201,8 @@ options(["--hplmn", HPLMN | T], Acc) ->
 	options(T, Acc#{hplmn => HPLMN});
 options(["--vplmn", VPLMN | T], Acc) ->
 	options(T, Acc#{vplmn => VPLMN});
+options(["--location", Location | T], Acc) ->
+	options(T, Acc#{location  => Location});
 options(["--imsi", IMSI | T], Acc) ->
 	options(T, Acc#{imsi=> IMSI});
 options(["--msisdn", MSISDN | T], Acc) ->
