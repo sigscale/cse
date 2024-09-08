@@ -5235,6 +5235,7 @@ plmn("64803" ++ MSN) ->
 %% @doc CODEC for `3GPP-User-Location-Info'.
 %%
 %% See 3GPP TS 29.061.
+%% @end
 % CGI (3GPP TS 29.274 8.21.1)
 user_location(<<22, Length, 0,
 		MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4,
