@@ -2286,7 +2286,7 @@ service_rating_ps7(#'3gpp_ro_PS-Information'{
 		{ok, UserLocation} ->
 			Info1 = Info#{"userLocationinfo" => UserLocation},
 			service_rating_ps8(PS, ServiceRating, Info1);
-		{error, unknown} ->
+		{error, undefined} ->
 			service_rating_ps8(PS, ServiceRating, Info)
 	end;
 service_rating_ps7(PS, ServiceRating, Info) ->
