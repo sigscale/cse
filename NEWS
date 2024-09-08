@@ -1,3 +1,9 @@
+September 8, 2024
+-----------------
+	- User location information
+	- Nrf_Rating API version 1.1.2
+	- Test script options for hplmn, vplmn, apn and location
+
 September 6, 2024
 -----------------
 	- Handle Global Title routing

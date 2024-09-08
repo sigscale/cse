@@ -1,3 +1,13 @@
+2024-09-08   Vance Shipley <vances@sigscale.org>
+
+	* user location in diameter client test scripts
+	* refactor location test case for random mcc, mnc, tac, eci
+	* correct tbcd/1 argument type
+	* user location information
+	* nrf_rating oas version 1.1.2
+	* diameter utility library module with plmn/1
+	* escript options for hplmn and vplmn
+
 2024-09-06   Vance Shipley <vances@sigscale.org>
 
 	* remove runtime dependencies specification
