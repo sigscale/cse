@@ -981,8 +981,8 @@ location_tai_ecgi() ->
 location_tai_ecgi(_Config) ->
 	MCC = 302,
 	MNC = 720,
-	<<MCC2:4, MCC1:4, 15:4, MCC3:4>> = cse_codec:tbcd(MCC),
-	<<MNC2:4, MNC1:4, 15:4, MNC3:4>> = cse_codec:tbcd(MNC),
+	<<MCC2:4, MCC1:4, 15:4, MCC3:4>> = cse_codec:tbcd(integer_to_list(MCC)),
+	<<MNC2:4, MNC1:4, 15:4, MNC3:4>> = cse_codec:tbcd(integer_to_list(MNC)),
 	Length = 14,
 	TAC = 30210,
 	ECI = 8941333,
