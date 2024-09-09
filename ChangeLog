@@ -1,5 +1,8 @@
 2024-09-08   Vance Shipley <vances@sigscale.org>
 
+	* correct 3gpp-user-location-info encoding
+	* support multiple mscc in diameter test scripts
+	* refactor user location codec to handle two digit mnc
 	* user location in diameter client test scripts
 	* refactor location test case for random mcc, mnc, tac, eci
 	* correct tbcd/1 argument type
