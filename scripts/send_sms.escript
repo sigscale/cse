@@ -64,11 +64,16 @@ send_sms(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = MSISDN},
 		SubscriptionId = [IMSI, MSISDNr],
+		SIs = maps:get(service_id, Options, "10"),
+		ServiceIds = [list_to_integer(SI) || SI <- string:lexemes(SIs, [$,])],
+		RGs = maps:get(rating_group, Options, "16"),
+		RatingGroups = [list_to_integer(RG) || RG <- string:lexemes(RGs, [$,])],
+		SiRg = lists:zip(ServiceIds, RatingGroups),
 		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
-		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Service-Identifier' = [maps:get(service_id, Options, 5)],
-				'Rating-Group' = [maps:get(rating_group, Options, 32)],
-				'Used-Service-Unit' = [USU]},
+		MSCC = [#'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Service-Identifier' = [SI],
+				'Rating-Group' = [RG],
+				'Used-Service-Unit' = [USU]} || {SI, RG} <- SiRg],
 		Location = << <<(list_to_integer([C], 16)):4>>
 				|| C <- maps:get(location, Options, "160f82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
@@ -96,7 +101,7 @@ send_sms(Options) ->
 				'CC-Request-Number' = 0,
 				'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
 				'Multiple-Services-Indicator' = [1],
-				'Multiple-Services-Credit-Control' = [MSCC],
+				'Multiple-Services-Credit-Control' = MSCC,
 				'Event-Timestamp' = [calendar:universal_time()],
 				'Subscription-Id' = SubscriptionId,
 				'Service-Information' = [ServiceInformation]},
@@ -124,8 +129,8 @@ send_sms(Options) ->
 
 usage() ->
 	Option1 = " [--context 32274@3gpp.org]",
-	Option2 = " [--service-id 5]",
-	Option3 = " [--rating-group 32]",
+	Option2 = " [--service-id 10]",
+	Option3 = " [--rating-group 16]",
 	Option4 = " [--apn internet]",
 	Option5 = " [--hplmn 001001]",
 	Option6 = " [--vplmn 001001]",

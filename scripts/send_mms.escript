@@ -64,6 +64,16 @@ send_mms(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = MSISDN},
 		SubscriptionId = [IMSIr, MSISDNr],
+		SIs = maps:get(service_id, Options, "15"),
+		ServiceIds = [list_to_integer(SI) || SI <- string:lexemes(SIs, [$,])],
+		RGs = maps:get(rating_group, Options, "16"),
+		RatingGroups = [list_to_integer(RG) || RG <- string:lexemes(RGs, [$,])],
+		SiRg = lists:zip(ServiceIds, RatingGroups),
+		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
+		MSCC = [#'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Service-Identifier' = [SI],
+				'Rating-Group' = [RG],
+				'Used-Service-Unit' = [USU]} || {SI, RG} <- SiRg],
 		Originator = #'3gpp_ro_Originator-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(orig, Options, "14165551234")]},
@@ -85,11 +95,6 @@ send_mms(Options) ->
 		ServiceInformation = #'3gpp_ro_Service-Information'{
 				'PS-Information' = [PS],
 				'MMS-Information' = [MMS]},
-		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
-		MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Service-Identifier' = [maps:get(service_id, Options, 5)],
-				'Rating-Group' = [maps:get(rating_group, Options, 32)],
-				'Used-Service-Unit' = [USU]},
 		CCR = #'3gpp_ro_CCR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -103,7 +108,7 @@ send_mms(Options) ->
 				'Subscription-Id' = SubscriptionId,
 				'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
 				'Multiple-Services-Indicator' = [1],
-				'Multiple-Services-Credit-Control' = [MSCC],
+				'Multiple-Services-Credit-Control' = MSCC,
 				'Service-Information' = [ServiceInformation]},
 		Fro = fun('3gpp_ro_CCA', _N) ->
 					record_info(fields, '3gpp_ro_CCA');
@@ -129,7 +134,7 @@ send_mms(Options) ->
 
 usage() ->
 	Option1 = " [--context 32270@3gpp.org]",
-	Option2 = " [--service-id 5]",
+	Option2 = " [--service-id 15]",
 	Option3 = " [--rating-group 32]",
 	Option4 = " [--apn internet]",
 	Option5 = " [--hplmn 001001]",

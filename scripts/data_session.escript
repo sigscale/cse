@@ -64,11 +64,16 @@ data_session(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
+		SIs = maps:get(service_id, Options, "1,5"),
+		ServiceIds = [list_to_integer(SI) || SI <- string:lexemes(SIs, [$,])],
+		RGs = maps:get(rating_group, Options, "16,32"),
+		RatingGroups = [list_to_integer(RG) || RG <- string:lexemes(RGs, [$,])],
+		SiRg = lists:zip(ServiceIds, RatingGroups),
 		RSU1 = #'3gpp_ro_Requested-Service-Unit'{},
-		MSCC1 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Service-Identifier' = [maps:get(service_id, Options, 5)],
-				'Rating-Group' = [maps:get(rating_group, Options, 32)],
-				'Requested-Service-Unit' = [RSU1]},
+		MSCC1 = [#'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Service-Identifier' = [SI],
+				'Rating-Group' = [RG],
+				'Requested-Service-Unit' = [RSU1]} || {SI, RG} <- SiRg],
 		Location = << <<(list_to_integer([C], 16)):4>>
 				|| C <- maps:get(location, Options, "160f82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
@@ -94,7 +99,7 @@ data_session(Options) ->
 				'CC-Request-Number' = RequestNum1,
 				'Event-Timestamp' = [calendar:universal_time()],
 				'Subscription-Id' = SubscriptionId,
-				'Multiple-Services-Credit-Control' = [MSCC1],
+				'Multiple-Services-Credit-Control' = MSCC1,
 				'Service-Information' = [ServiceInformation]},
 		Fro = fun('3gpp_ro_CCA', _N) ->
 					record_info(fields, '3gpp_ro_CCA');
@@ -117,14 +122,14 @@ data_session(Options) ->
 					ReqNum;
 				F(N, ReqNum) ->
 					NewReqNum = ReqNum + 1,
-					UsedUnits1 = rand:uniform(1000000),
-					USU1 = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits1]},
-					MSCC2 = MSCC1#'3gpp_ro_Multiple-Services-Credit-Control'{
-							'Used-Service-Unit' = [USU1]},
+					MSCC2 = [MSCC#'3gpp_ro_Multiple-Services-Credit-Control'{
+							'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
+							'CC-Total-Octets' = [rand:uniform(1000000)]}]}
+							|| MSCC <- MSCC1],
 					CCR2 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 							'CC-Request-Number' = NewReqNum,
-							'Multiple-Services-Credit-Control' = [MSCC2],
+							'Multiple-Services-Credit-Control' = MSCC2,
 							'Event-Timestamp' = [calendar:universal_time()]},
 					case diameter:call(Name, ro, CCR2, []) of
 						#'3gpp_ro_CCA'{} = Answer2 ->
@@ -138,16 +143,15 @@ data_session(Options) ->
 					F(N - 1, NewReqNum)
 		end,
 		RequestNum2 = Fupdate(maps:get(updates, Options, 1), RequestNum1),
-		UsedUnits2 = rand:uniform(1000000),
-		USU2 = #'3gpp_ro_Used-Service-Unit'{'CC-Total-Octets' = [UsedUnits2]},
-		MSCC3 = #'3gpp_ro_Multiple-Services-Credit-Control'{
-				'Service-Identifier' = [maps:get(service_id, Options, 5)],
-				'Rating-Group' = [maps:get(rating_group, Options, 32)],
-				'Used-Service-Unit' = [USU2]},
+		MSCC3 = [MSCC#'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Requested-Service-Unit' = [],
+				'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
+				'CC-Total-Octets' = [rand:uniform(1000000)]}]}
+				|| MSCC <- MSCC1],
 		CCR3 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 				'CC-Request-Number' = RequestNum2,
-				'Multiple-Services-Credit-Control' = [MSCC3],
+				'Multiple-Services-Credit-Control' = MSCC3,
 				'Event-Timestamp' = [calendar:universal_time()]},
 		case diameter:call(Name, ro, CCR3, []) of
 			#'3gpp_ro_CCA'{} = Answer3 ->
@@ -165,8 +169,8 @@ data_session(Options) ->
 
 usage() ->
 	Option1 = " [--context 32251@3gpp.org]",
-	Option2 = " [--service-id 5]",
-	Option3 = " [--rating-group 32]",
+	Option2 = " [--service-id 1,5]",
+	Option3 = " [--rating-group 16,32]",
 	Option4 = " [--apn internet]",
 	Option5 = " [--hplmn 001001]",
 	Option6 = " [--vplmn 001001]",
