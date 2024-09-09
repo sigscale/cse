@@ -75,7 +75,7 @@ data_session(Options) ->
 				'Rating-Group' = [RG],
 				'Requested-Service-Unit' = [RSU1]} || {SI, RG} <- SiRg],
 		Location = << <<(list_to_integer([C], 16)):4>>
-				|| C <- maps:get(location, Options, "160f82001100beef0011000deadbee") >>,
+				|| C <- maps:get(location, Options, "82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
 				'Called-Station-Id' = [maps:get(apn, Options, "internet")],
 				'3GPP-PDP-Type' = [3],
@@ -174,7 +174,7 @@ usage() ->
 	Option4 = " [--apn internet]",
 	Option5 = " [--hplmn 001001]",
 	Option6 = " [--vplmn 001001]",
-	Option7 = " [--location 160f82001100beef0011000deadbee]",
+	Option7 = " [--location 82001100beef0011000deadbee]",
 	Option8 = " [--msisdn 14165551234]",
 	Option9 = " [--imsi 001001123456789]",
 	Option10 = " [--interval 1000]",
