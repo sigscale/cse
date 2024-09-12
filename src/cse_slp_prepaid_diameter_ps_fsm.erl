@@ -254,6 +254,16 @@ authorize_origination_attempt(cast,
 			{next_state, null, NewData, Actions1}
 	end;
 authorize_origination_attempt(cast,
+		{nrf_start, {RequestId, {{Version, 400, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				reqno := RequestNum, req_type := RequestType} = Data) ->
+	log_nrf(ecs_http(Version, 400, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	{next_state, null, NewData, Actions};
+authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
@@ -265,14 +275,30 @@ authorize_origination_attempt(cast,
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI,
+				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
-	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
-	{next_state, null, NewData, Actions};
+	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := Cause}}, {_, "application/problem+json" ++ _}} ->
+			ResultCode = result_code(Cause),
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions};
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {status, 403}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, authorize_origination_attempt}]),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions}
+	end;
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
@@ -376,6 +402,22 @@ collect_information({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 collect_information(cast,
+		{NrfOperation, {RequestId, {{Version, 400, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 400, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data)
@@ -393,14 +435,30 @@ collect_information(cast,
 	end;
 collect_information(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI,
+				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
-	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
+	Actions = case {zj:decode(Body),
+			lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := Cause}}, {_, "application/problem+json" ++ _}} ->
+			ResultCode = result_code(Cause),
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			[{reply, From, Reply}];
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, NrfOperation}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {status, 403}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, collect_information}]),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			[{reply, From, Reply}]
+	end,
 	case NrfOperation of
 		nrf_update ->
 			{keep_state, NewData, Actions};
@@ -584,6 +642,22 @@ analyse_information({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 analyse_information(cast,
+		{NrfOperation, {RequestId, {{Version, 400, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 400, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data)
@@ -601,14 +675,30 @@ analyse_information(cast,
 	end;
 analyse_information(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI,
+				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
-	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
+	Actions = case {zj:decode(Body),
+			lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := Cause}}, {_, "application/problem+json" ++ _}} ->
+			ResultCode = result_code(Cause),
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			[{reply, From, Reply}];
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, NrfOperation}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {status, 403}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, analyse_information}]),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			[{reply, From, Reply}]
+	end,
 	case NrfOperation of
 		nrf_update ->
 			{keep_state, NewData, Actions};
@@ -790,6 +880,22 @@ active({call, From},
 			reqno => RequestNum, req_type => RequestType},
 	nrf_release(NewData);
 active(cast,
+		{NrfOperation, {RequestId, {{Version, 400, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+				reqno := RequestNum, req_type := RequestType} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 400, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
+	Reply = diameter_error(ResultCode, RequestType, RequestNum),
+	Actions = [{reply, From, Reply}],
+	case NrfOperation of
+		nrf_update ->
+			{keep_state, NewData, Actions};
+		nrf_release ->
+			{next_state, null, NewData, Actions}
+	end;
+active(cast,
 		{NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
 				reqno := RequestNum, req_type := RequestType} = Data)
@@ -807,14 +913,30 @@ active(cast,
 	end;
 active(cast,
 		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId, nrf_http := LogHTTP,
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI,
+				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType} = Data)
 		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
-	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED',
-	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
+	Actions = case {zj:decode(Body),
+			lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := Cause}}, {_, "application/problem+json" ++ _}} ->
+			ResultCode = result_code(Cause),
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			[{reply, From, Reply}];
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, NrfOperation}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {status, 403}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
+					{partial, Partial}, {remaining, Remaining},
+					{state, active}]),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			[{reply, From, Reply}]
+	end,
 	case NrfOperation of
 		nrf_update ->
 			{keep_state, NewData, Actions};
@@ -1709,20 +1831,35 @@ diameter_error(ResultCode, RequestType, RequestNum) ->
 		Result :: pos_integer().
 %% @doc Convert a Nrf ResultCode to a Diameter ResultCode
 %% @hidden
+% 3GPP TS 32.291 6.1.7.3-1
+result_code("CHARGING_FAILED") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED';
+result_code("RE_AUTHORIZATION_FAILED") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_END_USER_SERVICE_DENIED';
+result_code("CHARGING_NOT_APPLICABLE") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_CONTROL_NOT_APPLICABLE';
+result_code("USER_UNKNOWN") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN';
+result_code("END_USER_REQUEST_DENIED") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_END_USER_SERVICE_DENIED';
+result_code("QUOTA_LIMIT_REACHED") ->
+	?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED';
+% 3GPP TS 32.291 6.1.6.3.14-1
 result_code("SUCCESS") ->
 	?'DIAMETER_BASE_RESULT-CODE_SUCCESS';
 result_code("END_USER_SERVICE_DENIED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_END_USER_SERVICE_DENIED';
-result_code("QUOTA_LIMIT_REACHED") ->
-	?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_LIMIT_REACHED';
 result_code("QUOTA_MANAGEMENT_NOT_APPLICABLE") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_CREDIT_CONTROL_NOT_APPLICABLE';
-result_code("USER_UNKNOWN") ->
-	?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN';
 result_code("END_USER_SERVICE_REJECTED") ->
 	?'DIAMETER_CC_APP_RESULT-CODE_END_USER_SERVICE_DENIED';
 result_code("RATING_FAILED") ->
-	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED'.
+	?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED';
+% 3GPP TS 29.500 5.2.7.2-1
+result_code("SYSTEM_FAILURE") ->
+	?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY';
+result_code(_) ->
+	?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY'.
 
 -spec ecs_http(MIME, Body) -> HTTP
 	when
