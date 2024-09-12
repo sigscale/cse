@@ -1,3 +1,7 @@
+2024-09-13   Vance Shipley <vances@sigscale.org>
+
+	* handle problem details cause when 403 status response
+
 2024-09-08   Vance Shipley <vances@sigscale.org>
 
 	* correct 3gpp-user-location-info encoding
