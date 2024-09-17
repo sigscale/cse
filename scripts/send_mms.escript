@@ -19,7 +19,7 @@ main(Args) ->
 
 send_mms(Options) ->
 	try
-		Name = escript:script_name(),
+		Name = escript:script_name() ++ "-" ++ ref_to_list(make_ref()),
 		ok = diameter:start(),
 		Hostname = filename:rootname(filename:basename(Name), ".escript"),
 		OriginRealm = case inet_db:res_option(domain) of
