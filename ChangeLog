@@ -1,3 +1,7 @@
+2024-09-18   Vance Shipley <vances@sigscale.org>
+
+	* unique diameter client names in escripts to support concurrent runs
+
 2024-09-13   Vance Shipley <vances@sigscale.org>
 
 	* handle problem details cause when 403 status response

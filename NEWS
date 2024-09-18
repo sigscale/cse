@@ -1,3 +1,7 @@
+September 18, 2024
+------------------
+	- Support concurrent escript execution
+
 September 13, 2024
 ------------------
 	- Handle cause in problem details of Nrf operation error 403
