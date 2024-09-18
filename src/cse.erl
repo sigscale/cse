@@ -1391,7 +1391,7 @@ add_context(ContextId, Module, Args, Opts)
 	when
 		ContextId :: diameter:'UTF8String'(),
 		Result :: diameter_context().
-%% @doc Get the IN SLP registered with `ContextId'.
+%% @doc Get the DIAMETER SLP registered with `ContextId'.
 get_context(ContextId)
 		when is_list(ContextId); is_binary(ContextId) ->
 	case catch iolist_to_binary(ContextId) of
