@@ -1,6 +1,11 @@
 September 18, 2024
 ------------------
 	- Support concurrent escript execution
+	- Role option (originating, terminating) to voice call escript
+	- Shell scripts to be used by all package managers:
+		- install TLS certificates
+		- install SNMP agent configuration
+		- install OTP release package
 
 September 13, 2024
 ------------------

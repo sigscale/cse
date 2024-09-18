@@ -1,3 +1,10 @@
+2024-09-19   Vance Shipley <vances@sigscale.org>
+
+	* shell script to install otp release package
+	* add role (originating|terminating) option to voice call escript
+	* script for installing tls certificates
+	* shell script to install snmp configuration
+
 2024-09-18   Vance Shipley <vances@sigscale.org>
 
 	* unique diameter client names in escripts to support concurrent runs
