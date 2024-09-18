@@ -13,6 +13,7 @@ endif
 
 script_SCRIPTS = scripts/install_tables.escript \
 		scripts/join_cluster.escript \
+		scripts/install_snmp.sh \
 		scripts/snapshot.escript \
 		scripts/data_session.escript \
 		scripts/voice_call.escript \
