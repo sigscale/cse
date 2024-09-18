@@ -1368,7 +1368,7 @@ delete_service(Key) when is_integer(Key) ->
 %% @doc Register a DIAMETER Service Logic Processing Program (SLP).
 %%
 %% 	The `Service-Context-Id' of a `Credit-Control-Request'
-%% 	identifies the service logic logic which should be
+%% 	identifies the service logic which should be
 %% 	provided for the call.  An SLP is implemented in a
 %% 	`Module'.
 %%
