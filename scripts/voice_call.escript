@@ -85,11 +85,17 @@ voice_call(Options) ->
 				'3GPP-GGSN-MCC-MNC' = [maps:get(hplmn, Options, "001001")],
 				'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")],
 				'3GPP-User-Location-Info' = [Location]},
+		Role = case maps:get(role, Options, "originating") of
+			"originating" ->
+				?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE';
+			"terminating" ->
+				?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'
+		end,
 		{MNC, MCC} = lists:split(3, maps:get(vplmn, Options, "001001")),
 		IVNI = "ims.mnc" ++ MNC ++ ".mcc" ++ MCC ++ ".3gppnetwork.org",
 		IMS = #'3gpp_ro_IMS-Information'{
 						'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
-						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
+						'Role-Of-Node' = [Role],
 						'IMS-Visited-Network-Identifier' = [IVNI],
 						'Calling-Party-Address' = [CallingPartyAddress],
 						'Called-Party-Address' = [CalledPartyAddress]},
@@ -193,10 +199,11 @@ usage() ->
 	Option14 = " [--rport 3868]",
 	Option15 = " [--origin 14165551234]",
 	Option16 = " [--destination 14165556789]",
+	Option17 = " [--role originating]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
 			Option6, Option7, Option8, Option9, Option10,
 			Option11, Option12, Option13, Option14, Option15,
-			Option16],
+			Option16, Option17],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -239,6 +246,8 @@ options(["--origin", Origin | T], Acc) ->
 	options(T, Acc#{orig => Origin});
 options(["--destination", Destination | T], Acc) ->
 	options(T, Acc#{dest => Destination});
+options(["--role", Role | T], Acc) ->
+	options(T, Acc#{role => Role});
 options([_H | _T], _Acc) ->
 	usage();
 options([], Acc) ->
