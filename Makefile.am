@@ -4,8 +4,6 @@
 
 SUBDIRS = include src ebin doc test priv mibs
 
-beam_DATA = ebin/cse.appup
-
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = scripts/cse.service
 env_DATA = scripts/cse

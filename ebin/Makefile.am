@@ -2,8 +2,8 @@
 ## Process this file with automake to produce Makefile.in
 
 appdir = $(beamdir)
-app_DATA = cse.app
-EXTRA_DIST = cse.app
+app_DATA = cse.app cse.appup
+EXTRA_DIST = cse.app cse.appup
 
 beam_DATA = cse.beam \
 		cse_app.beam \
