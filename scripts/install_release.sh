@@ -5,6 +5,7 @@ PKG_NAME=cse
 
 set -e
 cd ${HOME}
+OLD_VER=`grep "{$PKG_NAME," releases/RELEASES | sed -e 's/.*{'"$PKG_NAME"',"//' -e 's/\([0-9].[0-9].[0-9]*\).*/\1/'`
 PKG_NEW=`find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/.tar.gz//'`
 if [ -z $PKG_NEW ];
 then
@@ -56,7 +57,7 @@ then
 			erl -noshell -sname $RPC_SNAME \
 					-eval "rpc:call('$OTP_NODE', application, start, [sasl])" \
 					-eval "rpc:call('$OTP_NODE', systools, make_relup, [\"releases/$PKG_NEW\", [\"releases/$PKG_NAME-$OLD_VER\"], [\"releases/$PKG_NAME-$OLD_VER\"], [{path,[\"lib/$PKG_NEW/ebin\"]}, {outdir, \"releases/$PKG_NEW\"}]])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, set_unpacked, [\"$HOMEDIR/releases/$PKG_NEW.rel\", $APPDIRS])" \
+					-eval "rpc:call('$OTP_NODE', release_handler, set_unpacked, [\"$HOME/releases/$PKG_NEW.rel\", $APPDIRS])" \
 					-eval "rpc:call('$OTP_NODE', release_handler, install_release, [\"$PKG_NEW\", [{update_paths, true}]])" \
 					-eval "rpc:call('$OTP_NODE', release_handler, make_permanent, [\"$PKG_NEW\"])" \
 					-s init stop && echo "... done."
@@ -76,13 +77,13 @@ then
 		if echo -e "4.2\n$SASLVER"  | sort --check=quiet --version-sort;
 		then
 			set -e
-			ERL_LIBS=lib RELDIR=$HOMEDIR/releases erl -noshell \
+			ERL_LIBS=lib RELDIR=$HOME/releases erl -noshell \
 					-sname $OTP_NODE -config releases/$PKG_NAME-$OLD_VER/sys \
 					-s mnesia \
 					-eval "application:start(sasl)" \
 					-eval "application:load($PKG_NAME)" \
 					-eval "systools:make_relup(\"releases/$PKG_NEW\", [\"releases/$PKG_NAME-$OLD_VER\"], [\"releases/$PKG_NAME-$OLD_VER\"], [{path,[\"lib/$PKG_NAME-$OLD_VER/ebin\"]}, {outdir, \"releases/$PKG_NEW\"}])" \
-					-eval "release_handler:set_unpacked(\"$HOMEDIR/releases/$PKG_NEW.rel\", $APPDIRS)" \
+					-eval "release_handler:set_unpacked(\"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
 					-eval "release_handler:install_release(\"$PKG_NEW\", [{update_paths, true}])" \
 					-eval "release_handler:make_permanent(\"$PKG_NEW\")" \
 					-s init stop && echo "... done."
@@ -106,13 +107,13 @@ else
 	if echo -e "4.2\n$SASLVER"  | sort --check=quiet --version-sort;
 	then
 		set -e
-		RELDIR=$HOMEDIR/releases erl -noshell -eval "application:start(sasl)" \
-				-eval "release_handler:create_RELEASES(\"$HOMEDIR/releases\", \"$HOMEDIR/releases/$PKG_NEW.rel\", $APPDIRS)" \
+		RELDIR=$HOME/releases erl -noshell -eval "application:start(sasl)" \
+				-eval "release_handler:create_RELEASES(\"$HOME/releases\", \"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
 				-s init stop && echo "... done."
 	else
 		set -e
 		RELDIR=releases erl -noshell -eval "application:start(sasl)" \
-				-eval "release_handler:create_RELEASES(code:root_dir(), \"$HOMEDIR/releases\", \"$HOMEDIR/releases/$PKG_NEW.rel\", $APPDIRS)" \
+				-eval "release_handler:create_RELEASES(code:root_dir(), \"$HOME/releases\", \"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
 				-s init stop && echo "... done."
 	fi
 	if ! test -f releases/RELEASES;
