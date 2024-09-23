@@ -6,7 +6,7 @@ PKG_NAME=cse
 set -e
 cd ${HOME}
 OLD_VER=`grep "{$PKG_NAME," releases/RELEASES | sed -e 's/[[:blank:]]*{'$PKG_NAME',[[:blank:]]*"//' -e 's/\([0-9.]*\).*/\1/'`
-PKG_NEW=`find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/.tar.gz//'`
+PKG_NEW=`find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/\.tar\.gz//'`
 if [ -z $PKG_NEW ];
 then
 	echo "Release package not found."
