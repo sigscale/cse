@@ -7,7 +7,7 @@ set -e
 cd ${HOME}
 OLD_VER=`grep "{$PKG_NAME," releases/RELEASES | sed -e 's/[[:blank:]]*{'$PKG_NAME',[[:blank:]]*"//' -e 's/\([0-9.]*\).*/\1/'`
 PKG_NEW=`find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/\.tar\.gz//'`
-if [ -z $PKG_NEW ];
+if [ -z "$PKG_NEW" ];
 then
 	echo "Release package not found."
 	exit 1
@@ -18,12 +18,12 @@ APPDIRS=`sed -e 's|.*{\([a-z][a-z_0-9]*\), *\"\([0-9.]*\)\".*|{\1,\"\2\",\"'$INS
 SASLVER=`erl -noinput -eval 'application:load(sasl), {ok, Vsn} = application:get_key(sasl, vsn), io:fwrite("~s", [Vsn]), init:stop()'`
 
 # Compare old and new release versions
-if [ -n "$OLD_VER" ] && [ "$PKG_NEW" != "$PKG_NAME-$OLD_VER" ] && [ -d lib/$PKG_NAME-$OLD_VER ] ;
+if [ -n "$OLD_VER" ] && [ "$PKG_NEW" != "$PKG_NAME-$OLD_VER" ] && [ -d "lib/$PKG_NAME-$OLD_VER" ] ;
 then
 	# Perform an OTP release upgrade
 	OTP_NODE="${PKG_NAME}@`echo $HOSTNAME | sed -e 's/\..*//'`"
 	cp releases/$PKG_NEW/sys.config releases/$PKG_NEW/sys.config.dist
-	if [ -f releases/$PKG_NAME-$OLD_VER/sys.config.dist ] ;
+	if [ -f "releases/$PKG_NAME-$OLD_VER/sys.config.dist" ] ;
 	then
 		set +e
 		echo "Merging previous system configuration localizations (sys.config) ..."
@@ -32,7 +32,7 @@ then
 				> releases/$PKG_NAME-$OLD_VER/sys.config.patch
 		patch releases/$PKG_NEW/sys.config \
 				releases/$PKG_NAME-$OLD_VER/sys.config.patch && echo "... merge done."
-		if [ $? -ne 0 ] ;
+		if [ "$?" -ne 0 ] ;
 		then
 			echo "... merge failed."
 			echo "Using previous system configuration without any newly distributed changes."
