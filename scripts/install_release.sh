@@ -122,7 +122,7 @@ else
 	fi
 	cp releases/$PKG_NEW/sys.config releases/$PKG_NEW/sys.config.dist
 fi
-ERTS=`grep "^\[{release," releases/RELEASES | cut -d, -f4 | tr -d \"`
+ERTS=`grep "^\[{release," t | sed -e 's/^\[{release,[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^\([0-9.]*\).*/\1/'`
 echo "$ERTS $PKG_NEW" > releases/start_erl.data
 exit 0
 
