@@ -1,5 +1,7 @@
 2024-09-24   Vance Shipley <vances@sigscale.org>
 
+	* correct install_release script exit status on release_handler failure
+	* set reldir environment variable compatible with sasl version
 	* slightly safer release file parsing
 	* get erts version safely
 	* quote test(1) expressions
