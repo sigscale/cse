@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install OTP SNMP Agent configuration
 
-RAND=`od -An -N27 -w27 -v -t u1 /dev/urandom | tr -s '\ ' ','`
+RAND=$(od -An -N27 -w27 -v -t u1 /dev/urandom | tr -s '\ ' ',')
 ENGINEID="[128,0,196,210,5$RAND]"
 if [ ! -f $HOME/snmp/conf/agent.conf ];
 then

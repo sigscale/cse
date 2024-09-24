@@ -6,9 +6,9 @@ PKG_NAME=cse
 set -e
 cd ${HOME}
 if [ -f "releases/RELEASES" ] ;
-	OLD_VER=`grep "{$PKG_NAME," releases/RELEASES | sed -e 's/[[:blank:]]*{'$PKG_NAME',[[:blank:]]*"//' -e 's/\([0-9.]*\).*/\1/'`
+	OLD_VER=$(grep "{$PKG_NAME," releases/RELEASES | sed -e 's/[[:blank:]]*{'$PKG_NAME',[[:blank:]]*"//' -e 's/\([0-9.]*\).*/\1/')
 fi
-PKG_NEW=`find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/\.tar\.gz//'`
+PKG_NEW=$(find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/\.tar\.gz//')
 if [ -z "$PKG_NEW" ];
 then
 	echo "Release package not found."
@@ -16,14 +16,14 @@ then
 fi
 tar -zxf releases/$PKG_NEW.tar.gz
 INSTDIR="$HOME/lib"
-APPDIRS=`sed -e 's|.*{\([a-z][a-zA-Z_0-9]*\),[[:blank:]]*\"\([0-9.]*\)\".*|{\1,\"\2\",\"'$INSTDIR'\"},|' -e '1s|^.*$|[|' -e '$s|\,$|]|' releases/$PKG_NEW.rel | tr -d "\r\n"`
-SASLVER=`erl -noinput -eval 'application:load(sasl), {ok, Vsn} = application:get_key(sasl, vsn), io:fwrite("~s", [Vsn]), init:stop()'`
+APPDIRS=$(sed -e 's|.*{\([a-z][a-zA-Z_0-9]*\),[[:blank:]]*\"\([0-9.]*\)\".*|{\1,\"\2\",\"'$INSTDIR'\"},|' -e '1s|^.*$|[|' -e '$s|\,$|]|' releases/$PKG_NEW.rel | tr -d "\r\n")
+SASLVER=$(erl -noinput -eval 'application:load(sasl), {ok, Vsn} = application:get_key(sasl, vsn), io:fwrite("~s", [Vsn]), init:stop()')
 
 # Compare old and new release versions
 if [ -n "$OLD_VER" ] && [ "$PKG_NEW" != "$PKG_NAME-$OLD_VER" ] && [ -d "lib/$PKG_NAME-$OLD_VER" ] ;
 then
 	# Perform an OTP release upgrade
-	OTP_NODE="${PKG_NAME}@`echo $HOSTNAME | sed -e 's/\..*//'`"
+	OTP_NODE="${PKG_NAME}@$(echo $HOSTNAME | sed -e 's/\..*//')"
 	cp releases/$PKG_NEW/sys.config releases/$PKG_NEW/sys.config.dist
 	if [ -f "releases/$PKG_NAME-$OLD_VER/sys.config.dist" ] ;
 	then
@@ -51,7 +51,7 @@ then
 	if epmd -names 2> /dev/null | grep -q '^name cse at';
 	then
 		# Upgrade using rpc
-		RPC_SNAME=`id -un`
+		RPC_SNAME=$(id -un)
 		echo "Performing an in-service upgrade ..."
 		if echo -e "4.2\n$SASLVER"  | sort --check=quiet --version-sort;
 		then
@@ -124,7 +124,7 @@ else
 	fi
 	cp releases/$PKG_NEW/sys.config releases/$PKG_NEW/sys.config.dist
 fi
-ERTS=`grep "^\[{release," releases/RELEASES | sed -e 's/^\[{release,[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^\([0-9.]*\).*/\1/'`
+ERTS=$(grep "^\[{release," releases/RELEASES | sed -e 's/^\[{release,[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^\([0-9.]*\).*/\1/')
 echo "$ERTS $PKG_NEW" > releases/start_erl.data
 exit 0
 
