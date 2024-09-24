@@ -57,18 +57,18 @@ then
 			erl -noshell -sname $RPC_SNAME \
 					-eval "rpc:call('$OTP_NODE', application, start, [sasl])" \
 					-eval "rpc:call('$OTP_NODE', systools, make_relup, [\"releases/$PKG_NEW\", [\"releases/$PKG_NAME-$OLD_VER\"], [\"releases/$PKG_NAME-$OLD_VER\"], [{path,[\"lib/$PKG_NEW/ebin\"]}, {outdir, \"releases/$PKG_NEW\"}]])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, set_unpacked, [\"$HOME/releases/$PKG_NEW.rel\", $APPDIRS])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, install_release, [\"$PKG_NEW\", [{update_paths, true}]])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, make_permanent, [\"$PKG_NEW\"])" \
+					-eval "{ok, _} = rpc:call('$OTP_NODE', release_handler, set_unpacked, [\"$HOME/releases/$PKG_NEW.rel\", $APPDIRS])" \
+					-eval "{ok, _, _} = rpc:call('$OTP_NODE', release_handler, install_release, [\"$PKG_NEW\", [{update_paths, true}]])" \
+					-eval "ok = rpc:call('$OTP_NODE', release_handler, make_permanent, [\"$PKG_NEW\"])" \
 					-s init stop && echo "... done."
 		else
 			set -e
 			erl -noshell -sname $RPC_SNAME \
 					-eval "rpc:call('$OTP_NODE', application, start, [sasl])" \
 					-eval "rpc:call('$OTP_NODE', systools, make_relup, [\"releases/$PKG_NEW\", [\"releases/$PKG_NAME-$OLD_VER\"], [\"releases/$PKG_NAME-$OLD_VER\"], [{path,[\"lib/$PKG_NEW/ebin\"]}, {outdir, \"releases/$PKG_NEW\"}]])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, set_unpacked, [\"releases/$PKG_NEW.rel\", $APPDIRS])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, install_release, [\"$PKG_NEW\", [{update_paths, true}]])" \
-					-eval "rpc:call('$OTP_NODE', release_handler, make_permanent, [\"$PKG_NEW\"])" \
+					-eval "{ok, _} = rpc:call('$OTP_NODE', release_handler, set_unpacked, [\"releases/$PKG_NEW.rel\", $APPDIRS])" \
+					-eval "{ok, _, _} = rpc:call('$OTP_NODE', release_handler, install_release, [\"$PKG_NEW\", [{update_paths, true}]])" \
+					-eval "ok = rpc:call('$OTP_NODE', release_handler, make_permanent, [\"$PKG_NEW\"])" \
 					-s init stop && echo "... done."
 		fi
 	else
@@ -83,9 +83,9 @@ then
 					-eval "application:start(sasl)" \
 					-eval "application:load($PKG_NAME)" \
 					-eval "systools:make_relup(\"releases/$PKG_NEW\", [\"releases/$PKG_NAME-$OLD_VER\"], [\"releases/$PKG_NAME-$OLD_VER\"], [{path,[\"lib/$PKG_NAME-$OLD_VER/ebin\"]}, {outdir, \"releases/$PKG_NEW\"}])" \
-					-eval "release_handler:set_unpacked(\"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
-					-eval "release_handler:install_release(\"$PKG_NEW\", [{update_paths, true}])" \
-					-eval "release_handler:make_permanent(\"$PKG_NEW\")" \
+					-eval "{ok, _} = release_handler:set_unpacked(\"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
+					-eval "{ok, _, _} = release_handler:install_release(\"$PKG_NEW\", [{update_paths, true}])" \
+					-eval "ok = release_handler:make_permanent(\"$PKG_NEW\")" \
 					-s init stop && echo "... done."
 		else
 			set -e
@@ -94,9 +94,9 @@ then
 					-eval "application:start(sasl)" \
 					-eval "application:load($PKG_NAME)" \
 					-eval "systools:make_relup(\"releases/$PKG_NEW\", [\"releases/$PKG_NAME-$OLD_VER\"], [\"releases/$PKG_NAME-$OLD_VER\"], [{path,[\"lib/$PKG_NAME-$OLD_VER/ebin\"]}, {outdir, \"releases/$PKG_NEW\"}])" \
-					-eval "release_handler:set_unpacked(\"releases/$PKG_NEW.rel\", $APPDIRS)" \
-					-eval "release_handler:install_release(\"$PKG_NEW\", [{update_paths, true}])" \
-					-eval "release_handler:make_permanent(\"$PKG_NEW\")" \
+					-eval "{ok, _} = release_handler:set_unpacked(\"releases/$PKG_NEW.rel\", $APPDIRS)" \
+					-eval "{ok, _, _} = release_handler:install_release(\"$PKG_NEW\", [{update_paths, true}])" \
+					-eval "ok = release_handler:make_permanent(\"$PKG_NEW\")" \
 					-s init stop && echo "... done."
 		fi
 	fi
@@ -108,12 +108,12 @@ else
 	then
 		set -e
 		RELDIR=$HOME/releases erl -noshell -eval "application:start(sasl)" \
-				-eval "release_handler:create_RELEASES(\"$HOME/releases\", \"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
+				-eval "ok = release_handler:create_RELEASES(\"$HOME/releases\", \"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
 				-s init stop && echo "... done."
 	else
 		set -e
 		RELDIR=releases erl -noshell -eval "application:start(sasl)" \
-				-eval "release_handler:create_RELEASES(code:root_dir(), \"$HOME/releases\", \"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
+				-eval "ok = release_handler:create_RELEASES(code:root_dir(), \"$HOME/releases\", \"$HOME/releases/$PKG_NEW.rel\", $APPDIRS)" \
 				-s init stop && echo "... done."
 	fi
 	if ! test -f releases/RELEASES;
