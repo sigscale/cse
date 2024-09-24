@@ -5,7 +5,7 @@ PKG_NAME=cse
 
 set -e
 cd ${HOME}
-if [ -f releases/RELEASES ] ;
+if [ -f "releases/RELEASES" ] ;
 	OLD_VER=`grep "{$PKG_NAME," releases/RELEASES | sed -e 's/[[:blank:]]*{'$PKG_NAME',[[:blank:]]*"//' -e 's/\([0-9.]*\).*/\1/'`
 fi
 PKG_NEW=`find releases -name ${PKG_NAME}-*.tar.gz 2> /dev/null | sort --version-sort | tail -1 | sed -e 's/releases\///' -e 's/\.tar\.gz//'`
