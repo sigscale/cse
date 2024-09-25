@@ -6,7 +6,7 @@ SUBDIRS = include src ebin doc test priv mibs
 
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = scripts/sigscale-cse.service
-sysusers_DATA = scripts/sigscale-cse.service
+sysusers_DATA = scripts/sigscale-cse.conf
 env_DATA = scripts/sigscale-cse
 endif
 
