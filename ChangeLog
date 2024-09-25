@@ -1,3 +1,10 @@
+2024-09-25   Vance Shipley <vances@sigscale.org>
+
+	* install bin directory
+	* use posix style command substitution
+	* quote test(1) expressions
+	* check if releases file exists first
+
 2024-09-24   Vance Shipley <vances@sigscale.org>
 
 	* correct install_release script exit status on release_handler failure
