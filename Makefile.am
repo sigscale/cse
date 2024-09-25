@@ -72,7 +72,7 @@ endif
 .PHONY: service
 if HAVE_SYSTEMD
 service:
-	-$(LN_S) $(DESTDIR)/$(systemdsystemunitdir)/sigscale-cse.service $(DESTDIR)/$(systemdsystemunitdir)/cse.service
+	-$(LN_S) -rfs $(DESTDIR)/$(systemdsystemunitdir)/sigscale-cse.service $(DESTDIR)/$(systemdsystemunitdir)/cse.service
 else
 service:
 endif
