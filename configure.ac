@@ -31,18 +31,6 @@ AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitd
 AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
 		[AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
 AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
-AC_ARG_WITH([sysusersdir],
-		[AS_HELP_STRING([--with-sysusersdir=DIR], [Directory for systemd users files])],,
-		[with_sysusersdir=auto])
-AS_IF([test "x$with_sysusersdir" = "xyes" -o "x$with_sysusersdir" = "xauto"],
-		[def_sysusersdir=$($PKG_CONFIG --variable=sysusersdir systemd)
-		AS_IF([test "x$def_sysusersdir" = "x"],
-				[AS_IF([test "x$with_sysusersdir" = "xyes"],
-						[AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])],
-						[with_sysusersdir=no])],
-				[with_sysusersdir="$def_sysusersdir"])])
-AS_IF([test "x$with_sysusersdir" != "xno"],
-		[AC_SUBST([sysusersdir], [$with_sysusersdir])])
 
 
 ##
@@ -154,5 +142,5 @@ AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile
 		src/Makefile priv/Makefile priv/schema/Makefile
 		priv/mibs/Makefile mibs/Makefile test/Makefile
 		sys.config sigtran.rel $PACKAGE_NAME.rel ebin/$PACKAGE_NAME.appup
-		scripts/sigscale-cse scripts/sigscale-cse.service])
+		scripts/cse scripts/cse.service])
 
