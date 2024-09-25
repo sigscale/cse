@@ -1,5 +1,5 @@
 [Unit]
-Description=Custom Service Environment (CSE)
+Description=SigScale CSE
 Documentation="https://github.com/sigscale/cse"
 After=epmd.service epmd.socket
 
@@ -9,7 +9,7 @@ Group=otp
 WorkingDirectory=/home/otp
 RuntimeDirectory=cse
 RuntimeDirectoryMode=0750
-EnvironmentFile=/etc/default/cse
+EnvironmentFile=/etc/default/sigscale-cse
 LimitNOFILE=4096
 ExecStart=@ERLANG_ROOT_DIR@/bin/run_erl -daemon /run/cse/ log \
                 'ERL_LIBS=lib exec ${ROOTDIR}/bin/start_erl ${ROOTDIR} @RELDIR@ \

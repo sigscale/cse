@@ -5,8 +5,9 @@
 SUBDIRS = include src ebin doc test priv mibs
 
 if HAVE_SYSTEMD
-systemdsystemunit_DATA = scripts/cse.service
-env_DATA = scripts/cse
+systemdsystemunit_DATA = scripts/sigscale-cse.service
+sysusers_DATA = scripts/sigscale-cse.service
+env_DATA = scripts/sigscale-cse
 endif
 
 script_SCRIPTS = scripts/install_tables.escript \
@@ -68,7 +69,15 @@ $(RELEASE_NAME).tar.gz: $(RELEASE_NAME).rel ebin/$(PACKAGE_NAME).appup sys.confi
 	rm -rf $(ERLTMP)
 endif
 
-install-data-hook: $(RELEASE_NAME).tar.gz
+.PHONY: service
+if HAVE_SYSTEMD
+service:
+	-$(LN_S) $(systemdsystemunitdir)/sigscale-cse.service $(systemdsystemunitdir)/cse.service
+else
+service:
+endif
+
+install-data-hook: $(RELEASE_NAME).tar.gz service
 	$(MKDIR_P) $(DESTDIR)/$(reldir)
 	$(INSTALL_DATA) $< $(DESTDIR)/$(reldir)
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/db
