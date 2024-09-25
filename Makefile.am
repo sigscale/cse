@@ -78,6 +78,7 @@ install-data-hook: $(RELEASE_NAME).tar.gz
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/log/slp
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/conf
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/db
+	$(MKDIR_P) $(DESTDIR)/$(otpdir)/bin
 
 EXTRA_DIST = $(RELEASE_NAME).tar.gz
 
