@@ -127,5 +127,4 @@ else
 fi
 ERTS=$(grep "^\[{release," releases/RELEASES | sed -e 's/^\[{release,[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^[^"]*\",[[:blank:]]*\"//' -e 's/^\([0-9.]*\).*/\1/')
 echo "$ERTS $PKG_NEW" > releases/start_erl.data
-exit 0
 
