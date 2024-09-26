@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install an Erlang/OTP release package
-set -x
+
 PKG_NAME=cse
 
 cd ${HOME}

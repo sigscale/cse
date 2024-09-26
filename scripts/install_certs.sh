@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install TLS certificates
-set -x
+
 if [ ! -d $HOME/tls ];
 then
 	mkdir $HOME/tls
