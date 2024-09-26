@@ -1,3 +1,9 @@
+2024-09-26   Vance Shipley <vances@sigscale.org>
+
+	* refactor systemd service with exec start
+	* refactor exception handling in install release script
+	* don't exit on success
+
 2024-09-25   Vance Shipley <vances@sigscale.org>
 
 	* install bin directory
