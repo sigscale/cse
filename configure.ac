@@ -142,5 +142,5 @@ AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile
 		src/Makefile priv/Makefile priv/schema/Makefile
 		priv/mibs/Makefile mibs/Makefile test/Makefile
 		sys.config sigtran.rel $PACKAGE_NAME.rel ebin/$PACKAGE_NAME.appup
-		scripts/cse srcipts/cse.service])
+		scripts/cse scripts/cse.service])
 
