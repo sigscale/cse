@@ -79,7 +79,6 @@ install-data-hook: $(RELEASE_NAME).tar.gz
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/conf
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/snmp/db
 	$(MKDIR_P) $(DESTDIR)/$(otpdir)/bin
-	$(INSTALL_BIN) scripts/start.sh $(DESTDIR)/$(otpdir)/bin/start
 
 EXTRA_DIST = $(RELEASE_NAME).tar.gz
 
