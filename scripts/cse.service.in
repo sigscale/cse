@@ -11,8 +11,7 @@ RuntimeDirectory=cse
 RuntimeDirectoryMode=0750
 LimitNOFILE=4096
 EnvironmentFile=/etc/default/cse
-Environment="START_ERL=ERL_LIBS=lib exec ${ROOTDIR}/bin/start_erl ${ROOTDIR} ${RELDIR} ${START_ERL_DATA} -boot_var OTPHOME . +K true +A 32 +Bi -sname ${NODENAME}"
-ExecStart=@ERLANG_ROOT_DIR@/bin/run_erl -daemon /run/cse/ log ${START_ERL}
+ExecStart=@ERLANG_ROOT_DIR@/bin/run_erl -daemon /run/cse/ log 'ERL_LIBS=lib exec ${ROOTDIR}/bin/start_erl ${ROOTDIR} ${RELDIR} ${START_ERL_DATA} -boot_var OTPHOME . +K true +A 32 +Bi -sname ${NODENAME}'
 GuessMainPID=no
 Type=forking
 Restart=always
