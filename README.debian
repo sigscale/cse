@@ -8,7 +8,7 @@
 	sudo apt update
 
 ### Debian 11 (bullseye)
-	curl -sLO https://asia-east1-apt.pkg.dev/projects/sigscale-release/pool/debian-bookworm/sigscale-release_1.4.5-1+debian11_all_e94392e15179b77adb24cd22a70f830b.deb
+	curl -sLO https://asia-east1-apt.pkg.dev/projects/sigscale-release/pool/debian-bullseye/sigscale-release_1.4.5-1+debian11_all_e94392e15179b77adb24cd22a70f830b.deb
 	sudo dpkg -i sigscale-release_*.deb
 	sudo apt update
 
