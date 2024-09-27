@@ -1,6 +1,6 @@
-September 26, 2024
+September 27, 2024
 ------------------
-	- Portable systemd service configuration
+	- Dynamically set RELDIR for systemd service
 
 September 24, 2024
 ------------------

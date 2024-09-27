@@ -1,3 +1,8 @@
+2024-09-27   Vance Shipley <vances@sigscale.org>
+
+	* set reldir in environment
+	* systemd exec start command must be static path
+
 2024-09-26   Vance Shipley <vances@sigscale.org>
 
 	* refactor systemd service with exec start
