@@ -19,9 +19,9 @@
 
 ## Install SigScale CSE:
 	sudo apt install sigscale-cse
-	sudo systemctl enable sigscale-cse
-	sudo systemctl start sigscale-cse
-	sudo systemctl status sigscale-cse
+	sudo systemctl enable cse
+	sudo systemctl start cse
+	sudo systemctl status cse
 
 Contact <support@sigscale.com> for further assistance.
 
