@@ -45,7 +45,7 @@ then
 		sed -e "s/$PKG_NAME-$OLD_VER/$PKG_NEW/" \
 				releases/$PKG_NAME-$OLD_VER/sys.config > releases/$PKG_NEW/sys.config
 	fi
-	if epmd -names 2> /dev/null | grep -q '^name cse at';
+	if epmd -names 2> /dev/null | grep -q "^name $PKG_NAME at";
 	then
 		# Upgrade using rpc
 		RPC_SNAME=$(id -un)
