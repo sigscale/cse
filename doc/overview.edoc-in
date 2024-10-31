@@ -364,7 +364,7 @@ Application environment variables configuring HTTP client
 ({@link //inets/httpc. httpc}) behaviour for the
 <a target="_blank"
 href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
-API on the 3GPP Re interface to a remote Rating Funtion (RF) (i.e. OCS).
+API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 <dl>
 	<dt>`nrf_profile'</dt>
 		<dd>Provides the {@link //inets/httpc:profile(). profile}
