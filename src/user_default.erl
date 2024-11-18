@@ -28,7 +28,7 @@
 -copyright('Copyright (c) 2016 - 2022 SigScale Global Inc.').
 
 %% export the user_default public API
--export([help/0, ts/0, td/0, su/0, di/0, di/1, di/2, dc/0]).
+-export([help/0, ts/0, td/0, su/0, slpi/0, di/0, di/1, di/2, dc/0]).
 
 -include("cse.hrl").
 -include("diameter_gen_3gpp.hrl").
@@ -49,6 +49,7 @@ help() ->
 	io:fwrite("ts()               -- table sizes\n"),
 	io:fwrite("td()               -- table distribution\n"),
 	io:fwrite("su()               -- scheduler utilization\n"),
+	io:fwrite("slpi()             -- service logic program instances\n"),
 	io:fwrite("di()               -- diameter services info\n"),
 	io:fwrite("di(Info)           -- diameter services info\n"),
 	io:fwrite("di(Service, Info)  -- diameter services info\n"),
@@ -156,6 +157,15 @@ su0([], Etag, Interval) ->
 			N + 1
 	end,
 	io:fwrite("Next report available in ~b seconds.\n", [Seconds]).
+
+-spec slpi() -> Count
+	when
+		Count :: non_neg_integer().
+%% @doc Count of active service logic program instances (SLPI).
+slpi() ->
+	Counts = supervisor:count_children(cse_slp_sup),
+	{active, Count} = lists:keyfind(active, 1, Counts),
+	Count.
 
 -spec di() -> Result
 	when
