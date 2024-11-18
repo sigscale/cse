@@ -157,6 +157,11 @@ su0([], Etag, Interval) ->
 	end,
 	io:fwrite("Next report available in ~b seconds.\n", [Seconds]).
 
+-spec di() -> Result
+	when
+		Result :: [ServiceResult],
+		ServiceResult :: {Service, [term()]},
+		Service :: term().
 %% @doc Get information on running diameter services.
 di() ->
 	diameter_service_info(diameter:services(), []).
