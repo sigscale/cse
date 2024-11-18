@@ -76,14 +76,15 @@ get_health([] = _Query, _RequestHeaders) ->
 				resource_spec, cse_service, cse_context,
 				m3ua_as, m3ua_asp, gtt_as, gtt_ep, gtt_pc])},
 		Checks3 = Checks2#{"uptime" => up()},
-		Checks4 = maps:merge(Checks3,
+		Checks4 = Checks3#{"slp:instances" => slpi()},
+		Checks5 = maps:merge(Checks4,
 				maps:from_list(get_diameter_statistics())),
 		case scheduler() of
 			{ok, HeadOptions, Scheds} ->
 				{HeadOptions, Status,
-						Checks4#{"scheduler:utilization" => Scheds}};
+						Checks5#{"scheduler:utilization" => Scheds}};
 			{error, _Reason1} ->
-				{[], Status, Checks4}
+				{[], Status, Checks5}
 		end
 	of
 		{CacheControl, "up" = _Status, Checks} ->
@@ -382,6 +383,17 @@ up() ->
 	[#{"componentType" =>"system",
 			"observedUnit" => "s",
 			"observedValue" => Uptime}].
+
+-spec slpi() -> Check
+	when
+		Check :: [map()].
+%% @doc Check service logic program instance (SLPI) instance count.
+%% @hidden
+slpi() ->
+	Counts = supervisor:count_children(cse_slp_sup),
+	{active, Count} = lists:keyfind(active, 1, Counts),
+	[#{"componentType" => "system",
+			"observedValue" => Count}].
 
 -spec get_diameter_statistics() -> DiameterChecks
 	when
