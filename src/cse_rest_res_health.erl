@@ -441,6 +441,13 @@ get_diameter_counters(diameter_gen_3gpp_ro_application, [Service | T], Counters)
 get_diameter_counters(diameter_gen_3gpp_ro_application, [], Counters) ->
 	Components = get_components(Counters),
 	{"diameter-ro:counters", Components};
+get_diameter_counters(diameter_gen_3gpp_rf_application, [Service | T], Counters) ->
+	Statistics = diameter:service_info(Service, statistics),
+	NewCounters = service_counters(3, Statistics, Counters),
+	get_diameter_counters(diameter_gen_3gpp_rf_application, T, NewCounters);
+get_diameter_counters(diameter_gen_3gpp_rf_application, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-rf:counters", Components};
 get_diameter_counters(diameter_gen_3gpp_gx_application, [Service | T], Counters) ->
 	Statistics = diameter:service_info(Service, statistics),
 	NewCounters = service_counters(16777238, Statistics, Counters),
