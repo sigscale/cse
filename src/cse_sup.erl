@@ -54,7 +54,7 @@ init(_Args) ->
 	ChildSpecs = [server({local, cse}, cse_server, [self()], []),
 			supervisor({local, cse_log_sup}, cse_log_sup, []),
 			bridge(cse_tco_sup, [self()]),
-			supervisor(cse_slp_sup, []),
+			supervisor({local, cse_slp_sup}, cse_slp_sup, []),
 			supervisor({local, cse_statistics_sup},
 					cse_statistics_sup, []),
 			supervisor({local, cse_diameter_sup}, cse_diameter_sup, []),
