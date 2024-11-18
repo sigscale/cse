@@ -1,3 +1,16 @@
+2024-10-18   Vance Shipley <vances@sigscale.org>
+
+	* add slp instance count in health api
+	* diameter dictionary for rf in health api
+	* shell short cut command for slpi count
+	* registered name for slp supervisor
+	* missing type specification
+	* use package name variable
+	* redhat packages in sigscale-release
+	* correct systemd service name in readme
+	* bullseye package in debian readme
+	* ubuntu 22.04 lts (noble) packages
+
 2024-09-27   Vance Shipley <vances@sigscale.org>
 
 	* set reldir in environment

@@ -1,3 +1,11 @@
+November 18, 2024
+-----------------
+	- SLP instance count in health API
+	- DIAMETER Rf interface in health API
+	- Shell shortcut command for SLPI count
+	- RHEL packages
+	- Ubuntu 24.04 LTS (noble) packages
+
 September 27, 2024
 ------------------
 	- Dynamically set RELDIR for systemd service
