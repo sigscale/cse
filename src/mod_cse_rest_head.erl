@@ -108,23 +108,12 @@
 
 -include_lib("inets/include/httpd.hrl").
 
--ifdef(OTP_RELEASE).
-	-if(?OTP_RELEASE > 23).
-		-define(URI_DECODE(URI), uri_string:percent_decode(URI)).
-	-else.
-		-define(URI_DECODE(URI), http_uri:decode(URI)).
-	-endif.
--else.
-	-define(URI_DECODE(URI), http_uri:decode(URI)).
--endif.
-
 -spec do(ModData) -> Result when
 	ModData :: #mod{},
 	Result :: {proceed, OldData} | {proceed, NewData} | {break, NewData} | done,
 	OldData :: list(),
-	NewData :: [{response, {StatusCode, Body}}]
-			| [{response, {response, Head, Body}}]
-			| [{response, {already_sent, StatusCode, Size}}],
+	NewData :: [{response,{StatusCode,Body}}] | [{response,{response,Head,Body}}]
+			| [{response,{already_sent,StatusCode,Size}}],
 	StatusCode :: integer(),
 	Body :: list() | nobody | {Fun, Arg},
 	Head :: [HeaderOption],
@@ -141,10 +130,8 @@
 	Size :: term(),
 	Fun :: fun((Arg) -> sent| close | Body),
 	Arg :: [term()].
-
 %% @doc Erlang web server API callback function.
-do(#mod{method = Method, parsed_header = _Headers,
-			request_uri = Uri, data = Data} = ModData) ->
+do(#mod{method = Method, request_uri = Uri, data = Data} = ModData) ->
 	case Method of
 		"HEAD" ->
 			case proplists:get_value(status, Data) of
@@ -153,40 +140,71 @@ do(#mod{method = Method, parsed_header = _Headers,
 				undefined ->
 					case proplists:get_value(response, Data) of
 						undefined ->
-							{_, Resource} = lists:keyfind(resource, 1, Data),
-							Path = ?URI_DECODE(Uri),
-							do_head(Resource, ModData, string:tokens(Path, "/"));
+							case lists:keyfind(resource, 1, Data) of
+								false ->
+									{proceed, Data};
+								{_, Resource} ->
+									parse_query(Resource, ModData,
+											uri_string:parse(Uri))
+							end;
 						_Response ->
 							{proceed,  Data}
 					end
 			end;
-		_ ->
+		_Other ->
 			{proceed, Data}
 	end.
 
 %% @hidden
-do_head(Resource, #mod{parsed_header = Headers} = ModData,
-		["health"]) ->
+parse_query(Resource, ModData, #{path := Path, query := Query}) ->
+	do_head(Resource, ModData, string:lexemes(Path, [$/]),
+			uri_string:dissect_query(Query));
+parse_query(Resource, ModData, #{path := Path}) ->
+	do_head(Resource, ModData, string:lexemes(Path, [$/]), []);
+parse_query(_, #mod{parsed_header = RequestHeaders,
+		data = Data} = ModData, _UriMap) ->
+	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
+					"rfc7231#section-6.5.4",
+			title => "Not Found",
+			detail => "No resource exists at the path provided",
+			code => "", status => 404},
+	{ContentType, ResponseBody}
+			= cse_rest:format_problem(Problem, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 404, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 404, Size}} | Data]}.
+
+%% @hidden
+do_head(Resource,
+		#mod{parsed_header = Headers} = ModData,
+		["health"], _Query) ->
 	do_response(ModData, Resource:head_health([], Headers));
-do_head(Resource, #mod{parsed_header = Headers} = ModData,
-		["health", "application"]) ->
+do_head(Resource,
+		#mod{parsed_header = Headers} = ModData,
+		["health", "application"], _Query) ->
 	do_response(ModData, Resource:head_applications([], Headers));
-do_head(Resource, #mod{parsed_header = Headers} = ModData,
-		["health", "application", Id]) ->
+do_head(Resource,
+		#mod{parsed_header = Headers} = ModData,
+		["health", "application", Id], _Query) ->
 	do_response(ModData, Resource:head_application(Id, Headers));
 do_head(Resource, ModData,
-		["resourceCatalogManagement", "v4", "resourceSpecification"]) ->
+		["resourceCatalogManagement", "v4", "resourceSpecification"],
+		_Query) ->
 	do_response(ModData, Resource:head_resource_spec());
 do_head(Resource, ModData,
-		["resourceCatalogManagement", "v4", "resourceSpecification", Id]) ->
+		["resourceCatalogManagement", "v4", "resourceSpecification", Id],
+		_Query) ->
 	do_response(ModData, Resource:head_resource_spec(Id));
 do_head(Resource, ModData,
-		["resourceInventoryManagement", "v4", "resource"]) ->
+		["resourceInventoryManagement", "v4", "resource"], _Query) ->
 	do_response(ModData, Resource:head_resource());
 do_head(Resource, ModData,
-		["resourceInventoryManagement", "v4", "resource", Id]) ->
+		["resourceInventoryManagement", "v4", "resource", Id], _Query) ->
 	do_response(ModData, Resource:head_resource(Id));
-do_head(_, #mod{parsed_header = RequestHeaders, data = Data} = ModData, _Path) ->
+do_head(_,
+		#mod{parsed_header = RequestHeaders, data = Data} = ModData,
+		_Path, _Query) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/"
 					"rfc7231#section-6.5.4",
 			title => "Not Found",
