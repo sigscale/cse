@@ -6,7 +6,7 @@ Prebuilt packages available for
 [Red Hat](https://github.com/sigscale/cse/blob/master/README.redhat.md),
 [Docker](https://github.com/sigscale/cse/blob/master/README.docker.md)
 and
-[Kubernetes](https://github.com/sigscale/cse/blob/master/master/README.kubernetes.md).
+[Kubernetes](https://github.com/sigscale/cse/blob/master/README.kubernetes.md).
 
 This application provides a Service Logic Execution Environment (SLEE)
 for Service Logic Processing Programs (SLP) implementing a network
