@@ -1,11 +1,12 @@
 # [SigScale](http://www.sigscale.org) Custom/CAMEL Service Environment (CSE)
 
 Prebuilt packages available for
-[Ubuntu](https://raw.githubusercontent.com/sigscale/cse/master/README.ubuntu),
-[Debian](https://raw.githubusercontent.com/sigscale/cse/master/README.debian),
-[Red Hat](https://raw.githubusercontent.com/sigscale/cse/master/README.redhat),
-[Docker](https://raw.githubusercontent.com/sigscale/cse/master/README.docker) and
-[Kubernetes](https://raw.githubusercontent.com/sigscale/cse/master/README.kubernetes).
+[Ubuntu](https://github.com/sigscale/cse/blob/master/README.ubuntu.md)
+[Debian](https://github.com/sigscale/cse/blob/master/README.debian.md),
+[Red Hat](https://github.com/sigscale/cse/blob/master/README.redhat.md),
+[Docker](https://github.com/sigscale/cse/blob/master/README.docker.md)
+and
+[Kubernetes](https://github.com/sigscale/cse/blob/master/master/README.kubernetes.md).
 
 This application provides a Service Logic Execution Environment (SLEE)
 for Service Logic Processing Programs (SLP) implementing a network
@@ -20,7 +21,7 @@ System) (3GPP TS 32.296) using the
 API on the Re interface to a remote Rating Function (RF) such as
 SigScale OCS.
  
-![screenshot](https://raw.githubusercontent.com/sigscale/cse/master/doc/ocf-ocs.svg)
+![diagram](https://raw.githubusercontent.com/sigscale/cse/master/doc/ocf-ocs.svg)
 
 Also provided are SLPs for Charging Data Function (CDF) on the
 DIAMETER Rf interface.
