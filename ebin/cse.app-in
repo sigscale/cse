@@ -99,7 +99,7 @@
 				%					{module, cse_diameter_3gpp_ro_application_cb},
 				%					{request_errors, callback}]},
 				%				{'Origin-Realm',"cse.mnc001.mcc001.3gppnetwork.org"}]}]},
-				{tsl, []},
+				{tsl, #{}},
 				% {tsl, #{cse_tsl => {cse_tco_server_cb,
 				%		[{ac,
 				%				#{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
