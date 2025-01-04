@@ -785,10 +785,10 @@ party(N, Acc) when length(Acc) < 11 ->
 	party(N - 1, [rand:uniform(10) - 1 | Acc]);
 party(0, Acc) ->
 	#party_address{ssn = ?SSN_INAP,
+			ri = route_on_ssn,
 			nai = international,
 			translation_type = undefined,
 			numbering_plan = isdn_tele,
-			encoding_scheme = bcd_odd,
 			gt = Acc}.
 
 isup_called_party() ->
