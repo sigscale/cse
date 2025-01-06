@@ -44,9 +44,7 @@
 -record(state,
 		{sup :: pid(),
 		ac :: #{AC :: tuple() := Module :: atom()},
-		slp_sup :: pid() | undefined,
-		queue = #{} :: #{Ref :: reference() => {Fsm :: pid(), Now :: integer()}},
-		weights = #{} :: gtt:weights()}).
+		slp_sup :: pid() | undefined}).
 -type state() :: #state{}.
 
 %%----------------------------------------------------------------------
@@ -81,48 +79,21 @@ init([Sup | ExtraArgs] = _Args) ->
 %% @private
 send_primitive({'N', 'UNITDATA', request,
 		#'N-UNITDATA'{userData = UserData,
-				calledAddress = #party_address{pc = DPC} = CalledParty,
+				calledAddress = #party_address{pc = DPC, mtp_sap = ASP} = CalledParty,
 				callingAddress = #party_address{pc = OPC} = CallingParty,
 				sequenceControl = SequenceControl, returnOption = ReturnOption,
 				importance = _Importance} = _UdataParams},
-		#state{queue = Queue, weights = Weights} = State) ->
-	Now = erlang:monotonic_time(),
-	Class = case {SequenceControl, ReturnOption} of
-		{false, false} ->
-			0;
-		{true, false} ->
-			1;
-		{false, true} ->
-			128;
-		{true, true} ->
-			129
-	end,
+		State) when is_integer(DPC), is_integer(OPC), is_pid(ASP) ->
+	Class = class(SequenceControl, ReturnOption),
 	SccpUnitData = #sccp_unitdata{data = UserData, class = Class,
 			called_party = CalledParty, calling_party = CallingParty},
 	case catch sccp_codec:sccp(SccpUnitData) of
 		UnitData when is_binary(UnitData) ->
-			case gtt:find_pc(DPC) of
-				RoutingKeys when length(RoutingKeys) > 0 ->
-					Stream = 1,
-					NI = 2,
-					SI = 3,
-					SLS = 1,
-					case gtt:candidates(RoutingKeys) of
-						ActiveAsps when length(ActiveAsps) > 0 ->
-							{Fsm, _Status, ActiveWeights} = gtt:select_asp(ActiveAsps, Weights),
-							Ref = m3ua:cast(Fsm, Stream, undefined, OPC, DPC, NI, SI, SLS, UnitData),
-							NewQueue = Queue#{Ref => {Fsm, Now}},
-							F = fun({QueueSize, Delay, _}) ->
-										{QueueSize + 1, Delay, Now}
-							end,
-							NewWeights = maps:update_with(Fsm, F, ActiveWeights),
-							{noreply, State#state{queue = NewQueue, weights = NewWeights}};
-						[] ->
-							{noreply, State}
-					end;
-				[] ->
-					{noreply, State}
-			end;
+			SLS = sccp:sequence_selection(CallingParty, CalledParty),
+			NI = 3, % national
+			SI = 3, % SCCP
+			m3ua:cast(ASP, undefined, undefined, OPC, DPC, NI, SI, SLS, UnitData),
+			{noreply, State};
 		{'EXIT', Reason} ->
 			{stop, Reason, State}
 	end.
@@ -243,15 +214,8 @@ handle_continue(init, #state{sup = TopSup} = State) ->
 %% @doc Handle a received message.
 %% @@see //stdlib/gen_server:handle_info/2
 %% @private
-handle_info({'MTP-TRANSFER', confirm, Ref},
-		#state{queue = Queue, weights = Weights} = State) ->
-	Now = erlang:monotonic_time(),
-	{{Fsm, Start}, NewQueue} =  maps:take(Ref, Queue),
-	F = fun({QueueSize, _, _}) ->
-				{QueueSize - 1, Now - Start, Now}
-	end,
-	NewWeights = maps:update_with(Fsm, F, Weights),
-	{noreply, State#state{queue = NewQueue, weights = NewWeights}}.
+handle_info({'MTP-TRANSFER', confirm, Ref}, State) ->
+	{noreply, State}.
 
 -spec terminate(Reason, State) -> any()
 	when
@@ -288,4 +252,14 @@ format_status(_Opt, [_PDict, State] = _StatusData) ->
 %%----------------------------------------------------------------------
 %% internal functions
 %%----------------------------------------------------------------------
+
+%% @hidden
+class(false = _SequenceControl, false = _ReturnOption) ->
+	0;
+class(true, false) ->
+	1;
+class(false, true) ->
+	128;
+class(true, true) ->
+	129.
 
