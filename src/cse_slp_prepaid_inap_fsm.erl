@@ -371,14 +371,14 @@ analyse_information(cast, {nrf_start,
 	NewData = maps:remove(nrf_reqid, Data),
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 analyse_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
 	NewData = maps:remove(nrf_reqid, Data),
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 analyse_information(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -531,14 +531,14 @@ select_facility(cast, {nrf_start,
 	NewData = maps:remove(nrf_reqid, Data),
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 select_facility(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
 	NewData = maps:remove(nrf_reqid, Data),
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 select_facility(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -987,7 +987,7 @@ o_active(cast, {nrf_update,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
 	NewData = maps:remove(nrf_reqid, Data),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile, nrf_uri := URI,
 				nrf_location := Location} = Data) ->
@@ -996,7 +996,7 @@ o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 			{slpi, self()}]),
 	Data1 = maps:remove(nrf_reqid, Data),
 	NewData = maps:remove(nrf_location, Data1),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 o_active(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -1173,7 +1173,7 @@ t_active(cast, {nrf_update,
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
 	NewData = maps:remove(nrf_reqid, Data),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location} = Data) ->
@@ -1182,7 +1182,7 @@ t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 			{slpi, self()}]),
 	Data1 = maps:remove(nrf_reqid, Data),
 	NewData = maps:remove(nrf_location, Data1),
-	{next_state, exception, NewData};
+	{next_state, exception, NewData, 0};
 t_active(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
