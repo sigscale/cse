@@ -45,7 +45,7 @@
 		unknown_imsi/0, unknown_imsi/1]).
 
 -include_lib("sccp/include/sccp.hrl").
--include_lib("tcap/include/sccp_primitive.hrl").
+-include_lib("sccp/include/sccp_primitive.hrl").
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
 -include_lib("map/include/MAP-MS-DataTypes.hrl").
@@ -82,9 +82,11 @@ init_per_suite(Config) ->
 	ok = cse_test_lib:unload(cse),
 	ok = cse_test_lib:load(cse),
 	Callback = callback(cse_tco_server_cb),
-	ok = application:set_env(cse, tsl_callback, Callback),
-	{ok, TslArgs} = application:get_env(cse, tsl_args),
-	ok = application:set_env(cse, tsl_args, [{?MODULE, undefined} | TslArgs]),
+	TCO = ?MODULE,
+	ACs = #{?'id-ac-CAP-gsmSSF-scfGenericAC' => cse_slp_cap_fsm},
+	TcoArgs = [{ac, ACs}, {shared_pc, true}],
+	Tsl = #{TCO => {Callback, TcoArgs, []}},
+	ok = application:set_env(cse, tsl, Tsl),
 	ok = cse_test_lib:init_tables(),
 	ok = cse_test_lib:start(),
 	EDP = #{abandon => notifyAndContinue,
@@ -98,27 +100,25 @@ init_per_suite(Config) ->
 	Data = #{edp => EDP},
 	Opts = [],
 	ok = cse:add_service(ServiceKey, cse_slp_prepaid_cap_fsm, Data, Opts),
-	{ok, TCO} = application:get_env(cse, tsl_name),
 	Config1 = [{tco, TCO}, {service_key, ServiceKey} | Config],
-	init_per_suite1(Config1).
-init_per_suite1(Config) ->
 	case inets:start(httpd,
 			[{port, 0},
 			{server_name, atom_to_list(?MODULE)},
 			{server_root, "./"},
-			{document_root, ?config(data_dir, Config)},
+			{document_root, ?config(data_dir, Config1)},
 			{modules, [mod_ct_nrf]}]) of
 		{ok, HttpdPid} ->
 			[{port, Port}] = httpd:info(HttpdPid, [port]),
 			NrfUri = "http://localhost:" ++ integer_to_list(Port),
 			ok = application:set_env(cse, nrf_uri, NrfUri),
-			Config1 = [{server_port, Port}, {server_pid, HttpdPid}, {nrf_uri, NrfUri} | Config],
-			init_per_suite2(Config1);
+			Config2 = [{server_port, Port}, {server_pid, HttpdPid},
+					{nrf_uri, NrfUri} | Config1],
+			init_per_suite1(Config2);
 		{error, InetsReason} ->
 			ct:fail(InetsReason)
 	end.
 %% @hidden
-init_per_suite2(Config) ->
+init_per_suite1(Config) ->
 	case gen_server:start({local, ocs}, cse_test_ocs_server, [], []) of
 		{ok, Pid} ->
 			[{ocs, Pid} | Config];
