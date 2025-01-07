@@ -1,7 +1,7 @@
 %%% cse_log_codec_bx.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2024 SigScale Global Inc.
+%%% @copyright 2024-2025 SigScale Global Inc.
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 %%% 	in the {@link //cse. cse} application.
 %%%
 -module(cse_log_codec_bx).
--copyright('Copyright (c) 2024 SigScale Global Inc.').
+-copyright('Copyright (c) 2024-2025 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
 
 %% export the cse_log_codec_bx public API

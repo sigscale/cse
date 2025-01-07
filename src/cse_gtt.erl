@@ -1,6 +1,6 @@
 %%% cse_gtt.erl
 %%%---------------------------------------------------------------------
-%%% @copyright 2023 SigScale Global Inc.
+%%% @copyright 2025 SigScale Global Inc.
 %%% @end
 %%%---------------------------------------------------------------------
 %%% @doc Global Title Table.
@@ -34,7 +34,7 @@
 %%% @end
 %%%
 -module(cse_gtt).
--copyright('Copyright (c) 2023 SigScale Global Inc.').
+-copyright('Copyright (c) 2025 SigScale Global Inc.').
 
 %% export API
 -export([new/2, new/3, insert/2, insert/3, delete/2, lookup_first/2,

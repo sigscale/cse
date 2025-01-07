@@ -1,7 +1,7 @@
 %%% cse_snmpm_cb.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2016-2023 SigScale Global Inc.
+%%% @copyright 2016-2025 SigScale Global Inc.
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 %%% 	{@link //cse. cse} application.
 %%%
 -module(cse_snmpm_cb).
--copyright('Copyright (c) 2016-2023 SigScale Global Inc.').
+-copyright('Copyright (c) 2016-2025 SigScale Global Inc.').
 
 -export([handle_error/3, handle_agent/5, handle_pdu/4,
 		handle_trap/3, handle_inform/3, handle_report/3,

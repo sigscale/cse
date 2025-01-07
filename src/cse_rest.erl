@@ -1,7 +1,7 @@
 %%% cse_rest.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @copyright 2022-2023 SigScale Global Inc.
+%%% @copyright 2022-2025 SigScale Global Inc.
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 %%% 	for REST servers in the {@link //cse. cse} application.
 %%%
 -module(cse_rest).
--copyright('Copyright (c) 2022-2023 SigScale Global Inc.').
+-copyright('Copyright (c) 2022-2025 SigScale Global Inc.').
 
 -export([parse_query/1, range/1, fields/2]).
 -export([format_problem/2]).
