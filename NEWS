@@ -1,3 +1,14 @@
+January 7, 2025
+---------------
+	- TCAP TCO improvements:
+		- multiple TCOs
+		- sends replies to requesting MTP SAP (ASP/SGP)
+		- consistent signaling link selector (SLS) 
+		- allow M3UA application to choose consistent SCTP stream
+		- SCCP party addresses include point code
+	- CAP/INAP SLP failure handling fixes
+	- Release handler improvements
+
 November 18, 2024
 -----------------
 	- SLP instance count in health API

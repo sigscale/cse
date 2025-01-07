@@ -1,3 +1,20 @@
+2025-01-07   Vance Shipley <vances@sigscale.org>
+
+	* no test spec when ct_run args provided
+	* timeout in exception state after nrf failure result
+	* update tco supervisor and test cases for new tco configuration
+	* correct tco start args
+	* update m3ua configuration example in user guide
+	* refactor tco callback module for short circuit reply and sequence selector
+	* update test suites for new sccp party address format
+	* default tsl application environment variable value is empty map()
+	* fix link in readme
+	* refactor package installation readmes
+	* port release handler improvements from ocs
+	* refactor for multiple tco endpoints
+	* enable preprocess in edoc to handle yecc macros
+	* modernize uri parsing in inets httpd callback for head operation
+
 2024-10-18   Vance Shipley <vances@sigscale.org>
 
 	* add slp instance count in health api
