@@ -21,7 +21,7 @@ testmods = cse_api_SUITE \
 		cse_snmpm_cb
 
 DIA_ARGS =
-CT_ARGS =
+CT_ARGS = -spec test.spec
 
 if SIGTRAN
 testmods += cse_inap_SUITE \
@@ -64,7 +64,7 @@ endif
 			$(CT_ARGS) \
 			-pa $(ERLANG_LIB_DIR_sigscale_mibs)/ebin \
 			-pa $(ERLANG_LIB_DIR_zj)/ebin \
-			-logdir log -config ct.cfg -spec test.spec -dir . \
+			-logdir log -config ct.cfg -dir . \
 			-erl_args -noshell -sname $(LOGNAME)-ct
 
 clean-local:
