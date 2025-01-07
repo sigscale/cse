@@ -36,7 +36,7 @@
 
 -include_lib("m3ua/include/m3ua.hrl").
 -include_lib("sccp/include/sccp.hrl").
--include_lib("tcap/include/sccp_primitive.hrl").
+-include_lib("sccp/include/sccp_primitive.hrl").
 -include_lib("tcap/include/DialoguePDUs.hrl").
 -include_lib("tcap/include/tcap.hrl").
 -include_lib("cap/include/CAP-object-identifiers.hrl").
@@ -214,7 +214,7 @@ handle_continue(init, #state{sup = TopSup} = State) ->
 %% @doc Handle a received message.
 %% @@see //stdlib/gen_server:handle_info/2
 %% @private
-handle_info({'MTP-TRANSFER', confirm, Ref}, State) ->
+handle_info({'MTP-TRANSFER', confirm, _Ref}, State) ->
 	{noreply, State}.
 
 -spec terminate(Reason, State) -> any()
