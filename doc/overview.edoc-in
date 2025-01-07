@@ -155,22 +155,22 @@ it is necessary to initialize {@link //mnesia. mnesia} tables.
 ===Initialize CSE===
 ```
 otp@cse:~$ ERL_LIBS=lib erl -sname cse -config releases/cse-%VERSION%/sys
-(cse@cse)1> cse_app:install().
+(cse@host)1> cse_app:install().
 '''
 
-===Initialize M3UA===
-For IN use cases the SIGTRAN stack tables should be initialized:
+===Initialize SIGTRAN===
+For IN use cases the SIGTRAN stack should be initialized:
 ```
-(cse@cse)2> m3ua_app:install().
+(cse@host)2> m3ua_app:install().
+(cse@host)3> gtt_app:install().
 '''
-
-===Initialize GTT===
-Configure a {@link //gtt. gtt} application server (AS) and SCTP endpoint (EP):
+The following example configures an application server (AS) with point
+code `1-2-3' (`2067') and an SCTP endpoint (EP) listening on the well
+known port for M3UA (2905) with subsystem number (SSN) `146' mapped to
+the the registered name of a TCAP transaction layer SAP:
 ```
-(cse@cse)3> gtt_app:install().
-(cse@cse)4> gtt:add_as(sg1, sg, 0, 0, [{2057, [], []}], loadshare, 1, 2).
-(cse@cse)5> gtt:add_ep(ep1, {{0,0,0,0}, 2905, [{ppi,false},{use_rc,false}]}, undefined, server, sgp, gtt_m3ua_cb, [{ssn, #{146 => cse_tsl}}], [sg1]).
-(cse@cse)6> q().
+(cse@host)4> gtt:add_as(as1, as, 0, 0, [{2067, [], []}], loadshare, 1, 2).
+(cse@host)5> gtt:add_ep(ep1, {{0,0,0,0}, 2905, [{ppi,false},{use_rc,false}]}, undefined, server, asp, gtt_m3ua_cb, [{ssn, #{146 => cse_tsl}}], [as1]).
 '''
 
 ==Operation==

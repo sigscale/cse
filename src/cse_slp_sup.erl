@@ -53,9 +53,10 @@ init([] = _Args) ->
 %% @private
 %%
 fsm() ->
-	{ok, TslArgs} = application:get_env(tsl_args),
-	ACs = proplists:get_value(ac, TslArgs),
-	Modules = maps:values(ACs),
+	{ok, Tsl} = application:get_env(tsl),
+	TCOs = maps:values(Tsl),
+	AllACs = [proplists:get_value(ac, Args, []) || {_, Args, _} <- TCOs],
+	Modules = lists:uniq(lists:flatten([maps:values(ACs) || ACs <- AllACs])),
 	StartFunc = {gen_statem, start_link, []},
 	#{id => slp_fsm, start => StartFunc,
 			restart => temporary, modules => Modules}.

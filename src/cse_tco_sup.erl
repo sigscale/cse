@@ -51,25 +51,16 @@
 %% @see //stdlib/supervisor_bridge:init/1
 %% @private
 %%
-init([Sup] = _Args) ->
-	{ok, Name} = application:get_env(tsl_name),
-	{ok, Callback} = application:get_env(tsl_callback),
-	init1(Sup, Name, Callback).
-%% @hidden
-init1(Sup, Name, Callback)
+init([Sup, Name, Callback, TcoArgs, Options] = _Args)
 		when is_atom(Name), Name /= undefined,
 		((is_atom(Callback) and (Callback /= undefined))
 		orelse (element(1, Callback) == tcap_tco_cb)) ->
-	{ok, TcoArgs} = application:get_env(tsl_args),
-	{ok, Options} = application:get_env(tsl_opts),
 	case tcap:start_tsl({local, Name}, Callback, [Sup | TcoArgs], Options) of
 		{ok, TCO} ->
 			{ok, TCO, #state{sup = Sup, tco = TCO}};
 		{error, Reason} ->
 			{error, Reason}
-	end;
-init1(_Sup, _Name, _Callback) ->
-	ignore.
+	end.
 
 -spec terminate(Reason, State) -> any()
 	when

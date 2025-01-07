@@ -53,8 +53,8 @@
 init(_Args) ->
 	ChildSpecs = [server({local, cse}, cse_server, [self()], []),
 			supervisor({local, cse_log_sup}, cse_log_sup, []),
-			bridge(cse_tco_sup, [self()]),
-			supervisor({local, cse_slp_sup}, cse_slp_sup, []),
+			supervisor({local, cse_tco_sup_sup}, cse_tco_sup_sup, []),
+			supervisor(cse_slp_sup, []),
 			supervisor({local, cse_statistics_sup},
 					cse_statistics_sup, []),
 			supervisor({local, cse_diameter_sup}, cse_diameter_sup, []),
@@ -96,21 +96,6 @@ supervisor(StartMod, Args) ->
 supervisor(RegName, StartMod, Args) ->
 	StartArgs = [RegName, StartMod, Args],
 	StartFunc = {supervisor, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			type => supervisor, modules => [StartMod]}.
-
--spec bridge(StartMod, Args) -> Result
-	when
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: supervisor:child_spec().
-%% @doc Build a supervisor child specification for a
-%% 	{@link //stdlib/supervisor_bridge. supervisor_bridge} behaviour.
-%% @private
-%%
-bridge(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
-	StartFunc = {supervisor_bridge, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc,
 			type => supervisor, modules => [StartMod]}.
 

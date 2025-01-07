@@ -17,6 +17,7 @@
 				cse_diameter_3gpp_ro_application_cb,
 				cse_diameter_3gpp_rf_application_cb,
 				cse_server,
+				cse_tco_sup_sup,
 				cse_tco_sup,
 				cse_tco_server_cb,
 				cse_slp_sup,
@@ -67,6 +68,7 @@
 				cse_statistics_sup,
 				cse_statistics,
 				cse_diameter_sup,
+				cse_tco_sup_sup,
 				cse_rest_pagination_sup]},
 		{applications,
 				[kernel,
@@ -97,19 +99,18 @@
 				%					{module, cse_diameter_3gpp_ro_application_cb},
 				%					{request_errors, callback}]},
 				%				{'Origin-Realm',"cse.mnc001.mcc001.3gppnetwork.org"}]}]},
-				{tsl_name, cse_tsl},
-				{tsl_callback, undefined},
-				% {tsl_callback, cse_tco_server_cb},
-				{tsl_args,
-						[{ac, #{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
-								=> cse_slp_cap_fsm,
-						{0,4,0,0,1,21,3,4}          % CAP Phase 3 (capssf-scfGenericAC)
-								=> cse_slp_cap_fsm,
-						{0,4,0,0,1,0,50,1}          % CAP Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
-								=> cse_slp_cap_fsm,
-						{0,4,0,1,1,20,5,4}          % INAP CS2 (id-as-ssf-scfGenericAS)
-								=> cse_slp_inap_fsm}}]},
-				{tsl_opts, []},
+				{tsl, #{}},
+				% {tsl, #{cse_tsl => {cse_tco_server_cb,
+				%		[{ac,
+				%				#{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
+				%						=> cse_slp_cap_fsm,
+				%				{0,4,0,0,1,21,3,4}    % CAP Phase 3 (capssf-scfGenericAC)
+				%						=> cse_slp_cap_fsm,
+				%				{0,4,0,0,1,0,50,1}    % CAP Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
+				%						=> cse_slp_cap_fsm,
+				%				{0,4,0,1,1,20,5,4}    % INAP CS2 (id-as-ssf-scfGenericAS)
+				%						=> cse_slp_inap_fsm}},
+				%		{shared_pc, true}], []}}},
 				{wait_tables, 60000},
 				{resource_table_type, disc_copies},
 				{nrf_profile, nrf},

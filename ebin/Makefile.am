@@ -20,6 +20,7 @@ beam_DATA = cse.beam \
 		cse_diameter_3gpp_ro_application_cb.beam \
 		cse_diameter_3gpp_rf_application_cb.beam \
 		cse_server.beam \
+		cse_tco_sup_sup.beam \
 		cse_tco_sup.beam \
 		cse_slp_sup.beam \
 		cse_slp_prepaid_diameter_ps_fsm.beam \
