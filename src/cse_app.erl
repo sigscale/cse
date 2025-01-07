@@ -205,7 +205,7 @@ start11(TopSup, []) ->
 %% @hidden
 start12(TopSup, [{Name, {Callback, Args, Options}} | T]) ->
 	case supervisor:start_child(cse_tco_sup_sup,
-			[TopSup, Name, Callback, Args, Options]) of
+			[[TopSup, Name, Callback, Args, Options]]) of
 		{ok, _Sup} ->
 			start12(TopSup, T);
 		{error, Reason} ->
