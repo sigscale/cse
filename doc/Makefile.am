@@ -88,6 +88,8 @@ overview.edoc: overview.edoc-in
 			-e 's!%DESCRIPTION%!$(PACKAGE)!' < $< > $@
 
 %.html:$(top_srcdir)/src/%.erl	overview.edoc $(top_srcdir)/doc/supervision.edoc
+	sed -e '/^-doc/d' $(top_builddir)/src/cse_rest_query_parser.erl > $(top_builddir)/src/cse_rest_query_parser.erl.tmp
+	mv $(top_builddir)/src/cse_rest_query_parser.erl.tmp $(top_builddir)/src/cse_rest_query_parser.erl
 	$(ERL) -noshell -run edoc_run application \
 			"'$(PACKAGE_NAME)'" "'$(top_builddir)'" \
 			'[{sort_functions,false},{private,true},{todo,true},{source_path,["$(top_srcdir)/src"]},{subpackages,false},{def,{docsrc,"$(top_srcdir)/doc/{@?}"}},{stylesheet_file, "$(top_srcdir)/doc/sigscale.css"}]'
