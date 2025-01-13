@@ -54,10 +54,11 @@ init(_Args) ->
 	ChildSpecs = [server({local, cse}, cse_server, [self()], []),
 			supervisor({local, cse_log_sup}, cse_log_sup, []),
 			supervisor({local, cse_tco_sup_sup}, cse_tco_sup_sup, []),
-			supervisor(cse_slp_sup, []),
+			supervisor({local, cse_slp_sup}, cse_slp_sup, []),
 			supervisor({local, cse_statistics_sup},
 					cse_statistics_sup, []),
 			supervisor({local, cse_diameter_sup}, cse_diameter_sup, []),
+			supervisor({local, cse_radius_sup}, cse_radius_sup, []),
 			supervisor({local, cse_rest_pagination_sup},
 					cse_rest_pagination_sup, [])],
 	SupFlags = #{},
@@ -66,21 +67,6 @@ init(_Args) ->
 %%----------------------------------------------------------------------
 %%  internal functions
 %%----------------------------------------------------------------------
-
--spec supervisor(StartMod, Args) -> Result
-	when
-		StartMod :: atom(),
-		Args :: [term()],
-		Result :: supervisor:child_spec().
-%% @doc Build a supervisor child specification for a
-%% 	{@link //stdlib/supervisor. supervisor} behaviour.
-%% @private
-%%
-supervisor(StartMod, Args) ->
-	StartArgs = [StartMod, Args],
-	StartFunc = {supervisor, start_link, StartArgs},
-	#{id => StartMod, start => StartFunc,
-			type => supervisor, modules => [StartMod]}.
 
 -spec supervisor(RegName, StartMod, Args) -> Result
 	when

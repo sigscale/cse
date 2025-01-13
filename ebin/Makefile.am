@@ -19,6 +19,10 @@ beam_DATA = cse.beam \
 		cse_diameter_base_application_cb.beam \
 		cse_diameter_3gpp_ro_application_cb.beam \
 		cse_diameter_3gpp_rf_application_cb.beam \
+		cse_radius_sup.beam \
+		cse_radius_server_sup.beam \
+		cse_radius_auth_server.beam \
+		cse_radius_acct_server.beam \
 		cse_server.beam \
 		cse_tco_sup_sup.beam \
 		cse_tco_sup.beam \
