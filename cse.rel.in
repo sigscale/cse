@@ -5,6 +5,7 @@
 	{mnesia, "@ERLANG_LIB_VER_mnesia@"},
 	{inets, "@ERLANG_LIB_VER_inets@"},
 	{diameter, "@ERLANG_LIB_VER_diameter@"},
+	{radius, "@ERLANG_LIB_VER_radius@"},
 	{zj, "@ERLANG_LIB_VER_zj@", load},
 	{snmp, "@ERLANG_LIB_VER_snmp@"},
 	{sigscale_mibs, "@ERLANG_LIB_VER_sigscale_mibs@"},

@@ -43,6 +43,8 @@
                  [{format, external},
                  {type, wrap},
                  {size, {10485760, 10}}]}]}]},
+{radius,
+      [{sock_opts, [{recbuf, 131072}, {sndbuf, 131072}]}]},
 {m3ua,
       []},
 {gtt,

@@ -6,6 +6,7 @@
 
 ## Configure new build directory
 mkdir -p shell/lib
+ln -st shell/lib ../../$(ls -d ../radius.build/shell/lib/radius-*)
 ln -st shell/lib ../../$(ls -d ../cap.build/shell/lib/cap-*)
 ln -st shell/lib ../../$(ls -d ../gtt.build/shell/lib/gtt-*)
 ln -st shell/lib ../../$(ls -d ../inap.build/shell/lib/inap-*)
