@@ -35,6 +35,8 @@
 		get_service/1, find_service/1, get_services/0]).
 -export([add_context/4, delete_context/1,
 		get_context/1, find_context/1, get_contexts/0]).
+-export([add_client/3, add_client/4, delete_client/1,
+		get_client/1, find_client/1, get_clients/0]).
 -export([add_session/2, delete_session/1,
 		get_session/1, find_session/1, get_sessions/0]).
 -export([announce/1]).
@@ -44,7 +46,8 @@
 		resource_spec_rel/0, resource/0, resource_ref/0, resource_rel/0,
 		resource_spec_ref/0, resource_spec_char/0, resource_spec_char_rel/0,
 		resource_spec_char_val/0, char_rel/0, characteristic/0,
-		target_res_schema/0, party_rel/0, in_service/0, diameter_context/0]).
+		target_res_schema/0, party_rel/0, in_service/0, diameter_context/0,
+		client/0]).
 
 -export_type([word/0]).
 
@@ -91,6 +94,10 @@
 -type party_rel() :: #party_rel{}.
 -type in_service() :: #in_service{}.
 -type diameter_context() :: #diameter_context{}.
+-type client() :: #client{}.
+-type client_attributes() :: #{
+		port => inet:port_number(),
+		trusted => boolean()}.
 
 %%----------------------------------------------------------------------
 %%  The cse public API
@@ -1481,6 +1488,130 @@ delete_context(ContextId)
 delete_context1(ContextId) ->
 	F = fun() ->
 		mnesia:delete(cse_context, ContextId, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec add_client(Address, Protocol, Attributes) -> ok
+	when
+		Address :: inet:ip_address(),
+		Protocol :: diameter,
+		Attributes :: client_attributes().
+%% @doc Add a DIAMETER NAS to the client table.
+add_client(Address, diameter, Attributes) ->
+	add_client(Address, diameter, undefined, Attributes).
+
+-spec add_client(Address, Protocol, Secret, Attributes) -> ok
+	when
+		Address :: inet:ip_address(),
+		Protocol :: radius,
+		Secret :: binary(),
+		Attributes :: map().
+%% @doc Add a RADIUS NAS to the client table.
+%%
+%% 	The `Address' of a network access server (NAS)
+%% 	identifies the service logic which should be
+%% 	provided for the call.  An SLP is implemented in a
+%% 	`Module'.
+%%
+add_client(Address, Protocol, Secret, Attributes)
+		when ((tuple_size(Address) =:= 4)
+				orelse (tuple_size(Address) =:= 8)),
+		is_atom(Protocol),
+		(is_binary(Secret) orelse (Secret == undefined)),
+		is_map(Attributes) ->
+	LM = {erlang:system_time(millisecond),
+			erlang:unique_integer([positive])},
+	Client = #client{address  = Address, protocol = Protocol,
+			secret = Secret, attributes = Attributes,
+			last_modified = LM},
+	F = fun() ->
+			mnesia:write(cse_client, Client, write)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, ok} ->
+			ok;
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec get_client(Address) -> Client
+	when
+		Address :: inet:ip_address(),
+		Client :: client().
+%% @doc Get the NAS with `Address' from client table.
+get_client(Address)
+		when ((tuple_size(Address) =:= 4)
+				orelse (tuple_size(Address) =:= 8)) ->
+	F = fun() ->
+			mnesia:read(cse_client, Address, read)
+	end,
+	case mnesia:transaction(F) of
+		{atomic, [#client{} = Client]} ->
+			Client;
+		{atomic, []} ->
+			exit(not_found);
+		{aborted, Reason} ->
+			exit(Reason)
+	end.
+
+-spec find_client(Address) -> Result
+	when
+		Address :: inet:ip_address(),
+		Result :: {ok, client()} | {error, Reason},
+		Reason :: not_found | term().
+%% @doc Find a NAS with `Address' in the client table.
+find_client(Address)
+		when ((tuple_size(Address) =:= 4)
+				orelse (tuple_size(Address) =:= 8)) ->
+	F = fun() ->
+			mnesia:read(cse_client, Address, read)
+	end,
+	case mnesia:ets(F) of
+		{atomic, [#client{} = Client]} ->
+			{ok, Client};
+		{atomic, []} ->
+			{error, not_found};
+		{aborted, Reason} ->
+			{error, Reason}
+	end.
+
+-spec get_clients() -> Clients
+	when
+		Clients :: [client()].
+%% @doc Get all NAS in the client table.
+get_clients() ->
+	MatchSpec = [{'_', [], ['$_']}],
+	F = fun F(start, Acc) ->
+				F(mnesia:select(cse_client,
+						MatchSpec, ?CHUNKSIZE, read), Acc);
+			F('$end_of_table', Acc) ->
+				{ok, Acc};
+			F({error, Reason}, _Acc) ->
+				{error, Reason};
+			F({L, Cont}, Acc) ->
+				F(mnesia:select(Cont), [L| Acc])
+	end,
+	case mnesia:async_dirty(F, [start, []]) of
+		{ok, Acc} when is_list(Acc) ->
+			lists:flatten(lists:reverse(Acc));
+		{error, Reason} ->
+			exit(Reason)
+	end.
+
+-spec delete_client(Address) -> ok
+	when
+		Address :: inet:ip_address().
+%% @doc Delete a NAS from the client table.
+delete_client(Address)
+		when ((tuple_size(Address) =:= 4)
+				orelse (tuple_size(Address) =:= 8)) ->
+	F = fun() ->
+		mnesia:delete(cse_client, Address, write)
 	end,
 	case mnesia:transaction(F) of
 		{atomic, ok} ->

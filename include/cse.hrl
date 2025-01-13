@@ -185,3 +185,12 @@
 		args  = [] :: [term()],
 		opts = [] :: [term()]}).
 
+-record(client,
+		{address :: inet:ip_address() | undefined | '_',
+		identifier = <<>> :: binary() | '_',
+		protocol :: radius | diameter | undefined | '_',
+		secret :: binary() | undefined | '_',
+		attributes = #{} :: map(),
+		last_modified :: {TS :: pos_integer(), N :: pos_integer()}
+				| undefined | '_'}).
+

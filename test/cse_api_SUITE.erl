@@ -37,6 +37,11 @@
 		find_context/0, find_context/1,
 		get_contexts/0, get_contexts/1,
 		delete_context/0, delete_context/1,
+		add_client/0, add_client/1,
+		get_client/0, get_client/1,
+		find_client/0, find_client/1,
+		get_clients/0, get_clients/1,
+		delete_client/0, delete_client/1,
 		no_service/0, no_service/1]).
 -export([announce/0, announce/1]).
 -export([add_index_table_spec/0, add_index_table_spec/1,
@@ -141,7 +146,8 @@ sequences() ->
 all() ->
 	[start_cse, stop_cse, add_service, find_service, get_services,
 			delete_service, add_context, get_context, find_context,
-			get_contexts, delete_context, no_service, announce,
+			get_contexts, delete_context, add_client, get_client,
+			find_client, get_clients, delete_client, no_service, announce,
 			add_index_table_spec, add_prefix_table_spec, add_range_table_spec,
 			get_index_table_spec, get_prefix_table_spec, get_range_table_spec,
 			delete_index_table_spec, delete_prefix_table_spec, delete_range_table_spec,
@@ -272,6 +278,60 @@ delete_context(_Config) ->
 	Module = cse_slp_prepaid_diameter_ims_fsm,
 	cse:add_context(ContextId, Module, [], []),
 	ok = cse:delete_context(ContextId).
+
+add_client() ->
+	[{userdata, [{doc, "Add a NAS to client table"}]}].
+
+add_client(_Config) ->
+	Address = cse_test_lib:rand_ip(),
+	{Protocol, Secret} = case rand:uniform(2) of
+		1 ->
+			{radius, cse_test_lib:rand_name()};
+		2 ->
+			{diameter, undefined}
+	end,
+	Attributes = #{},
+	ok = cse:add_client(Address, Protocol, Secret, Attributes).
+
+get_client() ->
+	[{userdata, [{doc, "Get a NAS client"}]}].
+
+get_client(_Config) ->
+	Address = cse_test_lib:rand_ip(),
+	Attributes = #{port => 3799},
+	cse:add_client(Address, diameter, Attributes),
+	#client{address = Address,
+			protocol = diameter,
+			attributes = Attributes} = cse:get_client(Address).
+
+find_client() ->
+	[{userdata, [{doc, "Find a NAS client"}]}].
+
+find_client(_Config) ->
+	Address = cse_test_lib:rand_ip(),
+	Attributes = #{port => 3799},
+	cse:add_client(Address, diameter, Attributes),
+	{ok, #client{address = Address,
+			protocol = diameter,
+			attributes = Attributes}} = cse:find_client(Address).
+
+get_clients() ->
+	[{userdata, [{doc, "List all NAS clients"}]}].
+
+get_clients(_Config) ->
+	cse:add_client(cse_test_lib:rand_ip(), diameter, #{}),
+	cse:add_client(cse_test_lib:rand_ip(), diameter, #{}),
+	cse:add_client(cse_test_lib:rand_ip(), diameter, #{}),
+	F = fun(S) -> is_record(S, client) end,
+	lists:all(F, cse:get_clients()).
+
+delete_client() ->
+	[{userdata, [{doc, "Remove a NAS client"}]}].
+
+delete_client(_Config) ->
+	Address = cse_test_lib:rand_ip(),
+	cse:add_client(Address, diameter, #{}),
+	ok = cse:delete_client(Address).
 
 no_service() ->
 	[{userdata, [{doc, "Attempt to find a non-existent SLP"}]}].
