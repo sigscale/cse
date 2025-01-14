@@ -135,8 +135,6 @@ request1(#client{secret = Secret} = Client, Packet,
 						ChapChallenge;
 					{ok, ChapChallenge} when is_list(ChapChallenge) ->
 						list_to_binary(ChapChallenge);
-					{error, not_found} when is_binary(Authenticator) ->
-						Authenticator;
 					{error, not_found} when is_list(Authenticator) ->
 						list_to_binary(Authenticator)
 				end,
