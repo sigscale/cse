@@ -25,6 +25,7 @@
 %% export the cse  public API
 -export([start/0, stop/0]).
 -export([start_diameter/3, stop_diameter/1]).
+-export([start_radius/5, stop_radius/1]).
 -export([add_resource_spec/1, get_resource_specs/0, find_resource_spec/1,
 		delete_resource_spec/1, query_resource_spec/4]).
 -export([add_resource/1, delete_resource/1,
@@ -128,7 +129,7 @@ stop() ->
 				| {listen, TransportOpts}
 				| {connect, TransportOpts},
 		TransportOpts :: diameter:transport_opt(),
-		Result :: Result :: {ok, Pid} | {error, Reason},
+		Result :: {ok, Pid} | {error, Reason},
 		Pid :: pid(),
 		Reason :: term().
 %% @doc Start a DIAMETER request handler.
@@ -138,11 +139,35 @@ start_diameter(Address, Port, Options) ->
 -spec stop_diameter(Pid) -> Result
 	when
 		Pid :: pid(),
-		Result :: Result :: ok | {error, Reason},
+		Result :: ok | {error, Reason},
 		Reason :: term().
 %% @doc Stop a DIAMETER request handler.
 stop_diameter(Pid) when is_pid(Pid) ->
 	gen_server:call(cse, {stop, diameter, Pid}).
+
+-spec start_radius(Address, Port, Module, Args, Options) -> Result
+	when
+		Module :: cse_radius_auth_server
+				| cse_radius_acct_server | atom(),
+		Address :: inet:ip_address(),
+		Port :: pos_integer(),
+		Args :: list(),
+		Options :: map(),
+		Result :: Result :: {ok, Pid} | {error, Reason},
+		Pid :: pid(),
+		Reason :: term().
+%% @doc Start a DIAMETER request handler.
+start_radius(Address, Port, Module, Args, Options) ->
+	gen_server:call(cse, {start, radius, Address, Port, Module, Args, Options}).
+
+-spec stop_radius(Pid) -> Result
+	when
+		Pid :: pid(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Stop a RADIUS request handler.
+stop_radius(Pid) when is_pid(Pid) ->
+	gen_server:call(cse, {stop, radius, Pid}).
 
 -spec add_user(Username, Password, UserData) -> Result
 	when
@@ -1508,8 +1533,8 @@ add_client(Address, diameter, Attributes) ->
 -spec add_client(Address, Protocol, Secret, Attributes) -> ok
 	when
 		Address :: inet:ip_address(),
-		Protocol :: radius,
-		Secret :: binary(),
+		Protocol :: radius | diameter,
+		Secret :: binary() | string() | undefined,
 		Attributes :: map().
 %% @doc Add a RADIUS NAS to the client table.
 %%
@@ -1518,6 +1543,9 @@ add_client(Address, diameter, Attributes) ->
 %% 	provided for the call.  An SLP is implemented in a
 %% 	`Module'.
 %%
+add_client(Address, Protocol, Secret, Attributes)
+		when is_list(Secret) ->
+	add_client(Address, Protocol, list_to_binary(Secret), Attributes);
 add_client(Address, Protocol, Secret, Attributes)
 		when ((tuple_size(Address) =:= 4)
 				orelse (tuple_size(Address) =:= 8)),
@@ -1572,12 +1600,10 @@ find_client(Address)
 			mnesia:read(cse_client, Address, read)
 	end,
 	case mnesia:ets(F) of
-		{atomic, [#client{} = Client]} ->
+		[#client{} = Client] ->
 			{ok, Client};
-		{atomic, []} ->
-			{error, not_found};
-		{aborted, Reason} ->
-			{error, Reason}
+		[] ->
+			{error, not_found}
 	end.
 
 -spec get_clients() -> Clients

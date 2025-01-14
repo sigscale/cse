@@ -35,6 +35,7 @@ beam_DATA = cse.beam \
 		cse_slp_postpaid_diameter_ims_fsm.beam \
 		cse_slp_postpaid_diameter_sms_fsm.beam \
 		cse_slp_postpaid_diameter_mms_fsm.beam \
+		cse_slp_prepaid_radius_ps_fsm.beam \
 		cse_statistics_server.beam \
 		cse_statistics_sup.beam \
 		cse_codec.beam \

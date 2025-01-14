@@ -69,7 +69,7 @@ suite() ->
 	{default_config, rest,
 			[{user, "nrf"},
 			{password, "4yjhe6ydsrh4"}]},
-   {timetrap, {minutes, 60}}].
+   {timetrap, {seconds, 60}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
@@ -94,10 +94,13 @@ init_per_suite(Config) ->
 	Secret = ct:get_config({radius, secret}, cse_test_lib:rand_name()),
 	AuthOptions = ct:get_config({radius, auth_options}, []),
 	AcctOptions = ct:get_config({radius, acct_options}, []),
+	SLP = {cse_slp_prepaid_radius_ps_fsm, [], []},
+	AuthArgs = [{slp, #{2 => SLP}}],
+	AcctArgs = [{slp, #{2 => SLP}}],
 	RadiusAppVar = [{RadiusAddress, AuthPort,
-					cse_radius_auth_server, AuthOptions},
+					cse_radius_auth_server, AuthArgs, AuthOptions},
 			{RadiusAddress, AcctPort,
-					cse_radius_acct_server, AcctOptions}],
+					cse_radius_acct_server, AcctArgs, AcctOptions}],
 	ok = application:set_env(cse, radius, RadiusAppVar),
 	InterimInterval = 60 * rand:uniform(10),
    Config1 = [{radius_address, RadiusAddress},
@@ -146,18 +149,18 @@ end_per_suite(Config) ->
 %% Initialization before each test case.
 %%
 init_per_testcase(_TestCase, Config) ->
-	Secret = proplists:get(secret, Config),
+	Address = proplists:get_value(radius_address, Config),
+	Secret = proplists:get_value(secret, Config),
 	{ok, Socket} = gen_udp:open(0, [{active, false}, inet, binary]),
-	{ok, {Address, Port}} = inet:sockname(Socket),
-	{ok, _} = cse:add_client(Address, Port, radius, Secret, #{}),
+	ok = cse:add_client(Address, radius, Secret, #{}),
 	[{nas_socket, Socket}, {nas_client, Address} | Config].
 
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.
 %%
 end_per_testcase(_TestCase, Config) ->
-	Socket = proplists:get(nas_socket, Config),
-	Address = proplists:get(nas_client, Config),
+	Socket = proplists:get_value(nas_socket, Config),
+	Address = proplists:get_value(nas_client, Config),
 	gen_udp:close(Socket),
 	ok = cse:delete_client(Address).
 
@@ -181,20 +184,20 @@ simple_auth() ->
 	[{userdata, [{doc, "RADIUS simple authentication"}]}].
 
 simple_auth(Config) ->
-	OCS = proplists:get(ocs, Config),
+	OCS = proplists:get_value(ocs, Config),
 	MSISDN = cse_test_lib:rand_dn(11),
-	Password = cse_test_lib:random_name(),
+	Password = cse_test_lib:rand_name(),
 	Balance = rand:uniform(100) + 3600,
 	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, MSISDN, Balance}),
 	RadID = 1,
 	NasID = atom_to_list(?FUNCTION_NAME),
-	AcctSessionID = cse_test_lib:random_name(),
-	Address = proplists:get(radius_address, Config),
-	Port = proplists:get(radius_auth_port, Config),
-	Secret = proplists:get(secret, Config),
+	AcctSessionID = cse_test_lib:rand_name(),
+	Address = proplists:get_value(radius_address, Config),
+	Port = proplists:get_value(auth_port, Config),
+	Secret = proplists:get_value(secret, Config),
 	ReqAuth = radius:authenticator(),
 	HiddenPassword = radius_attributes:hide(Secret, ReqAuth, Password),
-	Socket = proplists:get(nas_socket, Config),
+	Socket = proplists:get_value(nas_socket, Config),
 	authenticate_subscriber(Socket, Address, Port, MSISDN,
 			HiddenPassword, Secret, NasID, ReqAuth, RadID, AcctSessionID).
 

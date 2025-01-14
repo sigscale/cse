@@ -40,7 +40,7 @@
 		Opts :: [gen_statem:start_opt()]}.
 
 -record(state,
-		{address :: inet:ap_address(),
+		{address :: inet:ip_address(),
 		port :: inet:port_number(),
 		services :: #{ServiceType :: 1..11 | undefined := slp()}}).
 -type state() :: #state{}.
@@ -78,7 +78,7 @@ init(Address, Port) ->
 %% 	initializes.
 init(Address, Port, Args)
 		when is_tuple(Address), is_integer(Port), is_list(Args) ->
-	Services = proplists:get(slp, Args, undefined),
+	Services = proplists:get_value(slp, Args, undefined),
 	State = #state{address = Address,
 			port = Port, services = Services},
 	{ok, State}.
@@ -108,12 +108,12 @@ request1(#client{secret = Secret} = Client, Packet, State)
 		RadiusRequest = radius:codec(Packet),
 		#radius{code = ?AccountingRequest, id = ID, authenticator = Authenticator,
 				attributes = AttributeData} = RadiusRequest,
-		Attributes = radius_attributes:codec(AttributeData),
-		Length = size(Attributes) + 20,
+		Length = byte_size(AttributeData) + 20,
 		CalcAuth = crypto:hash(md5,
 				[<<?AccountingRequest, ID, Length:16>>,
-				<<0:128>>, Attributes, Secret]),
+				<<0:128>>, AttributeData, Secret]),
 		CalcAuth = list_to_binary(Authenticator),
+		Attributes = radius_attributes:codec(AttributeData),
 		{error, not_found} = radius_attributes:find(?UserPassword, Attributes),
 		{error, not_found} = radius_attributes:find(?ChapPassword, Attributes),
 		{error, not_found} = radius_attributes:find(?ReplyMessage, Attributes),

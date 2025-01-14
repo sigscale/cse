@@ -58,7 +58,7 @@ init([] = _Args) ->
 %%
 supervisor(StartMod) ->
 	StartArgs = [StartMod],
-	StartFunc = {supervisor, start_link, StartArgs},
+	StartFunc = {supervisor_bridge, start_link, StartArgs},
 	#{id => StartMod, start => StartFunc, 
 			type => supervisor, modules => [StartMod]}.
 

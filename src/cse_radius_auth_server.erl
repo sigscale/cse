@@ -40,7 +40,7 @@
 		Opts :: [gen_statem:start_opt()]}.
 
 -record(state,
-		{address :: inet:ap_address(),
+		{address :: inet:ip_address(),
 		port :: inet:port_number(),
 		services :: #{ServiceType :: 1..11 | undefined := slp()}}).
 -type state() :: #state{}.
@@ -135,8 +135,6 @@ request1(#client{secret = Secret} = Client, Packet,
 						ChapChallenge;
 					{ok, ChapChallenge} when is_list(ChapChallenge) ->
 						list_to_binary(ChapChallenge);
-					{error, not_found} when is_binary(Authenticator) ->
-						Authenticator;
 					{error, not_found} when is_list(Authenticator) ->
 						list_to_binary(Authenticator)
 				end,
