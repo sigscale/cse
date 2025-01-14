@@ -227,7 +227,7 @@ end_per_suite(Config) ->
 	Config.
 
 -spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
-%% Cleanup after the whole suite.
+%% Initialization before each test case.
 %%
 init_per_testcase(_TestCase, Config) ->
 	Config.
@@ -986,7 +986,6 @@ location_tai_ecgi(_Config) ->
 	Mnc = io_lib:fwrite("~3.10.0b", [MNC]),
 	<<MCC2:4, MCC1:4, 15:4, MCC3:4>> = cse_codec:tbcd(Mcc),
 	<<MNC2:4, MNC1:4, 15:4, MNC3:4>> = cse_codec:tbcd(Mnc),
-	Length = 15,
 	TAC = rand:uniform(16#ffff),
 	ECI = rand:uniform(16#fffffff),
 	Tac = io_lib:fwrite("~4.16.0b", [TAC]),

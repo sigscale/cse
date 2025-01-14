@@ -60,7 +60,7 @@ start(normal = _StartType, _Args) ->
 			[]
 	end,
 	Tables = [resource_spec, resource,
-			cse_service, cse_context] ++ HttpdTables,
+			cse_service, cse_context, cse_client] ++ HttpdTables,
 	{ok, Wait} = application:get_env(wait_tables),
 	case mnesia:wait_for_tables(Tables, Wait) of
 		ok ->
@@ -400,45 +400,53 @@ install6(Nodes, Acc) ->
 	end.
 %% @hidden
 install7(Nodes, Acc) ->
-	case application:load(inets) of
+	case create_table(cse_client, Nodes) of
 		ok ->
-			error_logger:info_msg("Loaded inets.~n"),
-			install8(Nodes, Acc);
-		{error, {already_loaded, inets}} ->
-			install8(Nodes, Acc)
+			install8(Nodes, [cse_client | Acc]);
+		{error, Reason} ->
+			{error, Reason}
 	end.
 %% @hidden
 install8(Nodes, Acc) ->
-	case is_mod_auth_mnesia() of
-		true ->
+	case application:load(inets) of
+		ok ->
+			error_logger:info_msg("Loaded inets.~n"),
 			install9(Nodes, Acc);
-		false ->
-			error_logger:info_msg("Httpd service not defined. "
-					"User table not created~n"),
-			install11(Nodes, Acc)
+		{error, {already_loaded, inets}} ->
+			install9(Nodes, Acc)
 	end.
 %% @hidden
 install9(Nodes, Acc) ->
-	case create_table(httpd_user, Nodes) of
-		ok ->
-			install10(Nodes, [httpd_user | Acc]);
-		{error, Reason} ->
-			{error, Reason}
+	case is_mod_auth_mnesia() of
+		true ->
+			install10(Nodes, Acc);
+		false ->
+			error_logger:info_msg("Httpd service not defined. "
+					"User table not created~n"),
+			install12(Nodes, Acc)
 	end.
 %% @hidden
 install10(Nodes, Acc) ->
-	case create_table(httpd_group, Nodes) of
+	case create_table(httpd_user, Nodes) of
 		ok ->
-			install11(Nodes, [httpd_group | Acc]);
+			install11(Nodes, [httpd_user | Acc]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-install11(_Nodes, Tables) ->
+install11(Nodes, Acc) ->
+	case create_table(httpd_group, Nodes) of
+		ok ->
+			install12(Nodes, [httpd_group | Acc]);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+install12(_Nodes, Tables) ->
 	{ok, Wait} = application:get_env(cse, wait_tables),
 	case mnesia:wait_for_tables(Tables, Wait) of
 		ok ->
-			install12(Tables, lists:member(httpd_user, Tables));
+			install13(Tables, lists:member(httpd_user, Tables));
 		{timeout, Tables} ->
 			error_logger:error_report(["Timeout waiting for tables",
 					{tables, Tables}]),
@@ -449,21 +457,21 @@ install11(_Nodes, Tables) ->
 			{error, Reason}
 	end.
 %% @hidden
-install12(Tables, true) ->
+install13(Tables, true) ->
 	case inets:start() of
 		ok ->
 			error_logger:info_msg("Started inets.~n"),
-			install13(Tables);
+			install14(Tables);
 		{error, {already_started, inets}} ->
-			install13(Tables);
+			install14(Tables);
 		{error, Reason} ->
 			error_logger:error_msg("Failed to start inets~n"),
 			{error, Reason}
 	end;
-install12(Tables, false) ->
-	install14(Tables).
+install13(Tables, false) ->
+	install15(Tables).
 %% @hidden
-install13(Tables) ->
+install14(Tables) ->
 	case cse:list_users() of
 		{ok, []} ->
 			UserData = [{locale, "en"}],
@@ -472,7 +480,7 @@ install13(Tables) ->
 					error_logger:info_report(["Created a default user",
 							{username, "admin"}, {password, "admin"},
 							{locale, "en"}]),
-					install14(Tables);
+					install15(Tables);
 				{error, Reason} ->
 					error_logger:error_report(["Failed to creat default user",
 							{username, "admin"}, {password, "admin"},
@@ -482,22 +490,22 @@ install13(Tables) ->
 		{ok, Users} ->
 			error_logger:info_report(["Found existing http users",
 					{users, Users}]),
-			install14(Tables);
+			install15(Tables);
 		{error, Reason} ->
 			error_logger:error_report(["Failed to list http users",
 				{error, Reason}]),
 			{error, Reason}
 	end.
 %% @hidden
-install14(Tables) ->
+install15(Tables) ->
 	case install_resource_specs() of
 		ok ->
-			install15([resource_spec | Tables ]);
+			install16([resource_spec | Tables ]);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-install15(Tables) ->
+install16(Tables) ->
 	cse:add_context("32251@3gpp.org",
 			cse_slp_prepaid_diameter_ps_fsm, [], []),
 	cse:add_context("32260@3gpp.org",
@@ -885,6 +893,12 @@ create_table(cse_context, Nodes) when is_list(Nodes) ->
 			{record_name, diameter_context},
 			{user_properties, [{cse, true}]},
 			{attributes, record_info(fields, diameter_context)}]));
+create_table(cse_client, Nodes) when is_list(Nodes) ->
+	create_table1(cse_client, mnesia:create_table(cse_client,
+			[{disc_copies, Nodes},
+			{record_name, client},
+			{user_properties, [{cse, true}]},
+			{attributes, record_info(fields, client)}]));
 create_table(httpd_user, Nodes) when is_list(Nodes) ->
 	create_table1(httpd_user,
 			mnesia:create_table(httpd_user, [{type, bag},

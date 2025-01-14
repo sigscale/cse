@@ -14,6 +14,7 @@ testmods = cse_api_SUITE \
 		cse_codec_SUITE \
 		cse_test_lib \
 		cse_diameter_SUITE \
+		cse_radius_SUITE \
 		cse_snmp_SUITE \
 		cse_test_diameter_cb \
 		cse_test_ocs_server \

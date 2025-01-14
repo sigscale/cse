@@ -9,6 +9,7 @@
 -export([rand_name/0, rand_name/1]).
 -export([rand_dn/0, rand_dn/1]).
 -export([rand_value/0]).
+-export([rand_ip/0, rand_ipv4/0, rand_ipv6/0]).
 
 -define(TIMEOUT, 1000).
 
@@ -161,4 +162,28 @@ rand_value(10) ->
 				F(N - 1, [rand_name() | Acc])
 	end,
 	F(rand:uniform(10), []).
+
+%% @doc Returns a random `inet:ip_address()' value.
+rand_ip() ->
+	case rand:uniform(2) of
+		1 ->
+			rand_ipv4();
+		2 ->
+			rand_ipv6()
+	end.
+
+%% @doc Returns a random `inet:ip4_address()' value.
+rand_ipv4() ->
+	case rand:uniform(3) of
+		1 ->
+			{10, rand:uniform(255), rand:uniform(255), rand:uniform(255)};
+		2 ->
+			{172, 15 + rand:uniform(16), rand:uniform(255), rand:uniform(255)};
+		3 ->
+			{192, 168, rand:uniform(255), rand:uniform(255)}
+	end.
+
+%% @doc Returns a random `inet:ip6_address()' value.
+rand_ipv6() ->
+	inet:ipv4_mapped_ipv6_address(rand_ipv4()).
 
