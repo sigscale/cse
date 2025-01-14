@@ -336,6 +336,21 @@ Application environment variables configuring instances of the
 				define a DIAMETER service. (default: `[]')</dd>
 </dl>
 
+===RADIUS===
+Application environment variables configuring instances of the
+{@link //radius. radius} application:
+<dl>
+	<dt>`radius'</dt>
+		<dd>Defines RADIUS services as `[{Addr, Port, Module, Args, Options}]'.
+				Each set defines a RADIUS service. The local bind address
+				(`Addr :: inet:ip_address()'), port (`Port :: 0..65535')
+				and options (`Options :: [radius:service_opt()])
+				configure a listening socket while the
+				callback module (`Module :: atom()') and
+				arguments (`Args :: [term()]') define how received
+				RADIUS requests are handled. (default: `[]')</dd>
+</dl>
+
 ===TCAP===
 Application environment variables configuring binding of the
 Transaction Sublayer (TSL) of the {@link //tcap. tcap} application:
@@ -456,6 +471,7 @@ Application environment variables configuring mnesia tables.
                  {codec, {cse_log_codec_bx, csv}},
                  {type, wrap},
                  {size, {10485760, 10}}]}]}]},
+     {radius, []},
      {diameter,
            [{{0,0,0,0}, 3868,
                  [{'Auth-Application-Id', [4]},
