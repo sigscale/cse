@@ -40,7 +40,7 @@
 		Opts :: [gen_statem:start_opt()]}.
 
 -record(state,
-		{address :: inet:ap_address(),
+		{address :: inet:ip_address(),
 		port :: inet:port_number(),
 		services :: #{ServiceType :: 1..11 | undefined := slp()}}).
 -type state() :: #state{}.
