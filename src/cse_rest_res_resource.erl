@@ -1350,32 +1350,32 @@ resource_spec_char([schema | T], #{<<"@schemaLocation">> := Schema} = M, Acc)
 resource_spec_char([start_date | T], #resource_spec_char{start_date = Start} = R,
 		#{<<"validFor">> := ValidFor} = Acc)
 		when is_integer(Start) ->
-	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(Start)},
+	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(Start)},
 	resource_spec_char(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char([start_date | T],
 		#resource_spec_char{start_date = StartDate} = R, Acc)
 		when is_integer(StartDate) ->
-	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(StartDate)},
+	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(StartDate)},
 	resource_spec_char(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec_char([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
 		when is_binary(Start) ->
 	resource_spec_char(T, M,
-			Acc#resource_spec_char{start_date = im_rest:iso8601(Start)});
+			Acc#resource_spec_char{start_date = cse_rest:iso8601(Start)});
 resource_spec_char([end_date | T], #resource_spec_char{end_date = End} = R,
 		#{<<"validFor">> := ValidFor} = Acc)
 		when is_integer(End) ->
-	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(End)},
+	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_char(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char([end_date | T], #resource_spec_char{end_date = End} = R, Acc)
 		when is_integer(End) ->
-	ValidFor = #{<<"endDateTime">> => im_rest:iso8601(End)},
+	ValidFor = #{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_char(T, R, Acc#{<<"validFor">> := ValidFor});
 resource_spec_char([end_date | T],
 		#{<<"validFor">> := #{<<"endDateTime">> := End}} = M, Acc)
 		when is_binary(End) ->
 	resource_spec_char(T, M,
-			Acc#resource_spec_char{end_date = im_rest:iso8601(End)});
+			Acc#resource_spec_char{end_date = cse_rest:iso8601(End)});
 resource_spec_char([configurable | T],
 		#resource_spec_char{configurable = Configurable} = R, Acc)
 		when is_boolean(Configurable) ->
@@ -1482,34 +1482,34 @@ resource_spec_char_rel([start_date | T],
 		#resource_spec_char_rel{start_date = Start} = R,
 		#{<<"validFor">> := ValidFor} = Acc)
 		when is_integer(Start) ->
-	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(Start)},
+	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(Start)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char_rel([start_date | T],
 		#resource_spec_char_rel{start_date = Start} = R, Acc)
 		when is_integer(Start) ->
-	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(Start)},
+	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(Start)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec_char_rel([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
 		when is_binary(Start) ->
 	resource_spec_char_rel(T, M,
-			Acc#resource_spec_char_rel{start_date = im_rest:iso8601(Start)});
+			Acc#resource_spec_char_rel{start_date = cse_rest:iso8601(Start)});
 resource_spec_char_rel([end_date | T],
 		#resource_spec_char_rel{end_date = End} = R,
 		#{<<"validFor">> := ValidFor} = Acc)
 		when is_integer(End) ->
-	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(End)},
+	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char_rel([end_date | T],
 		#resource_spec_char_rel{end_date = End} = R, Acc)
 		when is_integer(End) ->
-	ValidFor = #{<<"endDateTime">> => im_rest:iso8601(End)},
+	ValidFor = #{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_char_rel(T, R, Acc#{<<"validFor">> := ValidFor});
 resource_spec_char_rel([end_date | T],
 		#{<<"validFor">> := #{<<"endDateTime">> := End}} = M, Acc)
 		when is_binary(End) ->
 	resource_spec_char_rel(T, M,
-			Acc#resource_spec_char_rel{end_date = im_rest:iso8601(End)});
+			Acc#resource_spec_char_rel{end_date = cse_rest:iso8601(End)});
 resource_spec_char_rel([res_spec_id | T],
 		#resource_spec_char_rel{res_spec_id = Id} = R, Acc)
 		when is_binary(Id) ->
@@ -1600,34 +1600,34 @@ resource_spec_char_val([start_date | T],
 		#resource_spec_char_val{start_date = Start} = R,
 		#{<<"validFor">> := ValidFor} = Acc)
 		when is_integer(Start) ->
-	NewValidFor = ValidFor#{<<"startDateTime">> => im_rest:iso8601(Start)},
+	NewValidFor = ValidFor#{<<"startDateTime">> => cse_rest:iso8601(Start)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char_val([start_date | T],
 		#resource_spec_char_val{start_date = Start} = R, Acc)
 		when is_integer(Start) ->
-	ValidFor = #{<<"startDateTime">> => im_rest:iso8601(Start)},
+	ValidFor = #{<<"startDateTime">> => cse_rest:iso8601(Start)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> => ValidFor});
 resource_spec_char_val([start_date | T],
 		#{<<"validFor">> := #{<<"startDateTime">> := Start}} = M, Acc)
 		when is_binary(Start) ->
 	resource_spec_char_val(T, M,
-			Acc#resource_spec_char_val{start_date = im_rest:iso8601(Start)});
+			Acc#resource_spec_char_val{start_date = cse_rest:iso8601(Start)});
 resource_spec_char_val([end_date | T],
 		#resource_spec_char_val{end_date = End} = R,
 		#{<<"validFor">> := ValidFor} = Acc)
 		when is_integer(End) ->
-	NewValidFor = ValidFor#{<<"endDateTime">> => im_rest:iso8601(End)},
+	NewValidFor = ValidFor#{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> := NewValidFor});
 resource_spec_char_val([end_date | T],
 		#resource_spec_char_val{end_date = End} = R, Acc)
 		when is_integer(End) ->
-	ValidFor = #{<<"endDateTime">> => im_rest:iso8601(End)},
+	ValidFor = #{<<"endDateTime">> => cse_rest:iso8601(End)},
 	resource_spec_char_val(T, R, Acc#{<<"validFor">> := ValidFor});
 resource_spec_char_val([end_date | T],
 		#{<<"validFor">> := #{<<"endDateTime">> := End}} = M, Acc)
 		when is_binary(End) ->
 	resource_spec_char_val(T, M,
-			Acc#resource_spec_char_val{end_date = im_rest:iso8601(End)});
+			Acc#resource_spec_char_val{end_date = cse_rest:iso8601(End)});
 resource_spec_char_val([value | T],
 		#resource_spec_char_val{value = Value} = R, Acc)
 		when Value /= undefined ->
