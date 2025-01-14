@@ -37,6 +37,7 @@
 				cse_slp_postpaid_diameter_ims_fsm,
 				cse_slp_postpaid_diameter_sms_fsm,
 				cse_slp_postpaid_diameter_mms_fsm,
+				cse_slp_prepaid_radius_ps_fsm,
 				cse_statistics_server,
 				cse_statistics_sup,
 				cse_codec,
