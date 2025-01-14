@@ -42,8 +42,8 @@
 		Reason :: term().
 %% @see //stdlib/supervisor_bridge:init/1
 %% @private
-init([StartMod, Address, Port, Options] = _Args) ->
-	case radius:start_link(StartMod, Port, [{ip, Address} | Options]) of
+init([Address, Port, StartMod, ExtraArgs, Options] = _Args) ->
+	case radius:start_link(StartMod, ExtraArgs, Port, [{ip, Address} | Options]) of
 		{ok, Pid} ->
 			State = Pid,
 			{ok, Pid, State};
@@ -59,7 +59,6 @@ init([StartMod, Address, Port, Options] = _Args) ->
 %% @private
 terminate(_Reason, State) ->
 	radius:stop(State).
-
 
 %%----------------------------------------------------------------------
 %%  internal functions

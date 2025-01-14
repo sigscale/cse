@@ -177,41 +177,64 @@ start9(TopSup, [{LogName, Options} | T]) ->
 			{error, Reason}
 	end;
 start9(TopSup, []) ->
-	{ok, DiameterServices} = application:get_env(diameter),
-	start10(TopSup, DiameterServices).
+	{ok, RadiusServices} = application:get_env(radius),
+	start10(TopSup, RadiusServices).
 %% @hidden
-start10(TopSup, [] = DiameterServices) ->
-	start11(TopSup, DiameterServices);
-start10(TopSup, DiameterServices) ->
-	case application:start(diameter) of
+start10(TopSup, [] = RadiusServices) ->
+	start11(TopSup, RadiusServices);
+start10(TopSup, RadiusServices) ->
+	case application:start(radius) of
 		ok ->
-			start11(TopSup, DiameterServices);
+			start11(TopSup, RadiusServices);
 		{error, {already_started, _}} ->
-			start11(TopSup, DiameterServices);
+			start11(TopSup, RadiusServices);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start11(TopSup, [{Addr, Port, Options} | T]) ->
-	case cse:start_diameter(Addr, Port, Options) of
+start11(TopSup, [{Addr, Port, Module, Args, Options} | T]) ->
+	case cse:start_radius(Addr, Port, Module, Args, Options) of
 		{ok, _Sup} ->
 			start11(TopSup, T);
 		{error, Reason} ->
 			{error, Reason}
 	end;
-start11(TopSup, []) ->
-	{ok, Tsl} = application:get_env(tsl),
-	start12(TopSup, maps:to_list(Tsl)).
+start11(TopSup, [] = _RadiusServices) ->
+	{ok, DiameterServices} = application:get_env(diameter),
+	start12(TopSup, DiameterServices).
 %% @hidden
-start12(TopSup, [{Name, {Callback, Args, Options}} | T]) ->
-	case supervisor:start_child(cse_tco_sup_sup,
-			[[TopSup, Name, Callback, Args, Options]]) of
+start12(TopSup, [] = DiameterServices) ->
+	start13(TopSup, DiameterServices);
+start12(TopSup, DiameterServices) ->
+	case application:start(diameter) of
+		ok ->
+			start13(TopSup, DiameterServices);
+		{error, {already_started, _}} ->
+			start13(TopSup, DiameterServices);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start13(TopSup, [{Addr, Port, Options} | T]) ->
+	case cse:start_diameter(Addr, Port, Options) of
 		{ok, _Sup} ->
-			start12(TopSup, T);
+			start13(TopSup, T);
 		{error, Reason} ->
 			{error, Reason}
 	end;
-start12(TopSup, []) ->
+start13(TopSup, []) ->
+	{ok, Tsl} = application:get_env(tsl),
+	start14(TopSup, maps:to_list(Tsl)).
+%% @hidden
+start14(TopSup, [{Name, {Callback, Args, Options}} | T]) ->
+	case supervisor:start_child(cse_tco_sup_sup,
+			[[TopSup, Name, Callback, Args, Options]]) of
+		{ok, _Sup} ->
+			start14(TopSup, T);
+		{error, Reason} ->
+			{error, Reason}
+	end;
+start14(TopSup, []) ->
 	catch cse_mib:load(),
 	{ok, TopSup}.
 

@@ -71,10 +71,21 @@ handle_call({start, diameter, Address, Port, Options}, _From,
 	{_, DiameterSup, _, _} = lists:keyfind(cse_diameter_sup, 1, Children),
    Result = supervisor:start_child(DiameterSup, [[Address, Port, Options]]),
    {reply, Result, State};
+handle_call({start, radius, Address, Port, Module, Args, Options}, _From,
+		#state{sup = Sup} = State) ->
+	Children = supervisor:which_children(Sup),
+	{_, RadiusSup, _, _} = lists:keyfind(cse_radius_sup, 1, Children),
+   Result = supervisor:start_child(RadiusSup, [[Address, Port, Module, Args, Options]]),
+   {reply, Result, State};
 handle_call({stop, diameter, Child}, _From, #state{sup = Sup} = State) ->
 	Children = supervisor:which_children(Sup),
 	{_, DiameterSup, _, _} = lists:keyfind(cse_diameter_sup, 1, Children),
    Result = supervisor:terminate_child(DiameterSup, Child),
+   {reply, Result, State};
+handle_call({stop, radius, Child}, _From, #state{sup = Sup} = State) ->
+	Children = supervisor:which_children(Sup),
+	{_, RadiusSup, _, _} = lists:keyfind(cse_radius_sup, 1, Children),
+   Result = supervisor:terminate_child(RadiusSup, Child),
    {reply, Result, State};
 handle_call(Request, _From, State) ->
 	{stop, Request, State}.
