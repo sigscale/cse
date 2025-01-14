@@ -1508,8 +1508,8 @@ add_client(Address, diameter, Attributes) ->
 -spec add_client(Address, Protocol, Secret, Attributes) -> ok
 	when
 		Address :: inet:ip_address(),
-		Protocol :: radius,
-		Secret :: binary(),
+		Protocol :: radius | diameter,
+		Secret :: binary() | undefined,
 		Attributes :: map().
 %% @doc Add a RADIUS NAS to the client table.
 %%
