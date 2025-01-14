@@ -1,3 +1,23 @@
+2025-01-14   Vance Shipley <vances@sigscale.org>
+
+	* nrf requests accept header includes application/problem+json
+	* test case: send access-request
+	* skeleton slp for radius prepaid ps
+	* correct request validation with secret hash
+	* remove unused clause
+	* start radius services
+	* update radius configuration
+	* correct typespec for tco callback handle_call/3
+	* correct module name for iso8601 codec
+	* correct type specification in add_client/4
+	* clean mibs and scripts subdirectories in build readme
+	* radius nas client test suite
+	* nas (radius/diameter) client table management
+	* handle radius protocol stack
+	* dependency on radius stack application
+	* patch yecc generated file for edoc consumption
+	* do not enable preprocessor in edoc
+
 2025-01-07   Vance Shipley <vances@sigscale.org>
 
 	* no test spec when ct_run args provided

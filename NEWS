@@ -1,3 +1,9 @@
+January 14, 2025
+----------------
+	- RADIUS stack integrated
+	- Nrf requests accept header includes application/problem+json
+	- NAS client table management
+
 January 7, 2025
 ---------------
 	- TCAP TCO improvements:
