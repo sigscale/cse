@@ -160,11 +160,8 @@ start_aei(#'EXTERNAL'{encoding = {'single-ASN1-type',
 				| {reply, Reply :: term(), NewState :: state(), timeout() | hibernate | {continue, term()}}
 				| {noreply, NewState :: state()}
 				| {noreply, NewState :: state(), timeout() | hibernate | {continue, term()}}
-				| {primitive, Primitive, State}
 				| {stop, Reason :: term(), Reply :: term(), NewState :: state()}
-				| {stop, Reason :: term(), NewState :: state()},
-		Primitive :: {'N', 'UNITDATA', indication, UdataParams},
-		UdataParams :: #'N-UNITDATA'{}.
+				| {stop, Reason :: term(), NewState :: state()}.
 %% @see //stdlib/gen_server:handle_call/3
 %% @private
 handle_call(Request, _From, State) ->
