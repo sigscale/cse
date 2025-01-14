@@ -150,23 +150,22 @@ request1(#client{secret = Secret} = Client, Packet,
 		end,
 		Args = [Client, NasId1, Port, UserName, Password | ExtraArgs],
 		supervisor:start_child(cse_slp_sup, [Module, Args, Opts])
-	of
-		{ok, Child} ->
-			case catch gen_statem:call(Child, RadiusRequest) of
-				{'EXIT', Reason} ->
-					error_logger:error_report(["Radius Error",
-							{module, ?MODULE}, {fsm, Child},
-							{type, 'Access-Request'}, {nas, NasId1},
-							{error, Reason}]),
-					reject(ID, Authenticator, Secret);
-				#radius{} = RadiusResponse ->
-					{ok, radius:codec(RadiusResponse)}
-			end;
-		{error, Reason} ->
-			error_logger:error_report(["Radius Error",
-					{module, ?MODULE}, {type, 'Access-Request'},
-					{nas, NasId1}, {error, Reason}]),
-			reject(ID, Authenticator, Secret)
+			{ok, Child} ->
+				case catch gen_statem:call(Child, RadiusRequest) of
+					{'EXIT', Reason} ->
+						error_logger:error_report(["Radius Error",
+								{module, ?MODULE}, {fsm, Child},
+								{type, 'Access-Request'}, {nas, NasId1},
+								{error, Reason}]),
+						reject(ID, Authenticator, Secret);
+					#radius{} = RadiusResponse ->
+						{ok, radius:codec(RadiusResponse)}
+				end;
+			{error, Reason} ->
+				error_logger:error_report(["Radius Error",
+						{module, ?MODULE}, {type, 'Access-Request'},
+						{nas, NasId1}, {error, Reason}]),
+				reject(ID, Authenticator, Secret)
 	catch
 		_:_ ->
 			{error, ignore}
