@@ -85,7 +85,7 @@ do(#mod{method = Method, parsed_header = Headers, request_uri = Uri,
 %% @hidden
 content_type_available(Headers, Uri, Body, #mod{data = Data} = ModData) ->
 	case lists:keyfind("accept", 1, Headers) of
-		{_, "application/json"} ->
+		{_, "application/json" ++ _} ->
 			do_post(ModData, Body, string:tokens(Uri, "/"));
 		{_, _} ->
 			Response = "<h2>HTTP Error 415 - Unsupported Media Type</h2>",
@@ -272,6 +272,7 @@ do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData, {error,
 			code => "", status => 403,
 			title => "Request denied due to insufficient credit (usage applied)"},
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, RequestHeaders, ContentType}),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
 	send(ModData, 403, ResponseHeaders, ResponseBody),
@@ -284,6 +285,7 @@ do_response(#mod{data = Data} = ModData, {Code, Headers, ResponseBody}) ->
 	{proceed,[{response,{already_sent, Code, Size}} | Data]};
 do_response(#mod{data = Data} = _ModData, {error, 400}) ->
 	Response = "<h2>HTTP Error 400 - Bad Request</h2>",
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, Response}),
 	{proceed, [{response, {400, Response}} | Data]}.
 
 %% @hidden
