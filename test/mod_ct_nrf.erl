@@ -272,7 +272,6 @@ do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData, {error,
 			code => "", status => 403,
 			title => "Request denied due to insufficient credit (usage applied)"},
 	{ContentType, ResponseBody} = cse_rest:format_problem(Problem, RequestHeaders),
-erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, RequestHeaders, ContentType}),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
 	send(ModData, 403, ResponseHeaders, ResponseBody),
@@ -285,7 +284,6 @@ do_response(#mod{data = Data} = ModData, {Code, Headers, ResponseBody}) ->
 	{proceed,[{response,{already_sent, Code, Size}} | Data]};
 do_response(#mod{data = Data} = _ModData, {error, 400}) ->
 	Response = "<h2>HTTP Error 400 - Bad Request</h2>",
-erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, Response}),
 	{proceed, [{response, {400, Response}} | Data]}.
 
 %% @hidden
@@ -304,6 +302,8 @@ get_sub_id(["imsi-" ++ IMSI | _]) ->
 	IMSI;
 get_sub_id(["msisdn-" ++ MSISDN| _]) ->
 	MSISDN;
+get_sub_id(["nai-" ++ NAI | _]) ->
+	NAI;
 get_sub_id([_ | T]) ->
 	get_sub_id(T);
 get_sub_id([]) ->
