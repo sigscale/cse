@@ -127,12 +127,12 @@ request1(#client{secret = Secret} = Client, Packet, State)
 			{ok, ?AccountingStart} ->
 				request2(Client, RadiusRequest, SessionId, UserName,
 						NasId1, Port, Attributes, State);
-			_ ->
+			{ok, _Other} ->
 				request3(Client, RadiusRequest, UserName,
 						NasId1, Port, Attributes, State)
 		end
 	catch
-		_:_ ->
+		_:_Reason ->
 			{error, ignore}
 	end;
 request1(_Client, _Packet, _State) ->
@@ -153,7 +153,7 @@ request2(Client, RadiusRequest, SessionId, UserName,
 					{error, Reason}]),
 			{error, ignore}
 	catch
-		_:_ ->
+		_:_Reason ->
 			{error, ignore}
 	end.
 %% @hidden
@@ -191,7 +191,9 @@ request4(SLPI, RadiusRequest, NasId) ->
 					{error, Reason}]),
 			{error, ignore};
 		#radius{} = RadiusResponse ->
-			{ok, radius:codec(RadiusResponse)}
+			{ok, radius:codec(RadiusResponse)};
+		ignore ->
+			{error, ignore}
 	end.
 
 -spec terminate(Reason, State) -> ok

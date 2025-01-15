@@ -159,7 +159,9 @@ request1(#client{secret = Secret} = Client, Packet,
 								{error, Reason}]),
 						reject(ID, Authenticator, Secret);
 					#radius{} = RadiusResponse ->
-						{ok, radius:codec(RadiusResponse)}
+						{ok, radius:codec(RadiusResponse)};
+					ignore ->
+						{error, ignore}
 				end;
 			{error, Reason} ->
 				error_logger:error_report(["Radius Error",
