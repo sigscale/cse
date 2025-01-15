@@ -344,7 +344,7 @@ Application environment variables configuring instances of the
 		<dd>Defines RADIUS services as `[{Addr, Port, Module, Args, Options}]'.
 				Each set defines a RADIUS service. The local bind address
 				(`Addr :: inet:ip_address()'), port (`Port :: 0..65535')
-				and options (`Options :: [radius:service_opt()])
+				and options (`Options :: [radius:service_opt()'])
 				configure a listening socket while the
 				callback module (`Module :: atom()') and
 				arguments (`Args :: [term()]') define how received
