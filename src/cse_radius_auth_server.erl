@@ -149,7 +149,7 @@ request1(#client{secret = Secret} = Client, Packet,
 				maps:get(undefined, Services)
 		end,
 		Args = [Client, NasId1, Port, UserName, Password | ExtraArgs],
-		supervisor:start_child(cse_slp_sup, [Module, Args, Opts])
+		supervisor:start_child(cse_slp_sup, [Module, Args, Opts]) of
 			{ok, Child} ->
 				case catch gen_statem:call(Child, RadiusRequest) of
 					{'EXIT', Reason} ->
