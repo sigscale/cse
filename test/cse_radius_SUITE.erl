@@ -1,4 +1,4 @@
-%% cse_radius_SUITE.erl
+%%% cse_radius_SUITE.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2016 - 2025 SigScale Global Inc.
@@ -21,12 +21,13 @@
 -copyright('Copyright (c) 2016 - 2025 SigScale Global Inc.').
 
 %% common_test required callbacks
--export([suite/0, sequences/0, all/0]).
+-export([suite/0, all/0]).
 -export([init_per_suite/1, end_per_suite/1]).
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 % export test case functions
--export([simple_auth/0, simple_auth/1]).
+-export([auth_only/0, auth_only/1,
+		auth_start/0, auth_start/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("radius/include/radius.hrl").
@@ -45,11 +46,14 @@
 %%  Test server callback functions
 %%---------------------------------------------------------------------
 
--spec suite() -> DefaultData :: [tuple()].
-%% Require variables and set default values for the suite.
+-spec suite() -> [Info]
+	when
+		Info :: ct_suite:ct_info().
+%% @doc  Require variables and set default values for the suite.
 %%
 suite() ->
-   [{userdata, [{doc, "Test suite for RADIUS in CSE"}]},
+	Description = "Test suite for RADIUS in CSE",
+	[{userdata, [{doc, Description}]},
 	{require, radius},
 	{default_config, radius,
 			[{address, {127,0,0,1}}]},
@@ -71,8 +75,14 @@ suite() ->
 			{password, "4yjhe6ydsrh4"}]},
    {timetrap, {seconds, 60}}].
 
--spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
-%% Initialization before the whole suite.
+-spec init_per_suite(Config) -> NewConfig
+	when
+		Config :: ct_suite:ct_config(),
+		NewConfig :: ct_suite:ct_config()
+				| {skip, Reason}
+				| {skip_and_save, Reason, Config},
+		Reason :: term().
+%% @doc Initialization before the whole suite.
 %%
 init_per_suite(Config) ->
 	DataDir = ?config(priv_dir, Config),
@@ -91,7 +101,8 @@ init_per_suite(Config) ->
 			rand:uniform(64511) + 1024),
 	AcctPort = ct:get_config({radius, acct_port},
 			rand:uniform(64511) + 1024),
-	Secret = ct:get_config({radius, secret}, cse_test_lib:rand_name()),
+	Secret = ct:get_config({radius, secret},
+			list_to_binary(cse_test_lib:rand_name())),
 	AuthOptions = ct:get_config({radius, auth_options}, []),
 	AcctOptions = ct:get_config({radius, acct_options}, []),
 	SLP = {cse_slp_prepaid_radius_ps_fsm, [], []},
@@ -104,8 +115,8 @@ init_per_suite(Config) ->
 	ok = application:set_env(cse, radius, RadiusAppVar),
 	InterimInterval = 60 * rand:uniform(10),
    Config1 = [{radius_address, RadiusAddress},
-			{acct_port, AcctPort},
 			{auth_port, AuthPort},
+			{acct_port, AcctPort},
 			{secret, Secret},
 			{interim_interval, InterimInterval} | Config],
 	ok = cse_test_lib:start(),
@@ -122,7 +133,8 @@ init_per_suite1(Config) ->
 			[{port, Port}] = httpd:info(HttpdPid, [port]),
 			NrfUri = "http://localhost:" ++ integer_to_list(Port),
 			ok = application:set_env(cse, nrf_uri, NrfUri),
-			Config1 = [{server_port, Port}, {server_pid, HttpdPid}, {nrf_uri, NrfUri} | Config],
+			Config1 = [{server_port, Port}, {server_pid, HttpdPid},
+					{nrf_uri, NrfUri} | Config],
 			init_per_suite2(Config1);
 		{error, InetsReason} ->
 			ct:fail(InetsReason)
@@ -136,8 +148,11 @@ init_per_suite2(Config) ->
 			ct:fail(Reason)
 	end.
 
--spec end_per_suite(Config :: [tuple()]) -> any().
-%% Cleanup after the whole suite.
+-spec end_per_suite(Config) -> Result
+	when
+		Config :: ct_suite:ct_config(),
+		Result :: term() | {save_config, Config}.
+%% @doc Cleanup after the whole suite.
 %%
 end_per_suite(Config) ->
 	ok = cse_test_lib:stop(),
@@ -145,45 +160,77 @@ end_per_suite(Config) ->
 	ok = gen_server:stop(OCS),
 	Config.
 
--spec init_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
+-spec init_per_testcase(TestCase, Config) -> NewConfig
+	when
+		TestCase :: ct_suite:ct_testname(),
+		Config :: ct_suite:ct_config(),
+		NewConfig :: ct_suite:ct_config()
+				| {fail, Reason}
+				| {skip, Reason},
+		Reason :: term().
 %% Initialization before each test case.
 %%
-init_per_testcase(_TestCase, Config) ->
+init_per_testcase(auth_only = _TestCase, Config) ->
 	Address = proplists:get_value(radius_address, Config),
 	Secret = proplists:get_value(secret, Config),
 	{ok, Socket} = gen_udp:open(0, [{active, false}, inet, binary]),
 	ok = cse:add_client(Address, radius, Secret, #{}),
-	[{nas_socket, Socket}, {nas_client, Address} | Config].
+	[{nas_auth_socket, Socket} | Config];
+init_per_testcase(auth_start, Config) ->
+	Address = proplists:get_value(radius_address, Config),
+	Secret = proplists:get_value(secret, Config),
+	{ok, Socket1} = gen_udp:open(0, [{active, false}, inet, binary]),
+	{ok, Socket2} = gen_udp:open(0, [{active, false}, inet, binary]),
+	ok = cse:add_client(Address, radius, Secret, #{}),
+	[{nas_auth_socket, Socket1}, {nas_acct_socket, Socket2} | Config];
+init_per_testcase(_TestCase, Config) ->
+	Config.
 
--spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
+-spec end_per_testcase(TestCase, Config) -> Result
+	when
+		TestCase :: ct_suite:ct_testname(),
+		Config :: ct_suite:ct_config(),
+		Result :: term()
+				| {fail, Reason}
+				| {save_config, Config},
+		Reason :: term().
 %% Cleanup after each test case.
 %%
-end_per_testcase(_TestCase, Config) ->
-	Socket = proplists:get_value(nas_socket, Config),
-	Address = proplists:get_value(nas_client, Config),
+end_per_testcase(auth_only = _TestCase, Config) ->
+	Socket = proplists:get_value(nas_auth_socket, Config),
+	Address = proplists:get_value(radius_address, Config),
 	gen_udp:close(Socket),
-	ok = cse:delete_client(Address).
+	ok = cse:delete_client(Address);
+end_per_testcase(auth_start = _TestCase, Config) ->
+	Socket1 = proplists:get_value(nas_auth_socket, Config),
+	Socket2 = proplists:get_value(nas_acct_socket, Config),
+	Address = proplists:get_value(radius_address, Config),
+	gen_udp:close(Socket1),
+	gen_udp:close(Socket2),
+	ok = cse:delete_client(Address);
+end_per_testcase(_TestCase, _Config) ->
+	ok.
 
--spec sequences() -> Sequences :: [{SeqName :: atom(), Testcases :: [atom()]}].
-%% Group test cases into a test sequence.
-%%
-sequences() ->
-	[].
-
--spec all() -> TestCases :: [Case :: atom()].
+-spec all() -> Result
+	when
+		Result :: [TestDef] | {skip, Reason},
+		TestDef :: ct_suite:ct_test_def(),
+		Reason :: term().
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[simple_auth].
+	[auth_only, auth_start].
 
 %%---------------------------------------------------------------------
 %%  Test cases
 %%---------------------------------------------------------------------
 
-simple_auth() ->
-	[{userdata, [{doc, "RADIUS simple authentication"}]}].
+auth_only() ->
+	Description = "RADIUS Access-Request.",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
-simple_auth(Config) ->
+auth_only(Config) ->
 	OCS = proplists:get_value(ocs, Config),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Password = cse_test_lib:rand_name(),
@@ -193,34 +240,64 @@ simple_auth(Config) ->
 	NasID = atom_to_list(?FUNCTION_NAME),
 	AcctSessionID = cse_test_lib:rand_name(),
 	Address = proplists:get_value(radius_address, Config),
-	Port = proplists:get_value(auth_port, Config),
+	AuthPort = proplists:get_value(auth_port, Config),
 	Secret = proplists:get_value(secret, Config),
 	ReqAuth = radius:authenticator(),
 	HiddenPassword = radius_attributes:hide(Secret, ReqAuth, Password),
-	Socket = proplists:get_value(nas_socket, Config),
-	authenticate_subscriber(Socket, Address, Port, MSISDN,
+	Socket = proplists:get_value(nas_auth_socket, Config),
+	authenticate_subscriber(Socket, Address, AuthPort, MSISDN,
 			HiddenPassword, Secret, NasID, ReqAuth, RadID, AcctSessionID).
+
+auth_start() ->
+	Description = "RADIUS Access-Request with Acct-Session-Id",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+auth_start(Config) ->
+	OCS = proplists:get_value(ocs, Config),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Password = cse_test_lib:rand_name(),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, MSISDN, Balance}),
+	RadID = 1,
+	NasID = atom_to_list(?FUNCTION_NAME),
+	AcctSessionID = cse_test_lib:rand_name(),
+	Address = proplists:get_value(radius_address, Config),
+	AuthPort = proplists:get_value(auth_port, Config),
+	Secret = proplists:get_value(secret, Config),
+	ReqAuth = radius:authenticator(),
+	HiddenPassword = radius_attributes:hide(Secret, ReqAuth, Password),
+	Socket1 = proplists:get_value(nas_auth_socket, Config),
+	authenticate_subscriber(Socket1, Address, AuthPort, MSISDN,
+			HiddenPassword, Secret, NasID, ReqAuth, RadID, AcctSessionID),
+	AcctPort = proplists:get_value(acct_port, Config),
+	Socket2 = proplists:get_value(nas_acct_socket, Config),
+	accounting_start(Socket2, Address, AcctPort, MSISDN,
+			Secret, NasID, RadID, AcctSessionID).
 
 %%---------------------------------------------------------------------
 %%  Internal functions
 %%---------------------------------------------------------------------
 
 authenticate_subscriber(Socket, Address, Port,
-		Username, Password, Secret, NasID,
+		UserName, Password, Secret, NasID,
 		ReqAuth, RadID, AcctSessionID) ->
-	RadAttribute = radius_attributes:add(?UserPassword, Password, []),
-	access_request(Socket, Address, Port, Username, Secret,
-			NasID, ReqAuth, RadID, AcctSessionID, RadAttribute),
+	Attributes = radius_attributes:add(?UserPassword, Password, []),
+	access_request(Socket, Address, Port, UserName, Secret,
+			NasID, ReqAuth, RadID, AcctSessionID, Attributes),
 	access_accept(Socket, Address, Port, RadID).
 
+accounting_start(Socket, Address, Port,
+		UserName, Secret, NasID, RadID, AcctSessionID) ->
+	Attributes = radius_attributes:add(?AcctStatusType,
+			?AccountingStart, []),
+	accounting_request(Socket, Address, Port, UserName, Secret,
+			NasID, RadID, AcctSessionID, Attributes),
+	accounting_response(Socket, Address, Port, RadID).
+
 access_request(Socket, Address, Port, UserName, Secret,
-		NasID, Auth, RadID, AcctSessionID, RadAttributes)
-		when is_binary(UserName) ->
-	access_request(Socket, Address, Port, binary_to_list(UserName),
-			Secret, NasID, Auth, RadID, AcctSessionID, RadAttributes);
-access_request(Socket, Address, Port, UserName, Secret,
-		NasID, Auth, RadID, AcctSessionID, RadAttributes) ->
-	A1 = session_attributes(UserName, NasID, AcctSessionID, RadAttributes),
+		NasID, Auth, RadID, AcctSessionID, Attributes) ->
+	A1 = session_attributes(UserName, NasID, AcctSessionID, Attributes),
 	A2 = radius_attributes:add(?MessageAuthenticator, <<0:128>>, A1),
 	Request1 = #radius{code = ?AccessRequest, id = RadID,
 		authenticator = Auth, attributes = A2},
@@ -234,17 +311,36 @@ access_request(Socket, Address, Port, UserName, Secret,
 access_accept(Socket, Address, Port, RadID) ->
 	receive_radius(?AccessAccept, Socket, Address, Port, RadID).
 
+accounting_request(Socket, Address, Port, UserName, Secret,
+		NasID, RadID, AcctSessionID, Attributes) ->
+	A1 = session_attributes(UserName, NasID, AcctSessionID, Attributes),
+	Request1 = #radius{code = ?AccountingRequest, id = RadID,
+		authenticator = <<0:128>>, attributes = A1},
+	ReqPacket1 = radius:codec(Request1),
+	Auth = crypto:hash(md5, [ReqPacket1, Secret]),
+	Request2 = Request1#radius{authenticator = Auth},
+	ReqPacket2 = radius:codec(Request2),
+	gen_udp:send(Socket, Address, Port, ReqPacket2).
+
+accounting_response(Socket, Address, Port, RadID) ->
+	receive_radius(?AccountingResponse, Socket, Address, Port, RadID).
+
 receive_radius(Code, Socket, Address, Port, RadID) ->
 	{ok, {Address, Port, RespPacket}} = gen_udp:recv(Socket, 0),
 	#radius{code = Code, id = RadID} = radius:codec(RespPacket).
 
-session_attributes(UserName, NasID, AcctSessionID, RadAttributes) ->
-	A1 = radius_attributes:add(?UserName, UserName, RadAttributes),
+session_attributes(UserName, NasID, AcctSessionID, Attributes) ->
+	A1 = radius_attributes:add(?UserName, UserName, Attributes),
 	A2 = radius_attributes:add(?NasPort, 19, A1),
 	A3 = radius_attributes:add(?NasIpAddress, {127,0,0,1}, A2),
 	A4 = radius_attributes:add(?NasIdentifier, NasID, A3),
 	A5 = radius_attributes:add(?CallingStationId,"DE-AD-BE-EF-FE-ED", A4),
 	A6 = radius_attributes:add(?CalledStationId,"BA-DF-AD-CA-DD-AD:TestSSID", A5),
-	A7 = radius_attributes:add(?AcctSessionId, AcctSessionID, A6),
+	A7 = case AcctSessionID of
+			undefined ->
+				A6;
+			_ ->
+				radius_attributes:add(?AcctSessionId, AcctSessionID, A6)
+	end,
 	radius_attributes:add(?ServiceType, 2, A7).
 

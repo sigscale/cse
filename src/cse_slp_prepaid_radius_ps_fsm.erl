@@ -172,8 +172,12 @@ null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
 null(enter = _EventType, _OldState, _Data) ->
 	{stop, shutdown};
-null({call, _From}, #radius{}, Data) ->
-	{next_state, authorize_origination_attempt, Data, postpone}.
+null({call, _From},
+		#radius{code = ?AccessRequest}, Data) ->
+	{next_state, authorize_origination_attempt, Data, postpone};
+null({call, _From},
+		#radius{code = ?AccountingRequest}, Data) ->
+	{next_state, active, Data, postpone}.
 
 -spec authorize_origination_attempt(EventType, EventContent, Data) -> Result
 	when
@@ -186,22 +190,37 @@ null({call, _From}, #radius{}, Data) ->
 authorize_origination_attempt(enter, _EventContent, _Data) ->
 	keep_state_and_data;
 authorize_origination_attempt({call, From},
-		#radius{id = ReqId, authenticator = RequestAuthenticator}, Data) ->
-	NewData = Data#{from => From, req_id => ReqId,
-			req_authenticator => RequestAuthenticator},
-	nrf_start(NewData);
+		#radius{code = ?AccessRequest, id = ReqId,
+				authenticator = RequestAuthenticator,
+				attributes = AttributeData}, Data) ->
+	Attributes = radius_attributes:codec(AttributeData),
+	case radius_attributes:find(?AcctSessionId, Attributes) of
+		{ok, SessionId} ->
+			SessionId1 = list_to_binary(SessionId),
+			NewData = Data#{from => From, req_id => ReqId,
+					req_authenticator => RequestAuthenticator,
+					session_id => SessionId1},
+			cse:add_session(SessionId1, self()),
+			nrf_start(NewData);
+		{error, not_found} ->
+			NewData = Data#{from => From, req_id => ReqId,
+					req_authenticator => RequestAuthenticator},
+			Reply = radius_result("MANDATORY_IE_MISSING", NewData),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions}
+	end;
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{_, 201, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := _LogHTTP,
 				nas_id := NasId} = Data) ->
-	NewData = remove_nrf(Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := _ServiceRating}}, {_, Location}}
 				when is_list(Location) ->
-			Reply = radius_response(?AccessAccept, [], NewData),
+			Reply = radius_result("SUCCESS", Data),
+			NewData = remove_req(Data#{nrf_location => Location}),
 			Actions = [{reply, From, Reply}],
-			{next_state, analyse_information, NewData, Actions};
+			{next_state, collect_information, NewData, Actions};
 		{{error, Partial, Remaining}, Location} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -209,7 +228,8 @@ authorize_origination_attempt(cast,
 					{slpi, self()}, {nas, NasId},
 					{partial, Partial}, {remaining, Remaining},
 					{state, authorize_origination_attempt}]),
-			Reply = radius_result("SYSTEM_FAILURE", NewData),
+			Reply = radius_result("SYSTEM_FAILURE", Data),
+			NewData = remove_req(Data),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -217,16 +237,16 @@ authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{_, 400, _Phrase}, _Headers, _Body}}},
 		#{from := From, nrf_reqid := RequestId,
 				nrf_http := _LogHTTP} = Data) ->
-	NewData = remove_nrf(Data),
-	Reply = radius_result("SYSTEM_FAILURE", NewData),
+	Reply = radius_result("SYSTEM_FAILURE", Data),
+	NewData = remove_req(Data),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {{_, 404, _Phrase}, _Headers, _Body}}},
 		#{from := From, nrf_reqid := RequestId,
 				nrf_http := _LogHTTP} = Data) ->
-	NewData = remove_nrf(Data),
 	Reply = radius_result("USER_UNKNOWN", Data),
+	NewData = remove_req(Data),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
@@ -234,10 +254,10 @@ authorize_origination_attempt(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := _LogHTTP, nrf_uri := URI,
 				nas_id := NasId} = Data) ->
-	NewData = remove_nrf(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := Cause}}, {_, "application/problem+json" ++ _}} ->
 			Reply = radius_result(Cause, Data),
+			NewData = remove_req(Data),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{{error, Partial, Remaining}, _} ->
@@ -247,7 +267,8 @@ authorize_origination_attempt(cast,
 					{slpi, self()}, {nas, NasId},
 					{partial, Partial}, {remaining, Remaining},
 					{state, authorize_origination_attempt}]),
-			Reply = radius_result("SYSTEM_FAILURE", NewData),
+			Reply = radius_result("SYSTEM_FAILURE", Data),
+			NewData = remove_req(Data),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -256,14 +277,14 @@ authorize_origination_attempt(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := _LogHTTP,
 				nas_id := NasId} = Data) ->
-	NewData = remove_nrf(Data),
 	?LOG_WARNING([{?MODULE, nrf_start},
 			{code, Code}, {reason, Phrase},
 			{request_id, RequestId},
 			{profile, Profile}, {uri, URI},
 			{slpi, self()}, {nas, NasId},
 			{state, authorize_origination_attempt}]),
-	Reply = radius_result("SYSTEM_FAILURE", NewData),
+	Reply = radius_result("SYSTEM_FAILURE", Data),
+	NewData = remove_req(Data),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
@@ -271,12 +292,12 @@ authorize_origination_attempt(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := _LogHTTP,
 				nas_id := NasId} = Data) ->
-	NewData = remove_nrf(Data),
 	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {slpi, self()}, {nas, NasId},
 			{state, authorize_origination_attempt}]),
-	Reply = radius_result("SYSTEM_FAILURE", NewData),
+	Reply = radius_result("SYSTEM_FAILURE", Data),
+	NewData = remove_req(Data),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions}.
 
@@ -290,9 +311,19 @@ authorize_origination_attempt(cast,
 %% @private
 collect_information(enter, _EventContent, _Data) ->
 	keep_state_and_data;
+collect_information({call, From},
+		#radius{code = ?AccessRequest, id = ReqId,
+				authenticator = RequestAuthenticator},
+		Data) ->
+	% @todo challenge response
+	Reply = radius_result("UNSPECIFIED_MSG_FAILURE", Data),
+	NewData = Data#{from => From, req_id => ReqId,
+			req_authenticator => RequestAuthenticator},
+	Actions = [{reply, From, Reply}],
+	{next_state, null, NewData, Actions};
 collect_information({call, _From},
-		#radius{},  Data) ->
-	{next_state, null, Data}.
+		#radius{code = ?AccountingRequest}, Data) ->
+	{next_state, active, Data, postpone}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
@@ -302,11 +333,8 @@ collect_information({call, _From},
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>analyse_information</em> state.
 %% @private
-analyse_information(enter, _EventContent, _Data) ->
-	keep_state_and_data;
-analyse_information({call, _From},
-		#radius{},  Data) ->
-	{next_state, null, Data}.
+analyse_information(_, _EventContent, _Data) ->
+	keep_state_and_data.
 
 -spec active(EventType, EventContent, Data) -> Result
 	when
@@ -318,9 +346,158 @@ analyse_information({call, _From},
 %% @private
 active(enter, _EventContent, _Data) ->
 	keep_state_and_data;
-active({call, _From},
-		#radius{},  Data) ->
-	{next_state, null, Data}.
+active({call, From},
+		#radius{code = ?AccountingRequest, id = ReqId,
+				authenticator = RequestAuthenticator,
+				attributes = AttributeData},
+		Data) when is_map_key(session_id, Data) == false ->
+	NewData = Data#{from => From, req_id => ReqId,
+			req_authenticator => RequestAuthenticator},
+	Attributes = radius_attributes:codec(AttributeData),
+	case {radius_attributes:find(?AcctSessionId, Attributes),
+			radius_attributes:find(?AcctStatusType, Attributes)} of
+		{{ok, SessionId}, {ok, ?AccountingStart}} ->
+			SessionId1 = list_to_binary(SessionId),
+			NextData = Data#{session_id => SessionId1},
+			cse:add_session(SessionId1, self()),
+			nrf_start(NextData);
+		_ ->
+			Actions = [{reply, From, ignore}],
+			{next_state, null, NewData, Actions}
+	end;
+active({call, From},
+		#radius{code = ?AccountingRequest, id = ReqId,
+				authenticator = RequestAuthenticator,
+				attributes = AttributeData},
+		#{session_id := SessionId} = Data) ->
+	NewData = Data#{from => From, req_id => ReqId,
+			req_authenticator => RequestAuthenticator},
+	SessionId1 = binary_to_list(SessionId),
+	Attributes = radius_attributes:codec(AttributeData),
+	case {radius_attributes:find(?AcctSessionId, Attributes),
+			radius_attributes:find(?AcctStatusType, Attributes)} of
+		{{ok, SessionId1}, {ok, ?AccountingStart}} ->
+			nrf_update(NewData);
+		{{ok, SessionId1}, {ok, ?AccountingInterimUpdate}} ->
+			nrf_update(NewData);
+		{{ok, SessionId1}, {ok, ?AccountingStop}} ->
+			nrf_release(NewData);
+		_Other ->
+			Actions = [{reply, From, ignore}],
+			{next_state, null, NewData, Actions}
+	end;
+active(cast,
+		{nrf_start, {RequestId, {{_, 201, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_http := _LogHTTP,
+				nas_id := NasId} = Data) ->
+	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
+		{{ok, #{"serviceRating" := _ServiceRating}}, {_, Location}}
+				when is_list(Location) ->
+			Reply = radius_response(?AccountingResponse, [], Data),
+			NewData = remove_req(Data),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
+		{{error, Partial, Remaining}, Location} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location},
+					{slpi, self()}, {nas, NasId},
+					{partial, Partial}, {remaining, Remaining},
+					{state, active}]),
+			NewData = remove_req(Data),
+			Actions = [{reply, From, ignore}],
+			{next_state, null, NewData, Actions}
+	end;
+active(cast,
+		{NrfOperation, {RequestId, {{_, 200, _Phrase}, _Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_http := _LogHTTP,
+				nrf_location := Location, nas_id := NasId} = Data)
+		when NrfOperation == nrf_update;
+		NrfOperation == nrf_release ->
+	case zj:decode(Body) of
+		{ok, #{"serviceRating" := _ServiceRating}} ->
+			Reply = radius_response(?AccountingResponse, [], Data),
+			NewData = remove_req(Data),
+			Actions = [{reply, From, Reply}],
+			case NrfOperation of
+				nrf_update ->
+					{keep_state, NewData, Actions};
+				nrf_release ->
+					{next_state, null, NewData, Actions}
+			end;
+		{error, Partial, Remaining} ->
+			?LOG_ERROR([{?MODULE, NrfOperation}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {location, Location},
+					{slpi, self()}, {nas, NasId},
+					{partial, Partial}, {remaining, Remaining},
+					{state, active}]),
+			NewData = remove_req(Data),
+			Actions = [{reply, From, ignore}],
+			{next_state, null, NewData, Actions}
+	end;
+active(cast,
+		{_NrfOperation, {RequestId, {{_, 400, _Phrase}, _Headers, _Body}}},
+		#{from := From, nrf_reqid := RequestId,
+				nrf_http := _LogHTTP} = Data) ->
+	NewData = remove_req(Data),
+	Actions = [{reply, From, ignore}],
+	{next_state, null, NewData, Actions};
+active(cast,
+		{_NrfOperation, {RequestId, {{_, 404, _Phrase}, _Headers, _Body}}},
+		#{from := From, nrf_reqid := RequestId,
+				nrf_http := _LogHTTP} = Data) ->
+	NewData = remove_req(Data),
+	Actions = [{reply, From, ignore}],
+	{next_state, null, NewData, Actions};
+active(cast,
+		{NrfOperation, {RequestId, {{_, 403, _Phrase}, Headers, Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := _LogHTTP, nrf_uri := URI,
+				nas_id := NasId} = Data) ->
+	NewData = remove_req(Data),
+	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := _Cause}}, {_, "application/problem+json" ++ _}} ->
+			Actions = [{reply, From, ignore}],
+			{next_state, null, NewData, Actions};
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, NrfOperation}, {error, invalid_json},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {status, 403},
+					{slpi, self()}, {nas, NasId},
+					{partial, Partial}, {remaining, Remaining},
+					{state, active}]),
+			Actions = [{reply, From, ignore}],
+			{next_state, null, NewData, Actions}
+	end;
+active(cast,
+		{NrfOperation, {RequestId, {{_, Code, Phrase}, _Headers, _Body}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_http := _LogHTTP,
+				nas_id := NasId} = Data) ->
+	NewData = remove_req(Data),
+	?LOG_WARNING([{?MODULE, NrfOperation},
+			{code, Code}, {reason, Phrase},
+			{request_id, RequestId},
+			{profile, Profile}, {uri, URI},
+			{slpi, self()}, {nas, NasId},
+			{state, active}]),
+	Actions = [{reply, From, ignore}],
+	{next_state, null, NewData, Actions};
+active(cast,
+		{NrfOperation, {RequestId, {error, Reason}}},
+		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_http := _LogHTTP,
+				nas_id := NasId} = Data) ->
+	NewData = remove_req(Data),
+	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
+			{request_id, RequestId}, {profile, Profile},
+			{uri, URI}, {slpi, self()}, {nas, NasId},
+			{state, active}]),
+	Actions = [{reply, From, ignore}],
+	{next_state, null, NewData, Actions}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
@@ -520,16 +697,16 @@ nrf_update2(Now, JSON,
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
 					{location, Location}, {slpi, self()}]),
+			Reply = radius_result("SYSTEM_FAILURE", Data),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = radius_result("SYSTEM_FAILURE", NewData),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
 					{location, Location}, {slpi, self()}]),
+			Reply = radius_result("SYSTEM_FAILURE", Data),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = radius_result("SYSTEM_FAILURE", NewData),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions}
 	end.
@@ -584,16 +761,16 @@ nrf_release2(Now, JSON,
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
 					{location, Location}, {slpi, self()}]),
+			Reply = radius_result("SYSTEM_FAILURE", Data),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = radius_result("SYSTEM_FAILURE", NewData),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
 					{location, Location}, {slpi, self()}]),
+			Reply = radius_result("SYSTEM_FAILURE", Data),
 			NewData = maps:remove(nrf_location, Data),
-			Reply = radius_result("SYSTEM_FAILURE", NewData),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end.
@@ -607,7 +784,7 @@ nrf_release2(Now, JSON,
 service_rating(#{context := ServiceContextId} = _Data) ->
 	[#{"serviceContextId" => ServiceContextId,
 			"requestSubType" => "RESERVE"}];
-service_rating(Data) ->
+service_rating(_Data) ->
 	[].
 
 %% @hidden
@@ -664,6 +841,15 @@ radius_result("RATING_FAILED", Data) ->
 radius_result("SYSTEM_FAILURE", Data) ->
 	Attributes = [{?ReplyMessage, "Unable to comply"}],
 	radius_response(?AccessReject, Attributes, Data);
+radius_result("MANDATORY_IE_MISSING", Data) ->
+	Attributes = [{?ReplyMessage, "Unable to comply"}],
+	radius_response(?AccessReject, Attributes, Data);
+radius_result("MANDATORY_IE_INCORRECT", Data) ->
+	Attributes = [{?ReplyMessage, "Unable to comply"}],
+	radius_response(?AccessReject, Attributes, Data);
+radius_result("UNSPECIFIED_MSG_FAILURE", Data) ->
+	Attributes = [{?ReplyMessage, "Unable to comply"}],
+	radius_response(?AccessReject, Attributes, Data);
 radius_result(_, Data) ->
 	Attributes = [{?ReplyMessage, "Unable to comply"}],
 	radius_response(?AccessReject, Attributes, Data).
@@ -679,7 +865,10 @@ radius_result(_, Data) ->
 radius_response(RadiusCode, ResponseAttributes,
 		#{req_id := RadiusId,
 				req_authenticator := RequestAuthenticator,
-				nas_client := #client{secret = Secret}} = _Data) ->
+				nas_client := #client{secret = Secret}} = _Data)
+		when RadiusCode == ?AccessAccept;
+		RadiusCode == ?AccessReject;
+		RadiusCode == ?AccessChallenge ->
 	AttributeList1 = radius_attributes:add(?MessageAuthenticator,
 			<<0:128>>, ResponseAttributes),
 	Attributes1 = radius_attributes:codec(AttributeList1),
@@ -695,7 +884,20 @@ radius_response(RadiusCode, ResponseAttributes,
 			RequestAuthenticator, Attributes2, Secret]),
 	#radius{code = RadiusCode, id = RadiusId,
 			authenticator = ResponseAuthenticator,
-			attributes = Attributes2}.
+			attributes = Attributes2};
+radius_response(RadiusCode, ResponseAttributes,
+		#{req_id := RadiusId,
+				req_authenticator := RequestAuthenticator,
+				nas_client := #client{secret = Secret}} = _Data)
+		when RadiusCode == ?AccountingResponse ->
+	Attributes = radius_attributes:codec(ResponseAttributes),
+	Length = size(Attributes) + 20,
+	ResponseAuthenticator = crypto:hash(md5,
+			[<<RadiusCode, RadiusId, Length:16>>,
+			RequestAuthenticator, Attributes, Secret]),
+	#radius{code = RadiusCode, id = RadiusId,
+			authenticator = ResponseAuthenticator,
+			attributes = Attributes}.
 
 -spec ecs_http(MIME, Body) -> HTTP
 	when
@@ -743,10 +945,12 @@ ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
 	HTTP#{"version" => Version, "response" => Response}.
 
 %% @hidden
-remove_nrf(Data) ->
+remove_req(Data) ->
 	Data1 = maps:remove(from, Data),
-	Data2 = maps:remove(nrf_start, Data1),
-	Data3 = maps:remove(nrf_req_uri, Data2),
-	Data4 = maps:remove(nrf_http, Data3),
-	maps:remove(nrf_reqid, Data4).
+	Data2 = maps:remove(req_id, Data1),
+	Data3 = maps:remove(req_authenticator, Data2),
+	Data4 = maps:remove(nrf_start, Data3),
+	Data5 = maps:remove(nrf_req_uri, Data4),
+	Data6 = maps:remove(nrf_http, Data5),
+	maps:remove(nrf_reqid, Data6).
 
