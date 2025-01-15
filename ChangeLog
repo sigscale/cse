@@ -1,3 +1,11 @@
+2025-01-15   Vance Shipley <vances@sigscale.org>
+
+	* radius prepaid slp handles accounting requests
+	* handle ignore return from radius slps
+	* radius prepaid: nrf on access-request
+	* test: accept nai subscription id in nrf
+	* refactor try to avoid unsafe variables
+
 2025-01-14   Vance Shipley <vances@sigscale.org>
 
 	* nrf requests accept header includes application/problem+json
