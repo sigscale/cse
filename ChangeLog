@@ -1,3 +1,8 @@
+2025-01-18   Vance Shipley <vances@sigscale.org>
+
+	* add missing schema in ecs_postpaid validation
+	* include vlr-number from vcs-information in sms/mms nrf
+
 2025-01-15   Vance Shipley <vances@sigscale.org>
 
 	* radius prepaid slp handles accounting requests
