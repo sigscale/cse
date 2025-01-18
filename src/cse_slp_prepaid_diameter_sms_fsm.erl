@@ -1479,7 +1479,8 @@ service_rating(true, [MSCC | T],
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_ps(ServiceInformation, SR3),
 	SR5 = service_rating_sms(ServiceInformation, SR4),
-	Acc1 = service_rating_debit(MSCC, SR5, Acc),
+	SR6 = service_rating_vcs(ServiceInformation, SR5),
+	Acc1 = service_rating_debit(MSCC, SR6, Acc),
 	service_rating(true, T, Data, Acc1);
 service_rating(false, [MSCC | T],
 		#{context := ServiceContextId,
@@ -1489,8 +1490,9 @@ service_rating(false, [MSCC | T],
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_ps(ServiceInformation, SR3),
 	SR5 = service_rating_sms(ServiceInformation, SR4),
-	Acc1 = service_rating_reserve(MSCC, SR5, Acc),
-	Acc2 = service_rating_debit(MSCC, SR5, Acc1),
+	SR6 = service_rating_vcs(ServiceInformation, SR5),
+	Acc1 = service_rating_reserve(MSCC, SR6, Acc),
+	Acc2 = service_rating_debit(MSCC, SR6, Acc1),
 	service_rating(false, T, Data, Acc2);
 service_rating(_OneTime, [], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -1740,6 +1742,25 @@ service_rating_sms7(ServiceRating, Info)
 		when map_size(Info) > 0 ->
 	ServiceRating#{"serviceInformation" => Info};
 service_rating_sms7(ServiceRating, _Info) ->
+	ServiceRating.
+
+%% @hidden
+service_rating_vcs([#'3gpp_ro_Service-Information'{
+		'VCS-Information' = VCS}],
+		#{"serviceInformation" := Info} = ServiceRating) ->
+	service_rating_vcs1(VCS, ServiceRating, Info);
+service_rating_vcs([#'3gpp_ro_Service-Information'{
+		'VCS-Information' = VCS}], ServiceRating) ->
+	service_rating_vcs1(VCS, ServiceRating, #{});
+service_rating_vcs(_ServiceInformation, ServiceRating) ->
+	ServiceRating.
+%% @hidden
+service_rating_vcs1([#'3gpp_ro_VCS-Information'{
+		'VLR-Number' = [Number]}] = VCS,
+		ServiceRating, Info) ->
+	Info1 = Info#{"vlrNumber" => binary_to_list(Number)},
+	ServiceRating#{"serviceInformation" => Info};
+service_rating_vcs1(VCS, ServiceRating, Info) ->
 	ServiceRating.
 
 %% @hidden
