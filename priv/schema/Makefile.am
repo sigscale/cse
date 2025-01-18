@@ -139,6 +139,7 @@ check_DATA = .validation_ok
 				-r ECS_base.json \
 				-r ECS_ecs.json \
 				-r ECS_service.json \
+				-r ECS_network.json \
 				-r ECS_user.json \
 				-r ECS_event.json \
 				--spec=draft2020; \
