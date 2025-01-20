@@ -1,3 +1,7 @@
+2025-01-20   Vance Shipley <vances@sigscale.org>
+
+	* typo preventing vlr number showing up in nrf
+
 2025-01-18   Vance Shipley <vances@sigscale.org>
 
 	* add missing schema in ecs_postpaid validation
