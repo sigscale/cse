@@ -1759,7 +1759,7 @@ service_rating_vcs1([#'3gpp_ro_VCS-Information'{
 		'VLR-Number' = [Number]}] = VCS,
 		ServiceRating, Info) ->
 	Info1 = Info#{"vlrNumber" => binary_to_list(Number)},
-	ServiceRating#{"serviceInformation" => Info};
+	ServiceRating#{"serviceInformation" => Info1};
 service_rating_vcs1(VCS, ServiceRating, Info) ->
 	ServiceRating.
 
