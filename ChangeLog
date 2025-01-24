@@ -1,3 +1,9 @@
+2025-01-24   Vance Shipley <vances@sigscale.org>
+
+	* suppress unused variable warnings
+	* tco args for sccp pc and mttp ni indicators
+	* update user guide for new tcap configuration
+
 2025-01-20   Vance Shipley <vances@sigscale.org>
 
 	* typo preventing vlr number showing up in nrf
