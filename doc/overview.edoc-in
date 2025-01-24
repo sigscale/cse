@@ -352,26 +352,46 @@ Application environment variables configuring instances of the
 </dl>
 
 ===TCAP===
-Application environment variables configuring binding of the
-Transaction Sublayer (TSL) of the {@link //tcap. tcap} application:
+Application environment variables configuring Transaction Sublayer (TSL)
+bindings with the {@link //tcap. tcap} application:
 <dl>
-	<dt>`tsl_name'</dt>
-		<dd>Registered name of the TCO process in the TCAP Transaction
-				Sublayer (TSL). (default: `cse_tsl')</dd>
-	<dt>`tsl_callback'</dt>
-		<dd>Name of the {@link //tcap/tcap_tco_server. `tcap_tco_server'}
-				behaviour callback module implementing the TCAP binding.
-				To enable the TCAP stack with the default module use
-				`cse_tco_server_cb'.
-				(default:` undefined'})</dd>
-	<dt>`tsl_opts'</dt>
-		<dd>Options in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/'4}.
-				(default: `[]')</dd>
-	<dt>`tsl_args'</dt>
-		<dd>Extra arguments in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/4'}.
-				The default value (`[{ac, ApplicationContexts}]') binds the
-				CAP Phase 2,3,4 application contexts to module `cse_slp_cap_fsm'
-				and INAP CS2 to `cse_slp_inap_fsm'.</dd>
+	<dt>`tsl'</dt>
+		<dd>Provides TSL bindings as `#{Name => {Module, Args, Opts}}'
+		where `Name' is an `atom()' used as the locally registered
+		{@link //stdlib/gen_server:servername(). gen_server:servername()}
+		of a transaction coordinator (TCO).
+			<dl>
+				<dt>`Module'</dt>
+					<dd>Name of the
+					{@link //tcap/tcap_tco_server. `tcap_tco_server'}
+					behaviour callback module implementing the TCAP binding.
+					The {@link //cse/cse_tco_server_cb. cse_tco_server_cb}
+					module provides a default implementation.</dd>
+				<dt>`Args'</dt>
+					<dd>Extra arguments in
+					{@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/4'}.
+					The value `[{ac, ApplicationContexts}]' where
+					```
+ApplicationContexts ::
+		#{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
+				=> cse_slp_cap_fsm,
+		{0,4,0,0,1,21,3,4}    % CAP Phase 3 (capssf-scfGenericAC)
+				=> cse_slp_cap_fsm,
+		{0,4,0,0,1,0,50,1}    % CAP Phase 2 (CAP-v2-gsmSSF-to-gsmSCF-AC)
+				=> cse_slp_cap_fsm,
+		{0,4,0,1,1,20,5,4}    % INAP CS2 (id-as-ssf-scfGenericAS)
+				=> cse_slp_inap_fsm}
+					'''
+					binds the CAP Phase 2,3,4 application contexts to
+					SLP module `cse_slp_cap_fsm' and INAP CS2 to
+					`cse_slp_inap_fsm'.
+					</dd>
+				<dt>`Options'</dt>
+					<dd>List of
+					{@link //stdlib/gen_server:start_opt(). gen_server:start_opt()}
+					in {@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/4'}.</dd>
+			</dl>
+		</dd>
 </dl>
 
 ===Nrf_Rating===
