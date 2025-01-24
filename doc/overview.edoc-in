@@ -368,9 +368,11 @@ bindings with the {@link //tcap. tcap} application:
 					The {@link //cse/cse_tco_server_cb. cse_tco_server_cb}
 					module provides a default implementation.</dd>
 				<dt>`Args'</dt>
-					<dd>Extra arguments in
+					<dd>List of extra arguments in
 					{@link //tcap/tcap:start_tsl/4. `tcap:start_tsl/4'}.
-					The value `[{ac, ApplicationContexts}]' where
+					The {@link //cse/cse_tco_server_cb. cse_tco_server_cb}
+					callback module expects this argument list to include
+					`{ac, ApplicationContexts}' where
 					```
 ApplicationContexts ::
 		#{{0,4,0,0,1,23,3,4}  % CAP Phase 4 (CAP-gsmSSF-scfGenericAC)
@@ -384,7 +386,12 @@ ApplicationContexts ::
 					'''
 					binds the CAP Phase 2,3,4 application contexts to
 					SLP module `cse_slp_cap_fsm' and INAP CS2 to
-					`cse_slp_inap_fsm'.
+					`cse_slp_inap_fsm'.<br />
+					Optionally `{sccp_pc, boolean()}' may be included
+					to set the point code indicator in sent SCCP
+					called/calling party address (default: `true').<br />
+					Also `{mtp_ni, 0..3}' may be used to set the MTP
+					network indicator (NI) (default: `3').
 					</dd>
 				<dt>`Options'</dt>
 					<dd>List of

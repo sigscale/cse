@@ -44,6 +44,8 @@
 -record(state,
 		{sup :: pid(),
 		ac :: #{AC :: tuple() := Module :: atom()},
+		pc :: boolean(),
+		ni :: 0..3,
 		slp_sup :: pid() | undefined}).
 -type state() :: #state{}.
 
@@ -61,8 +63,11 @@
 %% @private
 init([Sup | ExtraArgs] = _Args) ->
 	ACs = proplists:get_value(ac, ExtraArgs),
+	PC = proplists:get_value(sccp_pc, ExtraArgs, true),
+	NI = proplists:get_value(mtp_ni, ExtraArgs, 3),
 	process_flag(trap_exit, true),
-	{ok, #state{sup = Sup, ac = ACs}, {continue, init}}.
+	State = #state{sup = Sup, ac = ACs, pc = PC, ni = NI},
+	{ok, State, {continue, init}}.
 
 -spec send_primitive(Primitive, State) -> Result
 	when
@@ -83,14 +88,22 @@ send_primitive({'N', 'UNITDATA', request,
 				callingAddress = #party_address{pc = OPC} = CallingParty,
 				sequenceControl = SequenceControl, returnOption = ReturnOption,
 				importance = _Importance} = _UdataParams},
-		State) when is_integer(DPC), is_integer(OPC), is_pid(ASP) ->
+		#state{pc = PCI, ni = NI} = State)
+		when is_integer(DPC), is_integer(OPC), is_pid(ASP) ->
 	Class = class(SequenceControl, ReturnOption),
-	SccpUnitData = #sccp_unitdata{data = UserData, class = Class,
-			called_party = CalledParty, calling_party = CallingParty},
+	SccpUnitData = case PCI of
+		true ->
+			#sccp_unitdata{data = UserData, class = Class,
+					called_party = CalledParty,
+					calling_party = CallingParty};
+		false ->
+			#sccp_unitdata{data = UserData, class = Class,
+					called_party = CalledParty#party_address{pc = undefined},
+					calling_party = CallingParty#party_address{pc = undefined}}
+	end,
 	case catch sccp_codec:sccp(SccpUnitData) of
 		UnitData when is_binary(UnitData) ->
 			SLS = sccp:sequence_selection(CallingParty, CalledParty),
-			NI = 3, % national
 			SI = 3, % SCCP
 			m3ua:cast(ASP, undefined, undefined, OPC, DPC, NI, SI, SLS, UnitData),
 			{noreply, State};
