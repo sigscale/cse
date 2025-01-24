@@ -1862,11 +1862,11 @@ service_rating_vcs(_ServiceInformation, ServiceRating) ->
 
 %% @hidden
 service_rating_vcs1([#'3gpp_ro_VCS-Information'{
-		'VLR-Number' = [Number]}] = VCS,
+		'VLR-Number' = [Number]}] = _VCS,
 		ServiceRating, Info) ->
 	Info1 = Info#{"vlrNumber" => binary_to_list(Number)},
 	ServiceRating#{"serviceInformation" => Info1};
-service_rating_vcs1(VCS, ServiceRating, Info) ->
+service_rating_vcs1(_VCS, ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden
