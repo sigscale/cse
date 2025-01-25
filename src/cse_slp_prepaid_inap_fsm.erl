@@ -284,7 +284,7 @@ analyse_information(cast, {nrf_start,
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			Data2 = maps:remove(nrf_location, Data1),
 			NewData = Data2#{iid => IID + 4,
 					call_info => #{}, tr_state => active},
@@ -334,7 +334,7 @@ analyse_information(cast, {nrf_start,
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
 				when is_list(Location) ->
 			NewIID = IID + 1,
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location, iid => NewIID},
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -348,34 +348,34 @@ analyse_information(cast, {nrf_start,
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, {_, Location}} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData};
 		{{ok, _}, false} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			NewData = maps:remove(nrf_reqid, Data),
+			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
 analyse_information(cast, {nrf_start,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData, 0};
 analyse_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData, 0};
@@ -445,7 +445,7 @@ select_facility(cast, {nrf_start,
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
 				{_, Location}} when is_list(Location) ->
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{iid => IID + 4, call_info => #{},
 					nrf_location => Location, tr_state => active},
 			BCSMEvents = [#{eventTypeBCSM => routeSelectFailure,
@@ -494,7 +494,7 @@ select_facility(cast, {nrf_start,
 		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
 				when is_list(Location) ->
 			NewIID = IID + 1,
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location, iid => NewIID},
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -508,34 +508,34 @@ select_facility(cast, {nrf_start,
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, {_, Location}} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData};
 		{{ok, _}, false} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			NewData = maps:remove(nrf_reqid, Data),
+			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
 select_facility(cast, {nrf_start,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData, 0};
 select_facility(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	{next_state, exception, NewData, 0};
@@ -924,7 +924,7 @@ o_active(cast, {nrf_update,
 			case lists:foldl(Fold, undefined, ServiceRating) of
 				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
-					Data1 = maps:remove(nrf_reqid, Data),
+					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID, tr_state => active},
 					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ApplyChargingArg',
 							#{aChBillingChargingCharacteristics => <<0>>,
@@ -942,7 +942,7 @@ o_active(cast, {nrf_update,
 							{profile, Profile}, {uri, URI}, {location, Location},
 							{slpi, self()}, {json, JSON}]),
 					NewIID = IID + 1,
-					Data1 = maps:remove(nrf_reqid, Data),
+					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid := NewIID},
 					Cause = #cause{location = local_public, value = 31},
 					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
@@ -956,7 +956,7 @@ o_active(cast, {nrf_update,
 		{ok, #{"serviceRating" := [#{"resultCode" := _},
 				#{"resultCode" := _}]}} ->
 			NewIID = IID + 1,
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{iid := NewIID},
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
@@ -970,13 +970,13 @@ o_active(cast, {nrf_update,
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			NewData = maps:remove(nrf_reqid, Data),
+			NewData = remove_nrf(Data),
 			{next_state, exception, NewData};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			NewData = maps:remove(nrf_reqid, Data),
+			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
 o_active(cast, {nrf_update,
@@ -986,7 +986,7 @@ o_active(cast, {nrf_update,
 	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, exception, NewData, 0};
 o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile, nrf_uri := URI,
@@ -994,7 +994,7 @@ o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	Data1 = maps:remove(nrf_reqid, Data),
+	Data1 = remove_nrf(Data),
 	NewData = maps:remove(nrf_location, Data1),
 	{next_state, exception, NewData, 0};
 o_active(cast, {'TC', 'L-CANCEL', indication,
@@ -1110,7 +1110,7 @@ t_active(cast, {nrf_update,
 			case lists:foldl(Fold, undefined, ServiceRating) of
 				GrantedTime when is_integer(GrantedTime) ->
 					NewIID = IID + 1,
-					Data1 = maps:remove(nrf_reqid, Data),
+					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID, tr_state => active},
 					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ApplyChargingArg',
 							#{aChBillingChargingCharacteristics => <<0>>,
@@ -1128,7 +1128,7 @@ t_active(cast, {nrf_update,
 							{profile, Profile}, {uri, URI}, {location, Location},
 							{slpi, self()}, {json, JSON}]),
 					NewIID = IID + 1,
-					Data1 = maps:remove(nrf_reqid, Data),
+					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID},
 					Cause = #cause{location = local_public, value = 31},
 					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
@@ -1142,7 +1142,7 @@ t_active(cast, {nrf_update,
 		{ok, #{"serviceRating" := [#{"resultCode" := _},
 				#{"resultCode" := _}]}} ->
 			NewIID = IID + 1,
-			Data1 = maps:remove(nrf_reqid, Data),
+			Data1 = remove_nrf(Data),
 			NewData = Data1#{iid => NewIID},
 			Cause = #cause{location = local_public, value = 31},
 			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
@@ -1156,13 +1156,13 @@ t_active(cast, {nrf_update,
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			NewData = maps:remove(nrf_reqid, Data),
+			NewData = remove_nrf(Data),
 			{next_state, exception, NewData};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			NewData = maps:remove(nrf_reqid, Data),
+			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
 t_active(cast, {nrf_update,
@@ -1172,7 +1172,7 @@ t_active(cast, {nrf_update,
 	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, exception, NewData, 0};
 t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1180,7 +1180,7 @@ t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	Data1 = maps:remove(nrf_reqid, Data),
+	Data1 = remove_nrf(Data),
 	NewData = maps:remove(nrf_location, Data1),
 	{next_state, exception, NewData, 0};
 t_active(cast, {'TC', 'L-CANCEL', indication,
@@ -1286,7 +1286,7 @@ abandon(timeout, _EventContent, Data) ->
 abandon(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 abandon(cast, {nrf_release,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
@@ -1295,7 +1295,7 @@ abandon(cast, {nrf_release,
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1303,7 +1303,7 @@ abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 abandon(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -1379,7 +1379,7 @@ disconnect(timeout, _EventContent, Data) ->
 disconnect(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 disconnect(cast, {nrf_release,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
@@ -1388,7 +1388,7 @@ disconnect(cast, {nrf_release,
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1396,7 +1396,7 @@ disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 disconnect(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -1496,13 +1496,13 @@ exception(timeout, _EventContent, Data) ->
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 exception(cast, {nrf_release,
 		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location} = Data) ->
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
@@ -1513,7 +1513,7 @@ exception(cast, {nrf_release, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = maps:remove(nrf_reqid, Data),
+	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 exception(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -1964,4 +1964,11 @@ call_info([#{requestedInformationType := releaseCause,
 	call_info(T, NewData);
 call_info([], Data) ->
 	Data.
+
+%% @hidden
+remove_nrf(Data) ->
+	Data1 = maps:remove(nrf_start, Data),
+	Data2 = maps:remove(nrf_req_url, Data1),
+	Data2 = maps:remove(nrf_http, Data2),
+	maps:remove(nrf_reqid, Data3).
 
