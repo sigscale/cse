@@ -3081,7 +3081,7 @@ log_fsm(State,
 remove_nrf(Data) ->
 	Data1 = maps:remove(from, Data),
 	Data2 = maps:remove(nrf_start, Data1),
-	Data3 = maps:remove(nrf_req_uri, Data2),
+	Data3 = maps:remove(nrf_req_url, Data2),
 	Data4 = maps:remove(nrf_http, Data3),
 	maps:remove(nrf_reqid, Data4).
 

@@ -950,7 +950,7 @@ remove_req(Data) ->
 	Data2 = maps:remove(req_id, Data1),
 	Data3 = maps:remove(req_authenticator, Data2),
 	Data4 = maps:remove(nrf_start, Data3),
-	Data5 = maps:remove(nrf_req_uri, Data4),
+	Data5 = maps:remove(nrf_req_url, Data4),
 	Data6 = maps:remove(nrf_http, Data5),
 	maps:remove(nrf_reqid, Data6).
 
