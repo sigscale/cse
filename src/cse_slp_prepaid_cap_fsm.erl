@@ -353,14 +353,16 @@ collect_information(cast, {nrf_start,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, NewData, 0};
-		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+		{{ok, JSON}, {_, Location}}
+				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
 			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData, 0};
-		{{error, Partial, Remaining}, {_, Location}} ->
+		{{error, Partial, Remaining}, {_, Location}}
+				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
@@ -368,8 +370,10 @@ collect_information(cast, {nrf_start,
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData, 0};
 		{{ok, _}, false} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {slpi, self()},
+					{state, collect_information}]),
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData, 0}
 	end;
@@ -793,14 +797,16 @@ terminating_call_handling(cast, {nrf_start,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, NewData};
-		{{ok, JSON}, {_, Location}} when is_list(Location) ->
+		{{ok, JSON}, {_, Location}}
+				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
 			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData};
-		{{error, Partial, Remaining}, {_, Location}} ->
+		{{error, Partial, Remaining}, {_, Location}}
+				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
@@ -808,8 +814,10 @@ terminating_call_handling(cast, {nrf_start,
 			NewData = Data1#{nrf_location => Location},
 			{next_state, exception, NewData};
 		{{ok, _}, false} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {missing, "Location:"},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {slpi, self()},
+					{state, terminating_call_handling}]),
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
@@ -1789,7 +1797,7 @@ abandon(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 abandon(timeout,  _EventContent,
-		#{nrf_location := Location} = Data) when is_list(Location) ->
+		#{nrf_location := Location} = Data) ->
 	nrf_release(Data);
 abandon(timeout,  _EventContent, Data) ->
 	{next_state, null, Data};
