@@ -266,12 +266,28 @@ authorize_origination_attempt(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
+		{{ok, #{}}, {_, Location}}
+				when is_list(Location) ->
+			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
+			Actions1 = [{reply, From, Reply1}],
+			{next_state, collect_information, NewData, Actions1};
 		{{error, Partial, Remaining}, Location} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {location, Location}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
+					{state, authorize_origination_attempt}]),
+			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
+			Actions1 = [{reply, From, Reply1}],
+			{next_state, null, NewData, Actions1};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
 					{state, authorize_origination_attempt}]),
 			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
@@ -568,12 +584,29 @@ terminating_call_handling(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
-		{{error, Partial, Remaining}, Location} ->
+		{{ok, #{}}, {_, Location}}
+				when is_list(Location) ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
+		{{error, Partial, Remaining}, Location}
+				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {location, Location}, {slpi, self()},
 					{origin_host, OHost}, {origin_realm, ORealm},
 					{partial, Partial}, {remaining, Remaining},
+					{state, terminating_call_handling}]),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{next_state, null, NewData, Actions};
+		{{ok, _}, false} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
+					{request_id, RequestId}, {profile, Profile},
+					{uri, URI}, {slpi, self()},
+					{origin_host, OHost}, {origin_realm, ORealm},
 					{state, terminating_call_handling}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -618,6 +651,11 @@ terminating_call_handling(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -659,8 +697,8 @@ terminating_call_handling(cast,
 					{next_state, null, NewData, Actions1}
 			end;
 		{ok, #{}} ->
-			Reply = diameter_answer([], ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-					RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Partial, Remaining} ->
@@ -856,6 +894,11 @@ collect_information(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -898,8 +941,8 @@ collect_information(cast,
 					{next_state, null, NewData, Actions1}
 			end;
 		{ok, #{}} ->
-			Reply = diameter_answer([], ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-					RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Partial, Remaining} ->
@@ -1096,6 +1139,11 @@ analyse_information(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -1334,6 +1382,11 @@ o_alerting(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -1376,8 +1429,8 @@ o_alerting(cast,
 					{next_state, null, NewData, Actions1}
 			end;
 		{ok, #{}} ->
-			Reply = diameter_answer([], ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-					RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Partial, Remaining} ->
@@ -1572,6 +1625,11 @@ t_alerting(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -1614,8 +1672,8 @@ t_alerting(cast,
 					{next_state, null, NewData, Actions1}
 			end;
 		{ok, #{}} ->
-			Reply = diameter_answer([], ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-					RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Partial, Remaining} ->
@@ -1805,6 +1863,11 @@ active(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{keep_state, NewData, Actions1}
 			end;
+		{ok, #{}} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_error(ResultCode, RequestType, RequestNum),
+			Actions = [{reply, From, Reply}],
+			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
@@ -1847,8 +1910,8 @@ active(cast,
 					{next_state, null, NewData, Actions1}
 			end;
 		{ok, #{}} ->
-			Reply = diameter_answer([], ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-					RequestType, RequestNum),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		{error, Partial, Remaining} ->
