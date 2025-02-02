@@ -2212,7 +2212,7 @@ ecs_http(MIME, Body) ->
 		Value :: binary() | iolist(),
 		Body :: binary() | iolist(),
 		HTTP :: map().
-%% @doc Construct ECS JSON `map()' for Nrf request.
+%% @doc Construct ECS JSON `map()' for Nrf response.
 %% @hidden
 ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
 	Response = case {lists:keyfind("content-length", 1, Headers),
