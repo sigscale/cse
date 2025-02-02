@@ -86,7 +86,8 @@
 		| abandon | term_attempt.
 -type monitor_mode() :: interrupted | notifyAndContinue | transparent.
 
--type statedata() :: #{dha => pid(),
+-type statedata() :: #{start := pos_integer(),
+		dha => pid(),
 		cco => pid(),
 		did => 0..4294967295,
 		iid => 0..127,
@@ -108,12 +109,20 @@
 		consumed => non_neg_integer(),
 		pending => non_neg_integer(),
 		nrf_profile => atom(),
+		nrf_address => inet:ip_address(),
+		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
 		nrf_location => string(),
 		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
+		nrf_start => pos_integer(),
+		nrf_req_url => string(),
+		nrf_http => map(),
 		nrf_reqid => reference()}.
 
+-define(SERVICENAME, "Prepaid Voice").
+-define(FSM_LOGNAME, prepaid).
+-define(NRF_LOGNAME, rating).
 -define(Pkgs, 'CS2-SSF-SCF-pkgs-contracts-acs').
 -define('leg1', <<1>>).
 -define('leg2', <<2>>).
@@ -169,14 +178,15 @@ null(enter, null = _EventContent, Data) ->
 			disconnect2 => interrupted},
 	NewData = Data#{edp => EDP},
 	{keep_state, NewData#{sequence => 1}};
-null(enter, _EventContent,
+null(enter, OldState,
 		#{tr_state := active, did := DialogueID, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
 			qos = {true, true}, termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	NewData = Data#{tr_state => idle},
+	catch log_fsm(OldState, NewData),
 	{keep_state, NewData};
-null(enter, _EventContent,
+null(enter, OldState,
 		#{tr_state := init_received, did := DialogueID,
 				ac := AC, dha := DHA} = Data) ->
 	End = #'TC-END'{dialogueID = DialogueID,
@@ -184,17 +194,24 @@ null(enter, _EventContent,
 			termination = basic},
 	gen_statem:cast(DHA, {'TC', 'END', request, End}),
 	NewData = Data#{tr_state => idle},
+	catch log_fsm(OldState, NewData),
 	{keep_state, NewData};
 null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				dialogueID = DialogueID},
 				#{eventTypeBCSM := analysedInformation}} = EventContent,
 		#{did := DialogueID} = Data) ->
 	{ok, Profile} = application:get_env(nrf_profile),
+	{ok, HttpcOptions} = httpc:get_options([ip, port], Profile),
+	NrfAddress = proplists:get_value(ip, HttpcOptions),
+	NrfPort = proplists:get_value(port, HttpcOptions),
 	{ok, URI} = application:get_env(nrf_uri),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
 	NewData = Data#{iid => 0, pending => 0, consumed => 0,
+			start => erlang:system_time(millisecond),
+			direction => originating,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
+			nrf_address => NrfAddress, nrf_port => NrfPort,
 			nrf_profile => Profile, nrf_uri => URI},
 	Actions = [{next_event, internal, EventContent}],
 	{next_state, analyse_information, NewData, Actions};
@@ -203,11 +220,17 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				#{eventTypeBCSM := termAttemptAuthorized}} = EventContent,
 		#{did := DialogueID} = Data) ->
 	{ok, Profile} = application:get_env(nrf_profile),
+	{ok, HttpcOptions} = httpc:get_options([ip, port], Profile),
+	NrfAddress = proplists:get_value(ip, HttpcOptions),
+	NrfPort = proplists:get_value(port, HttpcOptions),
 	{ok, URI} = application:get_env(nrf_uri),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
 	NewData = Data#{iid => 0, pending => 0, consumed => 0,
+			start => erlang:system_time(millisecond),
+			direction => terminating,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
+			nrf_address => NrfAddress, nrf_port => NrfPort,
 			nrf_profile => Profile, nrf_uri => URI},
 	Actions = [{next_event, internal, EventContent}],
 	{next_state, select_facility, NewData, Actions};
@@ -275,11 +298,12 @@ analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	nrf_start(NewData);
 analyse_information(cast, {nrf_start,
-		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
+		{RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{direction := originating, nrf_reqid := RequestId,
-				nrf_profile := Profile, nrf_uri := URI,  edp := EDP,
-				did := DialogueID, iid := IID, dha := DHA,
+				nrf_profile := Profile, nrf_uri := URI, nrf_http := LogHTTP,
+				edp := EDP, did := DialogueID, iid := IID, dha := DHA,
 				cco := CCO, scf := SCF, ac := AC} = Data) ->
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
@@ -369,9 +393,10 @@ analyse_information(cast, {nrf_start,
 			{next_state, exception, NewData}
 	end;
 analyse_information(cast, {nrf_start,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI} = Data) ->
+				nrf_uri := URI, nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
@@ -440,11 +465,12 @@ select_facility(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	nrf_start(NewData);
 select_facility(cast, {nrf_start,
-		{RequestId, {{_Version, 201, _Phrase}, Headers, Body}}},
+		{RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{direction := terminating, nrf_reqid := RequestId,
-				nrf_profile := Profile, nrf_uri := URI,  edp := EDP,
-				did := DialogueID, iid := IID, dha := DHA, cco := CCO,
-				scf := SCF, ac := AC} = Data) ->
+				nrf_profile := Profile, nrf_uri := URI, nrf_http := LogHTTP,
+				edp := EDP, did := DialogueID, iid := IID, dha := DHA,
+				cco := CCO, scf := SCF, ac := AC} = Data) ->
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
 				"grantedUnit" := #{"time" := GrantedTime}}]}},
@@ -533,9 +559,10 @@ select_facility(cast, {nrf_start,
 			{next_state, exception, NewData}
 	end;
 select_facility(cast, {nrf_start,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI} = Data) ->
+				nrf_uri := URI, nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
@@ -911,10 +938,12 @@ o_active(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 o_active(cast, {nrf_update,
-		{RequestId, {{_, 200, _}, _Headers, Body}}},
+		{RequestId, {{Version, 200, _}, _Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
-				nrf_location := Location, did := DialogueID, iid := IID,
-				dha := DHA, cco := CCO, scf := SCF} = Data) ->
+				nrf_location := Location, nrf_http := LogHTTP,
+				did := DialogueID, iid := IID, dha := DHA,
+				cco := CCO, scf := SCF} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
 				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
@@ -988,9 +1017,10 @@ o_active(cast, {nrf_update,
 			{next_state, exception, NewData}
 	end;
 o_active(cast, {nrf_update,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile, nrf_uri := URI,
-				nrf_location := Location} = Data) ->
+				nrf_location := Location, nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
@@ -1097,10 +1127,12 @@ t_active(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 t_active(cast, {nrf_update,
-		{RequestId, {{_, 200, _}, _Headers, Body}}},
+		{RequestId, {{Version, 200, _}, _Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
-				nrf_location := Location, did := DialogueID, iid := IID,
-				dha := DHA, cco := CCO, scf := SCF} = Data) ->
+				nrf_location := Location, nrf_http := LogHTTP,
+				did := DialogueID, iid := IID, dha := DHA,
+				cco := CCO, scf := SCF} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
 				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
@@ -1174,9 +1206,11 @@ t_active(cast, {nrf_update,
 			{next_state, exception, NewData}
 	end;
 t_active(cast, {nrf_update,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location} = Data) ->
+				nrf_uri := URI, nrf_location := Location,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
@@ -1292,14 +1326,17 @@ abandon(timeout, _EventContent,
 abandon(timeout, _EventContent, Data) ->
 	{next_state, null, Data};
 abandon(cast, {nrf_release,
-		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
-		#{nrf_reqid := RequestId} = Data) ->
+		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 abandon(cast, {nrf_release,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location} = Data) ->
+				nrf_uri := URI, nrf_location := Location,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
@@ -1385,14 +1422,17 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 disconnect(timeout, _EventContent, Data) ->
 	nrf_release(Data);
 disconnect(cast, {nrf_release,
-		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
-		#{nrf_reqid := RequestId} = Data) ->
+		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 disconnect(cast, {nrf_release,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location} = Data) ->
+				nrf_uri := URI, nrf_location := Location,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
@@ -1502,14 +1542,17 @@ exception(timeout, _EventContent,
 exception(timeout, _EventContent, Data) ->
 	{next_state, null, Data};
 exception(cast, {nrf_release,
-		{RequestId, {{_Version, 200, _Phrase}, _Headers, _Body}}},
-		#{nrf_reqid := RequestId} = Data) ->
+		{RequestId, {{Version, 200, _Phrase}, _Headers, _Body}}},
+		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
 exception(cast, {nrf_release,
-		{RequestId, {{_Version, Code, Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location} = Data) ->
+				nrf_uri := URI, nrf_location := Location,
+			nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
@@ -1682,7 +1725,7 @@ nrf_start2(ServiceRating, #{direction := originating,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CallingNumber],
 			"serviceRating" => [ServiceRating]},
-	nrf_start3(JSON, Data);
+	nrf_start3(Now, JSON, Data);
 nrf_start2(ServiceRating, #{direction := terminating,
 		called := CalledNumber, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
@@ -1691,19 +1734,23 @@ nrf_start2(ServiceRating, #{direction := terminating,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["msisdn-" ++ CalledNumber],
 			"serviceRating" => [ServiceRating]},
-	nrf_start3(JSON, Data).
+	nrf_start3(Now, JSON, Data).
 %% @hidden
-nrf_start3(JSON, #{nrf_profile := Profile, nrf_uri := URI,
+nrf_start3(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 				nrf_http_options := HttpOptions, nrf_headers := Headers} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ "/ratingdata", Headers1, "application/json", Body},
+	ContentType = "application/json",
+	RequestURL = URI ++ "/ratingdata",
+	LogHTTP = ecs_http(ContentType, Body),
+	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
-			NewData = Data#{nrf_reqid => RequestId},
+			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
+					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
@@ -1761,7 +1808,7 @@ nrf_update2(Consumed, ServiceRating, #{direction := originating,
 			"subscriptionId" => ["msisdn-" ++ CallingNumber],
 			"serviceRating" => [Debit, Reserve]},
 	NewData = Data#{sequence => NewSequence},
-	nrf_update3(JSON, NewData);
+	nrf_update3(Now, JSON, NewData);
 nrf_update2(Consumed, ServiceRating, #{direction := terminating,
 		called := CalledNumber, sequence := Sequence} = Data)
 		when is_integer(Consumed), Consumed >= 0 ->
@@ -1776,20 +1823,24 @@ nrf_update2(Consumed, ServiceRating, #{direction := terminating,
 			"subscriptionId" => ["msisdn-" ++ CalledNumber],
 			"serviceRating" => [Debit, Reserve]},
 	NewData = Data#{sequence => NewSequence},
-	nrf_update3(JSON, NewData).
+	nrf_update3(Now, JSON, NewData).
 %% @hidden
-nrf_update3(JSON, #{nrf_profile := Profile, nrf_uri := URI,
+nrf_update3(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		nrf_location := Location, nrf_http_options := HttpOptions,
 		nrf_headers := Headers} = Data) when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/update", Headers1, "application/json", Body},
+	ContentType = "application/json",
+	RequestURL = URI ++ Location ++ "/update",
+	LogHTTP = ecs_http(ContentType, Body),
+	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
-			NewData = Data#{nrf_reqid => RequestId},
+			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
+					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
@@ -1867,7 +1918,7 @@ nrf_release4(ServiceRating,
 			"subscriptionId" => ["msisdn-" ++ CallingNumber],
 			"serviceRating" => [Debit]},
 	NewData = Data#{sequence => NewSequence},
-	nrf_release5(JSON, NewData);
+	nrf_release5(Now, JSON, NewData);
 nrf_release4(ServiceRating,
 		#{direction := terminating, called := CalledNumber,
 		pending := Consumed, sequence := Sequence} = Data) ->
@@ -1881,21 +1932,26 @@ nrf_release4(ServiceRating,
 			"subscriptionId" => ["msisdn-" ++ CalledNumber],
 			"serviceRating" => [Debit]},
 	NewData = Data#{sequence => NewSequence},
-	nrf_release5(JSON, NewData).
+	nrf_release5(Now, JSON, NewData).
 %% @hidden
-nrf_release5(JSON, #{nrf_profile := Profile, nrf_uri := URI,
+nrf_release5(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		nrf_location := Location, nrf_http_options := HttpOptions,
 		nrf_headers := Headers} = Data) when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
-	Request = {URI ++ Location ++ "/release", Headers1, "application/json", Body},
+	ContentType = "application/json",
+	RequestURL = URI ++ Location ++ "/release",
+	LogHTTP = ecs_http(ContentType, Body),
+	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
 			Data1 = maps:remove(nrf_location, Data),
-			NewData = Data1#{nrf_reqid => RequestId, pending => 0},
+			NewData = Data1#{nrf_start => Now,
+					nrf_reqid => RequestId, pending => 0,
+					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData};
 		{error, Reason} ->
 			case Reason of
@@ -1972,6 +2028,109 @@ call_info([#{requestedInformationType := releaseCause,
 	call_info(T, NewData);
 call_info([], Data) ->
 	Data.
+
+-spec ecs_http(MIME, Body) -> HTTP
+	when
+		MIME :: string(),
+		Body :: binary() | iolist(),
+		HTTP :: map().
+%% @doc Construct ECS JSON `map()' for Nrf request.
+%% @hidden
+ecs_http(MIME, Body) ->
+	Body1 = #{"bytes" => iolist_size(Body),
+			"content" => zj:encode(Body)},
+	Request = #{"method" => "post",
+			"mime_type" => MIME,
+			"body" => Body1},
+	#{"request" => Request}.
+
+-spec ecs_http(Version, StatusCode, Headers, Body, HTTP) -> HTTP
+	when
+		Version :: string(),
+		StatusCode :: pos_integer(),
+		Headers :: [HttpHeader],
+		HttpHeader :: {Field, Value},
+		Field :: [byte()],
+		Value :: binary() | iolist(),
+		Body :: binary() | iolist(),
+		HTTP :: map().
+%% @doc Construct ECS JSON `map()' for Nrf response.
+%% @hidden
+ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
+	Response = case {lists:keyfind("content-length", 1, Headers),
+			lists:keyfind("content-type", 1, Headers)} of
+		{{_, Bytes}, {_, MIME}} ->
+			Body1 = #{"bytes" => Bytes,
+					"content" => zj:encode(Body)},
+			#{"status_code" => StatusCode,
+					"mime_type" => MIME, "body" => Body1};
+		{{_, Bytes}, false} ->
+			Body1 = #{"bytes" => Bytes,
+					"content" => zj:encode(Body)},
+			#{"status_code" => StatusCode, "body" => Body1};
+		_ ->
+			#{"status_code" => StatusCode}
+	end,
+	HTTP#{"version" => Version, "response" => Response}.
+
+-spec log_nrf(HTTP, Data) -> ok
+	when
+		HTTP :: map(),
+		Data :: statedata().
+%% @doc Write an event to a log.
+%% @hidden
+log_nrf(HTTP,
+		#{direction := originating, calling := MSISDN} = Data) ->
+	log_nrf(MSISDN, HTTP, Data);
+log_nrf(HTTP,
+		#{direction := terminating, called := MSISDN} = Data) ->
+	log_nrf(MSISDN, HTTP, Data).
+%% @hidden
+log_nrf(MSISDN, HTTP,
+		#{nrf_start := Start,
+		nrf_address := Address,
+		nrf_port := Port,
+		nrf_req_url := URL} = _Data) ->
+	Stop = erlang:system_time(millisecond),
+	Subscriber = #{msisdn => MSISDN},
+	Client = case {Address, Port} of
+		{Address, Port} when is_tuple(Address), is_integer(Port) ->
+			{Address, Port};
+		{Address, _} when is_tuple(Address) ->
+			{Address, 0};
+		{_, Port} when is_integer(Port) ->
+			{[], Port};
+		{_, _} ->
+			{[], 0}
+	end,
+	cse_log:blog(?NRF_LOGNAME,
+			{Start, Stop, ?SERVICENAME, Subscriber, Client, URL, HTTP}).
+
+-spec log_fsm(OldState, Data) -> ok
+	when
+		OldState :: atom(),
+		Data :: statedata().
+%% @doc Write an event to a log.
+%% @hidden
+log_fsm(State,
+		#{direction := originating, calling := MSISDN} = Data) ->
+	log_fsm(MSISDN, State, Data);
+log_fsm(State,
+		#{direction := terminating, called := MSISDN} = Data) ->
+	log_fsm(MSISDN, State, Data).
+%% @hidden
+log_fsm(MSISDN, State,
+		#{start := Start,
+		direction := Direction,
+		called :=  Called,
+		calling := Calling} = Data) ->
+	Stop = erlang:system_time(millisecond),
+	Subscriber = #{msisdn => MSISDN},
+	Call = #{direction => Direction, calling => Calling, called => Called},
+	Network = #{context => "32276@3gpp.org"},
+	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
+	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
+			State, Subscriber, Call, Network, OCS}).
 
 %% @hidden
 remove_nrf(Data) ->
