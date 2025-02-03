@@ -312,7 +312,7 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
 			ecs_service(ServiceName, "slp"), $,,
 			ecs_network("nrf", "http"), $,,
-			ecs_user(msisdn(Subscriber), imsi(Subscriber), []), $,,
+			ecs_user(sub_name(Subscriber), sub_id(Subscriber), []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol", "end"], Outcome), $,,
 			ecs_url(URL), $,,
@@ -373,7 +373,7 @@ codec_postpaid_ecs({Start, Stop, ServiceName,
 	[${,
 			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
 			ecs_service(ServiceName, "slp"), $,,
-			ecs_user(msisdn(Subscriber), imsi(Subscriber), []), $,,
+			ecs_user(sub_name(Subscriber), sub_id(Subscriber), []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol", "end"], Outcome), $,,
 			ecs_postpaid(State, Call, Network), $}].
@@ -426,7 +426,7 @@ codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
 			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
 			ecs_service(ServiceName, "slp"), $,,
 			ecs_network("nrf", "http"), $,,
-			ecs_user(msisdn(Subscriber), imsi(Subscriber), []), $,,
+			ecs_user(sub_name(Subscriber), sub_id(Subscriber), []), $,,
 			ecs_event(StartTime, StopTime, Duration,
 					"event", "session", ["protocol"], Outcome),
 			ecs_client([], [], Address, Port), $,,
@@ -870,14 +870,16 @@ get_string(Key, Map) ->
 	end.
 
 %% @hidden
-imsi(#{imsi := IMSI} = _Subscriber) when is_list(IMSI) ->
+sub_id(#{imsi := IMSI} = _Subscriber) when is_list(IMSI) ->
 	"imsi-" ++ IMSI;
-imsi(_Subscriber) ->
+sub_id(_Subscriber) ->
 	"".
 
 %% @hidden
-msisdn(#{msisdn := MSISDN} = _Subscriber) when is_list(MSISDN) ->
+sub_name(#{msisdn := MSISDN} = _Subscriber) when is_list(MSISDN) ->
 	"msisdn-" ++ MSISDN;
-msisdn(_Subscriber) ->
+sub_name(#{nai := NAI} = _Subscriber) when is_list(NAI) ->
+	"nai-" ++ NAI;
+sub_name(_Subscriber) ->
 	"".
 

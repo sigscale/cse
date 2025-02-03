@@ -170,7 +170,8 @@ init1([], Data) ->
 %% @private
 null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
-null(enter = _EventType, _OldState, _Data) ->
+null(enter = _EventType, OldState, Data) ->
+	catch log_fsm(OldState,Data),
 	{stop, shutdown};
 null({call, _From},
 		#radius{code = ?AccessRequest}, Data) ->
@@ -210,10 +211,11 @@ authorize_origination_attempt({call, From},
 			{next_state, null, NewData, Actions}
 	end;
 authorize_origination_attempt(cast,
-		{nrf_start, {RequestId, {{_, 201, _Phrase}, Headers, Body}}},
+		{nrf_start, {RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				nas_id := NasId} = Data) ->
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := _ServiceRating}}, {_, Location}}
 				when is_list(Location) ->
@@ -234,26 +236,29 @@ authorize_origination_attempt(cast,
 			{next_state, null, NewData, Actions}
 	end;
 authorize_origination_attempt(cast,
-		{nrf_start, {RequestId, {{_, 400, _Phrase}, _Headers, _Body}}},
+		{nrf_start, {RequestId, {{Version, 400, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId,
-				nrf_http := _LogHTTP} = Data) ->
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 400, Headers, Body, LogHTTP), Data),
 	Reply = radius_result("SYSTEM_FAILURE", Data),
 	NewData = remove_req(Data),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
-		{nrf_start, {RequestId, {{_, 404, _Phrase}, _Headers, _Body}}},
+		{nrf_start, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId,
-				nrf_http := _LogHTTP} = Data) ->
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	Reply = radius_result("USER_UNKNOWN", Data),
 	NewData = remove_req(Data),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
 authorize_origination_attempt(cast,
-		{nrf_start, {RequestId, {{_, 403, _Phrase}, Headers, Body}}},
+		{nrf_start, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_http := _LogHTTP, nrf_uri := URI,
+				nrf_http := LogHTTP, nrf_uri := URI,
 				nas_id := NasId} = Data) ->
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := Cause}}, {_, "application/problem+json" ++ _}} ->
 			Reply = radius_result(Cause, Data),
@@ -273,10 +278,11 @@ authorize_origination_attempt(cast,
 			{next_state, null, NewData, Actions}
 	end;
 authorize_origination_attempt(cast,
-		{nrf_start, {RequestId, {{_, Code, Phrase}, _Headers, _Body}}},
+		{nrf_start, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				nas_id := NasId} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	?LOG_WARNING([{?MODULE, nrf_start},
 			{code, Code}, {reason, Phrase},
 			{request_id, RequestId},
@@ -290,8 +296,7 @@ authorize_origination_attempt(cast,
 authorize_origination_attempt(cast,
 		{nrf_start, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
-				nas_id := NasId} = Data) ->
+				nrf_uri := URI, nas_id := NasId} = Data) ->
 	?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
 			{uri, URI}, {slpi, self()}, {nas, NasId},
@@ -387,10 +392,11 @@ active({call, From},
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{nrf_start, {RequestId, {{_, 201, _Phrase}, Headers, Body}}},
+		{nrf_start, {RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				nas_id := NasId} = Data) ->
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := _ServiceRating}}, {_, Location}}
 				when is_list(Location) ->
@@ -410,12 +416,13 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{NrfOperation, {RequestId, {{_, 200, _Phrase}, _Headers, Body}}},
+		{NrfOperation, {RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				nrf_location := Location, nas_id := NasId} = Data)
 		when NrfOperation == nrf_update;
 		NrfOperation == nrf_release ->
+	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	case zj:decode(Body) of
 		{ok, #{"serviceRating" := _ServiceRating}} ->
 			Reply = radius_response(?AccountingResponse, [], Data),
@@ -439,24 +446,27 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{_NrfOperation, {RequestId, {{_, 400, _Phrase}, _Headers, _Body}}},
+		{_NrfOperation, {RequestId, {{Version, 400, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId,
-				nrf_http := _LogHTTP} = Data) ->
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 400, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	Actions = [{reply, From, ignore}],
 	{next_state, null, NewData, Actions};
 active(cast,
-		{_NrfOperation, {RequestId, {{_, 404, _Phrase}, _Headers, _Body}}},
+		{_NrfOperation, {RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId,
-				nrf_http := _LogHTTP} = Data) ->
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	Actions = [{reply, From, ignore}],
 	{next_state, null, NewData, Actions};
 active(cast,
-		{NrfOperation, {RequestId, {{_, 403, _Phrase}, Headers, Body}}},
+		{NrfOperation, {RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_http := _LogHTTP, nrf_uri := URI,
+				nrf_http := LogHTTP, nrf_uri := URI,
 				nas_id := NasId} = Data) ->
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _Cause}}, {_, "application/problem+json" ++ _}} ->
@@ -473,10 +483,11 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
-		{NrfOperation, {RequestId, {{_, Code, Phrase}, _Headers, _Body}}},
+		{NrfOperation, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				nas_id := NasId} = Data) ->
+	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	?LOG_WARNING([{?MODULE, NrfOperation},
 			{code, Code}, {reason, Phrase},
@@ -489,8 +500,7 @@ active(cast,
 active(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_http := _LogHTTP,
-				nas_id := NasId} = Data) ->
+				nrf_uri := URI, nas_id := NasId} = Data) ->
 	NewData = remove_req(Data),
 	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
 			{request_id, RequestId}, {profile, Profile},
@@ -914,7 +924,6 @@ ecs_http(MIME, Body) ->
 			"body" => Body1},
 	#{"request" => Request}.
 
--dialyzer({no_unused, ecs_http/5}).
 -spec ecs_http(Version, StatusCode, Headers, Body, HTTP) -> HTTP
 	when
 		Version :: string(),
@@ -943,6 +952,52 @@ ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
 			#{"status_code" => StatusCode}
 	end,
 	HTTP#{"version" => Version, "response" => Response}.
+
+-spec log_nrf(HTTP, Data) -> ok
+	when
+		HTTP :: map(),
+		Data :: statedata().
+%% @doc Write an event to a log.
+%% @hidden
+log_nrf(HTTP,
+		#{nrf_start := Start,
+		username := Username,
+		nrf_address := Address,
+		nrf_port := Port,
+		nrf_req_url := URL} = _Data) ->
+	Stop = erlang:system_time(millisecond),
+	Subscriber = #{nai => Username},
+	Client = case {Address, Port} of
+		{Address, Port} when is_tuple(Address), is_integer(Port) ->
+			{Address, Port};
+		{Address, _} when is_tuple(Address) ->
+			{Address, 0};
+		{_, Port} when is_integer(Port) ->
+			{[], Port};
+		{_, _} ->
+			{[], 0}
+	end,
+	cse_log:blog(?NRF_LOGNAME,
+			{Start, Stop, ?SERVICENAME, Subscriber, Client, URL, HTTP}).
+
+-spec log_fsm(OldState, Data) -> ok
+	when
+		OldState :: atom(),
+		Data :: statedata().
+%% @doc Write an event to a log.
+%% @hidden
+log_fsm(State,
+		#{start := Start,
+		username := Username,
+		context := Context,
+		session_id := SessionId} = Data) ->
+	Stop = erlang:system_time(millisecond),
+	Subscriber = #{nai => Username},
+	Call = #{},
+	Network = #{context => Context, session_id => SessionId},
+	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
+	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
+			State, Subscriber, Call, Network, OCS}).
 
 %% @hidden
 remove_req(Data) ->

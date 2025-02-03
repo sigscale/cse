@@ -69,11 +69,7 @@ suite() ->
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
-	{require, rest},
-	{default_config, rest,
-			[{user, "nrf"},
-			{password, "4yjhe6ydsrh4"}]},
-   {timetrap, {seconds, 60}}].
+   {timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config) -> NewConfig
 	when
