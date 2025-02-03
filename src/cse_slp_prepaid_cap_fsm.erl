@@ -90,6 +90,7 @@
 		iid => 0..127,
 		ac => tuple(),
 		sequence => pos_integer(),
+		tr_state => idle | init_sent | init_received | active,
 		scf => sccp_codec:party_address(),
 		ssf => sccp_codec:party_address(),
 		direction => originating | terminating,
@@ -2741,13 +2742,11 @@ log_fsm(State,
 		msisdn := MSISDN,
 		direction := Direction,
 		called :=  Called,
-		calling := Calling,
-		context := Context,
-		session_id := SessionId} = Data) ->
+		calling := Calling} = Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{imsi => IMSI, msisdn => MSISDN},
 	Call = #{direction => Direction, calling => Calling, called => Called},
-	Network = #{context => Context, session_id => SessionId},
+	Network = #{context => "32276@3gpp.org"},
 	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
 	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
 			State, Subscriber, Call, Network, OCS}).
