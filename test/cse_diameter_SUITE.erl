@@ -96,10 +96,10 @@ suite() ->
 					{'3gpp_rf',
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_diameter_ecs}}]},
-					{'rating',
+					{rating,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_rating_ecs}}]},
-					{'cdr',
+					{cdr,
 							[{format, external}]},
 					{postpaid,
 							[{format, external},
@@ -107,11 +107,7 @@ suite() ->
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
-	{require, rest},
-	{default_config, rest,
-			[{user, "nrf"},
-			{password, "4yjhe6ydsrh4"}]},
-   {timetrap, {minutes, 60}}].
+   {timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
