@@ -590,7 +590,7 @@ terminating_call_handling(cast,
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions};
-		{{error, Partial, Remaining}, Location}
+		{{error, Partial, Remaining}, {_, Location}}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},

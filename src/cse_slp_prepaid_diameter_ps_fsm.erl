@@ -247,7 +247,8 @@ authorize_origination_attempt(cast,
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 			Actions1 = [{reply, From, Reply1}],
 			{next_state, collect_information, NewData, Actions1};
-		{{error, Partial, Remaining}, Location} ->
+		{{error, Partial, Remaining}, {_, Location}}
+				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {location, Location}, {slpi, self()},
