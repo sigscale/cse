@@ -68,7 +68,18 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+   [{userdata,
+			[{doc, "Test suite for CAMEL Application Part (CAP) in CSE"}]},
+	{require, log},
+	{default_config, log,
+			[{logs,
+					[{rating,
+							[{format, external},
+							{codec, {cse_log_codec_ecs, codec_rating_ecs}}]},
+					{prepaid,
+							[{format, external},
+							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
+   {timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -86,6 +97,10 @@ init_per_suite(Config) ->
 	TcoArgs = [{ac, ACs}, {shared_pc, true}],
 	Tsl = #{TCO => {Callback, TcoArgs, []}},
 	ok = application:set_env(cse, tsl, Tsl),
+	LogDir = ct:get_config({log, log_dir}, ?config(priv_dir, Config)),
+	ok = application:set_env(cse, log_dir, LogDir),
+	Logs = ct:get_config({log, logs}, []),
+	ok = application:set_env(cse, logs, Logs),
 	ok = cse_test_lib:init_tables(),
 	ok = cse_test_lib:start(),
 	EDP = #{abandon => notifyAndContinue,
