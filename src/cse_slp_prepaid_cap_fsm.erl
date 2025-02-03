@@ -1385,7 +1385,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 o_active(cast, {nrf_update,
-		{RequestId, {{Version, 200, _}, _Headers, Body}}},
+		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
 				nrf_location := Location, nrf_http := LogHTTP,
 				did := DialogueID, iid := IID, dha := DHA,
@@ -1628,7 +1628,7 @@ t_active(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 t_active(cast, {nrf_update,
-		{RequestId, {{Version, 200, _}, _Headers, Body}}},
+		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
 				nrf_location := Location, nrf_http := LogHTTP,
 				did := DialogueID, iid := IID, dha := DHA,
@@ -1830,12 +1830,12 @@ abandon(cast, {'TC', 'INVOKE', indication,
 			{stop, Reason}
 	end;
 abandon(timeout,  _EventContent,
-		#{nrf_location := Location} = Data) ->
+		#{nrf_location := _Location} = Data) ->
 	nrf_release(Data);
 abandon(timeout,  _EventContent, Data) ->
 	{next_state, null, Data};
 abandon(cast, {nrf_release,
-		{RequestId, {{Version, 200, _Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -1943,8 +1943,8 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 disconnect(timeout, _EventContent, Data) ->
 	nrf_release(Data);
 disconnect(cast, {nrf_release,
-		{RequestId, {{Version, 200, _Phrase}, _Headers, _Body}}},
-		#{nrf_reqid := RequestId} = Data) ->
+		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
 	{next_state, null, NewData};
@@ -2072,7 +2072,7 @@ exception(timeout, _EventContent,
 exception(timeout, _EventContent, Data) ->
 	{next_state, null, Data};
 exception(cast, {nrf_release,
-		{RequestId, {{Version, 200, _Phrase}, _Headers, _Body}}},
+		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_nrf(Data),
@@ -2756,6 +2756,6 @@ log_fsm(State,
 remove_nrf(Data) ->
 	Data1 = maps:remove(nrf_start, Data),
 	Data2 = maps:remove(nrf_req_url, Data1),
-	Data2 = maps:remove(nrf_http, Data2),
+	Data3 = maps:remove(nrf_http, Data2),
 	maps:remove(nrf_reqid, Data3).
 
