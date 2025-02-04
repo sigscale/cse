@@ -1176,7 +1176,7 @@ active(timeout, idle, Data) ->
 %% @doc Handles events received in any state.
 %% @private
 %%
-handle_event(_EventType, _EventContent, _State, _Data) ->
+handle_event(_EventType, _EventContent, _State, Data) ->
 	{keep_state_and_data, ?IDLE_TIMEOUT(Data)}.
 
 -spec terminate(Reason, State, Data) -> any()

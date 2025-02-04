@@ -1057,7 +1057,7 @@ active(cast,
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}], ?IDLE_TIMEOUT(Data),
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -1177,7 +1177,7 @@ active(timeout, idle, Data) ->
 %% @doc Handles events received in any state.
 %% @private
 %%
-handle_event(_EventType, _EventContent, _State, _Data) ->
+handle_event(_EventType, _EventContent, _State, Data) ->
 	{keep_state_and_data, ?IDLE_TIMEOUT(Data)}.
 
 -spec terminate(Reason, State, Data) -> any()

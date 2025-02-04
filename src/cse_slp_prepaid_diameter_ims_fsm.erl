@@ -653,6 +653,7 @@ terminating_call_handling(cast,
 						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{next_state, t_alerting, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false, false} ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{keep_state, NewData, Actions};
 					{_, _, _} ->
 						Actions = [{reply, From, Reply}],
@@ -1878,7 +1879,7 @@ active(cast,
 	end,
 	case NrfOperation of
 		nrf_update ->
-			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]]};
+			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -2034,7 +2035,7 @@ active(timeout, idle, Data) ->
 %% @doc Handles events received in any state.
 %% @private
 %%
-handle_event(_EventType, _EventContent, _State, _Data) ->
+handle_event(_EventType, _EventContent, _State, Data) ->
 	{keep_state_and_data, ?IDLE_TIMEOUT(Data)}.
 
 -spec terminate(Reason, State, Data) -> any()
