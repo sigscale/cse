@@ -47,6 +47,34 @@
 %%%
 %%% 	<img alt="state machine" src="prepaid-diameter-event.svg" />
 %%%
+%%% 	== Configuration ==
+%%% 	Application environment variables used in this SLP include:
+%%% 	<dl>
+%%% 		<dt>`nrf_profile'</dt>
+%%% 			<dd>Provides the {@link //inets/httpc:profile(). profile}
+%%% 					name of a manager process for the {@link //inets/httpc. httpc}
+%%% 					client. (default: `nrf')</dd>
+%%% 		<dt>`nrf_uri'</dt>
+%%% 			<dd>Uniform Resource Identifier (URI) for a
+%%% 					<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
+%%% 					server (i.e. OCS).</dd>
+%%% 		<dt>`nrf_http_options'</dt>
+%%% 			<dd>HTTP request {@link //inets/httpc:http_options(). options}
+%%% 					used by the {@link //inets/httpc. httpc} client.
+%%% 					(default: `[{timeout, 1500}, {connect_timeout, 1500}]').</dd>
+%%% 		<dt>`nrf_headers'</dt>
+%%% 			<dd>HTTP {@link //inets/httpc:headers(). headers} added by the
+%%% 					{@link //inets/httpc. httpc} client (default: `[]').</dd>
+%%% 	</dl>
+%%% 	Extra start arguments supported with
+%%% 	{@link //cse/cse:add_context/4. cse:add_context/4} include:
+%%% 	<dl>
+%%% 		<dt>`idle_timeout'</dt>
+%%% 			<dd>The idle time after which an SLPI will be shutdown:
+%%% 					`{seconds | minutes | hours | days, N :: pos_integer()}'
+%%% 					(default: `infinity')</dd>
+%%% 	</dl>
+%%%
 -module(cse_slp_prepaid_diameter_mms_fsm).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
 -author('Refath Wadood <refath@sigscale.org>').
@@ -151,11 +179,22 @@ init(Args) ->
 	{ok, URI} = application:get_env(cse, nrf_uri),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
+	IdleTime = case proplists:get_value(idle_timeout, Args) of
+		{days, Days} when is_integer(Days), Days > 0 ->
+			Days * 86400000;
+		{hours, Hours} when is_integer(Hours), Hours > 0 ->
+			Hours * 3600000;
+		{minutes, Minutes} when is_integer(Minutes), Minutes > 0 ->
+			Minutes * 60000;
+		{seconds, Seconds} when is_integer(Seconds), Seconds > 0 ->
+			Seconds * 1000;
+		_ ->
+			infinity
+	end,
 	Data = #{nrf_profile => Profile, nrf_uri => URI,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond),
-			idle => proplists:get_value(idle_timeout, Args, infinity),
-			sequence => 1},
+			idle => IdleTime, sequence => 1},
 	case httpc:get_options([ip, port], Profile) of
 		{ok, Options} ->
 			init1(Options, Data);

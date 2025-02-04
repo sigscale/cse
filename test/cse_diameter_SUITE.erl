@@ -837,9 +837,9 @@ idle_timeout_ps() ->
 idle_timeout_ps(Config) ->
 	OCS = ?config(ocs, Config),
 	Context = lists:concat([?FUNCTION_NAME, ".32251@3gpp.org"]),
-	IdleTime = rand:uniform(10000) + 1000,
+	IdleTime = rand:uniform(10) + 1,
 	ok = cse:add_context(Context, cse_slp_prepaid_diameter_ps_fsm,
-			[{idle_timeout, IdleTime}], []),
+			[{idle_timeout, {seconds, IdleTime}}], []),
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
@@ -860,7 +860,7 @@ idle_timeout_ps(Config) ->
 	{ok, Answer1} = scur_ps_interim(Config, Context, Session,
 			SI, RG, IMSI, MSISDN, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
-	ct:sleep(IdleTime + 500),
+	ct:sleep(IdleTime * 1000 + 500),
 	{error, not_found} = cse:find_session(Session).
 
 idle_timeout_ims() ->
@@ -869,9 +869,9 @@ idle_timeout_ims() ->
 idle_timeout_ims(Config) ->
 	OCS = ?config(ocs, Config),
 	Context = lists:concat([?FUNCTION_NAME, ".32260@3gpp.org"]),
-	IdleTime = rand:uniform(10000) + 1000,
+	IdleTime = rand:uniform(10) + 1,
 	ok = cse:add_context(Context, cse_slp_prepaid_diameter_ims_fsm,
-			[{idle_timeout, IdleTime}], []),
+			[{idle_timeout, {seconds, IdleTime}}], []),
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = rand:uniform(20),
@@ -892,8 +892,11 @@ idle_timeout_ims(Config) ->
 	{ok, Answer1} = scur_ims_interim(Config, Context, Session,
 			SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
-	ct:sleep(IdleTime + 500),
+	ct:sleep(IdleTime * 1000 + 500),
 	{error, not_found} = cse:find_session(Session).
+
+accounting_ims() ->
+	[{userdata, [{doc, "Accounting record for IMS voice call"}]}].
 
 accounting_ims(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
@@ -1064,21 +1067,31 @@ location_tai_ecgi(_Config) ->
 %%  Internal functions
 %%---------------------------------------------------------------------
 
-scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+scur_ims_start(Config, Session,
+		SI, RG, IMSI, MSISDN, Direction, RequestNum) ->
+	scur_ims_start(Config, "32260@3gpp.org", Session,
+			SI, RG, IMSI, MSISDN, Direction, RequestNum).
+
+scur_ims_start(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
-	scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
-scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	scur_ims_start(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, IMS, RequestNum);
+scur_ims_start(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
 			'Calling-Party-Address' = [Origination]},
-	scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum);
-scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
+	scur_ims_start(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, IMS, RequestNum);
+scur_ims_start(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, IMS, RequestNum)
 		when is_record(IMS, '3gpp_ro_IMS-Information') ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
@@ -1104,7 +1117,7 @@ scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 			'Origin-Realm' = OriginRealm,
 			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32260@3gpp.org",
+			'Service-Context-Id' = Context,
 			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 			'CC-Request-Number' = RequestNum,
@@ -1115,21 +1128,31 @@ scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
+scur_ims_interim(Config, Session,
+		SI, RG, IMSI, MSISDN, Direction, RequestNum, Used) ->
+	scur_ims_interim(Config, "32260@3gpp.org", Session,
+		SI, RG, IMSI, MSISDN, Direction, RequestNum, Used).
+
+scur_ims_interim(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
-	scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
+	scur_ims_interim(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_interim(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
 	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
 			'Calling-Party-Address' = [Origination]},
-	scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
+	scur_ims_interim(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_interim(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 		when is_record(IMS, '3gpp_ro_IMS-Information') ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
@@ -1157,7 +1180,7 @@ scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Origin-Realm' = OriginRealm,
 			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32260@3gpp.org",
+			'Service-Context-Id' = Context,
 			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 			'CC-Request-Number' = RequestNum,
@@ -1168,21 +1191,31 @@ scur_ims_interim(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
+scur_ims_stop(Config, Session,
+		SI, RG, IMSI, MSISDN, Direction, RequestNum, Used) ->
+	scur_ims_stop(Config, "32260@3gpp.org", Session,
+			SI, RG, IMSI, MSISDN, Direction, RequestNum, Used).
+
+scur_ims_stop(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, originate, RequestNum, Used) ->
 	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
 			'Called-Party-Address' = [Destination]},
-	scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
+	scur_ims_stop(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_stop(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, terminate, RequestNum, Used) ->
 	Origination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
 	IMS = #'3gpp_ro_IMS-Information'{
 			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
 			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE'],
 			'Calling-Party-Address' = [Origination]},
-	scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
-scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
+	scur_ims_stop(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, IMS, RequestNum, Used);
+scur_ims_stop(Config, Context, Session,
+		SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 		when is_record(IMS, '3gpp_ro_IMS-Information') ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
@@ -1208,7 +1241,7 @@ scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 			'Origin-Realm' = OriginRealm,
 			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32260@3gpp.org" ,
+			'Service-Context-Id' = Context,
 			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum,
