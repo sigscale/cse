@@ -1,3 +1,9 @@
+Febraury 4, 2025
+----------------
+	- SLPI garbage collection (IN-157)
+	- Logging for RADIUS IBAP and CAP SLPs
+	- CAP and INAP SLP Nrf response handling improvements
+
 January 24, 2025
 ----------------
 	- Document TCAP TCO configuration options
