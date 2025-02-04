@@ -304,81 +304,82 @@ collect_information(cast, {nrf_start,
 				dha := DHA, cco := CCO, scf := SCF, ac := AC} = Data) ->
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
-				"grantedUnit" := #{"time" := GrantedTime}}]}},
-				{_, Location}} when is_list(Location) ->
-			Data1 = remove_nrf(Data),
-			NewData = Data1#{iid => IID + 4, call_info => #{},
-					nrf_location => Location, tr_state => active},
-			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = routeSelectFailure,
-							monitorMode = map_get(route_fail, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = oCalledPartyBusy,
-							monitorMode =  map_get(busy, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = oNoAnswer,
-							monitorMode =  map_get(no_answer, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = oAbandon,
-							monitorMode =  map_get(abandon, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = oAnswer,
-							monitorMode =  map_get(answer, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = oDisconnect,
-							monitorMode =  map_get(disconnect1, EDP),
-							legID = {sendingSideID, ?leg1}},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = oDisconnect,
-							monitorMode =  map_get(disconnect2, EDP),
-							legID = {sendingSideID, ?leg2}}],
-			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
-			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 2,
-					parameters = RequestReportBCSMEventArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
-			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
-					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
-					requestedInformationTypeList = [callStopTime, releaseCause]}),
-			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
-					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
-					parameters = CallInformationRequestArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = GrantedTime * 10},
-			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
-					'PduAChBillingChargingCharacteristics',
-					{timeDurationCharging, TimeDurationCharging}),
-			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
-					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
-					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
-					partyToCharge = {sendingSideID, ?leg1}}),
-			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
-					invokeID = IID + 3, dialogueID = DialogueID, class = 2,
-					parameters = ApplyChargingArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
-			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
-					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-					appContextName = AC, qos = {true, true}, origAddress = SCF},
-			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{next_state, analyse_information, NewData};
-		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
-				when is_list(Location) ->
-			NewIID = IID + 1,
-			Data1 = remove_nrf(Data),
-			NewData = Data1#{nrf_location => Location, iid => NewIID},
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = NewIID, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData, 0};
+		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
+				when is_list(ServiceRating), is_list(Location) ->
+			case granted(ServiceRating) of
+				{ok, GrantedTime} ->
+					Data1 = remove_nrf(Data),
+					NewData = Data1#{iid => IID + 4, call_info => #{},
+							nrf_location => Location, tr_state => active},
+					BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = routeSelectFailure,
+									monitorMode = map_get(route_fail, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = oCalledPartyBusy,
+									monitorMode =  map_get(busy, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = oNoAnswer,
+									monitorMode =  map_get(no_answer, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = oAbandon,
+									monitorMode =  map_get(abandon, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = oAnswer,
+									monitorMode =  map_get(answer, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = oDisconnect,
+									monitorMode =  map_get(disconnect1, EDP),
+									legID = {sendingSideID, ?leg1}},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = oDisconnect,
+									monitorMode =  map_get(disconnect2, EDP),
+									legID = {sendingSideID, ?leg2}}],
+					{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
+					Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
+							invokeID = IID + 1, dialogueID = DialogueID, class = 2,
+							parameters = RequestReportBCSMEventArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
+					{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
+							#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
+							requestedInformationTypeList = [callStopTime, releaseCause]}),
+					Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
+							invokeID = IID + 2, dialogueID = DialogueID, class = 2,
+							parameters = CallInformationRequestArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+							maxCallPeriodDuration = GrantedTime * 10},
+					{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+							'PduAChBillingChargingCharacteristics',
+							{timeDurationCharging, TimeDurationCharging}),
+					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+							#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+							aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+							partyToCharge = {sendingSideID, ?leg1}}),
+					Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+							invokeID = IID + 3, dialogueID = DialogueID, class = 2,
+							parameters = ApplyChargingArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
+					Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
+							invokeID = IID + 4, dialogueID = DialogueID, class = 4},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
+					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+							appContextName = AC, qos = {true, true}, origAddress = SCF},
+					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+					{next_state, analyse_information, NewData};
+				{error, _Reason} ->
+					NewIID = IID + 1,
+					Data1 = remove_nrf(Data),
+					NewData = Data1#{nrf_location => Location, iid => NewIID},
+					Cause = #cause{location = local_public, value = 31},
+					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+							{allCallSegments, cse_codec:cause(Cause)}),
+					Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+							invokeID = NewIID, dialogueID = DialogueID, class = 4,
+							parameters = ReleaseCallArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+					{next_state, exception, NewData, 0}
+			end;
 		{{ok, JSON}, {_, Location}}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
@@ -747,84 +748,85 @@ terminating_call_handling(cast, {nrf_start,
 				scf := SCF, ac := AC, edp := EDP} = Data) ->
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS",
-				"grantedUnit" := #{"time" := GrantedTime}}]}},
-				{_, Location}} when is_list(Location) ->
-			Data1 = remove_nrf(Data),
-			NewData = Data1#{iid => IID + 4, call_info => #{},
-					nrf_location => Location, tr_state => active},
-			BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tBusy,
-							monitorMode =  map_get(busy, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tNoAnswer,
-							monitorMode =  map_get(no_answer, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tAnswer,
-							monitorMode =  map_get(answer, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tAbandon,
-							monitorMode =  map_get(abandon, EDP)},
-%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-%							eventTypeBCSM = oTermSeized, % Alerting DP is a Phase 4 feature
-%							monitorMode =  map_get(term_seize, EDP)},
-%					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-%							eventTypeBCSM = callAccepted, % Alerting DP is a Phase 4 feature
-%							monitorMode =  map_get(call_accept, EDP)},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tDisconnect,
-							monitorMode =  map_get(disconnect1, EDP),
-							legID = {sendingSideID, ?leg1}},
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
-							eventTypeBCSM = tDisconnect,
-							monitorMode =  map_get(disconnect2, EDP),
-							legID = {sendingSideID, ?leg2}}],
-			{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
-					#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
-			Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 2,
-					parameters = RequestReportBCSMEventArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
-			{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
-					#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
-					requestedInformationTypeList = [callStopTime, releaseCause]}),
-			Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
-					invokeID = IID + 2, dialogueID = DialogueID, class = 2,
-					parameters = CallInformationRequestArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
-			TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
-					maxCallPeriodDuration = GrantedTime * 10},
-			{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
-					'PduAChBillingChargingCharacteristics',
-					{timeDurationCharging, TimeDurationCharging}),
-			{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
-					#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
-					aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
-					partyToCharge = {sendingSideID, ?leg2}}),
-			Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
-					invokeID = IID + 3, dialogueID = DialogueID, class = 2,
-					parameters = ApplyChargingArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
-			Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
-					invokeID = IID + 4, dialogueID = DialogueID, class = 4},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
-					appContextName = AC, qos = {true, true}, origAddress = SCF},
-			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			{keep_state, NewData};
-		{{ok, #{"serviceRating" := [#{"resultCode" := _}]}}, {_, Location}}
-				when is_list(Location) ->
-			NewIID = IID + 1,
-			Data1 = remove_nrf(Data),
-			NewData = Data1#{nrf_location => Location, iid => NewIID},
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = NewIID, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData};
+		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
+				when is_list(ServiceRating), is_list(Location) ->
+			case granted(ServiceRating) of
+				{ok, GrantedTime} ->
+					Data1 = remove_nrf(Data),
+					NewData = Data1#{iid => IID + 4, call_info => #{},
+							nrf_location => Location, tr_state => active},
+					BCSMEvents = [#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = tBusy,
+									monitorMode =  map_get(busy, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = tNoAnswer,
+									monitorMode =  map_get(no_answer, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = tAnswer,
+									monitorMode =  map_get(answer, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = tAbandon,
+									monitorMode =  map_get(abandon, EDP)},
+%							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+%									eventTypeBCSM = oTermSeized, % Alerting DP is a Phase 4 feature
+%									monitorMode =  map_get(term_seize, EDP)},
+%							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+%									eventTypeBCSM = callAccepted, % Alerting DP is a Phase 4 feature
+%									monitorMode =  map_get(call_accept, EDP)},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = tDisconnect,
+									monitorMode =  map_get(disconnect1, EDP),
+									legID = {sendingSideID, ?leg1}},
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg_bcsmEvents_SEQOF'{
+									eventTypeBCSM = tDisconnect,
+									monitorMode =  map_get(disconnect2, EDP),
+									legID = {sendingSideID, ?leg2}}],
+					{ok, RequestReportBCSMEventArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg',
+							#'GenericSCF-gsmSSF-PDUs_RequestReportBCSMEventArg'{bcsmEvents = BCSMEvents}),
+					Invoke1 = #'TC-INVOKE'{operation = ?'opcode-requestReportBCSMEvent',
+							invokeID = IID + 1, dialogueID = DialogueID, class = 2,
+							parameters = RequestReportBCSMEventArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke1}),
+					{ok, CallInformationRequestArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_CallInformationRequestArg',
+							#'GenericSCF-gsmSSF-PDUs_CallInformationRequestArg'{
+							requestedInformationTypeList = [callStopTime, releaseCause]}),
+					Invoke2 = #'TC-INVOKE'{operation = ?'opcode-callInformationRequest',
+							invokeID = IID + 2, dialogueID = DialogueID, class = 2,
+							parameters = CallInformationRequestArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke2}),
+					TimeDurationCharging = #'PduAChBillingChargingCharacteristics_timeDurationCharging'{
+							maxCallPeriodDuration = GrantedTime * 10},
+					{ok, PduAChBillingChargingCharacteristics} = 'CAMEL-datatypes':encode(
+							'PduAChBillingChargingCharacteristics',
+							{timeDurationCharging, TimeDurationCharging}),
+					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ApplyChargingArg',
+							#'GenericSCF-gsmSSF-PDUs_ApplyChargingArg'{
+							aChBillingChargingCharacteristics = PduAChBillingChargingCharacteristics,
+							partyToCharge = {sendingSideID, ?leg2}}),
+					Invoke3 = #'TC-INVOKE'{operation = ?'opcode-applyCharging',
+							invokeID = IID + 3, dialogueID = DialogueID, class = 2,
+							parameters = ApplyChargingArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke3}),
+					Invoke4 = #'TC-INVOKE'{operation = ?'opcode-continue',
+							invokeID = IID + 4, dialogueID = DialogueID, class = 4},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke4}),
+					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+							appContextName = AC, qos = {true, true}, origAddress = SCF},
+					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
+					{keep_state, NewData};
+				{error, _Reason} ->
+					NewIID = IID + 1,
+					Data1 = remove_nrf(Data),
+					NewData = Data1#{nrf_location => Location, iid => NewIID},
+					Cause = #cause{location = local_public, value = 31},
+					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+							{allCallSegments, cse_codec:cause(Cause)}),
+					Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+							invokeID = NewIID, dialogueID = DialogueID, class = 4,
+							parameters = ReleaseCallArg},
+					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+					{next_state, exception, NewData}
+			end;
 		{{ok, JSON}, {_, Location}}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
@@ -1393,21 +1395,10 @@ o_active(cast, {nrf_update,
 				cco := CCO, scf := SCF} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
-				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
-			Fold = fun(#{"grantedUnit" := #{"time" := GU}}, undefined)
-							when is_integer(GU) ->
-						GU;
-					(#{"grantedUnit" := #{"time" := GU}}, _)
-							when is_integer(GU) ->
-						multiple;
-					(#{"grantedUnit" := _}, undefined) ->
-						invalid;
-					(#{}, Acc) ->
-						Acc
-			end,
-			case lists:foldl(Fold, undefined, ServiceRating) of
-				GrantedTime when is_integer(GrantedTime) ->
+		{ok, #{"serviceRating" := ServiceRating}}
+				when is_list(ServiceRating) ->
+			case granted(ServiceRating) of
+				{ok, GrantedTime} ->
 					NewIID = IID + 1,
 					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID, tr_state => active},
@@ -1428,10 +1419,7 @@ o_active(cast, {nrf_update,
 							qos = {true, true}, origAddress = SCF},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 					{keep_state, NewData};
-				Other when is_atom(Other) ->
-					?LOG_ERROR([{?MODULE, nrf_update}, {Other, "grantedUnit"},
-							{profile, Profile}, {uri, URI}, {location, Location},
-							{slpi, self()}, {json, JSON}]),
+				{error, _Reason} ->
 					NewIID = IID + 1,
 					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID},
@@ -1444,19 +1432,6 @@ o_active(cast, {nrf_update,
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 					{next_state, exception, NewData}
 			end;
-		{ok, #{"serviceRating" := [#{"resultCode" := _},
-				#{"resultCode" := _}]}} ->
-			NewIID = IID + 1,
-			Data1 = remove_nrf(Data),
-			NewData = Data1#{iid => NewIID},
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = NewIID, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData};
 		{ok, JSON} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
@@ -1636,21 +1611,10 @@ t_active(cast, {nrf_update,
 				cco := CCO, scf := SCF} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := [#{"resultCode" := "SUCCESS"},
-				#{"resultCode" := "SUCCESS"}] = ServiceRating} = JSON} ->
-			Fold = fun(#{"grantedUnit" := #{"time" := GU}}, undefined)
-							when is_integer(GU) ->
-						GU;
-					(#{"grantedUnit" := #{"time" := GU}}, _)
-							when is_integer(GU) ->
-						multiple;
-					(#{"grantedUnit" := _}, undefined) ->
-						invalid;
-					(#{}, Acc) ->
-						Acc
-			end,
-			case lists:foldl(Fold, undefined, ServiceRating) of
-				GrantedTime when is_integer(GrantedTime) ->
+		{ok, #{"serviceRating" := ServiceRating}}
+				when is_list(ServiceRating) ->
+			case granted(ServiceRating) of
+				{ok, GrantedTime} ->
 					NewIID = IID + 1,
 					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID, tr_state => active},
@@ -1671,10 +1635,7 @@ t_active(cast, {nrf_update,
 							qos = {true, true}, origAddress = SCF},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 					{keep_state, NewData};
-				Other when is_atom(Other) ->
-					?LOG_ERROR([{?MODULE, nrf_update}, {Other, "grantedUnit"},
-							{profile, Profile}, {uri, URI}, {location, Location},
-							{slpi, self()}, {json, JSON}]),
+				{error, _Reason} ->
 					NewIID = IID + 1,
 					Data1 = remove_nrf(Data),
 					NewData = Data1#{iid => NewIID},
@@ -1687,19 +1648,6 @@ t_active(cast, {nrf_update,
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 					{next_state, exception, NewData}
 			end;
-		{ok, #{"serviceRating" := [#{"resultCode" := _},
-				#{"resultCode" := _}]}} ->
-			NewIID = IID + 1,
-			Data1 = remove_nrf(Data),
-			NewData = Data1#{iid => NewIID},
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = NewIID, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
-			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData};
 		{ok, JSON} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
@@ -2657,6 +2605,29 @@ call_info([#'RequestedInformation'{requestedInformationType = releaseCause,
 	call_info(T, NewData);
 call_info([], Data) ->
 	Data.
+
+-spec granted(ServiceRating) -> Result
+	when
+		ServiceRating :: [ServiceRatingResult],
+		ServiceRatingResult :: map(),
+		Result :: {ok, Time} | {error, Reason},
+		Time :: pos_integer(),
+		Reason :: not_found | string().
+%% @doc Get granted time units.
+%% @hidden
+granted(ServiceRating) ->
+	granted(ServiceRating, not_found).
+%% @hidden
+granted([#{"grantedUnit" := #{"time" := Time},
+		"resultCode" := "SUCCESS"} | _T], _Acc)
+		when is_integer(Time), Time > 0 ->
+	{ok, Time};
+granted([#{"resultCode" := ResultCode} | T], _Acc) ->
+	granted(T, ResultCode);
+granted([_H | T], Acc) ->
+	granted(T, Acc);
+granted([], Acc) ->
+	{error, Acc}.
 
 -spec ecs_http(MIME, Body) -> HTTP
 	when
