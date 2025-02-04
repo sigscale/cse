@@ -150,10 +150,17 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 		Response :: map().
 %% @doc Build a rating response.
 rate(Subscriber, #{"serviceRating" := ServiceRating}, ModData) ->
-	rate1(Subscriber, ServiceRating, ModData, []).
+	F = fun(#{"serviceContextId" := Context} = SR)
+					when length(Context) > 14 ->
+				Context1 = lists:sublist(Context, length(Context) - 13, 14),
+				SR#{"serviceContextId" => Context1};
+			(SR) ->
+				SR
+	end,
+	rate1(Subscriber, lists:map(F, ServiceRating), ModData, []).
 %% @hidden
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?PS} = H | T] , ModData, Acc) ->
+		"serviceContextId" := ?PS} = H | T], ModData, Acc) ->
 	Amount = (rand:uniform(10) + 5) * 1048576,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
@@ -169,7 +176,7 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?IMS} = H | T] , ModData, Acc) ->
+		"serviceContextId" := ?IMS} = H | T], ModData, Acc) ->
 	Amount = rand:uniform(50) * 30,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
@@ -185,7 +192,7 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, [#{"requestSubType" := "DEBIT",
-		"serviceContextId" := ContextId} = H | T] , ModData, Acc)
+		"serviceContextId" := ContextId} = H | T], ModData, Acc)
 		when ContextId == ?SMS; ContextId == ?MMS ->
 	Amount = rand:uniform(5),
 	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
@@ -202,7 +209,7 @@ rate1(Subscriber, [#{"requestSubType" := "DEBIT",
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ContextId} = H | T] , ModData, Acc)
+		"serviceContextId" := ContextId} = H | T], ModData, Acc)
 		when ContextId == ?SMS; ContextId == ?MMS ->
 	Amount = rand:uniform(5),
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
@@ -219,7 +226,7 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?VCS} = H | T] , ModData, Acc) ->
+		"serviceContextId" := ?VCS} = H | T], ModData, Acc) ->
 	Amount = rand:uniform(50) * 30,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->

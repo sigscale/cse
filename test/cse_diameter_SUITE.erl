@@ -45,6 +45,8 @@
 		initial_in_call/0, initial_in_call/1,
 		interim_in_call/0, interim_in_call/1,
 		final_in_call/0, final_in_call/1,
+		idle_timeout_ps/0, idle_timeout_ps/1,
+		idle_timeout_ims/0, idle_timeout_ims/1,
 		accounting_ims/0, accounting_ims/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1,
@@ -262,6 +264,7 @@ all() ->
 			sms_iec, mms_iec,
 			unknown_subscriber, out_of_credit,
 			initial_in_call, interim_in_call, final_in_call,
+			idle_timeout_ps, idle_timeout_ims,
 			accounting_ims, client_connect, client_reconnect,
 			location_tai_ecgi].
 
@@ -828,8 +831,69 @@ final_in_call(Config) ->
 			'Granted-Service-Unit' = [],
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
 
-accounting_ims() ->
-	[{userdata, [{doc, "Accounting record for IMS voice call"}]}].
+idle_timeout_ps() ->
+	[{userdata, [{doc, "PS SCUR idle timeout in active state"}]}].
+
+idle_timeout_ps(Config) ->
+	OCS = ?config(ocs, Config),
+	Context = lists:concat([?FUNCTION_NAME, ".32251@3gpp.org"]),
+	IdleTime = rand:uniform(10000) + 1000,
+	ok = cse:add_context(Context, cse_slp_prepaid_diameter_ps_fsm,
+			[{idle_timeout, IdleTime}], []),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = (rand:uniform(10) + 50) * 1048576,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = list_to_binary(diameter:session_id(atom_to_list(?MODULE))),
+	RequestNum0 = 0,
+	{ok, Answer0} = scur_ps_start(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant0]} = GSU0,
+	RequestNum1 = RequestNum0 + 1,
+	Used = rand:uniform(Grant0),
+	{ok, Answer1} = scur_ps_interim(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, RequestNum1, Used),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
+	ct:sleep(IdleTime + 500),
+	{error, not_found} = cse:find_session(Session).
+
+idle_timeout_ims() ->
+	[{userdata, [{doc, "IMS SCUR idle timeout in active state"}]}].
+
+idle_timeout_ims(Config) ->
+	OCS = ?config(ocs, Config),
+	Context = lists:concat([?FUNCTION_NAME, ".32260@3gpp.org"]),
+	IdleTime = rand:uniform(10000) + 1000,
+	ok = cse:add_context(Context, cse_slp_prepaid_diameter_ims_fsm,
+			[{idle_timeout, IdleTime}], []),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI = rand:uniform(20),
+	RG = rand:uniform(99) + 100,
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = list_to_binary(diameter:session_id(atom_to_list(?MODULE))),
+	RequestNum0 = 0,
+	{ok, Answer0} = scur_ims_start(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, originate, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
+	RequestNum1 = RequestNum0 + 1,
+	Used = rand:uniform(Grant0),
+	{ok, Answer1} = scur_ims_interim(Config, Context, Session,
+			SI, RG, IMSI, MSISDN, originate, RequestNum1, Used),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
+	ct:sleep(IdleTime + 500),
+	{error, not_found} = cse:find_session(Session).
 
 accounting_ims(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
@@ -1156,6 +1220,9 @@ scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, IMS, RequestNum, Used)
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum) ->
+	scur_ps_start(Config, "32251@3gpp.org", Session, SI, RG, IMSI, MSISDN, RequestNum).
+
+scur_ps_start(Config, Context, Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
 	DestinationRealm = ?config(sut_realm, Config),
@@ -1178,7 +1245,7 @@ scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 			'Origin-Realm' = OriginRealm,
 			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32251@3gpp.org",
+			'Service-Context-Id' = Context,
 			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
 			'CC-Request-Number' = RequestNum,
@@ -1190,6 +1257,9 @@ scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum) ->
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+	scur_ps_interim(Config, "32251@3gpp.org", Session, SI, RG, IMSI, MSISDN, RequestNum, Used).
+
+scur_ps_interim(Config, Context, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
 	DestinationRealm = ?config(sut_realm, Config),
@@ -1214,7 +1284,7 @@ scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 			'Origin-Realm' = OriginRealm,
 			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32251@3gpp.org",
+			'Service-Context-Id' = Context,
 			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
 			'CC-Request-Number' = RequestNum,
@@ -1226,6 +1296,9 @@ scur_ps_interim(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
+	scur_ps_stop(Config, "32251@3gpp.org", Session, SI, RG, IMSI, MSISDN, RequestNum, Used).
+
+scur_ps_stop(Config, Context, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
 	DestinationRealm = ?config(sut_realm, Config),
@@ -1248,7 +1321,7 @@ scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) ->
 			'Origin-Realm' = OriginRealm,
 			'Destination-Realm' = DestinationRealm,
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
-			'Service-Context-Id' = "32251@3gpp.org" ,
+			'Service-Context-Id' = Context,
 			'User-Name' = [MSISDN ++ "@" ++ Realm],
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum,

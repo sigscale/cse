@@ -76,6 +76,7 @@
 -define(SERVICENAME, "Prepaid Voice").
 -define(FSM_LOGNAME, prepaid).
 -define(NRF_LOGNAME, rating).
+-define(IDLE_TIMEOUT(Data), {timeout, maps:get(idle, Data), idle}).
 
 -type state() :: null
 		| authorize_origination_attempt | terminating_call_handling
@@ -83,6 +84,7 @@
 		| o_alerting | t_alerting | active.
 
 -type statedata() :: #{start := pos_integer(),
+		idle := erlang:timeout(),
 		from => pid(),
 		session_id => binary(),
 		context => string(),
@@ -142,7 +144,7 @@ callback_mode() ->
 %%
 %% @see //stdlib/gen_statem:init/1
 %% @private
-init(_Args) ->
+init(Args) ->
 	{ok, Profile} = application:get_env(cse, nrf_profile),
 	{ok, URI} = application:get_env(cse, nrf_uri),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
@@ -150,6 +152,7 @@ init(_Args) ->
 	Data = #{nrf_profile => Profile, nrf_uri => URI,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond),
+			idle => proplists:get_value(idle_timeout, Args, infinity),
 			sequence => 1},
 	case httpc:get_options([ip, port], Profile) of
 		{ok, Options} ->
@@ -163,7 +166,7 @@ init1([{ip, Address} | T], Data) ->
 init1([{port, Port} | T], Data) ->
 	init1(T, Data#{nrf_port => Port});
 init1([], Data) ->
-	{ok, null, Data}.
+	{ok, null, Data, ?IDLE_TIMEOUT(Data)}.
 
 -spec null(EventType, EventContent, Data) -> Result
 	when
@@ -175,8 +178,9 @@ init1([], Data) ->
 %% @private
 null(enter = _EventType, null = _EventContent, _Data) ->
 	keep_state_and_data;
-null(enter = _EventType, OldState, Data) ->
-	catch log_fsm(OldState,Data),
+null(enter = _EventType, OldState, #{session_id := SessionId} = Data) ->
+	catch log_fsm(OldState, Data),
+	cse:delete_session(SessionId),
 	{stop, shutdown};
 null({call, _From}, #'3gpp_ro_CCR'{
 		'Service-Information' = [#'3gpp_ro_Service-Information'{
@@ -191,7 +195,10 @@ null({call, _From}, #'3gpp_ro_CCR'{
 						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE']}]}]},
 		Data) ->
 	NewData = Data#{direction => terminating},
-	{next_state, terminating_call_handling, NewData, postpone}.
+	Actions = [postpone, ?IDLE_TIMEOUT(Data) , ?IDLE_TIMEOUT(Data)],
+	{next_state, terminating_call_handling, NewData, Actions};
+null(timeout, idle, _Data) ->
+	{stop, shutdown}.
 
 -spec authorize_origination_attempt(EventType, EventContent, Data) -> Result
 	when
@@ -244,14 +251,16 @@ authorize_origination_attempt(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
 				case {ResultCode, CalledDN} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', Destination}
 							when length(Destination) > 0 ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{next_state, analyse_information, NewData1, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _} ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{next_state, collect_information, NewData1, Actions};
 					{_, _} ->
+						Actions = [{reply, From, Reply}],
 						{next_state, null, NewData1, Actions}
 				end
 			catch
@@ -270,7 +279,7 @@ authorize_origination_attempt(cast,
 				when is_list(Location) ->
 			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-			Actions1 = [{reply, From, Reply1}],
+			Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 			{next_state, collect_information, NewData, Actions1};
 		{{error, Partial, Remaining}, Location} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
@@ -389,7 +398,9 @@ authorize_origination_attempt(cast,
 	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
-	{next_state, null, NewData, Actions}.
+	{next_state, null, NewData, Actions};
+authorize_origination_attempt(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec terminating_call_handling(EventType, EventContent, Data) -> Result
 	when
@@ -488,13 +499,15 @@ terminating_call_handling(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_start ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 terminating_call_handling(cast,
@@ -505,13 +518,15 @@ terminating_call_handling(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_start ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions};
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 terminating_call_handling(cast,
@@ -543,7 +558,7 @@ terminating_call_handling(cast,
 		nrf_start ->
 			{next_state, null, NewData, Actions};
 		nrf_update ->
-			{keep_state, NewData, Actions};
+			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -563,13 +578,15 @@ terminating_call_handling(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_rsu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{next_state, t_alerting, NewData1, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false} ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{keep_state, NewData1, Actions};
 					{_, _} ->
+						Actions = [{reply, From, Reply}],
 						{next_state, null, NewData1, Actions}
 				end
 			catch
@@ -588,7 +605,7 @@ terminating_call_handling(cast,
 				when is_list(Location) ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{{error, Partial, Remaining}, {_, Location}}
 				when is_list(Location) ->
@@ -628,15 +645,17 @@ terminating_call_handling(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
 				case {ResultCode, is_rsu(MSCC), is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true} ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{next_state, active, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, false} ->
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 						{next_state, t_alerting, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false, false} ->
 						{keep_state, NewData, Actions};
 					{_, _, _} ->
+						Actions = [{reply, From, Reply}],
 						{next_state, null, NewData, Actions}
 				end
 			catch
@@ -648,13 +667,13 @@ terminating_call_handling(cast,
 							{state, terminating_call_handling}]),
 					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
+					Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 					{keep_state, NewData, Actions1}
 			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -665,7 +684,7 @@ terminating_call_handling(cast,
 					{state, terminating_call_handling}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end;
 terminating_call_handling(cast,
@@ -745,13 +764,16 @@ terminating_call_handling(cast,
 			{state, terminating_call_handling}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
-	end.
+	end;
+terminating_call_handling(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec collect_information(EventType, EventContent, Data) -> Result
 	when
@@ -800,11 +822,12 @@ collect_information(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 collect_information(cast,
@@ -816,11 +839,12 @@ collect_information(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 collect_information(cast,
@@ -851,7 +875,7 @@ collect_information(cast,
 	end,
 	case NrfOperation of
 		nrf_update ->
-			{keep_state, NewData, Actions};
+			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -870,7 +894,7 @@ collect_information(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
+				Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 				case {ResultCode, is_rsu(MSCC), is_usu(MSCC), CalledDN} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true, _} ->
 						{next_state, active, NewData, Actions};
@@ -891,13 +915,13 @@ collect_information(cast,
 							{state, collect_information}]),
 					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
+					Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 					{keep_state, NewData, Actions1}
 			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -908,7 +932,7 @@ collect_information(cast,
 					{state, collect_information}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end;
 collect_information(cast,
@@ -973,11 +997,12 @@ collect_information(cast,
 			{state, collect_information}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 collect_information(cast,
@@ -995,13 +1020,16 @@ collect_information(cast,
 			{state, collect_information}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
-	end.
+	end;
+collect_information(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec analyse_information(EventType, EventContent, Data) -> Result
 	when
@@ -1048,11 +1076,12 @@ analyse_information(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 analyse_information(cast,
@@ -1064,11 +1093,12 @@ analyse_information(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 analyse_information(cast,
@@ -1099,7 +1129,7 @@ analyse_information(cast,
 	end,
 	case NrfOperation of
 		nrf_update ->
-			{keep_state, NewData, Actions};
+			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -1118,7 +1148,7 @@ analyse_information(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
+				Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 				case {ResultCode, is_rsu(MSCC), is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', _, true} ->
 						{next_state, active, NewData, Actions};
@@ -1136,13 +1166,13 @@ analyse_information(cast,
 							{state, analyse_information}]),
 					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
+					Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 					{keep_state, NewData, Actions1}
 			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -1153,7 +1183,7 @@ analyse_information(cast,
 					{state, analyse_information}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end;
 analyse_information(cast,
@@ -1218,11 +1248,12 @@ analyse_information(cast,
 			{state, analyse_information}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 analyse_information(cast,
@@ -1240,13 +1271,16 @@ analyse_information(cast,
 			{state, analyse_information}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
-	end.
+	end;
+analyse_information(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec o_alerting(EventType, EventContent, Data) -> Result
 	when
@@ -1293,11 +1327,12 @@ o_alerting(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 o_alerting(cast,
@@ -1309,11 +1344,12 @@ o_alerting(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 o_alerting(cast,
@@ -1344,7 +1380,7 @@ o_alerting(cast,
 	end,
 	case NrfOperation of
 		nrf_update ->
-			{keep_state, NewData, Actions};
+			{keep_state, NewData, Actions + [?IDLE_TIMEOUT(Data)]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -1363,7 +1399,7 @@ o_alerting(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
+				Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 				case {ResultCode, is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
 						{next_state, active, NewData, Actions};
@@ -1379,13 +1415,13 @@ o_alerting(cast,
 							{state, o_alerting}]),
 					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
+					Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 					{keep_state, NewData, Actions1}
 			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -1396,7 +1432,7 @@ o_alerting(cast,
 					{state, o_alerting}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end;
 o_alerting(cast,
@@ -1461,11 +1497,12 @@ o_alerting(cast,
 			{state, o_alerting}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 o_alerting(cast,
@@ -1483,13 +1520,16 @@ o_alerting(cast,
 			{state, o_alerting}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
-	end.
+	end;
+o_alerting(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec t_alerting(EventType, EventContent, Data) -> Result
 	when
@@ -1536,11 +1576,12 @@ t_alerting(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 t_alerting(cast,
@@ -1552,11 +1593,12 @@ t_alerting(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 t_alerting(cast,
@@ -1587,7 +1629,7 @@ t_alerting(cast,
 	end,
 	case NrfOperation of
 		nrf_update ->
-			{keep_state, NewData, Actions};
+			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -1606,7 +1648,7 @@ t_alerting(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
+				Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 				case {ResultCode, is_usu(MSCC)} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true} ->
 						{next_state, active, NewData, Actions};
@@ -1622,13 +1664,13 @@ t_alerting(cast,
 							{state, t_alerting}]),
 					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
+					Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 					{keep_state, NewData, Actions1}
 			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -1639,7 +1681,7 @@ t_alerting(cast,
 					{state, t_alerting}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end;
 t_alerting(cast,
@@ -1704,11 +1746,12 @@ t_alerting(cast,
 			{state, t_alerting}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 t_alerting(cast,
@@ -1726,13 +1769,16 @@ t_alerting(cast,
 			{state, t_alerting}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
-	end.
+	end;
+t_alerting(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec active(EventType, EventContent, Data) -> Result
 	when
@@ -1779,11 +1825,12 @@ active(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
@@ -1795,11 +1842,12 @@ active(cast,
 	NewData = remove_nrf(Data),
 	ResultCode = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
@@ -1830,7 +1878,7 @@ active(cast,
 	end,
 	case NrfOperation of
 		nrf_update ->
-			{keep_state, NewData, Actions};
+			{keep_state, NewData, Actions ++ [?IDLE_TIMEOUT(Data)]]};
 		nrf_release ->
 			{next_state, null, NewData, Actions}
 	end;
@@ -1849,7 +1897,7 @@ active(cast,
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
+				Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 				{keep_state, NewData, Actions}
 			catch
 				_:Reason ->
@@ -1860,13 +1908,13 @@ active(cast,
 							{state, active}]),
 					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
 					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
+					Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
 					{keep_state, NewData, Actions1}
 			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
@@ -1877,7 +1925,7 @@ active(cast,
 					{state, active}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end;
 active(cast,
@@ -1942,11 +1990,12 @@ active(cast,
 			{state, active}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
@@ -1964,13 +2013,16 @@ active(cast,
 			{state, active}]),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
 	case NrfOperation of
 		nrf_update ->
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		nrf_release ->
+			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
-	end.
+	end;
+active(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
@@ -1983,7 +2035,7 @@ active(cast,
 %% @private
 %%
 handle_event(_EventType, _EventContent, _State, _Data) ->
-	keep_state_and_data.
+	{keep_state_and_data, ?IDLE_TIMEOUT(Data)}.
 
 -spec terminate(Reason, State, Data) -> any()
 	when
@@ -2066,8 +2118,10 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 	when
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {keep_state, Data, Actions},
-		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
-		From :: {pid(), reference()}.
+		Actions :: [Action] | Action,
+		Action :: {reply, From, #'3gpp_ro_CCA'{}} | {timeout, Time, idle},
+		From :: {pid(), reference()},
+		Time :: erlang:timeout().
 %% @doc Start rating a session.
 %% @hidden
 nrf_start(Data) ->
@@ -2105,7 +2159,7 @@ nrf_start2(Now, JSON,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
+			{keep_state, NewData, ?IDLE_TIMEOUT(Data)};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI},
@@ -2129,8 +2183,10 @@ nrf_start2(Now, JSON,
 	when
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {keep_state, Data, Actions},
-		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
-		From :: {pid(), reference()}.
+		Actions :: [Action] | Action,
+		Action :: {reply, From, #'3gpp_ro_CCA'{}} | {timeout, Time, idle},
+		From :: {pid(), reference()},
+		Time :: erlang:timeout().
 %% @doc Update rating a session.
 nrf_update(Data) ->
 	case service_rating(Data) of
@@ -2169,7 +2225,7 @@ nrf_update2(Now, JSON,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
+			{keep_state, NewData, ?IDLE_TIMEOUT(Data)};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
@@ -2178,7 +2234,7 @@ nrf_update2(Now, JSON,
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
@@ -2188,7 +2244,7 @@ nrf_update2(Now, JSON,
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end.
 
@@ -2196,8 +2252,10 @@ nrf_update2(Now, JSON,
 	when
 		Data ::  statedata(),
 		Result :: {keep_state, Data} | {keep_state, Data, Actions},
-		Actions :: [{reply, From, #'3gpp_ro_CCA'{}}],
-		From :: {pid(), reference()}.
+		Actions :: [Action] | Action,
+		Action :: {reply, From, #'3gpp_ro_CCA'{}} | {timeout, Time, idle},
+		From :: {pid(), reference()},
+		Time :: erlang:timeout().
 %% @doc Finish rating a session.
 nrf_release(Data) ->
 	case service_rating(Data) of
@@ -2237,7 +2295,7 @@ nrf_release2(Now, JSON,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
+			{keep_state, NewData, ?IDLE_TIMEOUT(Data)};
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
