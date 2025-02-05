@@ -1,3 +1,7 @@
+2025-02-05   Vance Shipley <vances@sigscale.org>
+
+	* correct cause code location code points
+
 2025-02-04   Vance Shipley <vances@sigscale.org>
 
 	* refactor idle timeout configuration
