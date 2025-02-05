@@ -332,9 +332,9 @@ cause(4, Acc) ->
 	Acc#cause{location = remote_public};
 cause(5, Acc) ->
 	Acc#cause{location = remote_private};
-cause(6, Acc) ->
-	Acc#cause{location = international};
 cause(7, Acc) ->
+	Acc#cause{location = international};
+cause(10, Acc) ->
 	Acc#cause{location = beyond}.
 %% @hidden
 cause1(itu, Location, Acc) ->
