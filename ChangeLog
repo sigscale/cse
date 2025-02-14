@@ -1,3 +1,21 @@
+2025-02-05   Vance Shipley <vances@sigscale.org>
+
+	* correct cause code location code points
+
+2025-02-04   Vance Shipley <vances@sigscale.org>
+
+	* refactor idle timeout configuration
+	* IN-157 idle timeout to reap stale diameter slps
+	* refactor service rating result handling in cap/inap slps
+	* log to prepaid and rating logs in radius ps slp
+	* logging configuration for cap, inap test suites
+	* correct cap rating logging
+	* log to fsm and rating logs in cap and inap slps
+	* consistent logging of missing location header
+	* handle empty nrf response; log missing location header
+	* refactor removing http request id after response received
+	* refactor httpc error handling to remove redundancy
+
 2025-01-24   Vance Shipley <vances@sigscale.org>
 
 	* suppress unused variable warnings
