@@ -62,9 +62,9 @@
 -export([null/3, authorize_attempt/3, collect_information/3,
 		analyse_information/3, select_route/3, select_facility/3,
 		authorize_call_setup/3, send_call/3, present_call/3,
-		o_alerting/3, t_alerting/3, o_active/3, t_active/3,
-		o_suspended/3, t_suspended/3, disconnect/3, abandon/3,
-		exception/3]).
+		o_alerting/3, t_alerting/3, o_active/3, o_active0/3,
+		t_active/3, t_active0/3, o_suspended/3, t_suspended/3,
+		disconnect/3, abandon/3, exception/3]).
 %% export the private api
 -export([nrf_start_reply/2, nrf_update_reply/2, nrf_release_reply/2]).
 
@@ -78,9 +78,9 @@
 -type state() :: null | authorize_attempt | collect_information
 		| analyse_information | select_route | select_facility
 		| authorize_call_setup | send_call | present_call
-		| o_alerting | t_alerting | o_active | t_active
-		| o_suspended | t_suspended | disconnect | abandon
-		| exception.
+		| o_alerting | t_alerting | o_active | o_active0
+		| t_active | t_active0 | o_suspended | t_suspended
+		| disconnect | abandon | exception.
 -type event_type() :: collected_info | analysed_info | route_fail
 		| busy | no_answer | answer | mid_call | disconnect1 | disconnect2
 		| abandon | term_attempt.
@@ -296,7 +296,12 @@ analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	NewData = Data#{direction => originating,
 			calling => CallingDN, called => CalledDN,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
-	nrf_start(NewData);
+	case nrf_start(NewData) of
+		{ok, NextData} ->
+			{keep_state, NextData};
+		{error, _Reason} ->
+			{next_state, exception, NewData}
+	end;
 analyse_information(cast, {nrf_start,
 		{RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{direction := originating, nrf_reqid := RequestId,
@@ -464,7 +469,12 @@ select_facility(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	NewData = Data#{direction => terminating,
 			calling => CallingDN, called => CalledDN,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
-	nrf_start(NewData);
+	case nrf_start(NewData) of
+		{ok, NextData} ->
+			{keep_state, NextData};
+		{error, _Reason} ->
+			{next_state, exception, NewData}
+	end;
 select_facility(cast, {nrf_start,
 		{RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
 		#{direction := terminating, nrf_reqid := RequestId,
@@ -925,7 +935,13 @@ o_active(cast, {'TC', 'INVOKE', indication,
 			% @todo Parse network operator specific CallResult
 			Time = 0,
 			NewData = Data#{consumed => Time},
-			nrf_update((Time - Consumed) div 10, NewData);
+			case nrf_update((Time - Consumed) div 10, NewData) of
+				{ok, NextData} ->
+					{next_state, o_active0, NextData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, exception, NewData, 0}
+			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -939,7 +955,34 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_active(cast, {nrf_update,
+o_active(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#{did := DialogueID}) ->
+	keep_state_and_data;
+o_active(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+				componentsPresent = false}} = _EventContent,
+		#{did := DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
+o_active(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+				error = Error, parameters = Parameters}} = _EventContent,
+		#{did := DialogueID, ssf := SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, o_active}, {ssf, sccp_codec:party_address(SSF)}]),
+	{next_state, exception, Data};
+o_active(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
+	{stop, Reason}.
+
+%% @hidden
+o_active0(enter, _EventContent, _Data) ->
+	keep_state_and_data;
+o_active0(cast, {'TC', 'INVOKE', indication, _} = _EventContent, _Data) ->
+	{keep_state_and_data, postpone};
+o_active0(cast, {nrf_update,
 		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
 				nrf_location := Location, nrf_http := LogHTTP,
@@ -964,7 +1007,7 @@ o_active(cast, {nrf_update,
 					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
 							qos = {true, true}, origAddress = SCF},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-					{keep_state, NewData};
+					{next_state, o_active, NewData};
 				{error, _Reason} ->
 					NewIID = IID + 1,
 					Data1 = remove_nrf(Data),
@@ -991,7 +1034,7 @@ o_active(cast, {nrf_update,
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
-o_active(cast, {nrf_update,
+o_active0(cast, {nrf_update,
 		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile, nrf_uri := URI,
 				nrf_location := Location, nrf_http := LogHTTP} = Data) ->
@@ -1001,7 +1044,7 @@ o_active(cast, {nrf_update,
 			{slpi, self()}]),
 	NewData = remove_nrf(Data),
 	{next_state, exception, NewData, 0};
-o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
+o_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile, nrf_uri := URI,
 				nrf_location := Location} = Data) ->
 	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
@@ -1010,16 +1053,16 @@ o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 	Data1 = remove_nrf(Data),
 	NewData = maps:remove(nrf_location, Data1),
 	{next_state, exception, NewData, 0};
-o_active(cast, {'TC', 'L-CANCEL', indication,
+o_active0(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
 	keep_state_and_data;
-o_active(cast, {'TC', 'END', indication,
+o_active0(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
 	{next_state, exception, Data, 0};
-o_active(cast, {'TC', 'U-ERROR', indication,
+o_active0(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
 		#{did := DialogueID, ssf := SSF} = Data) ->
@@ -1029,7 +1072,7 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 			{invokeID, InvokeID}, {slpi, self()},
 			{state, o_active}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
-o_active(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
+o_active0(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec t_active(EventType, EventContent, Data) -> Result
@@ -1087,7 +1130,13 @@ t_active(cast, {'TC', 'INVOKE', indication,
 			% @todo Parse network operator specific CallResult
 			Time = 0,
 			NewData = Data#{consumed => Time},
-			nrf_update((Time - Consumed) div 10, NewData);
+			case nrf_update((Time - Consumed) div 10, NewData) of
+				{ok, NextData} ->
+					{next_state, t_active0, NextData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, exception, NewData, 0}
+			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1101,7 +1150,34 @@ t_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-t_active(cast, {nrf_update,
+t_active(cast, {'TC', 'L-CANCEL', indication,
+		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
+		#{did := DialogueID}) ->
+	keep_state_and_data;
+t_active(cast, {'TC', 'END', indication,
+		#'TC-END'{dialogueID = DialogueID,
+				componentsPresent = false}} = _EventContent,
+		#{did := DialogueID} = Data) ->
+	{next_state, exception, Data, 0};
+t_active(cast, {'TC', 'U-ERROR', indication,
+		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
+				error = Error, parameters = Parameters}} = _EventContent,
+		#{did := DialogueID, ssf := SSF} = Data) ->
+	?LOG_WARNING([{'TC', 'U-ERROR'},
+			{error, cse_codec:error_code(Error)},
+			{parameters, Parameters}, {dialogueID, DialogueID},
+			{invokeID, InvokeID}, {slpi, self()},
+			{state, t_active}, {ssf, sccp_codec:party_address(SSF)}]),
+	{next_state, exception, Data};
+t_active(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
+	{stop, Reason}.
+
+%% @hidden
+t_active0(enter, _EventContent, _Data) ->
+	keep_state_and_data;
+t_active0(cast, {'TC', 'INVOKE', indication, _} = _EventContent, _Data) ->
+	{keep_state_and_data, postpone};
+t_active0(cast, {nrf_update,
 		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
 				nrf_location := Location, nrf_http := LogHTTP,
@@ -1126,7 +1202,7 @@ t_active(cast, {nrf_update,
 					Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
 							qos = {true, true}, origAddress = SCF},
 					gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-					{keep_state, NewData};
+					{next_state, t_active, NewData};
 				{error, _Reason} ->
 					NewIID = IID + 1,
 					Data1 = remove_nrf(Data),
@@ -1153,7 +1229,7 @@ t_active(cast, {nrf_update,
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
 	end;
-t_active(cast, {nrf_update,
+t_active0(cast, {nrf_update,
 		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
@@ -1164,7 +1240,7 @@ t_active(cast, {nrf_update,
 			{slpi, self()}]),
 	NewData = remove_nrf(Data),
 	{next_state, exception, NewData, 0};
-t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
+t_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location} = Data) ->
 	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
@@ -1173,16 +1249,16 @@ t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 	Data1 = remove_nrf(Data),
 	NewData = maps:remove(nrf_location, Data1),
 	{next_state, exception, NewData, 0};
-t_active(cast, {'TC', 'L-CANCEL', indication,
+t_active0(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
 	keep_state_and_data;
-t_active(cast, {'TC', 'END', indication,
+t_active0(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
 	{next_state, exception, Data, 0};
-t_active(cast, {'TC', 'U-ERROR', indication,
+t_active0(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
 		#{did := DialogueID, ssf := SSF} = Data) ->
@@ -1192,7 +1268,7 @@ t_active(cast, {'TC', 'U-ERROR', indication,
 			{invokeID, InvokeID}, {slpi, self()},
 			{state, t_active}, {ssf, sccp_codec:party_address(SSF)}]),
 	{next_state, exception, Data};
-t_active(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
+t_active0(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
 
 -spec o_suspended(EventType, EventContent, Data) -> Result
@@ -1264,13 +1340,25 @@ abandon(cast, {'TC', 'INVOKE', indication,
 		#{did := DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #{requestedInformationList := CallInfo}} ->
-			nrf_release(call_info(CallInfo, Data));
+			case nrf_release(call_info(CallInfo, Data)) of
+				{ok, NewData} ->
+					{keep_state, NewData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, null, NewData}
+			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
 abandon(timeout, _EventContent,
 		#{nrf_location := _Location} = Data) ->
-	nrf_release(Data);
+	case nrf_release(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, null, NewData}
+	end;
 abandon(timeout, _EventContent, Data) ->
 	{next_state, null, Data};
 abandon(cast, {nrf_release,
@@ -1306,7 +1394,13 @@ abandon(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	nrf_release(Data);
+	case nrf_release(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, null, NewData}
+	end;
 abandon(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1363,12 +1457,24 @@ disconnect(cast, {'TC', 'INVOKE', indication,
 		#{did := DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #{requestedInformationList := CallInfo}} ->
-			nrf_release(call_info(CallInfo, Data));
+			case nrf_release(call_info(CallInfo, Data)) of
+				{ok, NewData} ->
+					{keep_state, NewData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, null, NewData}
+			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
 disconnect(timeout, _EventContent, Data) ->
-	nrf_release(Data);
+	case nrf_release(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, null, NewData}
+	end;
 disconnect(cast, {nrf_release,
 		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
@@ -1402,7 +1508,13 @@ disconnect(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	nrf_release(Data);
+	case nrf_release(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, null, NewData}
+	end;
 disconnect(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1480,13 +1592,25 @@ exception(cast, {'TC', 'INVOKE', indication,
 		#{did := DialogueID} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
 		{ok, #{requestedInformationList := CallInfo}} ->
-			nrf_release(call_info(CallInfo, Data));
+			case nrf_release(call_info(CallInfo, Data)) of
+				{ok, NewData} ->
+					{keep_state, NewData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, null, NewData}
+			end;
 		{error, Reason} ->
 			{stop, Reason}
 	end;
 exception(timeout, _EventContent,
 		#{nrf_location := _Location} = Data) ->
-	nrf_release(Data);
+	case nrf_release(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, null, NewData}
+	end;
 exception(timeout, _EventContent, Data) ->
 	{next_state, null, Data};
 exception(cast, {nrf_release,
@@ -1522,7 +1646,13 @@ exception(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID, nrf_location := _Location} = Data) ->
-	nrf_release(Data);
+	case nrf_release(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, null, NewData}
+	end;
 exception(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
@@ -1635,7 +1765,8 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 -spec nrf_start(Data) -> Result
 	when
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {next_state, exception, Data}.
+		Result :: {ok, Data} | {error, Reason},
+		Reason :: term().
 %% @doc Start rating a session.
 nrf_start(#{call_start := CallStart,
 		charging_start := ChargingStart} = Data)
@@ -1699,22 +1830,19 @@ nrf_start3(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
-		{error, {failed_connect, _} = Reason} ->
-			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			{next_state, exception, Data};
+			{ok, NewData};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			{next_state, exception, Data}
+			{error, Reason}
 	end.
 
 -spec nrf_update(Consumed, Data) -> Result
 	when
 		Consumed :: non_neg_integer(),
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {next_state, exception, Data}.
+		Result :: {ok, Data} | {error, Reason},
+		Reason :: term().
 %% @doc Interim update during a rating session.
 nrf_update(Consumed, #{call_start := CallStart,
 		charging_start := ChargingStart} = Data)
@@ -1789,23 +1917,18 @@ nrf_update3(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
-		{error, {failed_connect, _} = Reason} ->
-			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
-					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			NewData = maps:remove(nrf_location, Data),
-			{next_state, exception, NewData};
+			{ok, NewData};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
-			NewData = maps:remove(nrf_location, Data),
-			{next_state, exception, NewData}
+			{error, Reason}
 	end.
 
 -spec nrf_release(Data) -> Result
 	when
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {next_state, exception, Data}.
+		Result :: {ok, Data} | {error, Reason},
+		Reason :: term().
 %% @doc Final update to release a rating session.
 nrf_release(#{call_start := CallStart,
 		charging_start := ChargingStart} = Data)
@@ -1896,22 +2019,14 @@ nrf_release5(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, Options, Profile) of
 		{ok, RequestId} when is_reference(RequestId) ->
-			Data1 = maps:remove(nrf_location, Data),
-			NewData = Data1#{nrf_start => Now,
+			NewData = Data#{nrf_start => Now,
 					nrf_reqid => RequestId, pending => 0,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
+			{ok, NewData};
 		{error, Reason} ->
-			case Reason of
-				{failed_connect, _} ->
-					?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
-							{profile, Profile}, {uri, URI}, {slpi, self()}]);
-				_ ->
-					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
-							{profile, Profile}, {uri, URI}, {slpi, self()}])
-			end,
-			NewData = maps:remove(nrf_location, Data),
-			{next_state, null, NewData}
+			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
+			{error, Reason}
 	end.
 
 -spec calling_number(Address, Data) -> Number
