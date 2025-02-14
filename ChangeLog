@@ -1,3 +1,8 @@
+2025-02-14 Vance Shipley <vances@sigscale.org>
+
+	* postpone pending tcap components while waiting for nrf response
+	* remove deprecated callback, default handler now formats status
+
 2025-02-05   Vance Shipley <vances@sigscale.org>
 
 	* correct cause code location code points
