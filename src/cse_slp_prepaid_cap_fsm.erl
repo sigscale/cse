@@ -2375,7 +2375,7 @@ nrf_start7(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
+			{ok, NewData};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
@@ -2474,7 +2474,7 @@ nrf_update7(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 		{ok, RequestId} when is_reference(RequestId) ->
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
-			{keep_state, NewData};
+			{ok, NewData};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
