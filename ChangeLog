@@ -1,3 +1,7 @@
+2025-02-16 Vance Shipley <vances@sigscale.org>
+
+	* correct return value in two nrf requests
+
 2025-02-14 Vance Shipley <vances@sigscale.org>
 
 	* postpone pending tcap components while waiting for nrf response
