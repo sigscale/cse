@@ -1,3 +1,7 @@
+February 17, 2025
+-----------------
+	- Correct hang in abandon/disconnect states
+
 February 14, 2025
 ----------------
 	- Handle multiple invokes in active state

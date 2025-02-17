@@ -1,3 +1,7 @@
+2025-02-17 Vance Shipley <vances@sigscale.org>
+
+	* remove abandon/disconnect state enter clause preventing timeout
+
 2025-02-16 Vance Shipley <vances@sigscale.org>
 
 	* correct return value in two nrf requests
