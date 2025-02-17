@@ -1305,8 +1305,6 @@ t_suspended(_Event, _EventContent, _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>abandon</em> state.
 %% @private
-abandon(enter, _EventContent, #{call_info := #{}} = _Data) ->
-	keep_state_and_data;
 abandon(enter, _EventContent, _Data) ->
 	{keep_state_and_data, 0};
 abandon(cast, {'TC', 'CONTINUE', indication,
@@ -1422,8 +1420,6 @@ abandon(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 		Result :: gen_statem:event_handler_result(state()).
 %% @doc Handles events received in the <em>disconnect</em> state.
 %% @private
-disconnect(enter, _EventContent, #{call_info := #{}} = _Data) ->
-	keep_state_and_data;
 disconnect(enter, _EventContent, _Data) ->
 	{keep_state_and_data, 0};
 disconnect(cast, {'TC', 'CONTINUE', indication,
