@@ -410,6 +410,29 @@ collect_information(cast, {nrf_start,
 			{next_state, exception, NewData, 0}
 	end;
 collect_information(cast, {nrf_start,
+		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, NewData}
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {status, 403},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
+					{state, collect_information}]),
+			{next_state, exception, NewData};
+	end;
+collect_information(cast, {nrf_start,
 		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
 	NewIID = IID + 1,
@@ -860,6 +883,29 @@ terminating_call_handling(cast, {nrf_start,
 					{state, terminating_call_handling}]),
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
+	end;
+terminating_call_handling(cast, {nrf_start,
+		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, exception, NewData}
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {status, 403},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
+					{state, terminating_call_handling}]),
+			{next_state, excepion, NewData};
 	end;
 terminating_call_handling(cast, {nrf_start,
 		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
@@ -1489,6 +1535,29 @@ o_active0(cast, {nrf_update,
 			{next_state, exception, NewData}
 	end;
 o_active0(cast, {nrf_update,
+		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, disconnect, NewData}
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {status, 403},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
+					{state, o_active0}]),
+			{next_state, exception, NewData};
+	end;
+o_active0(cast, {nrf_update,
 		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
 	NewIID = IID + 1,
@@ -1736,6 +1805,29 @@ t_active0(cast, {nrf_update,
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData}
+	end;
+t_active0(cast, {nrf_update,
+		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
+		#{nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
+	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
+	NewData = remove_nrf(Data),
+	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
+			Cause = #cause{location = local_public, value = 31},
+			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
+					{allCallSegments, cse_codec:cause(Cause)}),
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4,
+					parameters = ReleaseCallArg},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, disconnect, NewData}
+		{{error, Partial, Remaining}, _} ->
+			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+					{profile, Profile}, {uri, URI}, {status, 403},
+					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
+					{state, t_active0}]),
+			{next_state, exception, NewData};
 	end;
 t_active0(cast, {nrf_start,
 		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
