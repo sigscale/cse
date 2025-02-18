@@ -359,9 +359,9 @@ cause2(Coding, remote_public, Acc) ->
 cause2(Coding, remote_private, Acc) ->
 	<<1:1, Coding:2, 0:1, 5:4, Acc/binary>>;
 cause2(Coding, international, Acc) ->
-	<<1:1, Coding:2, 0:1, 6:4, Acc/binary>>;
+	<<1:1, Coding:2, 0:1, 7:4, Acc/binary>>;
 cause2(Coding, beyond, Acc) ->
-	<<1:1, Coding:2, 0:1, 7:4, Acc/binary>>.
+	<<1:1, Coding:2, 0:1, 10:4, Acc/binary>>.
 
 -spec ims_uri(URIString) -> Result
 	when
