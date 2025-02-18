@@ -429,13 +429,13 @@ collect_information(cast, {nrf_start,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData}
+			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, _} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, collect_information}]),
-			{next_state, exception, NewData};
+			{next_state, exception, NewData}
 	end;
 collect_information(cast, {nrf_start,
 		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
@@ -906,13 +906,13 @@ terminating_call_handling(cast, {nrf_start,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, exception, NewData}
+			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, _} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, terminating_call_handling}]),
-			{next_state, excepion, NewData};
+			{next_state, excepion, NewData}
 	end;
 terminating_call_handling(cast, {nrf_start,
 		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
@@ -1558,13 +1558,13 @@ o_active0(cast, {nrf_update,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, disconnect, NewData}
+			{next_state, disconnect, NewData};
 		{{error, Partial, Remaining}, _} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, o_active0}]),
-			{next_state, exception, NewData};
+			{next_state, exception, NewData}
 	end;
 o_active0(cast, {nrf_update,
 		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
@@ -1832,13 +1832,13 @@ t_active0(cast, {nrf_update,
 					invokeID = NewIID, dialogueID = DialogueID, class = 4,
 					parameters = ReleaseCallArg},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			{next_state, disconnect, NewData}
+			{next_state, disconnect, NewData};
 		{{error, Partial, Remaining}, _} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, t_active0}]),
-			{next_state, exception, NewData};
+			{next_state, exception, NewData}
 	end;
 t_active0(cast, {nrf_start,
 		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
