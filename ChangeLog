@@ -1,3 +1,12 @@
+2025-02-18 Vance Shipley <vances@sigscale.org>
+
+	* cap slp: refactor abandon/disconnect/exception states for release handling
+	* cap slp: message sequence diagram in edoc
+	* cap slp: update invocation id for release call
+	* cap slp: event timeout provided by state enter function
+	* cap slp: explicitly handle 403 forbidden
+	* cap slp: remove abandon/disconnect state enter clause preventing timeout
+
 2025-02-16 Vance Shipley <vances@sigscale.org>
 
 	* correct return value in two nrf requests
