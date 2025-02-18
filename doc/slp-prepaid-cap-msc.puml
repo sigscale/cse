@@ -1,0 +1,50 @@
+@startuml
+
+skinparam shadowing false
+skinparam sequence {
+ParticipantBorderColor #f57f17
+ParticipantBackgroundColor white
+LifeLineBorderColor #f57f17
+LifeLineBackgroundColor white
+}
+participant "SSF" as ssf
+participant "SCF/OCF" as scf
+participant "RF" as rf
+hide footbox
+
+activate ssf
+ssf -> scf : initialDP
+activate scf
+scf -> rf : POST /ratingdata
+activate rf
+scf <- rf : 201 Created
+ssf <- scf : requestReportBCSMEvent
+ssf <- scf : callInformationRequest
+ssf <- scf : applyCharging
+ssf <- scf : continue 	
+...
+ssf -> scf : eventReportBCSM
+...
+ssf -> scf : applyChargingReport
+scf -> rf : POST /ratingdata/{RatingDataRef}/update
+scf <- rf : 200 OK
+ssf <- scf : applyCharging
+...
+== repetition ==
+...
+alt out of credit
+ssf -> scf : applyChargingReport
+scf -> rf : POST /ratingdata/{RatingDataRef}/update
+scf <- rf : 403 Forbidden
+else normal call end
+ssf -> scf : callInformationReport
+ssf -> scf : eventReportBCSM
+end
+scf -> rf : POST /ratingdata/{RatingDataRef}/release
+scf <- rf : 200 OK
+deactivate rf
+ssf <- scf : invoke releaseCall
+deactivate scf
+deactivate ssf
+
+@enduml
