@@ -44,6 +44,11 @@
 %%% 	lookup the SLP implementation module (this) and push it onto
 %%% 	the callback stack.
 %%%
+%%% 	== Message Sequence ==
+%%% 	The diagram below depicts the normal sequence of exchanged messages:
+%%%
+%%% 	<img alt="message sequence chart" src="slp-prepaid-cap-msc.svg" />
+%%%
 -module(cse_slp_prepaid_cap_fsm).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
