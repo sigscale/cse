@@ -383,7 +383,7 @@ collect_information(cast, {nrf_start,
 							invokeID = NewIID, dialogueID = DialogueID, class = 4,
 							parameters = ReleaseCallArg},
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-					{next_state, exception, NewData, 0}
+					{next_state, exception, NewData}
 			end;
 		{{ok, JSON}, {_, Location}}
 				when is_list(Location) ->
@@ -392,7 +392,7 @@ collect_information(cast, {nrf_start,
 					{slpi, self()}, {json, JSON}]),
 			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
-			{next_state, exception, NewData, 0};
+			{next_state, exception, NewData};
 		{{error, Partial, Remaining}, {_, Location}}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
@@ -400,14 +400,14 @@ collect_information(cast, {nrf_start,
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
 			Data1 = remove_nrf(Data),
 			NewData = Data1#{nrf_location => Location},
-			{next_state, exception, NewData, 0};
+			{next_state, exception, NewData};
 		{{ok, _}, false} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
 					{state, collect_information}]),
 			NewData = remove_nrf(Data),
-			{next_state, exception, NewData, 0}
+			{next_state, exception, NewData}
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
@@ -433,8 +433,10 @@ collect_information(cast, {nrf_start,
 			{next_state, exception, NewData};
 	end;
 collect_information(cast, {nrf_start,
-		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
+		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{did := DialogueID, iid := IID, cco := CCO,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
 	NewData = Data1#{iid => NewIID},
@@ -445,7 +447,7 @@ collect_information(cast, {nrf_start,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 collect_information(cast, {nrf_start,
 		{_RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
@@ -464,7 +466,7 @@ collect_information(cast, {nrf_start,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
@@ -481,7 +483,7 @@ collect_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 collect_information(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -617,7 +619,7 @@ analyse_information(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 analyse_information(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -908,8 +910,10 @@ terminating_call_handling(cast, {nrf_start,
 			{next_state, excepion, NewData};
 	end;
 terminating_call_handling(cast, {nrf_start,
-		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
+		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{did := DialogueID, iid := IID, cco := CCO,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
 	NewData = Data1#{iid => NewIID},
@@ -920,7 +924,7 @@ terminating_call_handling(cast, {nrf_start,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 terminating_call_handling(cast, {nrf_start,
 		{_RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
@@ -939,7 +943,7 @@ terminating_call_handling(cast, {nrf_start,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 terminating_call_handling(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
@@ -956,14 +960,14 @@ terminating_call_handling(cast, {nrf_start, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 terminating_call_handling(cast, {nrf_start, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI} = Data) ->
 	NewData = remove_nrf(Data),
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -972,7 +976,7 @@ terminating_call_handling(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 		componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 terminating_call_handling(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 		error = Error, parameters = Parameters}} = _EventContent,
@@ -1112,7 +1116,7 @@ routing(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 routing(info, {'EXIT', DHA, Reason}, #{dha := DHA} = _Data) ->
 	{stop, Reason}.
 
@@ -1233,7 +1237,7 @@ o_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 o_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1352,7 +1356,7 @@ t_alerting(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 t_alerting(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1430,7 +1434,7 @@ o_active(cast, {'TC', 'INVOKE', indication,
 							{next_state, o_active0, NextData};
 						{error, _Reason} ->
 							NewData = maps:remove(nrf_location, Data),
-							{next_state, exception, NewData, 0}
+							{next_state, exception, NewData}
 					end;
 				{error, Reason} ->
 					{stop, Reason}
@@ -1457,7 +1461,7 @@ o_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 o_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1558,8 +1562,10 @@ o_active0(cast, {nrf_update,
 			{next_state, exception, NewData};
 	end;
 o_active0(cast, {nrf_update,
-		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
+		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{did := DialogueID, iid := IID, cco := CCO,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
 	NewData = Data1#{iid => NewIID},
@@ -1570,7 +1576,7 @@ o_active0(cast, {nrf_update,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, disconnect, NewData};
 o_active0(cast, {nrf_update,
 		{_RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
@@ -1589,7 +1595,7 @@ o_active0(cast, {nrf_update,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 o_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1606,7 +1612,7 @@ o_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 o_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location} = Data) ->
@@ -1615,7 +1621,7 @@ o_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 			{slpi, self()}]),
 	Data1 = remove_nrf(Data),
 	NewData = maps:remove(nrf_location, Data1),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 o_active0(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -1624,7 +1630,7 @@ o_active0(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 o_active0(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1702,7 +1708,7 @@ t_active(cast, {'TC', 'INVOKE', indication,
 							{next_state, t_active0, NextData};
 						{error, _Reason} ->
 							NewData = maps:remove(nrf_location, Data),
-							{next_state, exception, NewData, 0}
+							{next_state, exception, NewData}
 					end;
 				{error, Reason} ->
 					{stop, Reason}
@@ -1729,7 +1735,7 @@ t_active(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 t_active(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
@@ -1830,8 +1836,10 @@ t_active0(cast, {nrf_update,
 			{next_state, exception, NewData};
 	end;
 t_active0(cast, {nrf_start,
-		{_RequestId, {{_Version, 404, _Phrase}, _Headers, _Body}}},
-		#{did := DialogueID, iid := IID, cco := CCO} = Data) ->
+		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
+		#{did := DialogueID, iid := IID, cco := CCO,
+				nrf_http := LogHTTP} = Data) ->
+	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
 	NewData = Data1#{iid => NewIID},
@@ -1842,7 +1850,7 @@ t_active0(cast, {nrf_start,
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, disconnect, NewData};
 t_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1859,7 +1867,7 @@ t_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 t_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location} = Data) ->
@@ -1868,7 +1876,7 @@ t_active0(cast, {nrf_update, {RequestId, {error, Reason}}},
 			{slpi, self()}]),
 	Data1 = remove_nrf(Data),
 	NewData = maps:remove(nrf_location, Data1),
-	{next_state, exception, NewData, 0};
+	{next_state, exception, NewData};
 t_active0(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -1877,7 +1885,7 @@ t_active0(cast, {'TC', 'END', indication,
 		#'TC-END'{dialogueID = DialogueID,
 				componentsPresent = false}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{next_state, exception, Data, 0};
+	{next_state, exception, Data};
 t_active0(cast, {'TC', 'U-ERROR', indication,
 		#'TC-U-ERROR'{dialogueID = DialogueID, invokeID = InvokeID,
 				error = Error, parameters = Parameters}} = _EventContent,
