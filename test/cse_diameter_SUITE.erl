@@ -1,4 +1,4 @@
-%% cse_diameter_SUITE.erl
+%%% cse_diameter_SUITE.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2016 - 2025 SigScale Global Inc.
@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  @doc Test suite for diameter protocoll n the {@link //cse. cse} application.
+%%%  @doc Test suite for DIAMETER in the {@link //cse. cse} application.
 %%%
 -module(cse_diameter_SUITE).
 -copyright('Copyright (c) 2016 - 2025 SigScale Global Inc.').
@@ -83,7 +83,9 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-   [{userdata, [{doc, "Test suite for Diameter in CSE"}]},
+	Description = "Test suite for DIAMETER in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
 	{require, diameter},
 	{default_config, diameter,
 			[{address, {127,0,0,1}},
@@ -273,7 +275,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 initial_scur_ims() ->
-	[{userdata, [{doc, "IMS SCUR CCA-I success"}]}].
+	Description = "IMS SCUR CCA-I success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_scur_ims(Config) ->
 	OCS = ?config(ocs, Config),
@@ -302,7 +306,9 @@ initial_scur_ims(Config) ->
 	Grant > 0.
 
 initial_scur_ims_nrf() ->
-	[{userdata, [{doc, "IMS SCUR Nrf start"}]}].
+	Description = "IMS SCUR Nrf start",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_scur_ims_nrf(Config) ->
 	OCS = ?config(ocs, Config),
@@ -324,7 +330,9 @@ initial_scur_ims_nrf(Config) ->
 	Balance = NewBalance + Grant.
 
 interim_scur_ims() ->
-	[{userdata, [{doc, "IMS SCUR CCA-U success"}]}].
+	Description = "IMS SCUR CCA-U success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 interim_scur_ims(Config) ->
 	OCS = ?config(ocs, Config),
@@ -361,7 +369,9 @@ interim_scur_ims(Config) ->
 	Grant > 0.
 
 interim_scur_ims_nrf() ->
-	[{userdata, [{doc, "IMS SCUR CCR-U with Nrf update"}]}].
+	Description = "IMS SCUR CCR-U with Nrf update",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 interim_scur_ims_nrf(Config) ->
 	OCS = ?config(ocs, Config),
@@ -391,7 +401,9 @@ interim_scur_ims_nrf(Config) ->
 	Balance = NewBalance + Grant1 + Used.
 
 final_scur_ims() ->
-	[{userdata, [{doc, "IMS SCUR CCR-T with CCA-T success"}]}].
+	Description = "IMS SCUR CCR-T with CCA-T success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 final_scur_ims(Config) ->
 	OCS = ?config(ocs, Config),
@@ -426,7 +438,9 @@ final_scur_ims(Config) ->
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
 
 final_scur_ims_nrf() ->
-	[{userdata, [{doc, "IMS SCUR CCR-T with Nrf release"}]}].
+	Description = "IMS SCUR CCR-T with Nrf release",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 final_scur_ims_nrf(Config) ->
 	OCS = ?config(ocs, Config),
@@ -463,7 +477,9 @@ final_scur_ims_nrf(Config) ->
 	Balance = NewBalance + Used1 + Used2.
 
 initial_scur_ps() ->
-	[{userdata, [{doc, "PS SCUR CCA-I success"}]}].
+	Description = "PS SCUR CCA-I success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_scur_ps(Config) ->
 	OCS = ?config(ocs, Config),
@@ -492,7 +508,9 @@ initial_scur_ps(Config) ->
 	Grant > 0.
 
 initial_scur_ps_nrf() ->
-	[{userdata, [{doc, "PS SCUR Nrf start"}]}].
+	Description = "PS SCUR Nrf start",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_scur_ps_nrf(Config) ->
 	OCS = ?config(ocs, Config),
@@ -514,7 +532,9 @@ initial_scur_ps_nrf(Config) ->
 	Balance = NewBalance + Grant.
 
 interim_scur_ps() ->
-	[{userdata, [{doc, "PS SCUR CCA-U success"}]}].
+	Description = "PS SCUR CCA-U success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 interim_scur_ps(Config) ->
 	OCS = ?config(ocs, Config),
@@ -551,7 +571,9 @@ interim_scur_ps(Config) ->
 	Grant > 0.
 
 interim_scur_ps_nrf() ->
-	[{userdata, [{doc, "PS SCUR CCR-U with Nrf update"}]}].
+	Description = "PS SCUR CCR-U with Nrf update",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 interim_scur_ps_nrf(Config) ->
 	OCS = ?config(ocs, Config),
@@ -581,7 +603,9 @@ interim_scur_ps_nrf(Config) ->
 	Balance = NewBalance + Grant1 + Used.
 
 final_scur_ps() ->
-	[{userdata, [{doc, "IMS SCUR CCR-T with CCA-T success"}]}].
+	Description = "IMS SCUR CCR-T with CCA-T success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 final_scur_ps(Config) ->
 	OCS = ?config(ocs, Config),
@@ -616,7 +640,9 @@ final_scur_ps(Config) ->
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
 
 final_scur_ps_nrf() ->
-	[{userdata, [{doc, "IMS SCUR CCR-T with Nrf release"}]}].
+	Description = "IMS SCUR CCR-T with Nrf release",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 final_scur_ps_nrf(Config) ->
 	OCS = ?config(ocs, Config),
@@ -653,7 +679,9 @@ final_scur_ps_nrf(Config) ->
 	Balance = NewBalance + Used1 + Used2.
 
 sms_iec() ->
-	[{userdata, [{doc, "SMS IEC CCR-E with CCA-E success"}]}].
+	Description = "SMS IEC CCR-E with CCA-E success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 sms_iec(Config) ->
 	OCS = ?config(ocs, Config),
@@ -678,7 +706,9 @@ sms_iec(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [1]} = GSU.
 
 mms_iec() ->
-	[{userdata, [{doc, "MMS IEC CCR-E with CCA-E success"}]}].
+	Description = "MMS IEC CCR-E with CCA-E success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mms_iec(Config) ->
 	OCS = ?config(ocs, Config),
@@ -703,7 +733,9 @@ mms_iec(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [1]} = GSU.
 
 unknown_subscriber() ->
-	[{userdata, [{doc, "SCUR Nrf start with unknown user"}]}].
+	Description = "SCUR Nrf start with unknown user",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 unknown_subscriber(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
@@ -716,7 +748,9 @@ unknown_subscriber(Config) ->
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer0.
 
 out_of_credit() ->
-	[{userdata, [{doc, "SCUR Nrf start when credit limit reached"}]}].
+	Description = "SCUR Nrf start when credit limit reached",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 out_of_credit(Config) ->
 	OCS = ?config(ocs, Config),
@@ -731,7 +765,9 @@ out_of_credit(Config) ->
 	#'3gpp_ro_CCA'{'Result-Code' = ?'IETF_RESULT-CODE_CREDIT_LIMIT_REACHED'} = Answer0.
 
 initial_in_call() ->
-	[{userdata, [{doc, "IMS voice terminating call SCUR CCA-I success"}]}].
+	Description = "IMS voice terminating call SCUR CCA-I success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_in_call(Config) ->
 	OCS = ?config(ocs, Config),
@@ -760,7 +796,9 @@ initial_in_call(Config) ->
 	Grant > 0.
 
 interim_in_call() ->
-	[{userdata, [{doc, "IMS voice terminating call SCUR CCA-U success"}]}].
+	Description = "IMS voice terminating call SCUR CCA-U success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 interim_in_call(Config) ->
 	OCS = ?config(ocs, Config),
@@ -797,7 +835,9 @@ interim_in_call(Config) ->
 	Grant > 0.
 
 final_in_call() ->
-	[{userdata, [{doc, "IMS voice terminating call SCUR CCR-T with CCA-T success"}]}].
+	Description = "IMS voice terminating call SCUR CCR-T with CCA-T success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 final_in_call(Config) ->
 	OCS = ?config(ocs, Config),
@@ -832,7 +872,9 @@ final_in_call(Config) ->
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
 
 idle_timeout_ps() ->
-	[{userdata, [{doc, "PS SCUR idle timeout in active state"}]}].
+	Description = "PS SCUR idle timeout in active state",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 idle_timeout_ps(Config) ->
 	OCS = ?config(ocs, Config),
@@ -864,7 +906,9 @@ idle_timeout_ps(Config) ->
 	{error, not_found} = cse:find_session(Session).
 
 idle_timeout_ims() ->
-	[{userdata, [{doc, "IMS SCUR idle timeout in active state"}]}].
+	Description = "IMS SCUR idle timeout in active state",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 idle_timeout_ims(Config) ->
 	OCS = ?config(ocs, Config),
@@ -896,7 +940,9 @@ idle_timeout_ims(Config) ->
 	{error, not_found} = cse:find_session(Session).
 
 accounting_ims() ->
-	[{userdata, [{doc, "Accounting record for IMS voice call"}]}].
+	Description = "Accounting record for IMS voice call",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 accounting_ims(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
@@ -923,7 +969,9 @@ accounting_ims(Config) ->
 			'Accounting-Record-Number' = RecordNum2} = Answer2.
 
 client_connect() ->
-	[{userdata, [{doc, "Connect as client to peer server"}]}].
+	Description = "Connect as client to peer server",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 client_connect(Config) ->
 	Realm = "ct." ++ ?config(realm, Config),
@@ -968,7 +1016,9 @@ client_connect(Config) ->
    end.
 
 client_reconnect() ->
-	[{userdata, [{doc, "Reconnect disconnected client to peer server"}]}].
+	Description = "Reconnect disconnected client to peer server",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 client_reconnect(Config) ->
 	Realm = "ct." ++ ?config(realm, Config),
@@ -1039,7 +1089,9 @@ client_reconnect(Config) ->
 	end.
 
 location_tai_ecgi() ->
-	[{userdata, [{doc, "User location CODEC for TAI and ECGI"}]}].
+	Description = "User location CODEC for TAI and ECGI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 location_tai_ecgi(_Config) ->
 	Type = 130,

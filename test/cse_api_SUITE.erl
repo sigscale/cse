@@ -96,7 +96,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+	Description = "Test suite for public API of CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -166,19 +169,25 @@ all() ->
 %%---------------------------------------------------------------------
 
 start_cse() ->
-	[{userdata, [{doc, "Start the CAMEL Service Enviromnment (CSE)"}]}].
+	Description = "Start the CAMEL Service Enviromnment (CSE)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 start_cse(_Config) ->
 	ok = cse:start().
 
 stop_cse() ->
-	[{userdata, [{doc, "Stop the CAMEL Service Enviromnment (CSE)"}]}].
+	Description = "Stop the CAMEL Service Enviromnment (CSE)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 stop_cse(_Config) ->
 	ok = cse:stop().
 
 add_service() ->
-	[{userdata, [{doc, "Add an IN service logic processing program (SLP)"}]}].
+	Description = "Add an IN service logic processing program (SLP)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
@@ -188,7 +197,9 @@ add_service(_Config) ->
 	ok = cse:add_service(ServiceKey, Module, Data, Opts).
 
 get_service() ->
-	[{userdata, [{doc, "Get an IN service logic processing program (SLP)"}]}].
+	Description = "Get an IN service logic processing program (SLP)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
@@ -200,7 +211,9 @@ get_service(_Config) ->
 			data = Data, opts = Opts} = cse:get_service(ServiceKey).
 
 find_service() ->
-	[{userdata, [{doc, "Find an IN service logic processing program (SLP)"}]}].
+	Description = "Find an IN service logic processing program (SLP)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 find_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
@@ -213,7 +226,9 @@ find_service(_Config) ->
 			data = Data, opts = Opts} = Service.
 
 get_services() ->
-	[{userdata, [{doc, "List all IN service logic processing programs (SLP)"}]}].
+	Description = "List all IN service logic processing programs (SLP)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_services(_Config) ->
 	cse:add_service(rand:uniform(2147483647), cse_slp_prepaid_inap_fsm, #{}, []),
@@ -223,7 +238,9 @@ get_services(_Config) ->
 	lists:all(F, cse:get_services()).
 
 delete_service() ->
-	[{userdata, [{doc, "Remove an IN service logic processing program (SLP)"}]}].
+	Description = "Remove an IN service logic processing program (SLP)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
@@ -231,7 +248,9 @@ delete_service(_Config) ->
 	ok = cse:delete_service(ServiceKey).
 
 add_context() ->
-	[{userdata, [{doc, "Add a DIAMETER logic processing program (SLP)"}]}].
+	Description = "Add a DIAMETER logic processing program (SLP)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
@@ -239,7 +258,9 @@ add_context(_Config) ->
 	ok = cse:add_context(ContextId, Module, [], []).
 
 get_context() ->
-	[{userdata, [{doc, "Get a DIAMETER SLP"}]}].
+	Description = "Get a DIAMETER SLP",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
@@ -249,7 +270,9 @@ get_context(_Config) ->
 			args = [], opts = []} = cse:get_context(ContextId).
 
 find_context() ->
-	[{userdata, [{doc, "Find a DIAMETER SLP"}]}].
+	Description = "Find a DIAMETER SLP",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 find_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
@@ -260,7 +283,9 @@ find_context(_Config) ->
 			args = [], opts = []} = Context.
 
 get_contexts() ->
-	[{userdata, [{doc, "List all DIAMETER contexts"}]}].
+	Description = "List all DIAMETER contexts",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_contexts(_Config) ->
 	Module = cse_slp_prepaid_diameter_ims_fsm,
@@ -271,7 +296,9 @@ get_contexts(_Config) ->
 	lists:all(F, cse:get_contexts()).
 
 delete_context() ->
-	[{userdata, [{doc, "Remove a DIAMETER SLP"}]}].
+	Description = "Remove a DIAMETER SLP",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_context(_Config) ->
 	ContextId = list_to_binary(cse_test_lib:rand_name(20)),
@@ -280,7 +307,9 @@ delete_context(_Config) ->
 	ok = cse:delete_context(ContextId).
 
 add_client() ->
-	[{userdata, [{doc, "Add a NAS to client table"}]}].
+	Description = "Add a NAS to client table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_client(_Config) ->
 	Address = cse_test_lib:rand_ip(),
@@ -294,7 +323,9 @@ add_client(_Config) ->
 	ok = cse:add_client(Address, Protocol, Secret, Attributes).
 
 get_client() ->
-	[{userdata, [{doc, "Get a NAS client"}]}].
+	Description = "Get a NAS client",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_client(_Config) ->
 	Address = cse_test_lib:rand_ip(),
@@ -305,7 +336,9 @@ get_client(_Config) ->
 			attributes = Attributes} = cse:get_client(Address).
 
 find_client() ->
-	[{userdata, [{doc, "Find a NAS client"}]}].
+	Description = "Find a NAS client",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 find_client(_Config) ->
 	Address = cse_test_lib:rand_ip(),
@@ -316,7 +349,9 @@ find_client(_Config) ->
 			attributes = Attributes}} = cse:find_client(Address).
 
 get_clients() ->
-	[{userdata, [{doc, "List all NAS clients"}]}].
+	Description = "List all NAS clients",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_clients(_Config) ->
 	cse:add_client(cse_test_lib:rand_ip(), diameter, #{}),
@@ -326,7 +361,9 @@ get_clients(_Config) ->
 	lists:all(F, cse:get_clients()).
 
 delete_client() ->
-	[{userdata, [{doc, "Remove a NAS client"}]}].
+	Description = "Remove a NAS client",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_client(_Config) ->
 	Address = cse_test_lib:rand_ip(),
@@ -334,14 +371,18 @@ delete_client(_Config) ->
 	ok = cse:delete_client(Address).
 
 no_service() ->
-	[{userdata, [{doc, "Attempt to find a non-existent SLP"}]}].
+	Description = "Attempt to find a non-existent SLP",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 no_service(_Config) ->
 	ServiceKey = rand:uniform(2147483647),
 	{error, not_found} = cse:find_service(ServiceKey).
 
 announce() ->
-	[{userdata, [{doc, "Make announcement word list"}]}].
+	Description = "Make announcement word list",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 announce(_Config) ->
 	Amount = rand:uniform(1000000000000),
@@ -357,7 +398,9 @@ announce(_Config) ->
 	lists:all(F, cse:announce(Amount)).
 
 add_index_table_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for an index table"}]}].
+	Description = "Add a Resource Specification for an index table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_index_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -365,7 +408,9 @@ add_index_table_spec(_Config) ->
 	{ok, _} = cse:add_resource_spec(Specification).
 
 add_prefix_table_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for a prefix table"}]}].
+	Description = "Add a Resource Specification for a prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_prefix_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -374,7 +419,9 @@ add_prefix_table_spec(_Config) ->
 	{ok, #resource_spec{name = NameB}} = cse:add_resource_spec(Specification).
 
 add_range_table_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for a prefix range table"}]}].
+	Description = "Add a Resource Specification for a prefix range table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_range_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -383,7 +430,9 @@ add_range_table_spec(_Config) ->
 	{ok, #resource_spec{name = NameB}} = cse:add_resource_spec(Specification).
 
 get_index_table_spec() ->
-	[{userdata, [{doc, "Get a dynamic index table Resource Specification"}]}].
+	Description = "Get a dynamic index table Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_index_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -392,7 +441,9 @@ get_index_table_spec(_Config) ->
 	{ok, RS} = cse:find_resource_spec(Id).
 
 get_prefix_table_spec() ->
-	[{userdata, [{doc, "Get a dynamic prefix table Resource Specification"}]}].
+	Description = "Get a dynamic prefix table Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_prefix_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -401,7 +452,9 @@ get_prefix_table_spec(_Config) ->
 	{ok, RS} = cse:find_resource_spec(Id).
 
 get_range_table_spec() ->
-	[{userdata, [{doc, "Get a dynamic prefix range table Resource Specification"}]}].
+	Description = "Get a dynamic prefix range table Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_range_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -410,7 +463,9 @@ get_range_table_spec(_Config) ->
 	{ok, RS} = cse:find_resource_spec(Id).
 
 delete_index_table_spec() ->
-	[{userdata, [{doc, "Delete a dynamic index table Resource Specification"}]}].
+	Description = "Delete a dynamic index table Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_index_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -420,7 +475,9 @@ delete_index_table_spec(_Config) ->
 	{error, not_found} = cse:find_resource_spec(Id).
 
 delete_prefix_table_spec() ->
-	[{userdata, [{doc, "Delete a dynamic prefix table Resource Specification"}]}].
+	Description = "Delete a dynamic prefix table Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_prefix_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -430,7 +487,9 @@ delete_prefix_table_spec(_Config) ->
 	{error, not_found} = cse:find_resource_spec(Id).
 
 delete_range_table_spec() ->
-	[{userdata, [{doc, "Delete a dynamic prefix range table Resource Specification"}]}].
+	Description = "Delete a dynamic prefix range table Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_range_table_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -440,7 +499,9 @@ delete_range_table_spec(_Config) ->
 	{error, not_found} = cse:find_resource_spec(Id).
 
 add_index_table() ->
-	[{userdata, [{doc, "Add a Resource for an index table"}]}].
+	Description = "Add a Resource for an index table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_index_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -452,7 +513,9 @@ add_index_table(_Config) ->
 	{ok, #resource{name = NameB}} = cse:add_resource(ResourceT).
 
 add_prefix_table() ->
-	[{userdata, [{doc, "Add a Resource for a prefix table"}]}].
+	Description = "Add a Resource for a prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_prefix_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -464,7 +527,9 @@ add_prefix_table(_Config) ->
 	{ok, #resource{name = NameB}} = cse:add_resource(ResourceT).
 
 add_range_table() ->
-	[{userdata, [{doc, "Add a Resource for a prefix range table"}]}].
+	Description = "Add a Resource for a prefix range table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_range_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -476,7 +541,9 @@ add_range_table(_Config) ->
 	{ok, #resource{name = NameB}} = cse:add_resource(ResourceT).
 
 get_index_table() ->
-	[{userdata, [{doc, "Get a Resource for an index table"}]}].
+	Description = "Get a Resource for an index table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_index_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -488,7 +555,9 @@ get_index_table(_Config) ->
 	{ok, ResourceR} = cse:find_resource(Id).
 
 get_prefix_table() ->
-	[{userdata, [{doc, "Get a Resource for a prefix table"}]}].
+	Description = "Get a Resource for a prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_prefix_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -500,7 +569,9 @@ get_prefix_table(_Config) ->
 	{ok, ResourceR} = cse:find_resource(Id).
 
 get_range_table() ->
-	[{userdata, [{doc, "Get a Resource for a prefix range table"}]}].
+	Description = "Get a Resource for a prefix range table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_range_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -512,7 +583,9 @@ get_range_table(_Config) ->
 	{ok, ResourceR} = cse:find_resource(Id).
 
 delete_index_table() ->
-	[{userdata, [{doc, "Delete a Resource for an index table"}]}].
+	Description = "Delete a Resource for an index table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_index_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -525,7 +598,9 @@ delete_index_table(_Config) ->
 	{error, not_found} = cse:find_resource(Id).
 
 delete_prefix_table() ->
-	[{userdata, [{doc, "Delete a Resource for a prefix table"}]}].
+	Description = "Delete a Resource for a prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_prefix_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -538,7 +613,9 @@ delete_prefix_table(_Config) ->
 	{error, not_found} = cse:find_resource(Id).
 
 delete_range_table() ->
-	[{userdata, [{doc, "Delete a Resource for a prefix range table"}]}].
+	Description = "Delete a Resource for a prefix range table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_range_table(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -551,7 +628,9 @@ delete_range_table(_Config) ->
 	{error, not_found} = cse:find_resource(Id).
 
 add_index_row_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for an index table row"}]}].
+	Description = "Add a Resource Specification for an index table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_index_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -561,7 +640,9 @@ add_index_row_spec(_Config) ->
 	{ok, _RowSpecR} = cse:add_resource_spec(RowSpecT).
 
 add_prefix_row_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for a prefix table row"}]}].
+	Description = "Add a Resource Specification for a prefix table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_prefix_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -571,7 +652,9 @@ add_prefix_row_spec(_Config) ->
 	{ok, _RowSpecR} = cse:add_resource_spec(RowSpecT).
 
 add_range_row_spec() ->
-	[{userdata, [{doc, "Add a Resource Specification for a prefix range table row"}]}].
+	Description = "Add a Resource Specification for a prefix range table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_range_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -581,7 +664,9 @@ add_range_row_spec(_Config) ->
 	{ok, _RowSpecR} = cse:add_resource_spec(RowSpecT).
 
 get_index_row_spec() ->
-	[{userdata, [{doc, "Get a Resource Specification for an index table row"}]}].
+	Description = "Get a Resource Specification for an index table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_index_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -592,7 +677,9 @@ get_index_row_spec(_Config) ->
 	{ok, RowSpecR} = cse:find_resource_spec(Id).
 
 get_prefix_row_spec() ->
-	[{userdata, [{doc, "Get a Resource Specification for a prefix table row"}]}].
+	Description = "Get a Resource Specification for a prefix table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_prefix_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -603,7 +690,9 @@ get_prefix_row_spec(_Config) ->
 	{ok, RowSpecR} = cse:find_resource_spec(Id).
 
 get_range_row_spec() ->
-	[{userdata, [{doc, "Get a Resource Specification for a prefix range table row"}]}].
+	Description = "Get a Resource Specification for a prefix range table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_range_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -614,7 +703,9 @@ get_range_row_spec(_Config) ->
 	{ok, RowSpecR} = cse:find_resource_spec(Id).
 
 delete_index_row_spec() ->
-	[{userdata, [{doc, "Delete a Resource Specification for an index table row"}]}].
+	Description = "Delete a Resource Specification for an index table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_index_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -626,7 +717,9 @@ delete_index_row_spec(_Config) ->
 	{error, not_found} = cse:find_resource_spec(Id).
 
 delete_prefix_row_spec() ->
-	[{userdata, [{doc, "Delete a Resource Specification for a prefix table row"}]}].
+	Description = "Delete a Resource Specification for a prefix table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_prefix_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -638,7 +731,9 @@ delete_prefix_row_spec(_Config) ->
 	{error, not_found} = cse:find_resource_spec(Id).
 
 delete_range_row_spec() ->
-	[{userdata, [{doc, "Delete a Resource Specification for a prefix range table row"}]}].
+	Description = "Delete a Resource Specification for a prefix range table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_range_row_spec(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -650,7 +745,9 @@ delete_range_row_spec(_Config) ->
 	{error, not_found} = cse:find_resource_spec(Id).
 
 add_index_row() ->
-	[{userdata, [{doc, "Add a Resource for an index table row"}]}].
+	Description = "Add a Resource for an index table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_index_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -667,7 +764,9 @@ add_index_row(_Config) ->
 	{ok, _RowR} = cse:add_resource(RowT).
 
 add_prefix_row() ->
-	[{userdata, [{doc, "Add a Resource for a prefix table row"}]}].
+	Description = "Add a Resource for a prefix table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_prefix_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -684,7 +783,9 @@ add_prefix_row(_Config) ->
 	{ok, _RowR} = cse:add_resource(RowT).
 
 add_range_row() ->
-	[{userdata, [{doc, "Add a Resource for a prefix range table row"}]}].
+	Description = "Add a Resource for a prefix range table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_range_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -703,7 +804,9 @@ add_range_row(_Config) ->
 	{ok, _RowR} = cse:add_resource(RowT).
 
 get_index_row() ->
-	[{userdata, [{doc, "Get a Resource for an index table row"}]}].
+	Description = "Get a Resource for an index table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_index_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -721,7 +824,9 @@ get_index_row(_Config) ->
 	{ok, RowR} = cse:find_resource(Id).
 
 get_index_row_extra() ->
-	[{userdata, [{doc, "Get a Resource for an index table row with extra characteristics"}]}].
+	Description = "Get a Resource for an index table row with extra characteristics",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_index_row_extra(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -749,7 +854,9 @@ get_index_row_extra(_Config) ->
 	{atomic, [{_, Key, ValueMap}]} = mnesia:transaction(Ftran).
 
 get_prefix_row() ->
-	[{userdata, [{doc, "Get a Resource for a prefix table row"}]}].
+	Description = "Get a Resource for a prefix table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_prefix_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -767,7 +874,9 @@ get_prefix_row(_Config) ->
 	{ok, RowR} = cse:find_resource(Id).
 
 get_range_row() ->
-	[{userdata, [{doc, "Get a Resource for a prefix range table row"}]}].
+	Description = "Get a Resource for a prefix range table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_range_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -787,7 +896,9 @@ get_range_row(_Config) ->
 	{ok, RowR} = cse:find_resource(Id).
 
 delete_index_row() ->
-	[{userdata, [{doc, "Delete a Resource for an index table row"}]}].
+	Description = "Delete a Resource for an index table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_index_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -806,7 +917,9 @@ delete_index_row(_Config) ->
 	{error, not_found} = cse:find_resource(Id).
 
 delete_prefix_row() ->
-	[{userdata, [{doc, "Delete a Resource for a prefix table row"}]}].
+	Description = "Delete a Resource for a prefix table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_prefix_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),
@@ -825,7 +938,9 @@ delete_prefix_row(_Config) ->
 	{error, not_found} = cse:find_resource(Id).
 
 delete_range_row() ->
-	[{userdata, [{doc, "Delete a Resource for a prefix range table row"}]}].
+	Description = "Delete a Resource for a prefix range table row",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_range_row(_Config) ->
 	Name = cse_test_lib:rand_name(10),

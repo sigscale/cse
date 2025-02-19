@@ -1,4 +1,4 @@
-
+%%% cse_gtt_SUITTE.erl
 %%% vim: ts=3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2022-2025 SigScale Global Inc.
@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  @doc Test suite for public API of the {@link //cse_gtt. cse_gtt} application.
+%%%  @doc Test suite for GTT table API of the {@link //cse. cse} application.
 %%%
 -module(cse_gtt_SUITE).
 -copyright('Copyright 2022-2025 SigScale Global Inc.').
@@ -54,7 +54,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{userdata, [{doc, "Test suite for cse_gtt API in CSE"}]}].
+	Description = "Test suite for GTT tables in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
@@ -130,7 +133,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 add_table() ->
-	[{userdata, [{doc, "Add a prefix table."}]}].
+	Description = "Add a prefix table.",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_table(Config) ->
 	Table = ?config(table, Config),
@@ -139,42 +144,54 @@ add_table(Config) ->
 	disc_copies = mnesia:table_info(Table, storage_type).
 
 delete_table() ->
-	[{userdata, [{doc, "Delete a prefix table."}]}].
+	Description = "Delete a prefix table.",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_table(Config) ->
 	Table = ?config(table, Config),
 	ok = cse_gtt:delete(Table).
 
 list_tables() ->
-	[{userdata, [{doc, "List prefix tables."}]}].
+	Description = "List prefix tables.",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 list_tables(Config) ->
 	Table = ?config(table, Config),
 	true = lists:member(Table, cse_gtt:list()).
 
 insert() ->
-	[{userdata, [{doc, "Add a key and value to prefix table"}]}].
+	Description = "Add a key and value to prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 insert(Config) ->
 	Table = ?config(table, Config),
 	do_insert(Table).
 
 lookup() ->
-	[{userdata, [{doc, "Find a key and value in prefix table"}]}].
+	Description = "Find a key and value in prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 lookup(Config) ->
 	Table = ?config(table, Config),
 	do_lookup(Table).
 
 list() ->
-	[{userdata, [{doc, "List all rows in prefix table"}]}].
+	Description = "List all rows in prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 list(Config) ->
 	Table = ?config(table, Config),
 	do_list(Table).
 
 range() ->
-	[{userdata, [{doc, "Prefixes for range"}]}].
+	Description = "Prefixes for range",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 range(_Config) ->
 	Start = "5551234",
@@ -190,7 +207,9 @@ range(_Config) ->
 	Prefixes  = lists:sort(cse_gtt:range(Start, End)).
 
 add_range() ->
-	[{userdata, [{doc, "Add prefixes by range"}]}].
+	Description = "Add prefixes by range",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_range(Config) ->
 	Table = ?config(table, Config),
@@ -201,7 +220,9 @@ add_range(Config) ->
 	ok = cse_gtt:add_range(Table, Start, End, Value).
 
 delete_range() ->
-	[{userdata, [{doc, "Delete prefixes by range"}]}].
+	Description = "Delete prefixes by range",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_range(Config) ->
 	Table = ?config(table, Config),
@@ -220,7 +241,9 @@ delete_range(Config) ->
 	{atomic, 0} = mnesia:transaction(F2).
 
 big_table() ->
-	[{userdata, [{doc, "Add a disk only prefix table"}]}].
+	Description = "Add a disk only prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 big_table(Config) ->
 	Table = ?config(table, Config),
@@ -229,24 +252,32 @@ big_table(Config) ->
 	disc_only_copies = mnesia:table_info(Table, storage_type).
 
 big_list_tables() ->
-	[{userdata, [{doc, "List prefix tables, including disk only."}]}].
+	Description = "List prefix tables, including disk only.",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 big_list_tables(Config) ->
 	Table = ?config(table, Config),
 	true = lists:member(Table, cse_gtt:list()).
 
 big_insert() ->
-	[{userdata, [{doc, "Add a key and value to disk only prefix table"}]}].
+	Description = "Add a key and value to disk only prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 big_insert(Config) ->
 	Table = ?config(table, Config),
 	do_insert(Table).
 
 big_lookup() ->
-	[{userdata, [{doc, "Find a key and value in disk only prefix table"}]}].
+	Description = "Find a key and value in disk only prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 big_list() ->
-	[{userdata, [{doc, "List all rows in disk only prefix table"}]}].
+	Description = "List all rows in disk only prefix table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 big_list(Config) ->
 	Table = ?config(table, Config),
@@ -257,7 +288,9 @@ big_lookup(Config) ->
 	do_lookup(Table).
 
 big_range() ->
-	[{userdata, [{doc, "Add prefixes to a disk only table by range"}]}].
+	Description = "Add prefixes to a disk only table by range",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 big_range(Config) ->
 	Table = ?config(table, Config),

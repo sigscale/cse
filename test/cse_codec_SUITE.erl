@@ -14,7 +14,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Test suite for the public API of the {@link //cse. cse} application.
+%%% Test suite for the CODEC library of the {@link //cse. cse} application.
 %%%
 -module(cse_codec_SUITE).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
@@ -48,7 +48,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+	Description = "Test suite for CODEC library of CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -93,7 +96,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 called_party() ->
-	[{userdata, [{doc, "Encode/decode ISUP Called Party IE"}]}].
+	Description = "Encode/decode ISUP Called Party IE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 called_party(_Config) ->
 	NAI = nai(),
@@ -108,7 +113,9 @@ called_party(_Config) ->
 	CP = cse_codec:called_party(B).
 
 calling_party() ->
-	[{userdata, [{doc, "Encode/decode ISUP Calling Party IE"}]}].
+	Description = "Encode/decode ISUP Calling Party IE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 calling_party(_Config) ->
 	NAI = nai(),
@@ -126,7 +133,9 @@ calling_party(_Config) ->
 	CP = cse_codec:calling_party(B).
 
 called_party_bcd() ->
-	[{userdata, [{doc, "Encode/decode CAMEL CalledPartyBCD"}]}].
+	Description = "Encode/decode CAMEL CalledPartyBCD",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 called_party_bcd(_Config) ->
 	TON = 2,
@@ -144,7 +153,9 @@ called_party_bcd(_Config) ->
 	CP = cse_codec:called_party_bcd(B).
 
 tbcd() ->
-	[{userdata, [{doc, "Encode/decode TBCD-String"}]}].
+	Description = "Encode/decode TBCD-String",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 tbcd(_Config) ->
 	Digits1 = "0123456789*#abc",
@@ -155,7 +166,9 @@ tbcd(_Config) ->
 	Digits3 = cse_codec:tbcd(cse_codec:tbcd(Digits3)).
 
 isdn_address() ->
-	[{userdata, [{doc, "Encode/decode MAP ISDN-Address"}]}].
+	Description = "Encode/decode MAP ISDN-Address",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 isdn_address(_Config) ->
 	NAI = nai(),
@@ -168,7 +181,9 @@ isdn_address(_Config) ->
 	IA = cse_codec:isdn_address(B).
 
 generic_number() ->
-	[{userdata, [{doc, "Encode/decode ISUP Generic Number IE"}]}].
+	Description = "Encode/decode ISUP Generic Number IE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 generic_number(_Config) ->
 	NQI = 0,
@@ -187,7 +202,9 @@ generic_number(_Config) ->
 	GN = cse_codec:generic_number(B).
 
 generic_digits() ->
-	[{userdata, [{doc, "Encode/decode ISUP Generic Digits IE"}]}].
+	Description = "Encode/decode ISUP Generic Digits IE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 generic_digits(_Config) ->
 	Address = address(),
@@ -201,7 +218,9 @@ generic_digits(_Config) ->
 	GD = cse_codec:generic_digits(B).
 
 date_time() ->
-	[{userdata, [{doc, "Encode/decode CAMEL CalledPartyBCD"}]}].
+	Description = "Encode/decode CAMEL CalledPartyBCD",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 date_time(_Config) ->
 	Year = (rand:uniform(1000) - 1) + 1500,
@@ -225,7 +244,9 @@ date_time(_Config) ->
 	DateTime = cse_codec:date_time(B).
 
 cause() ->
-	[{userdata, [{doc, "Encode/decode ISUP Cause"}]}].
+	Description = "Encode/decode ISUP Cause",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 cause(_Config) ->
 	Codings = [itu, iso, national, other],
@@ -245,7 +266,9 @@ cause(_Config) ->
 	Cause = cse_codec:cause(cse_codec:cause(Cause)).
 
 ims_sip() ->
-	[{userdata, [{doc, "Decode IMS SIP URI"}]}].
+	Description = "Decode IMS SIP URI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 ims_sip(_Config) ->
 	URIString1 = "sip:+14165551234;npdi;rn=+14162220000@ims.mnc001.mcc001.3gppnetwork.org:5060;user=phone",
@@ -261,7 +284,9 @@ ims_sip(_Config) ->
 	"phone" = map_get("user", UriParams2).
 
 ims_tel() ->
-	[{userdata, [{doc, "Decode IMS Tel URI"}]}].
+	Description = "Decode IMS Tel URI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 ims_tel(_Config) ->
 	URIString1 = "tel:+14165551234;npdi;rn=+14162220000",
@@ -273,7 +298,9 @@ ims_tel(_Config) ->
 	#ims_uri{user = "+14165559876"} = cse_codec:ims_uri(URIString2).
 
 rat_type() ->
-	[{userdata, [{doc, "Decode 3GPP-RAT-Type"}]}].
+	Description = "Decode 3GPP-RAT-Type",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 rat_type(_Config) ->
 	RatType = rand:bytes(1),

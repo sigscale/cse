@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  @doc Test suite for public API of the {@link //ocs. ocs} application.
+%%%  @doc Test suite for SNMP agent in the {@link //cse. cse} application.
 %%%
 -module(cse_snmp_SUITE).
 -copyright('Copyright (c) 2016-2025 SigScale Global Inc.').
@@ -56,7 +56,9 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{userdata, [{doc, "Test suite for SNMP agent in SigScale CSE"}]},
+	Description = "Test suite for SNMP agent in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
 	{timetrap, {minutes, 1}},
 	{require, diameter},
 	{default_config, diameter,
@@ -173,7 +175,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 get_id() ->
-	[{userdata, [{doc, "SNMP GET agent identity"}]}].
+	Description = "SNMP GET agent identity",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_id(_Config) ->
 	{value, DbpLocalId} = snmpa:name_to_oid(dbpLocalId),
@@ -182,7 +186,9 @@ get_id(_Config) ->
 			= ct_snmp:get_values(ct_agent, [OID], snmp_mgr_agent).
 
 get_realm() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER Realm"}]}].
+	Description = "SNMP GET DIAMETER Realm",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_realm(_Config) ->
 	{value, DbpLocalRealm} = snmpa:name_to_oid(dbpLocalRealm),
@@ -191,7 +197,9 @@ get_realm(_Config) ->
 			= ct_snmp:get_values(ct_agent, [OID], snmp_mgr_agent).
 
 get_host() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER Host"}]}].
+	Description = "SNMP GET DIAMETER Host",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_host(_Config) ->
 	{value, DbpLocalOriginHost} = snmpa:name_to_oid(dbpLocalOriginHost),
@@ -200,7 +208,9 @@ get_host(_Config) ->
 			= ct_snmp:get_values(ct_agent, [OID], snmp_mgr_agent).
 
 get_uptime() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER uptime"}]}].
+	Description = "SNMP GET DIAMETER uptime",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_uptime(_Config) ->
 	{value, DbpLocalStatsTotalUpTime} = snmpa:name_to_oid(dbpLocalStatsTotalUpTime),
@@ -209,7 +219,9 @@ get_uptime(_Config) ->
 			= ct_snmp:get_values(ct_agent, [OID], snmp_mgr_agent).
 
 get_count_in() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER total incoming packet count"}]}].
+	Description = "SNMP GET DIAMETER total incoming packet count",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_count_in(_Config) ->
 	{value, DbpLocalStatsTotalPacketsIn} = snmpa:name_to_oid(dbpLocalStatsTotalPacketsIn),
@@ -218,7 +230,9 @@ get_count_in(_Config) ->
 			= ct_snmp:get_values(ct_agent, [OID], snmp_mgr_agent).
 
 get_count_out() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER total incoming packet count"}]}].
+	Description = "SNMP GET DIAMETER total incoming packet count",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_count_out(_Config) ->
 	{value, DbpLocalStatsTotalPacketsOut} = snmpa:name_to_oid(dbpLocalStatsTotalPacketsOut),
@@ -227,7 +241,9 @@ get_count_out(_Config) ->
 			= ct_snmp:get_values(ct_agent, [OID], snmp_mgr_agent).
 
 get_next_peers() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER peers table"}]}].
+	Description = "SNMP GET DIAMETER peers table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_next_peers(Config) ->
 	DiameterAddress = ?config(diameter_address, Config),
@@ -259,7 +275,9 @@ get_next_peers(Config) ->
 		F(ct_snmp:get_next_values(ct_agent, [DccaPeerTable], snmp_mgr_agent)).
 
 get_next_stats() ->
-	[{userdata, [{doc, "SNMP GET DIAMETER peer stats table"}]}].
+	Description = "SNMP GET DIAMETER peer stats table",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_next_stats(Config) ->
 	DiameterAddress = ?config(diameter_address, Config),
@@ -291,7 +309,9 @@ get_next_stats(Config) ->
 		F(ct_snmp:get_next_values(ct_agent, [DccaPerPeerStatsTable], snmp_mgr_agent)).
 
 peer_up() ->
-	[{userdata, [{doc, "Recieve SNMP Notification for Diameter Peer UP"}]}].
+	Description = "Recieve SNMP Notification for Diameter Peer UP",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 peer_up(Config) ->
 	DiameterHost = ?config(diameter_host, Config),
@@ -321,7 +341,9 @@ peer_up(Config) ->
 	end.
 
 peer_down() ->
-	[{userdata, [{doc, "Recieve SNMP Notification for Diameter Peer Down"}]}].
+	Description = "Recieve SNMP Notification for Diameter Peer Down",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 peer_down(Config) ->
 	DiameterHost = ?config(diameter_host, Config),
