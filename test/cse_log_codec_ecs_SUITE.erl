@@ -14,7 +14,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Test suite for the Elestic Stack CODEC API
+%%% Test suite for the Elastic Stack CODEC API
 %%% 	of the {@link //cse. cse} application.
 %%%
 -module(cse_log_codec_ecs_SUITE).
@@ -43,7 +43,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+	Description = "Test suite for ECS log CODEC in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -86,7 +89,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 diameter_ccr_initial() ->
-	[{userdata, [{doc, "Encode diameter event"}]}].
+	Description = "Encode DIAMETER event",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 diameter_ccr_initial(_Config) ->
 	Start = erlang:system_time(millisecond),
@@ -143,7 +148,9 @@ diameter_ccr_initial(_Config) ->
 	{ok, ECS} = zj:decode(JSON).
 
 prepaid_originating() ->
-	[{userdata, [{doc, "Encode prepaid originating call event"}]}].
+	Description = "Encode prepaid originating call event",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 prepaid_originating(_Config) ->
 	Start = erlang:system_time(millisecond),
@@ -170,7 +177,9 @@ prepaid_originating(_Config) ->
 	{ok, ECS} = zj:decode(JSON).
 
 postpaid_originating() ->
-	[{userdata, [{doc, "Encode postpaid originating call event"}]}].
+	Description = "Encode postpaid originating call event",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 postpaid_originating(_Config) ->
 	Start = erlang:system_time(millisecond),

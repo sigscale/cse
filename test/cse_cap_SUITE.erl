@@ -69,8 +69,9 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-   [{userdata,
-			[{doc, "Test suite for CAMEL Application Part (CAP) in CSE"}]},
+	Description = "Test suite for CAMEL Application Part (CAP) in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
 	{require, log},
 	{default_config, log,
 			[{logs,
@@ -182,7 +183,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 start_dialogue() ->
-	[{userdata, [{doc, "Start a TCAP Dialogue"}]}].
+	Description = "Start a TCAP Dialogue",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 start_dialogue(Config) ->
 	OCS = ?config(ocs, Config),
@@ -222,7 +225,9 @@ start_dialogue(Config) ->
 	accepted = Result.
 
 end_dialogue() ->
-	[{userdata, [{doc, "End a TCAP Dialogue"}]}].
+	Description = "End a TCAP Dialogue",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 end_dialogue(Config) ->
 	OCS = ?config(ocs, Config),
@@ -258,7 +263,9 @@ end_dialogue(Config) ->
 	end.
 
 initial_dp_mo() ->
-	[{userdata, [{doc, "MO InitialDP received by SLPI"}]}].
+	Description = "MO InitialDP received by SLPI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_dp_mo(Config) ->
 	OCS = ?config(ocs, Config),
@@ -284,7 +291,9 @@ initial_dp_mo(Config) ->
 	analyse_information = get_state(TcUser).
 
 initial_dp_mt() ->
-	[{userdata, [{doc, "MT InitialDP received by SLPI"}]}].
+	Description = "MT InitialDP received by SLPI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 initial_dp_mt(Config) ->
 	OCS = ?config(ocs, Config),
@@ -310,7 +319,9 @@ initial_dp_mt(Config) ->
 	terminating_call_handling = get_state(TcUser).
 
 continue() ->
-	[{userdata, [{doc, "Continue received by SSF"}]}].
+	Description = "Continue received by SSF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 continue(Config) ->
 	OCS = ?config(ocs, Config),
@@ -338,7 +349,9 @@ continue(Config) ->
 	?'opcode-continue' = element(N, Invoke).
 
 dp_arming() ->
-	[{userdata, [{doc, "RequestReportBCSMEvent received by SSF"}]}].
+	Description = "RequestReportBCSMEvent received by SSF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 dp_arming(Config) ->
 	OCS = ?config(ocs, Config),
@@ -378,7 +391,9 @@ dp_arming(Config) ->
 	true = lists:all(F2, BCSMEvents).
 
 apply_charging() ->
-	[{userdata, [{doc, "ApplyCharging received by SSF"}]}].
+	Description = "ApplyCharging received by SSF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 apply_charging(Config) ->
 	OCS = ?config(ocs, Config),
@@ -416,7 +431,9 @@ apply_charging(Config) ->
 	true = is_integer(P).
 
 call_info_request() ->
-	[{userdata, [{doc, "CallInformationRequest received by SSF"}]}].
+	Description = "CallInformationRequest received by SSF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 call_info_request(Config) ->
 	OCS = ?config(ocs, Config),
@@ -457,7 +474,9 @@ call_info_request(Config) ->
 	true = lists:all(F, L).
 
 mo_abandon() ->
-	[{userdata, [{doc, "EventReportBCSM:oAbandon received by SCF"}]}].
+	Description = "EventReportBCSM:oAbandon received by SCF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mo_abandon(Config) ->
 	OCS = ?config(ocs, Config),
@@ -497,7 +516,9 @@ mo_abandon(Config) ->
 	end.
 
 mt_abandon() ->
-	[{userdata, [{doc, "EventReportBCSM:tAbandon received by SCF"}]}].
+	Description = "EventReportBCSM:tAbandon received by SCF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mt_abandon(Config) ->
 	OCS = ?config(ocs, Config),
@@ -537,7 +558,9 @@ mt_abandon(Config) ->
 	end.
 
 mo_answer() ->
-	[{userdata, [{doc, "EventReportBCSM:oAnswer received by SCF"}]}].
+	Description = "EventReportBCSM:oAnswer received by SCF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mo_answer(Config) ->
 	OCS = ?config(ocs, Config),
@@ -570,7 +593,9 @@ mo_answer(Config) ->
 	o_active = get_state(TcUser).
 
 mt_answer() ->
-	[{userdata, [{doc, "EventReportBCSM:tAnswer received by SCF"}]}].
+	Description = "EventReportBCSM:tAnswer received by SCF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mt_answer(Config) ->
 	OCS = ?config(ocs, Config),
@@ -603,7 +628,9 @@ mt_answer(Config) ->
 	t_active = get_state(TcUser).
 
 mo_disconnect() ->
-	[{userdata, [{doc, "EventReportBCSM:oDisconnect received by SCF"}]}].
+	Description = "EventReportBCSM:oDisconnect received by SCF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mo_disconnect(Config) ->
 	OCS = ?config(ocs, Config),
@@ -646,7 +673,9 @@ mo_disconnect(Config) ->
 	end.
 
 mt_disconnect() ->
-	[{userdata, [{doc, "EventReportBCSM:tDisconnect received by SCF"}]}].
+	Description = "EventReportBCSM:tDisconnect received by SCF",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 mt_disconnect(Config) ->
 	OCS = ?config(ocs, Config),
@@ -689,7 +718,9 @@ mt_disconnect(Config) ->
 	end.
 
 unknown_imsi() ->
-	[{userdata, [{doc, "InitialDP received for unknown IMSI"}]}].
+	Description = "InitialDP received for unknown IMSI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 unknown_imsi(Config) ->
 	ServiceKey = ?config(service_key, Config),

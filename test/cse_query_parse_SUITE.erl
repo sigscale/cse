@@ -14,7 +14,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Test suite for the REST query filter scanner/parse
+%%% Test suite for the REST query filter scanner/parser
 %%% 	of the {@link //cse. cse} application.
 %%%
 -module(cse_query_parse_SUITE).
@@ -58,7 +58,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+	Description = "Test suite for REST query filter scanner/parser in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -105,7 +108,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 root_path() ->
-	[{userdata, [{doc, "Explicit root path selection"}]}].
+	Description = "Explicit root path selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 root_path(_Config) ->
 	Query = "$.name",
@@ -115,7 +120,9 @@ root_path(_Config) ->
 	{Root, Steps} = parse(Query).
 
 relative_path() ->
-	[{userdata, [{doc, "Implicit root path selection"}]}].
+	Description = "Implicit root path selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 relative_path(_Config) ->
 	Query = "name",
@@ -125,7 +132,9 @@ relative_path(_Config) ->
 	{Root, Steps} = parse(Query).
 
 select_child() ->
-	[{userdata, [{doc, "Child path selection"}]}].
+	Description = "Child path selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 select_child(_Config) ->
 	Query = "$.resourceSpecification",
@@ -135,7 +144,9 @@ select_child(_Config) ->
 	{Root, Steps} = parse(Query).
 
 select_children() ->
-	[{userdata, [{doc, "Children path selection"}]}].
+	Description = "Children path selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 select_children(_Config) ->
 	Query = "$.resourceSpecification[id,href]",
@@ -146,7 +157,9 @@ select_children(_Config) ->
 	{Root, Steps} = parse(Query).
 
 select_descendants() ->
-	[{userdata, [{doc, "Descendants path selection"}]}].
+	Description = "Descendants path selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 select_descendants(_Config) ->
 	Query = "$..name",
@@ -156,7 +169,9 @@ select_descendants(_Config) ->
 	{Root, Steps} = parse(Query).
 
 select_embedded() ->
-	[{userdata, [{doc, "Embedded child selection"}]}].
+	Description = "Embedded child selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 select_embedded(_Config) ->
 	Query = "$.resourceSpecification.id",
@@ -167,7 +182,9 @@ select_embedded(_Config) ->
 	{Root, Steps} = parse(Query).
 
 slice() ->
-	[{userdata, [{doc, "Slice array selection"}]}].
+	Description = "Slice array selection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 slice(_Config) ->
 	Query = "$.resourceCharacteristic[0:2]",
@@ -178,7 +195,9 @@ slice(_Config) ->
 	{Root, Steps} = parse(Query).
 
 slice_start() ->
-	[{userdata, [{doc, "Slice array selection from start"}]}].
+	Description = "Slice array selection from start",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 slice_start(_Config) ->
 	Query = "$.resourceCharacteristic[:2]",
@@ -189,7 +208,9 @@ slice_start(_Config) ->
 	{Root, Steps} = parse(Query).
 
 slice_end() ->
-	[{userdata, [{doc, "Slice array selection from end"}]}].
+	Description = "Slice array selection from end",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 slice_end(_Config) ->
 	Query = "$.resourceCharacteristic[-4:]",
@@ -200,7 +221,9 @@ slice_end(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_exact() ->
-	[{userdata, [{doc, "Filter selection with exact match"}]}].
+	Description = "Filter selection with exact match",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_exact(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value=='purple')]",
@@ -212,7 +235,9 @@ filter_exact(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_notexact() ->
-	[{userdata, [{doc, "Filter selection with exactly not"}]}].
+	Description = "Filter selection with exactly not",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_notexact(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value!='purple')]",
@@ -224,7 +249,9 @@ filter_notexact(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_lt() ->
-	[{userdata, [{doc, "Filter selection with less than"}]}].
+	Description = "Filter selection with less than",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_lt(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value<42)]",
@@ -236,7 +263,9 @@ filter_lt(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_lte() ->
-	[{userdata, [{doc, "Filter selection with less than or equal to"}]}].
+	Description = "Filter selection with less than or equal to",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_lte(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value=<42)]",
@@ -248,7 +277,9 @@ filter_lte(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_gt() ->
-	[{userdata, [{doc, "Filter selection with greater than"}]}].
+	Description = "Filter selection with greater than",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_gt(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value>42)]",
@@ -260,7 +291,9 @@ filter_gt(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_gte() ->
-	[{userdata, [{doc, "Filter selection with less than or equal to"}]}].
+	Description = "Filter selection with less than or equal to",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_gte(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value>=42)]",
@@ -272,7 +305,9 @@ filter_gte(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_regex() ->
-	[{userdata, [{doc, "Filter selection with regular expression"}]}].
+	Description = "Filter selection with regular expression",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_regex(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.value=~'/[0-9]*$/')]",
@@ -284,7 +319,9 @@ filter_regex(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_negate() ->
-	[{userdata, [{doc, "Filter selection with boolean not"}]}].
+	Description = "Filter selection with boolean not",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_negate(_Config) ->
 	Query = "$.resourceCharacteristic[?(!@.default)]",
@@ -296,7 +333,9 @@ filter_negate(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_band() ->
-	[{userdata, [{doc, "Filter with logical AND"}]}].
+	Description = "Filter with logical AND",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_band(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.name=='prefix' && @.value=='+1416')]",
@@ -310,7 +349,9 @@ filter_band(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_bor() ->
-	[{userdata, [{doc, "Filter with logical AND"}]}].
+	Description = "Filter with logical AND",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_bor(_Config) ->
 	Query = "$.resourceCharacteristic[?(@.id=='42' || @.name=='forty-two')]",
@@ -324,7 +365,9 @@ filter_bor(_Config) ->
 	{Root, Steps} = parse(Query).
 
 filter_embedded() ->
-	[{userdata, [{doc, "Filter selection with embedded element"}]}].
+	Description = "Filter selection with embedded element",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 filter_embedded(_Config) ->
 	Query = "resourceRelationship[?(@.resource.name=='foo')]",

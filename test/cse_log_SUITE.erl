@@ -14,7 +14,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Test suite for the public API of the {@link //cse. cse} application.
+%%% Test suite for the logging in the {@link //cse. cse} application.
 %%%
 -module(cse_log_SUITE).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
@@ -45,7 +45,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+	Description = "Test suite for logging in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -103,14 +106,18 @@ all() ->
 %%---------------------------------------------------------------------
 
 new() ->
-	[{userdata, [{doc, "Create a new log"}]}].
+	Description = "Create a new log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 new(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
 	ok = cse_log:open(LogName, []).
 
 close() ->
-	[{userdata, [{doc, "Close an open log"}]}].
+	Description = "Close an open log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 close(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -118,7 +125,9 @@ close(_Config) ->
 	ok = cse_log:close(LogName).
 
 log() ->
-	[{userdata, [{doc, "Write to an internal format log"}]}].
+	Description = "Write to an internal format log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 log(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -129,7 +138,9 @@ log(_Config) ->
 	{_, [Term]} = disk_log:chunk(LogName, start).
 
 blog() ->
-	[{userdata, [{doc, "Write to an external format log"}]}].
+	Description = "Write to an external format log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 blog(Config) ->
 	PrivDir = ?config(priv_dir, Config),
@@ -145,7 +156,9 @@ blog(Config) ->
 	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
 alog() ->
-	[{userdata, [{doc, "Write to an internal log asynchronously"}]}].
+	Description = "Write to an internal log asynchronously",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 alog(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -157,7 +170,9 @@ alog(_Config) ->
 	{_, [Term]} = disk_log:chunk(LogName, start).
 
 balog() ->
-	[{userdata, [{doc, "Write to an external log asynchronously"}]}].
+	Description = "Write to an external log asynchronously",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 balog(Config) ->
 	PrivDir = ?config(priv_dir, Config),
@@ -174,7 +189,9 @@ balog(Config) ->
 	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
 log_wrap() ->
-	[{userdata, [{doc, "Write to an internal format wrap log"}]}].
+	Description = "Write to an internal format wrap log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 log_wrap(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -192,7 +209,9 @@ log_wrap(_Config) ->
 	{_, [{?MODULE, _, _} | _]} = disk_log:chunk(LogName, Cont).
 
 blog_wrap() ->
-	[{userdata, [{doc, "Write to an external format wrap log"}]}].
+	Description = "Write to an external format wrap log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 blog_wrap(Config) ->
 	PrivDir = ?config(priv_dir, Config),
@@ -217,7 +236,9 @@ blog_wrap(Config) ->
 	{ok, <<BytesOut:Size/binary, _/binary>>} = file:read_file(Filename).
 
 log_codec() ->
-	[{userdata, [{doc, "Write through CODEC to an internal format log"}]}].
+	Description = "Write through CODEC to an internal format log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 log_codec(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -229,7 +250,9 @@ log_codec(_Config) ->
 	Binary = codec_int(Term).
 
 blog_codec() ->
-	[{userdata, [{doc, "Write through CODEC to an external format log"}]}].
+	Description = "Write through CODEC to an external format log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 blog_codec(Config) ->
 	PrivDir = ?config(priv_dir, Config),
@@ -245,7 +268,9 @@ blog_codec(Config) ->
 	Binary = codec_ext(JSON).
 
 log_job() ->
-	[{userdata, [{doc, "Write with CODEC job to an internal format log"}]}].
+	Description = "Write with CODEC job to an internal format log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 log_job(_Config) ->
 	LogName = list_to_atom(cse_test_lib:rand_name()),
@@ -258,7 +283,9 @@ log_job(_Config) ->
 	Binary = codec_int(Term).
 
 blog_job() ->
-	[{userdata, [{doc, "Write with CODEC job to an external format log"}]}].
+	Description = "Write with CODEC job to an external format log",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 blog_job(Config) ->
 	PrivDir = ?config(priv_dir, Config),

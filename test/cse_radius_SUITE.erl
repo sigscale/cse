@@ -15,7 +15,7 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  @doc Test suite for diameter protocoll n the {@link //cse. cse} application.
+%%%  @doc Test suite for RADIUS in the {@link //cse. cse} application.
 %%%
 -module(cse_radius_SUITE).
 -copyright('Copyright (c) 2016 - 2025 SigScale Global Inc.').
@@ -53,6 +53,7 @@
 %%
 suite() ->
 	Description = "Test suite for RADIUS in CSE",
+	ct:comment(Description),
 	[{userdata, [{doc, Description}]},
 	{require, radius},
 	{default_config, radius,

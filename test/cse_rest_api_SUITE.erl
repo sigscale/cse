@@ -77,7 +77,10 @@
 %% Require variables and set default values for the suite.
 %%
 suite() ->
-	[{timetrap, {minutes, 1}}].
+	Description = "Test suite for REST API in CSE",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]},
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -149,7 +152,9 @@ all() ->
 %%---------------------------------------------------------------------
 
 resource_spec_add() ->
-	[{userdata, [{doc, "POST to Resource Specification collection"}]}].
+	Description = "POST to Resource Specification collection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_add(Config) ->
 	SpecName = cse_test_lib:rand_name(8),
@@ -170,7 +175,9 @@ resource_spec_add(Config) ->
 	true = is_resource_spec(ResourceSpecMap).
 
 resource_spec_exists() ->
-	[{userdata, [{doc, "Existing table spec with same name is a conflict"}]}].
+	Description = "Existing table spec with same name is a conflict",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_exists(Config) ->
 	HostUrl = ?config(host, Config),
@@ -195,7 +202,9 @@ resource_spec_exists(Config) ->
 	{{"HTTP/1.1", 409, "Conflict"}, _Headers, _Body} = Result.
 
 resource_spec_retrieve_static() ->
-	[{userdata, [{doc, "Retrieve Static Resource Specifications"}]}].
+	Description = "Retrieve static Resource Specifications",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_retrieve_static(Config) ->
 	Host = ?config(host, Config),
@@ -215,7 +224,9 @@ resource_spec_retrieve_static(Config) ->
 	true = lists:all(fun is_resource_spec/1, [TableSpec, RowSpec]).
 
 resource_spec_retrieve_dynamic() ->
-	[{userdata, [{doc, "Retrieve  Resource Specification collection"}]}].
+	Description = "Retrieve Resource Specification collection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_retrieve_dynamic(Config) ->
 	SpecName = cse_test_lib:rand_name(8),
@@ -238,7 +249,9 @@ resource_spec_retrieve_dynamic(Config) ->
 	true = is_resource_spec(RowSpec).
 
 resource_spec_delete_static() ->
-	[{userdata, [{doc,"Delete Static Resource Specification"}]}].
+	Description = "Delete static Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_delete_static(Config) ->
 	Host = ?config(host, Config),
@@ -249,7 +262,9 @@ resource_spec_delete_static(Config) ->
 	{{"HTTP/1.1", 405, _BadRequest}, _Headers, _Body} = Result.
 
 resource_spec_delete_dynamic() ->
-	[{userdata, [{doc,"Delete Dynamic Resource Specification"}]}].
+	Description = "Delete dynamic Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_delete_dynamic(Config) ->
 	TableSpecName = cse_test_lib:rand_name(8),
@@ -264,8 +279,10 @@ resource_spec_delete_dynamic(Config) ->
 	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
 
 resource_spec_query_based() ->
-	[{userdata, [{doc,"Query Resource Specifications based on"
-			"resource specification relathioship type"}]}].
+	Description = "Query Resource Specifications based on"
+			"Resource Specification relatshioship type",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 resource_spec_query_based(Config) ->
 	TableSpecName = cse_test_lib:rand_name(8),
@@ -307,7 +324,9 @@ resource_spec_query_based(Config) ->
 	true = lists:all(F1, ResSpecs).
 
 add_static_table_resource() ->
-	[{userdata, [{doc,"Add prefix table resource with POST"}]}].
+	Description = "Add prefix table resource with POST",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_static_table_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -328,7 +347,9 @@ add_static_table_resource(Config) ->
 	true = is_resource(ResourceMap).
 
 add_dynamic_table_resource() ->
-	[{userdata, [{doc,"Add dynamic prefix table resource with POST"}]}].
+	Description = "Add dynamic prefix table resource with POST",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_dynamic_table_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -353,7 +374,9 @@ add_dynamic_table_resource(Config) ->
 	{ok, #resource{id = IdB}} = cse:find_resource(Id).
 
 add_static_row_resource() ->
-	[{userdata, [{doc,"Add prefix row resource in rest interface"}]}].
+	Description = "Add prefix row resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_static_row_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -378,7 +401,9 @@ add_static_row_resource(Config) ->
 	true = is_resource(ResourceMap).
 
 add_dynamic_row_resource() ->
-	[{userdata, [{doc,"Add dynamic prefix row resource"}]}].
+	Description = "Add dynamic prefix row resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_dynamic_row_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -415,7 +440,9 @@ add_dynamic_row_resource(Config) ->
 	Value2 = cse_gtt:lookup_first(TableName, Prefix2).
 
 get_resource() ->
-	[{userdata, [{doc, "Retrieve Prefix Resource"}]}].
+	Description = "Retrieve prefix Resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -437,7 +464,9 @@ get_resource(Config) ->
 	true = is_resource(Resource).
 
 query_resource() ->
-	[{userdata, [{doc,"Query Resource collection"}]}].
+	Description = "Query Resource collection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 query_resource(Config) ->
 	TableName1 = cse_test_lib:rand_name(8),
@@ -492,7 +521,9 @@ query_resource(Config) ->
 	true = lists:all(F1, Resources).
 
 delete_static_table_resource() ->
-	[{userdata, [{doc,"Delete static table Resource by its id"}]}].
+	Description = "Delete static table Resource by its id",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_static_table_resource(Config) ->
 	TableName = "samplePrefixTable",
@@ -514,7 +545,9 @@ delete_static_table_resource(Config) ->
 	{{"HTTP/1.1", 404, "Object Not Found"}, _Headers2, _Response} = Result2.
 
 delete_dynamic_table_resource() ->
-	[{userdata, [{doc,"Delete dynamic Resource by its id"}]}].
+	Description = "Delete dynamic Resource by its id",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_dynamic_table_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -546,7 +579,9 @@ delete_dynamic_table_resource(Config) ->
 	0 = mnesia:table_info('tempDynamicTable', size).
 
 delete_row_resource() ->
-	[{userdata, [{doc,"Delete row Resource by its id"}]}].
+	Description = "Delete row Resource by its id",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_row_resource(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -566,7 +601,9 @@ delete_row_resource(Config) ->
 	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
 delete_range_row() ->
-	[{userdata, [{doc,"Delete static range row resource"}]}].
+	Description = "Delete static range row resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_range_row(Config) ->
 	TableNameS = cse_test_lib:rand_name(8),
@@ -603,7 +640,9 @@ delete_range_row(Config) ->
 	true = lists:all(Fall, cse_gtt:range(Start, End)).
 
 delete_row_query() ->
-	[{userdata, [{doc,"Delete row by query on column value"}]}].
+	Description = "Delete row by query on column value",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 delete_row_query(Config) ->
 	TableName = cse_test_lib:rand_name(8),
@@ -644,7 +683,9 @@ delete_row_query(Config) ->
 	undefined = cse_gtt:lookup_first(TableName, Prefix).
 
 add_range_row_resource() ->
-	[{userdata, [{doc,"Add dynamic prefix row resource"}]}].
+	Description = "Add dynamic prefix row resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_range_row_resource(Config) ->
 	TableNameS = cse_test_lib:rand_name(8),
@@ -686,7 +727,9 @@ add_range_row_resource(Config) ->
 	true = lists:all(F2, Prefixes).
 
 add_index_row_resource() ->
-	[{userdata, [{doc,"Add static index row resource"}]}].
+	Description = "Add static index row resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 add_index_row_resource(Config) ->
 	TableNameS = cse_test_lib:rand_name(8),
@@ -719,7 +762,9 @@ add_index_row_resource(Config) ->
 	{atomic, [{TableNameA, Key2, Value2}]} = mnesia:transaction(F).
 
 query_table_row() ->
-	[{userdata, [{doc,"Query Resource Characteristics"}]}].
+	Description = "Query Resource Characteristics",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 query_table_row(Config) ->
 	Host = ?config(host, Config),
@@ -759,7 +804,9 @@ query_table_row(Config) ->
 	RowId1 = list_to_binary(RowId2).
 
 head_resource_specs() ->
-	[{userdata, [{doc, "HEAD request on static resource specification collection"}]}].
+	Description = "HEAD request on static Resource Specification collection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 head_resource_specs(Config) ->
 	Host = ?config(host, Config),
@@ -772,7 +819,9 @@ head_resource_specs(Config) ->
 	[_, N, N] = string:lexemes(Range, [$-, $/]).
 
 head_resource_spec() ->
-	[{userdata, [{doc, "HEAD request on static resource specification"}]}].
+	Description = "HEAD request on static Resource Specification",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 head_resource_spec(Config) ->
 	Host = ?config(host, Config),
@@ -784,7 +833,9 @@ head_resource_spec(Config) ->
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers).
 
 head_resources() ->
-	[{userdata, [{doc, "HEAD request on Resource collection"}]}].
+	Description = "HEAD request on Resource collection",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 head_resources(Config) ->
 	TableNameS = cse_test_lib:rand_name(8),
@@ -802,7 +853,9 @@ head_resources(Config) ->
 	[_, N, N] = string:lexemes(Range, [$-, $/]).
 
 head_resource() ->
-	[{userdata, [{doc, "HEAD request on static resource"}]}].
+	Description = "HEAD request on static resource",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 head_resource(Config) ->
 	Host = ?config(host, Config),
@@ -818,7 +871,9 @@ head_resource(Config) ->
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers).
 
 get_health() ->
-	[{userdata, [{doc,"Get health in rest interface"}]}].
+	Description = "Get health",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 get_health(Config) ->
 	Host = ?config(host, Config),
@@ -837,7 +892,9 @@ get_health(Config) ->
 	Uptime > 0.
 
 head_health() ->
-	[{userdata, [{doc,"Get headers (only) of health in rest interface"}]}].
+	Description = "Get headers (only) of health",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
 
 head_health(Config) ->
 	Host = ?config(host, Config),
