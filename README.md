@@ -8,6 +8,10 @@ Prebuilt packages available for
 and
 [Kubernetes](https://github.com/sigscale/cse/blob/master/README.kubernetes.md).
 
+See the
+[developers guide](https://storage.googleapis.com/cse.sigscale.org/debian-bookworm/lib/cse/doc/index.html)
+for detailed information.
+
 This application provides a Service Logic Execution Environment (SLEE)
 for Service Logic Processing Programs (SLP) implementing a network
 operator's custom services. Several protocol stacks are supported
