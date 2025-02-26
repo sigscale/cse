@@ -532,12 +532,8 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, routing, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, abandon, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
@@ -554,36 +550,24 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			{next_state, o_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}}
 				when map_get(busy, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
@@ -698,24 +682,16 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, abandon, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}} ->
 			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tBusy}}
 				when map_get(busy, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tBusy}} ->
@@ -742,12 +718,8 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			{next_state, t_active, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}} ->
@@ -1023,12 +995,8 @@ routing(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
@@ -1045,24 +1013,16 @@ routing(cast, {'TC', 'INVOKE', indication,
 			{next_state, o_alerting, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}}
 				when map_get(busy, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
@@ -1152,48 +1112,32 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, abandon, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAbandon}} ->
 			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oNoAnswer}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}}
 				when map_get(busy, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oCalledPartyBusy}} ->
@@ -1283,36 +1227,24 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, abandon, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}} ->
 			{next_state, abandon, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}}
 				when map_get(no_answer, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tNoAnswer}} ->
 			{next_state, exception, Data};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tBusy}}
 				when map_get(busy, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tBusy}} ->
@@ -1403,23 +1335,15 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect,
 				legID = {receivingSideID, ?leg1}}}
 				when map_get(disconnect1, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, disconnect, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect,
 				legID = {receivingSideID, ?leg2}}}
 				when map_get(disconnect2, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, disconnect, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect}} ->
@@ -1679,23 +1603,15 @@ t_active(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tDisconnect,
 				legID = {receivingSideID, ?leg1}}}
 				when map_get(disconnect1, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, disconnect, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tDisconnect,
 				legID = {receivingSideID, ?leg2}}}
 				when map_get(disconnect2, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, disconnect, Data#{iid => IID + 1}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tDisconnect}} ->
@@ -2141,23 +2057,15 @@ exception(cast, {'TC', 'INVOKE', indication,
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect,
 				legID = {receivingSideID, ?leg1}}}
 				when map_get(disconnect1, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{keep_state, Data#{iid => IID + 1}, 0};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oDisconnect,
 				legID = {receivingSideID, ?leg2}}}
 				when map_get(disconnect2, EDP) == interrupted ->
-			Cause = #cause{location = local_public, value = 31},
-			{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-gsmSSF-PDUs_ReleaseCallArg',
-					{allCallSegments, cse_codec:cause(Cause)}),
-			Invoke = #'TC-INVOKE'{operation = ?'opcode-releaseCall',
-					invokeID = IID + 1, dialogueID = DialogueID, class = 4,
-					parameters = ReleaseCallArg},
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{keep_state, Data#{iid => IID + 1}, 0};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = _}} ->
