@@ -1490,7 +1490,7 @@ o_active0(cast, {nrf_update,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, disconnect, NewData#{iid => NewIID}};
 		{{error, Partial, Remaining}, _} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, o_active0}]),
@@ -1758,13 +1758,13 @@ t_active0(cast, {nrf_update,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, disconnect, NewData#{iid => NewIID}};
 		{{error, Partial, Remaining}, _} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, t_active0}]),
 			{next_state, exception, NewData}
 	end;
-t_active0(cast, {nrf_start,
+t_active0(cast, {nrf_update,
 		{_RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 				nrf_http := LogHTTP} = Data) ->
