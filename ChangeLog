@@ -1,3 +1,12 @@
+2025-03-03 Vance Shipley <vances@sigscale.org>
+
+	* process all components before nrf request
+	* cap: correct handling nrf_update 404 response
+	* continue after interupted abandon/disconnect/busy/route_fail/no_answer edp
+	* link to published edoc in readme
+	* modernize test suite documentation
+	* correct cause code location code points
+
 2025-02-18 Vance Shipley <vances@sigscale.org>
 
 	* cap slp: refactor abandon/disconnect/exception states for release handling
