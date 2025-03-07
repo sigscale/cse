@@ -2781,7 +2781,12 @@ nrf_update7(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
-	RequestURL = URI ++ Location ++ "/update",
+	RequestURL = case hd(Location) of
+		$/ ->
+			URI ++ Location ++ "/update";
+		_ ->
+			Location ++ "/update"
+	end,
 	Request = {RequestURL, Headers1, ContentType, Body},
 	LogHTTP = ecs_http(ContentType, Body),
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
@@ -2909,7 +2914,12 @@ nrf_release9(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 	Headers1 = [{"accept", "application/json"} | Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
-	RequestURL = URI ++ Location ++ "/release",
+	RequestURL = case hd(Location) of
+		$/ ->
+			URI ++ Location ++ "/release";
+		_ ->
+			Location ++ "/release"
+	end,
 	LogHTTP = ecs_http(ContentType, Body),
 	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
