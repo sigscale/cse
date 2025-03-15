@@ -763,19 +763,9 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			case LastComponent of
-				false ->
-					{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
-				true ->
-					{next_state, o_active, Data#{iid => IID + 1, tr_state => active}, 0}
-			end;
+			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #{eventTypeBCSM := oAnswer}} ->
-			case LastComponent of
-				false ->
-					{next_state, o_active, Data};
-				true ->
-					{next_state, o_active, Data, 0}
-			end;
+			{next_state, o_active, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -910,19 +900,9 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
-			case LastComponent of
-				false ->
-					{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
-				true ->
-					{next_state, t_active, Data#{iid => IID + 1, tr_state => active}, 0}
-			end;
+			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #{eventTypeBCSM := tAnswer}} ->
-			case LastComponent of
-				false ->
-					{next_state, t_active, Data};
-				true ->
-					{next_state, t_active, Data, 0}
-			end;
+			{next_state, t_active, Data};
 		{error, Reason} ->
 			{stop, Reason}
 	end;
@@ -1030,17 +1010,17 @@ o_active(cast, {'TC', 'INVOKE', indication,
 	end;
 o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
-				dialogueID = DialogueID, parameters = Argument,
-				lastComponent = LastComponent}} = _EventContent,
-		#{did := DialogueID, consumed := _Consumed} = _Data) ->
+				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#{did := DialogueID, consumed := _Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
-		{ok, __ChargingResultArg} ->
+		{ok, _ChargingResultArg} ->
 			% @todo Parse network operator specific CallResult
-			case LastComponent of
-				false ->
-					keep_state_and_data;
-				true ->
-					{keep_state_and_data, 0}
+			case nrf_update(Data) of
+				{ok, NewData} ->
+					{keep_state, NewData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, exception, NewData, 0}
 			end;
 		{error, Reason} ->
 			{stop, Reason}
@@ -1055,18 +1035,6 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_active(timeout,  _EventContent,
-		#{nrf_location := _Location} = Data)
-				when not is_map_key(nrf_reqid, Data) ->
-	case nrf_update(Data) of
-		{ok, NewData} ->
-			{keep_state, NewData};
-		{error, _Reason} ->
-			NewData = maps:remove(nrf_location, Data),
-			{next_state, exception, NewData, 0}
-	end;
-o_active(timeout,  _EventContent, _Data) ->
-	keep_state_and_data;
 o_active(cast, {nrf_update,
 		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
@@ -1223,17 +1191,17 @@ t_active(cast, {'TC', 'INVOKE', indication,
 	end;
 t_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
-				dialogueID = DialogueID, parameters = Argument,
-				lastComponent = LastComponent}} = _EventContent,
-		#{did := DialogueID, consumed := _Consumed} = _Data) ->
+				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
+		#{did := DialogueID, consumed := _Consumed} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
-		{ok, __ChargingResultArg} ->
+		{ok, _ChargingResultArg} ->
 			% @todo Parse network operator specific CallResult
-			case LastComponent of
-				false ->
-					keep_state_and_data;
-				true ->
-					{keep_state_and_data, 0}
+			case nrf_update(Data) of
+				{ok, NewData} ->
+					{keep_state, NewData};
+				{error, _Reason} ->
+					NewData = maps:remove(nrf_location, Data),
+					{next_state, exception, NewData, 0}
 			end;
 		{error, Reason} ->
 			{stop, Reason}
@@ -1248,18 +1216,6 @@ t_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-t_active(timeout,  _EventContent,
-		#{nrf_location := _Location} = Data)
-				when not is_map_key(nrf_reqid, Data) ->
-	case nrf_update(Data) of
-		{ok, NewData} ->
-			{keep_state, NewData};
-		{error, _Reason} ->
-			NewData = maps:remove(nrf_location, Data),
-			{next_state, exception, NewData, 0}
-	end;
-t_active(timeout,  _EventContent, _Data) ->
-	keep_state_and_data;
 t_active(cast, {nrf_update,
 		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
