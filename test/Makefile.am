@@ -67,7 +67,7 @@ endif
 			-pa $(ERLANG_LIB_DIR_sigscale_mibs)/ebin \
 			-pa $(ERLANG_LIB_DIR_zj)/ebin \
 			-logdir log -config ct.cfg -dir . \
-			-erl_args -noshell -sname $(LOGNAME)-ct
+			-erl_args -noshell -sname ct$$$$
 
 clean-local:
 	-rm -r *.beam log/*
