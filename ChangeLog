@@ -1,3 +1,8 @@
+2025-03-15 Vance Shipley <vances@sigscale.org>
+
+	* nrf_update only on apply charging report
+	* handle absolute or relative url for location
+
 2025-03-03 Vance Shipley <vances@sigscale.org>
 
 	* process all components before nrf request
