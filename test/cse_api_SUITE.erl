@@ -169,7 +169,7 @@ all() ->
 %%---------------------------------------------------------------------
 
 start_cse() ->
-	Description = "Start the CAMEL Service Enviromnment (CSE)",
+	Description = "Start the CAMEL Service Environment (CSE)",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -177,7 +177,7 @@ start_cse(_Config) ->
 	ok = cse:start().
 
 stop_cse() ->
-	Description = "Stop the CAMEL Service Enviromnment (CSE)",
+	Description = "Stop the CAMEL Service Environment (CSE)",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
