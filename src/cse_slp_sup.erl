@@ -56,7 +56,7 @@ fsm() ->
 	{ok, Tsl} = application:get_env(tsl),
 	TCOs = maps:values(Tsl),
 	AllACs = [proplists:get_value(ac, Args, []) || {_, Args, _} <- TCOs],
-	Modules = lists:uniq(lists:flatten([maps:values(ACs) || ACs <- AllACs])),
+	Modules = lists:usort(lists:flatten([maps:values(ACs) || ACs <- AllACs])),
 	StartFunc = {gen_statem, start_link, []},
 	#{id => slp_fsm, start => StartFunc,
 			restart => temporary, modules => Modules}.
