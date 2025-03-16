@@ -10,7 +10,9 @@ and
 
 See the
 [developers guide](https://storage.googleapis.com/cse.sigscale.org/debian-bookworm/lib/cse/doc/index.html)
-for detailed information.
+for detailed information and the most recent
+[test report](https://storage.googleapis.com/cse.sigscale.org/debian-bookworm/test/index.html)
+for functional verification.
 
 This application provides a Service Logic Execution Environment (SLEE)
 for Service Logic Processing Programs (SLP) implementing a network
