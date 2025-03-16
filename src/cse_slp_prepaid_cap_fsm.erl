@@ -519,14 +519,15 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-		dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = analyzedInformation}}
 				when map_get(analyzed_info, EDP) == interrupted ->
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, routing, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = analyzedInformation}} ->
@@ -554,7 +555,8 @@ analyse_information(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
@@ -726,7 +728,7 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-				dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
@@ -769,7 +771,8 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, t_alerting, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = callAccepted}} ->
@@ -779,7 +782,8 @@ terminating_call_handling(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->
@@ -837,7 +841,7 @@ terminating_call_handling(cast, {nrf_start,
 		#{nrf_reqid := RequestId, msisdn := MSISDN, called := MSISDN,
 				nrf_profile := Profile, nrf_uri := URI, nrf_http := LogHTTP,
 				did := DialogueID, iid := IID, dha := DHA, cco := CCO,
-				scf := SCF, ac := AC, edp := EDP} = Data) ->
+				ac := AC, edp := EDP, scf := SCF} = Data) ->
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
 	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
 		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
@@ -1076,7 +1080,7 @@ routing(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-				dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
@@ -1101,7 +1105,8 @@ routing(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, o_alerting, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oTermSeized}} ->
@@ -1147,7 +1152,8 @@ routing(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
@@ -1230,7 +1236,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-		dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
@@ -1309,7 +1315,8 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = oAnswer}} ->
@@ -1392,7 +1399,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-				dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-gsmSCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
@@ -1453,7 +1460,8 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #'GenericSSF-gsmSCF-PDUs_EventReportBCSMArg'{eventTypeBCSM = tAnswer}} ->

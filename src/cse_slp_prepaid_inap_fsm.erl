@@ -682,7 +682,7 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-				dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #{eventTypeBCSM := routeSelectFailure}}
 				when map_get(route_fail, EDP) == interrupted ->
@@ -761,7 +761,8 @@ o_alerting(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, o_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #{eventTypeBCSM := oAnswer}} ->
@@ -837,7 +838,7 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
 		#{did := DialogueID, edp := EDP, iid := IID,
-				dha := DHA, cco := CCO} = Data) ->
+				dha := DHA, cco := CCO, scf := SCF} = Data) ->
 	case ?Pkgs:decode('GenericSSF-SCF-PDUs_EventReportBCSMArg', Argument) of
 		{ok, #{eventTypeBCSM := tAbandon}}
 				when map_get(abandon, EDP) == interrupted ->
@@ -898,7 +899,8 @@ t_alerting(cast, {'TC', 'INVOKE', indication,
 			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
 					invokeID = IID + 1, dialogueID = DialogueID, class = 4},
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-			Continue = #'TC-CONTINUE'{dialogueID = DialogueID, qos = {true, true}},
+			Continue = #'TC-CONTINUE'{dialogueID = DialogueID,
+					qos = {true, true}, origAddress = SCF},
 			gen_statem:cast(DHA, {'TC', 'CONTINUE', request, Continue}),
 			{next_state, t_active, Data#{iid => IID + 1, tr_state => active}};
 		{ok, #{eventTypeBCSM := tAnswer}} ->
