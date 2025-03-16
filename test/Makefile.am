@@ -21,8 +21,9 @@ testmods = cse_api_SUITE \
 		mod_ct_nrf \
 		cse_snmpm_cb
 
-DIA_ARGS =
-CT_ARGS = -spec test.spec
+DIA_ARGS := ${DIALYZER_ARGS}
+CT_ARGS := ${CT_RUN_ARGS}
+CT_ARGS += -spec test.spec
 
 if SIGTRAN
 testmods += cse_inap_SUITE \
