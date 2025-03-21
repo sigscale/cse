@@ -973,6 +973,39 @@ o_active(cast, {'TC', 'CONTINUE', indication,
 		#{did := DialogueID} = _Data) ->
 	keep_state_and_data;
 o_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+				dialogueID = DialogueID, parameters = Argument,
+				lastComponent = LastComponent}} = _EventContent,
+		#{did := DialogueID, consumed := _Consumed} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, _ChargingResultArg} ->
+			% @todo Parse network operator specific CallResult
+			case LastComponent of
+				false ->
+					{keep_state, Data};
+				true ->
+					{keep_state, Data, 0}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+				dialogueID = DialogueID, parameters = Argument,
+				lastComponent = LastComponent}} = _EventContent,
+		#{did := DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+			case LastComponent of
+				false ->
+					{keep_state, call_info(CallInfo, Data)};
+				true ->
+					{keep_state, call_info(CallInfo, Data), 0}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+o_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
@@ -1010,33 +1043,18 @@ o_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-o_active(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
-				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#{did := DialogueID, consumed := _Consumed} = Data) ->
-	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
-		{ok, _ChargingResultArg} ->
-			% @todo Parse network operator specific CallResult
-			case nrf_update(Data) of
-				{ok, NewData} ->
-					{keep_state, NewData};
-				{error, _Reason} ->
-					NewData = maps:remove(nrf_location, Data),
-					{next_state, exception, NewData, 0}
-			end;
-		{error, Reason} ->
-			{stop, Reason}
+o_active(timeout,  _EventContent,
+		#{nrf_location := _Location} = Data)
+				when not is_map_key(nrf_reqid, Data) ->
+	case nrf_update(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, exception, NewData, 0}
 	end;
-o_active(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
-				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#{did := DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #{requestedInformationList := CallInfo}} ->
-			{keep_state, call_info(CallInfo, Data)};
-		{error, Reason} ->
-			{stop, Reason}
-	end;
+o_active(timeout,  _EventContent, _Data) ->
+	keep_state_and_data;
 o_active(cast, {nrf_update,
 		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
@@ -1154,6 +1172,39 @@ t_active(cast, {'TC', 'CONTINUE', indication,
 		#{did := DialogueID} = _Data) ->
 	keep_state_and_data;
 t_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
+				dialogueID = DialogueID, parameters = Argument,
+				lastComponent = LastComponent}} = _EventContent,
+		#{did := DialogueID, consumed := _Consumed} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
+		{ok, _ChargingResultArg} ->
+			% @todo Parse network operator specific CallResult
+			case LastComponent of
+				false ->
+					{keep_state, Data};
+				true ->
+					{keep_state, Data, 0}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+t_active(cast, {'TC', 'INVOKE', indication,
+		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
+				dialogueID = DialogueID, parameters = Argument,
+				lastComponent = LastComponent}} = _EventContent,
+		#{did := DialogueID} = Data) ->
+	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
+		{ok, #{requestedInformationList := CallInfo}} ->
+			case LastComponent of
+				false ->
+					{keep_state, call_info(CallInfo, Data)};
+				true ->
+					{keep_state, call_info(CallInfo, Data), 0}
+			end;
+		{error, Reason} ->
+			{stop, Reason}
+	end;
+t_active(cast, {'TC', 'INVOKE', indication,
 		#'TC-INVOKE'{operation = ?'opcode-eventReportBCSM',
 				dialogueID = DialogueID, parameters = Argument,
 				lastComponent = LastComponent}} = _EventContent,
@@ -1191,33 +1242,18 @@ t_active(cast, {'TC', 'INVOKE', indication,
 		{error, Reason} ->
 			{stop, Reason}
 	end;
-t_active(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-applyChargingReport',
-				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#{did := DialogueID, consumed := _Consumed} = Data) ->
-	case ?Pkgs:decode('GenericSSF-SCF-PDUs_ApplyChargingReportArg', Argument) of
-		{ok, _ChargingResultArg} ->
-			% @todo Parse network operator specific CallResult
-			case nrf_update(Data) of
-				{ok, NewData} ->
-					{keep_state, NewData};
-				{error, _Reason} ->
-					NewData = maps:remove(nrf_location, Data),
-					{next_state, exception, NewData, 0}
-			end;
-		{error, Reason} ->
-			{stop, Reason}
+t_active(timeout,  _EventContent,
+		#{nrf_location := _Location} = Data)
+				when not is_map_key(nrf_reqid, Data) ->
+	case nrf_update(Data) of
+		{ok, NewData} ->
+			{keep_state, NewData};
+		{error, _Reason} ->
+			NewData = maps:remove(nrf_location, Data),
+			{next_state, exception, NewData, 0}
 	end;
-t_active(cast, {'TC', 'INVOKE', indication,
-		#'TC-INVOKE'{operation = ?'opcode-callInformationReport',
-				dialogueID = DialogueID, parameters = Argument}} = _EventContent,
-		#{did := DialogueID} = Data) ->
-	case ?Pkgs:decode('GenericSSF-SCF-PDUs_CallInformationReportArg', Argument) of
-		{ok, #{requestedInformationList := CallInfo}} ->
-			{keep_state, call_info(CallInfo, Data)};
-		{error, Reason} ->
-			{stop, Reason}
-	end;
+t_active(timeout,  _EventContent, _Data) ->
+	keep_state_and_data;
 t_active(cast, {nrf_update,
 		{RequestId, {{Version, 200, _}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_uri := URI, nrf_profile := Profile,
