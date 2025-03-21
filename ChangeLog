@@ -1,3 +1,12 @@
+2025-03-21 Vance Shipley <vances@sigscale.org>
+
+	* correct handling invoke components in active states
+	* readme link to common test report
+	* use usort/1, instead of uniq/1, for otp < 25 support
+	* always include originating address in tc-continue
+	* make check: environment variables for extra args
+	* use random number, instead of username, in nodename
+
 2025-03-15 Vance Shipley <vances@sigscale.org>
 
 	* nrf_update only on apply charging report
