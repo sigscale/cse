@@ -410,7 +410,7 @@ collect_information(cast, {nrf_start,
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
-					{state, collect_information}]),
+					{state, ?FUNCTION_NAME}]),
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData, 0}
 	end;
@@ -436,7 +436,7 @@ collect_information(cast, {nrf_start,
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
-					{state, collect_information}]),
+					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
 collect_information(cast, {nrf_start,
@@ -663,7 +663,7 @@ analyse_information(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, analyse_information}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -943,7 +943,7 @@ terminating_call_handling(cast, {nrf_start,
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
-					{state, terminating_call_handling}]),
+					{state, ?FUNCTION_NAME}]),
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData, 0}
 	end;
@@ -969,7 +969,7 @@ terminating_call_handling(cast, {nrf_start,
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
-					{state, terminating_call_handling}]),
+					{state, ?FUNCTION_NAME}]),
 			{next_state, excepion, NewData, 0}
 	end;
 terminating_call_handling(cast, {nrf_start,
@@ -1049,7 +1049,7 @@ terminating_call_handling(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, terminating_call_handling}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -1197,7 +1197,7 @@ routing(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, routing}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -1369,7 +1369,7 @@ o_alerting(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, o_alerting}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -1514,7 +1514,7 @@ t_alerting(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, t_alerting}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -1715,7 +1715,7 @@ o_active(cast, {nrf_update,
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
-					{state, o_active}]),
+					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
 o_active(cast, {nrf_update,
@@ -1797,7 +1797,7 @@ o_active(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, o_active}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -1998,7 +1998,7 @@ t_active(cast, {nrf_update,
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
-					{state, t_active}]),
+					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
 t_active(cast, {nrf_update,
@@ -2080,7 +2080,7 @@ t_active(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, t_active}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			{next_state, exception, Data};
@@ -2199,7 +2199,7 @@ abandon(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, abandon}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			keep_state_and_data;
@@ -2322,7 +2322,7 @@ disconnect(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, disconnect}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			keep_state_and_data;
@@ -2485,7 +2485,7 @@ exception(cast, {'TC', 'U-ERROR', indication,
 			{error, cse_codec:error_code(Error)},
 			{parameters, Parameters}, {dialogueID, DialogueID},
 			{invokeID, InvokeID}, {slpi, self()},
-			{state, exception}, {ssf, sccp_codec:party_address(SSF)}]),
+			{state, ?FUNCTION_NAME}, {ssf, sccp_codec:party_address(SSF)}]),
 	case LastComponent of
 		false ->
 			keep_state_and_data;
