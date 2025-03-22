@@ -1024,13 +1024,6 @@ terminating_call_handling(cast, {nrf_start, {RequestId, {error, Reason}}},
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, exception, NewData, 0};
-terminating_call_handling(cast, {nrf_start, {RequestId, {error, Reason}}},
-		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI} = Data) ->
-	NewData = remove_nrf(Data),
-	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
-			{profile, Profile}, {uri, URI}, {slpi, self()}]),
-	{next_state, exception, NewData, 0};
 terminating_call_handling(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -1770,15 +1763,6 @@ o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, exception, NewData, 0};
-o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
-		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location} = Data) ->
-	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
-			{profile, Profile}, {uri, URI}, {location, Location},
-			{slpi, self()}]),
-	Data1 = remove_nrf(Data),
-	NewData = maps:remove(nrf_location, Data1),
-	{next_state, exception, NewData, 0};
 o_active(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
 		#{did := DialogueID}) ->
@@ -2052,15 +2036,6 @@ t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 			invokeID = NewIID, dialogueID = DialogueID,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
-	{next_state, exception, NewData, 0};
-t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
-		#{nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location} = Data) ->
-	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
-			{profile, Profile}, {uri, URI}, {location, Location},
-			{slpi, self()}]),
-	Data1 = remove_nrf(Data),
-	NewData = maps:remove(nrf_location, Data1),
 	{next_state, exception, NewData, 0};
 t_active(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
