@@ -1,3 +1,10 @@
+2025-03-22 Vance Shipley <vances@sigscale.org>
+
+	* handle nrf exception responses in inap slp
+	* remove redundant clauses in cap slp
+	* use macro as state name for portability and accuracy
+	* handle other http status in t_active
+
 2025-03-21 Vance Shipley <vances@sigscale.org>
 
 	* correct handling invoke components in active states
