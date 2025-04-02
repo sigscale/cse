@@ -25,7 +25,8 @@
 %% export the cse_codec  public API
 -export([called_party/1, calling_party/1, called_party_bcd/1,
 		isdn_address/1, tbcd/1, generic_number/1, generic_digits/1,
-		date_time/1, cause/1, ims_uri/1, rat_type/1]).
+		date_time/1, cause/1, ims_uri/1, rat_type/1,
+		redirect_info/1]).
 
 -ifdef(CAP).
 -export([error_code/1]).
@@ -39,12 +40,13 @@
 -type isdn_address() :: #isdn_address{}.
 -type generic_number() :: #generic_number{}.
 -type generic_digits() :: #generic_digits{}.
+-type redirect_info() :: #redirect_info{}.
 -type cause() :: #cause{}.
 %% Use of ISUP cause values is described in ITU-T Q.850.
 -type ims_uri() :: #ims_uri{}.
 -export_types([called_party/0, called_party_bcd/0, calling_party/0,
 		isdn_address/0, generic_number/0, generic_digits/0, cause/0,
-		ims_uri/0]).
+		ims_uri/0, redirect_info/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_codec public API
@@ -472,6 +474,24 @@ rat_type(<<105>>) ->
 	"3GPP2-UMB";
 rat_type(Other) when is_binary(Other) ->
 	integer_to_list(binary_to_integer(Other)).
+
+-spec redirect_info(RedirectionInformation) -> RedirectionInformation
+	when
+		RedirectionInformation :: binary() | redirect_info().
+%% @doc CODEC for ISUP Redirection information.
+redirect_info(<<Orig:4, _:1, Ind:3>> = _RedirectionInformation) ->
+	#redirect_info{indicator = Ind,
+			orig_reason = Orig,
+			reason = 0,
+			counter = 0};
+redirect_info(<<Orig:4, _:1, Ind:3, Reason:4, _:1, Count:3>>) ->
+	#redirect_info{indicator = Ind,
+			orig_reason = Orig,
+			reason = Reason,
+			counter = Count};
+redirect_info(#redirect_info{indicator = Ind,
+		orig_reason = Orig, reason = Reason, counter = Count}) ->
+	<<Orig:4, 0:1, Ind:3, Reason:4, 0:1, Count:3>>.
 
 %%----------------------------------------------------------------------
 %%  internal functions

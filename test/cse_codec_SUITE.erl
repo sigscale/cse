@@ -30,6 +30,7 @@
 		calling_party/0, calling_party/1,
 		called_party_bcd/0, called_party_bcd/1,
 		tbcd/0, tbcd/1, isdn_address/0, isdn_address/1,
+		redirect_info/0, redirect_info/1,
 		generic_number/0, generic_number/1,
 		generic_digits/0, generic_digits/1,
 		date_time/0, date_time/1,
@@ -88,8 +89,8 @@ sequences() ->
 %%
 all() ->
 	[called_party, called_party_bcd, calling_party, isdn_address,
-			generic_number, generic_digits, tbcd, date_time, cause,
-			ims_sip, ims_tel].
+			redirect_info, generic_number, generic_digits, tbcd,
+			date_time, cause, ims_sip, ims_tel].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -179,6 +180,28 @@ isdn_address(_Config) ->
 	<<1:1, NAI:3, NPI:4, Rest/binary>> = B,
 	Address = cse_codec:tbcd(Rest),
 	IA = cse_codec:isdn_address(B).
+
+redirect_info() ->
+	Description = "Encode/decode ISUP Redirection information",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+redirect_info(_Config) ->
+	RedirectingIndicator = rand:uniform(7) -1,
+	OriginalRedirectionReason = rand:uniform(4) -1,
+	RedirectionCounter = rand:uniform(5),
+	RedirectingReason = rand:uniform(7) - 1,
+	RedirectionInformation = #redirect_info{
+			indicator = RedirectingIndicator,
+			orig_reason = OriginalRedirectionReason,
+			reason = RedirectingReason,
+			counter = RedirectionCounter},
+	B = cse_codec:redirect_info(RedirectionInformation),
+	<<OriginalRedirectionReason:4, _:1,
+			RedirectingIndicator:3,
+			RedirectingReason:4, _:1,
+			RedirectionCounter:3>> = B,
+	RedirectionInformation = cse_codec:redirect_info(B).
 
 generic_number() ->
 	Description = "Encode/decode ISUP Generic Number IE",

@@ -46,6 +46,13 @@
 		npi :: 0..9,
 		address = [] :: [$0..$9]}).
 
+%% ITU-T Q.763 ISUP 3.45
+-record(redirect_info,
+		{indicator :: 0..7,
+		orig_reason :: 0..15,
+		reason :: 0..15,
+		counter :: 0..7}).
+
 %% ITU-T Q.763 ISUP 3.12
 -record(cause,
 		{coding = itu :: itu | iso | national | other,
