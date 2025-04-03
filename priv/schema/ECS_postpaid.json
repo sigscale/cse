@@ -119,7 +119,7 @@
 				"name": "Postpaid Voice",
 				"type": "slp",
 				"node": {
-					"name": "cset@build-focal"
+					"name": "cse@build-focal"
 				}
 			},
 			"user": {
