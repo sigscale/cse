@@ -46,7 +46,8 @@
 					"type": "string",
 					"enum": [
 						"originating",
-						"terminating"
+						"terminating",
+						"forwarding"
 					]
 				},
 				"calling": {
@@ -106,7 +107,7 @@
 					"description": "The value of a DIAMETER 'Session-Id' AVP.",
 					"type": "string",
 					"examples": [
-						"938866875.1399848961.172716;1736676773;5;cse@build-focal"
+						"938866875.1399848961.172716;1736676773;5;cse@host"
 					]
 				},
 				"ocs": {
@@ -153,7 +154,7 @@
 	],
 	"examples": [
 		{
-			"@timestamp": "2023-01-31T13:27:01.944Z",
+			"@timestamp": "2025-04-03T13:27:01.944Z",
 			"labels": {
 				"application": "sigscale-cse"
 			},
@@ -165,7 +166,7 @@
 				"name": "Prepaid Voice",
 				"type": "slp",
 				"node": {
-					"name": "cset@build-focal"
+					"name": "cse@host"
 				}
 			},
 			"network": {
@@ -177,8 +178,8 @@
 				"id": "imsi-0010010335668343"
 			},
 			"event": {
-				"start": "2023-01-31T13:27:01.944Z",
-				"end": "2023-01-31T13:27:02.031Z",
+				"start": "2025-04-03T13:27:01.944Z",
+				"end": "2025-04-03T13:27:02.031Z",
 				"duration": "87000000",
 				"kind": "event",
 				"category": [
@@ -196,10 +197,114 @@
 			"prepaid": {
 				"state": "analyse_information",
 				"direction": "originating",
-				"calling": "+21584107516",
 				"called": "+14165551234",
 				"context": "32260@3gpp.org",
-				"session": "938866875.1399848961.172716;1736676773;5;cse@build-focal",
+				"session": "938866875.1399848961.172716;1736676773;1;cse@host",
+				"ocs": {
+					"result": "200"
+				}
+			}
+		},
+		{
+			"@timestamp": "2025-04-03T14:29:51.011Z",
+			"labels": {
+				"application": "sigscale-cse"
+			},
+			"tags": [],
+			"ecs": {
+				"version": "8.5"
+			},
+			"service": {
+				"name": "Prepaid Voice",
+				"type": "slp",
+				"node": {
+					"name": "cse@host"
+				}
+			},
+			"network": {
+				"application": "nrf",
+				"protocol": "http"
+			},
+			"user": {
+				"name": "msisdn-21584107516",
+				"id": "imsi-0010010335668343"
+			},
+			"event": {
+				"start": "2025-04-03T14:29:51.011Z",
+				"end": "2025-04-03T14:32:14.533Z",
+				"duration": "143522000000",
+				"kind": "event",
+				"category": [
+					"session"
+				],
+				"type": [
+					"protocol",
+					"end"
+				],
+				"outcome": "success"
+			},
+			"url": {
+				"path":"/ratingdata/37740"
+			},
+			"prepaid": {
+				"state": "analyse_information",
+				"direction": "terminating",
+				"calling": "+14165551234",
+				"context": "32260@3gpp.org",
+				"session": "938866875.1399848961.172716;1736676773;2;cse@host",
+				"ocs": {
+					"result": "200"
+				}
+			}
+		},
+		{
+			"@timestamp": "2025-04-03T14:42:22.728Z",
+			"labels": {
+				"application": "sigscale-cse"
+			},
+			"tags": [],
+			"ecs": {
+				"version": "8.5"
+			},
+			"service": {
+				"name": "Prepaid Voice",
+				"type": "slp",
+				"node": {
+					"name": "cse@host"
+				}
+			},
+			"network": {
+				"application": "nrf",
+				"protocol": "http"
+			},
+			"user": {
+				"name": "msisdn-21584107516",
+				"id": "imsi-0010010335668343"
+			},
+			"event": {
+				"start": "2025-04-03T14:42:22.728Z",
+				"end": "2025-04-03T14:57:12.114Z",
+				"duration": "889386000000",
+				"kind": "event",
+				"category": [
+					"session"
+				],
+				"type": [
+					"protocol",
+					"end"
+				],
+				"outcome": "success"
+			},
+			"url": {
+				"path":"/ratingdata/37740"
+			},
+			"prepaid": {
+				"state": "analyse_information",
+				"direction": "forwarding",
+				"calling": "+14165551234",
+				"called": "+21584107765",
+				"context": "32260@3gpp.org",
+				"session": "938866875.1399848961.172716;1736676773;3;cse@host",
 				"ocs": {
 					"result": "200"
 				}
