@@ -115,6 +115,7 @@
 		msc => [$0..$9],
 		vlr => [$0..$9],
 		isup => [$0..$9],
+		location => map(),
 		nrf_profile => atom(),
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
@@ -307,19 +308,20 @@ collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 					Data#{msisdn => A, calling => A, called => B}
 			end
 	end,
-	{Vlr1, Msc1, Isup1} = case LocationInformation of
-		#'LocationInformation'{'vlr-number' = LIvlr,
-				'msc-Number' = LImsc, locationNumber = LIisup,
-				ageOfLocationInformation = Age} when Age < 15 ->
-			{LIvlr, LImsc, LIisup};
-		_ ->
-			{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
+	Data2 = case MscAddress of
+		asn1_NOVALUE ->
+			Data1;
+		MscAddress ->
+			Data1#{msc => isdn_address(MscAddress)}
 	end,
-	MSC = isdn_address(Msc1, MscAddress),
-	VLR = isdn_address(Vlr1),
-	ISUP = calling_number(Isup1, LocationNumber, Data1),
-	NewData = Data1#{imsi => cse_codec:tbcd(IMSI),
-			isup => ISUP, vlr => VLR, msc => MSC,
+	Data3 = case LocationNumber of
+		asn1_NOVALUE ->
+			Data2;
+		LocationNumber ->
+			Data2#{isup => calling_number(LocationNumber, Data2)}
+	end,
+	Data4 = user_location(LocationInformation, Data3),
+	NewData = Data4#{imsi => cse_codec:tbcd(IMSI),
 			call_ref => CallReferenceNumber,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	case nrf_start(NewData) of
@@ -722,22 +724,23 @@ terminating_call_handling(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP
 				callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress}} = _EventContent,
 		#{did := DialogueID} = Data) ->
-	{Vlr1, Msc1, Isup1} = case LocationInformation of
-		#'LocationInformation'{'vlr-number' = LIvlr,
-				'msc-Number' = LImsc, locationNumber = LIisup,
-				ageOfLocationInformation = Age} when Age < 15 ->
-			{LIvlr, LImsc, LIisup};
-		_ ->
-			{asn1_NOVALUE, asn1_NOVALUE, asn1_NOVALUE}
+	Data1 = case MscAddress of
+		asn1_NOVALUE ->
+			Data;
+		MscAddress ->
+			Data#{msc => isdn_address(MscAddress)}
 	end,
-	MSC = isdn_address(Msc1, MscAddress),
-	VLR = isdn_address(Vlr1),
-	ISUP = calling_number(Isup1, LocationNumber, Data),
-	Calling = calling_number(CallingPartyNumber, Data),
+	Data2 = case LocationNumber of
+		asn1_NOVALUE ->
+			Data1;
+		LocationNumber ->
+			Data1#{isup => calling_number(LocationNumber, Data1)}
+	end,
+	Data3 = user_location(LocationInformation, Data2),
+	Calling = calling_number(CallingPartyNumber, Data3),
 	MSISDN = called_number(CalledPartyNumber),
-	NewData = Data#{imsi => cse_codec:tbcd(IMSI), msisdn => MSISDN,
+	NewData = Data3#{imsi => cse_codec:tbcd(IMSI), msisdn => MSISDN,
 			calling => Calling, called => MSISDN,
-			isup => ISUP, vlr => VLR, msc => MSC,
 			call_ref => CallReferenceNumber,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	case nrf_start(NewData) of
@@ -2604,25 +2607,31 @@ nrf_start1(SI, #{isup := ISUP} = Data)
 nrf_start1(SI, Data) ->
 	nrf_start2(SI, Data).
 %% @hidden
-nrf_start2(SI, #{call_ref := CallRef} = Data)
-		when is_binary(CallRef) ->
-	nrf_start3(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_start2(SI, #{location := UserLocation} = Data)
+		when is_map(UserLocation) ->
+	nrf_start3(SI#{"userLocation" => UserLocation}, Data);
 nrf_start2(SI, Data) ->
 	nrf_start3(SI, Data).
 %% @hidden
-nrf_start3(SI, #{call_start := DateTime} = Data)
-		when is_list(DateTime) ->
-	nrf_start4(SI#{"startTime" => DateTime}, Data).
-%nrf_start3(SI, Data) ->
-%	nrf_start4(SI, Data).
+nrf_start3(SI, #{call_ref := CallRef} = Data)
+		when is_binary(CallRef) ->
+	nrf_start4(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_start3(SI, Data) ->
+	nrf_start4(SI, Data).
 %% @hidden
-nrf_start4(SI, #{charging_start := DateTime} = Data)
+nrf_start4(SI, #{call_start := DateTime} = Data)
 		when is_list(DateTime) ->
-	nrf_start5(SI#{"startOfCharging" => DateTime}, Data);
-nrf_start4(SI, Data) ->
-	nrf_start5(SI, Data).
+	nrf_start5(SI#{"startTime" => DateTime}, Data).
+%nrf_start4(SI, Data) ->
+%	nrf_start5(SI, Data).
 %% @hidden
-nrf_start5(SI, #{direction := originating,
+nrf_start5(SI, #{charging_start := DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_start6(SI#{"startOfCharging" => DateTime}, Data);
+nrf_start5(SI, Data) ->
+	nrf_start6(SI, Data).
+%% @hidden
+nrf_start6(SI, #{direction := originating,
 		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
@@ -2631,8 +2640,8 @@ nrf_start5(SI, #{direction := originating,
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_start6(ServiceRating, Data);
-nrf_start5(SI, #{direction := terminating,
+	nrf_start7(ServiceRating, Data);
+nrf_start6(SI, #{direction := terminating,
 		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
@@ -2641,8 +2650,8 @@ nrf_start5(SI, #{direction := terminating,
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_start6(ServiceRating, Data);
-nrf_start5(SI, #{direction := forwarding,
+	nrf_start7(ServiceRating, Data);
+nrf_start6(SI, #{direction := forwarding,
 		calling := CallingNumber, called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
@@ -2653,9 +2662,9 @@ nrf_start5(SI, #{direction := forwarding,
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_start6(ServiceRating, Data).
+	nrf_start7(ServiceRating, Data).
 %% @hidden
-nrf_start6(ServiceRating, #{imsi := IMSI, msisdn := MSISDN,
+nrf_start7(ServiceRating, #{imsi := IMSI, msisdn := MSISDN,
 		sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON = #{"invocationSequenceNumber" => Sequence,
@@ -2663,9 +2672,9 @@ nrf_start6(ServiceRating, #{imsi := IMSI, msisdn := MSISDN,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating]},
-	nrf_start7(Now, JSON, Data).
+	nrf_start8(Now, JSON, Data).
 %% @hidden
-nrf_start7(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
+nrf_start8(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			nrf_http_options := HttpOptions, nrf_headers := Headers} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
@@ -2708,25 +2717,31 @@ nrf_update1(SI, #{isup := ISUP} = Data)
 nrf_update1(SI, Data) ->
 	nrf_update2(SI, Data).
 %% @hidden
-nrf_update2(SI, #{call_ref := CallRef} = Data)
-		when is_binary(CallRef) ->
-	nrf_update3(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_update2(SI, #{location := UserLocation} = Data)
+		when is_map(UserLocation) ->
+	nrf_update3(SI#{"userLocation" => UserLocation}, Data);
 nrf_update2(SI, Data) ->
 	nrf_update3(SI, Data).
 %% @hidden
-nrf_update3(SI, #{call_start := DateTime} = Data)
-		when is_list(DateTime) ->
-	nrf_update4(SI#{"startTime" => DateTime}, Data);
+nrf_update3(SI, #{call_ref := CallRef} = Data)
+		when is_binary(CallRef) ->
+	nrf_update4(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
 nrf_update3(SI, Data) ->
 	nrf_update4(SI, Data).
 %% @hidden
-nrf_update4(SI, #{charging_start := DateTime} = Data)
+nrf_update4(SI, #{call_start := DateTime} = Data)
 		when is_list(DateTime) ->
-	nrf_update5(SI#{"startOfCharging" => DateTime}, Data);
+	nrf_update5(SI#{"startTime" => DateTime}, Data);
 nrf_update4(SI, Data) ->
 	nrf_update5(SI, Data).
 %% @hidden
-nrf_update5(SI, #{direction := originating,
+nrf_update5(SI, #{charging_start := DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_update6(SI#{"startOfCharging" => DateTime}, Data);
+nrf_update5(SI, Data) ->
+	nrf_update6(SI, Data).
+%% @hidden
+nrf_update6(SI, #{direction := originating,
 		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
@@ -2735,8 +2750,8 @@ nrf_update5(SI, #{direction := originating,
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_update6(ServiceRating, Data);
-nrf_update5(SI, #{direction := terminating,
+	nrf_update7(ServiceRating, Data);
+nrf_update6(SI, #{direction := terminating,
 		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
@@ -2745,8 +2760,8 @@ nrf_update5(SI, #{direction := terminating,
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_update6(ServiceRating, Data);
-nrf_update5(SI, #{direction := forwarding,
+	nrf_update7(ServiceRating, Data);
+nrf_update6(SI, #{direction := forwarding,
 		calling := CallingNumber, called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
@@ -2757,9 +2772,9 @@ nrf_update5(SI, #{direction := forwarding,
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
-	nrf_update6(ServiceRating, Data).
+	nrf_update7(ServiceRating, Data).
 %% @hidden
-nrf_update6(ServiceRating,
+nrf_update7(ServiceRating,
 		#{imsi := IMSI, msisdn := MSISDN,
 				sequence := Sequence, pending := Consumed} = Data) ->
 	NewSequence = Sequence + 1,
@@ -2773,9 +2788,9 @@ nrf_update6(ServiceRating,
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
 	NewData = Data#{sequence => NewSequence, pending => 0},
-	nrf_update7(Now, JSON, NewData).
+	nrf_update8(Now, JSON, NewData).
 %% @hidden
-nrf_update7(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
+nrf_update8(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			nrf_location := Location, nrf_http_options := HttpOptions,
 			nrf_headers := Headers} = Data)
 		when is_list(Location) ->
@@ -2825,36 +2840,42 @@ nrf_release1(SI, #{isup := ISUP} = Data)
 nrf_release1(SI, Data) ->
 	nrf_release2(SI, Data).
 %% @hidden
-nrf_release2(SI, #{call_ref := CallRef} = Data)
-		when is_binary(CallRef) ->
-	nrf_release3(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
+nrf_release2(SI, #{location := UserLocation} = Data)
+		when is_map(UserLocation) ->
+	nrf_release3(SI#{"userLocation" => UserLocation}, Data);
 nrf_release2(SI, Data) ->
 	nrf_release3(SI, Data).
 %% @hidden
-nrf_release3(SI, #{call_start := DateTime} = Data)
-		when is_list(DateTime) ->
-	nrf_release4(SI#{"startTime" => DateTime}, Data);
+nrf_release3(SI, #{call_ref := CallRef} = Data)
+		when is_binary(CallRef) ->
+	nrf_release4(SI#{"callReferenceNumber" => base64:encode(CallRef)}, Data);
 nrf_release3(SI, Data) ->
 	nrf_release4(SI, Data).
 %% @hidden
-nrf_release4(SI, #{charging_start := DateTime} = Data)
+nrf_release4(SI, #{call_start := DateTime} = Data)
 		when is_list(DateTime) ->
-	nrf_release5(SI#{"startOfCharging" => DateTime}, Data);
+	nrf_release5(SI#{"startTime" => DateTime}, Data);
 nrf_release4(SI, Data) ->
 	nrf_release5(SI, Data).
 %% @hidden
-nrf_release5(SI, #{call_info := CallInfo} = Data)
-		when is_map(CallInfo) ->
-	case maps:find(stop, CallInfo) of
-		{ok, DateTime} ->
-			nrf_release6(SI#{"stopTime" => DateTime}, Data);
-		error ->
-			nrf_release6(SI, Data)
-	end;
+nrf_release5(SI, #{charging_start := DateTime} = Data)
+		when is_list(DateTime) ->
+	nrf_release6(SI#{"startOfCharging" => DateTime}, Data);
 nrf_release5(SI, Data) ->
 	nrf_release6(SI, Data).
 %% @hidden
 nrf_release6(SI, #{call_info := CallInfo} = Data)
+		when is_map(CallInfo) ->
+	case maps:find(stop, CallInfo) of
+		{ok, DateTime} ->
+			nrf_release7(SI#{"stopTime" => DateTime}, Data);
+		error ->
+			nrf_release7(SI, Data)
+	end;
+nrf_release6(SI, Data) ->
+	nrf_release7(SI, Data).
+%% @hidden
+nrf_release7(SI, #{call_info := CallInfo} = Data)
 		when is_map(CallInfo) ->
 	case maps:find(cause, CallInfo) of
 		{ok, #cause{value = Value,
@@ -2867,14 +2888,14 @@ nrf_release6(SI, #{call_info := CallInfo} = Data)
 				undefined ->
 					Cause1
 			end,
-			nrf_release7(SI#{"isupCause" => Cause2}, Data);
+			nrf_release8(SI#{"isupCause" => Cause2}, Data);
 		error ->
-			nrf_release7(SI, Data)
+			nrf_release8(SI, Data)
 	end;
-nrf_release6(SI, Data) ->
-	nrf_release7(SI, Data).
+nrf_release7(SI, Data) ->
+	nrf_release8(SI, Data).
 %% @hidden
-nrf_release7(SI, #{direction := originating,
+nrf_release8(SI, #{direction := originating,
 		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
@@ -2882,8 +2903,8 @@ nrf_release7(SI, #{direction := originating,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release8(ServiceRating, Data);
-nrf_release7(SI, #{direction := terminating,
+	nrf_release9(ServiceRating, Data);
+nrf_release8(SI, #{direction := terminating,
 		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
@@ -2891,8 +2912,8 @@ nrf_release7(SI, #{direction := terminating,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release8(ServiceRating, Data);
-nrf_release7(SI, #{direction := forwarding,
+	nrf_release9(ServiceRating, Data);
+nrf_release8(SI, #{direction := forwarding,
 		calling := CallingNumber, called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
 	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
@@ -2902,9 +2923,9 @@ nrf_release7(SI, #{direction := forwarding,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
-	nrf_release8(ServiceRating, Data).
+	nrf_release9(ServiceRating, Data).
 %% @hidden
-nrf_release8(ServiceRating,
+nrf_release9(ServiceRating,
 		#{imsi := IMSI, msisdn := MSISDN,
 				pending := Consumed, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
@@ -2917,9 +2938,9 @@ nrf_release8(ServiceRating,
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating1]},
 	NewData = Data#{sequence => NewSequence, pending => 0},
-	nrf_release9(Now, JSON, NewData).
+	nrf_release10(Now, JSON, NewData).
 %% @hidden
-nrf_release9(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
+nrf_release10(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
 			nrf_location := Location, nrf_http_options := HttpOptions,
 			nrf_headers := Headers} = Data)
 		when is_list(Location) ->
@@ -2998,20 +3019,6 @@ isdn_address(Address) when is_binary(Address) ->
 isdn_address(asn1_NOVALUE) ->
 	undefined.
 
--spec isdn_address(Address1, Address2) -> Number
-	when
-		Address1 :: binary() | asn1_NOVALUE,
-		Address2 :: binary() | asn1_NOVALUE,
-		Number :: string() | undefined.
-%% @doc Convert ISDN-AddressString to E.164 string.
-%% 	Prefer `Address1', fallback to `Address2'.
-isdn_address(Address1, _Address2) when is_binary(Address1) ->
-	isdn_address(Address1);
-isdn_address(asn1_NOVALUE, Address) when is_binary(Address) ->
-	isdn_address(Address);
-isdn_address(asn1_NOVALUE, asn1_NOVALUE) ->
-	undefined.
-
 -spec called_number(CalledPartyNumber) -> Number
 	when
 		CalledPartyNumber :: binary() | asn1_NOVALUE,
@@ -3062,6 +3069,84 @@ call_info([#'RequestedInformation'{requestedInformationType = releaseCause,
 	call_info(T, NewData);
 call_info([], Data) ->
 	Data.
+
+-spec user_location(LocationInformation, Data) -> Data
+	when
+		LocationInformation :: #'LocationInformation'{},
+		Data :: statedata().
+%% @doc Parse user location information.
+%% @hidden
+user_location(#'LocationInformation'{
+		ageOfLocationInformation = Age} = LocationInformation, Data)
+		when Age < 15 ->
+	user_location1(LocationInformation, Data);
+user_location(_LocationInformation, Data) ->
+	Data.
+%% @hidden
+user_location1(#'LocationInformation'{
+		'msc-Number' = asn1_NOVALUE} = LocationInformation, Data) ->
+	user_location2(LocationInformation, Data);
+user_location1(#'LocationInformation'{
+		'msc-Number' = MSC} = LocationInformation, Data) ->
+	Data1 = Data#{msc => isdn_address(MSC)},
+	user_location2(LocationInformation, Data1).
+%% @hidden
+user_location2(#'LocationInformation'{
+		'vlr-number' = asn1_NOVALUE} = LocationInformation, Data) ->
+	user_location3(LocationInformation, Data);
+user_location2(#'LocationInformation'{
+		'vlr-number' = VLR} = LocationInformation, Data) ->
+	Data1 = Data#{vlr => isdn_address(VLR)},
+	user_location3(LocationInformation, Data1).
+%% @hidden
+user_location3(#'LocationInformation'{
+		locationNumber = asn1_NOVALUE} = LocationInformation, Data) ->
+	user_location4(LocationInformation, Data);
+user_location3(#'LocationInformation'{
+		locationNumber = ISUP} = LocationInformation, Data) ->
+	Data1 = Data#{isup => calling_number(ISUP, Data)},
+	user_location4(LocationInformation, Data1).
+%% @hidden
+user_location4(#'LocationInformation'{
+		cellGlobalIdOrServiceAreaIdOrLAI = asn1_NOVALUE}, Data) ->
+	Data;
+user_location4(#'LocationInformation'{
+		cellGlobalIdOrServiceAreaIdOrLAI = {cellGlobalIdOrServiceAreaIdFixedLength,
+				CellGlobalIdOrServiceAreaIdFixedLength}}, Data) ->
+	user_location5(CellGlobalIdOrServiceAreaIdFixedLength, Data);
+user_location4(#'LocationInformation'{
+		cellGlobalIdOrServiceAreaIdOrLAI = {laiFixedLength,
+				LAIFixedLength}}, Data) ->
+	user_location6(LAIFixedLength, Data).
+%% @hidden
+user_location5(<<MCCMNC:3/binary, LAC:16, CI:16>>, Data) ->
+	{MCC, MNC} = tbcd(MCCMNC),
+	CGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			lac => io_lib:fwrite("~4.16.0b", [LAC]),
+			utraCellId => io_lib:fwrite("~4.16.0b", [CI])},
+	UserLocation = #{utraLocation => #{cgi => CGI}},
+	Data#{location => UserLocation};
+user_location5(_, Data) ->
+	Data.
+%% @hidden
+user_location6(<<MCCMNC:3/binary, LAC:16>>, Data) ->
+	{MCC, MNC} = tbcd(MCCMNC),
+	CGI = #{plmnId => #{mcc => MCC, mnc => MNC},
+			lac => io_lib:fwrite("~4.16.0b", [LAC])},
+	UserLocation = #{utraLocation => #{cgi => CGI}},
+	Data#{location => UserLocation};
+user_location6(_, Data) ->
+	Data.
+
+%% @hidden
+tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4, MNC2:4, MNC1:4>>) ->
+	MCC = cse_codec:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_codec:tbcd(<<MNC2:4, MNC1:4>>),
+	{MCC, MNC};
+tbcd(<<MCC2:4, MCC1:4, MNC3:4, MCC3:4, MNC2:4, MNC1:4>>) ->
+	MCC = cse_codec:tbcd(<<MCC2:4, MCC1:4, 15:4, MCC3:4>>),
+	MNC = cse_codec:tbcd(<<MNC2:4, MNC1:4, 15:4, MNC3:4>>),
+	{MCC, MNC}.
 
 -spec granted(ServiceRating) -> Result
 	when
