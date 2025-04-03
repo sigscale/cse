@@ -98,7 +98,7 @@
 		tr_state => idle | init_sent | init_received | active,
 		scf => sccp_codec:party_address(),
 		ssf => sccp_codec:party_address(),
-		direction => originating | terminating,
+		direction => originating | terminating | forwarding,
 		imsi => [$0..$9],
 		msisdn => [$0..$9],
 		country_code => [$0..$9],
@@ -275,13 +275,38 @@ collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		dialogueID = DialogueID, invokeID = _InvokeID, lastComponent = true},
 		#'GenericSSF-gsmSCF-PDUs_InitialDPArg'{eventTypeBCSM = collectedInfo,
 				callingPartyNumber = CallingPartyNumber,
-				originalCalledPartyID = OriginalCalledPartyID,
+				calledPartyNumber = CalledPartyNumber,
 				calledPartyBCDNumber = CalledPartyBCDNumber,
+				originalCalledPartyID = OriginalCalledPartyID,
+				redirectingPartyID = RedirectingPartyID,
+				redirectionInformation = RedirectionInformation,
 				locationInformation = LocationInformation,
 				locationNumber = LocationNumber,
-				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
+				iMSI = IMSI,
+				callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress}} = _EventContent,
 		#{did := DialogueID} = Data) ->
+	Data1 = case RedirectionInformation of
+		asn1_NOVALUE ->
+			A = calling_number(CallingPartyNumber, Data),
+			B = called_bcd_number(CalledPartyBCDNumber),
+			Data#{msisdn => A, calling => A, called => B};
+		RedirectionInformation ->
+			case cse_codec:redirect_info(RedirectionInformation) of
+				#redirect_info{indicator = Ind}
+						when Ind >= 3, Ind =< 6 ->
+					MSISDN = calling_number(RedirectingPartyID,
+							OriginalCalledPartyID, Data),
+					A = calling_number(CallingPartyNumber, Data),
+					B = called_number(CalledPartyNumber),
+					Data#{msisdn => MSISDN, direction => forwarding,
+							calling => A, called => B};
+				#redirect_info{} ->
+					A = calling_number(CallingPartyNumber, Data),
+					B = called_bcd_number(CalledPartyBCDNumber),
+					Data#{msisdn => A, calling => A, called => B}
+			end
+	end,
 	{Vlr1, Msc1, Isup1} = case LocationInformation of
 		#'LocationInformation'{'vlr-number' = LIvlr,
 				'msc-Number' = LImsc, locationNumber = LIisup,
@@ -292,11 +317,8 @@ collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	end,
 	MSC = isdn_address(Msc1, MscAddress),
 	VLR = isdn_address(Vlr1),
-	ISUP = calling_number(Isup1, LocationNumber, Data),
-	MSISDN = calling_number(CallingPartyNumber, Data),
-	DN = called_number(OriginalCalledPartyID, CalledPartyBCDNumber),
-	NewData = Data#{imsi => cse_codec:tbcd(IMSI),
-			msisdn => MSISDN, called => DN, calling => MSISDN,
+	ISUP = calling_number(Isup1, LocationNumber, Data1),
+	NewData = Data1#{imsi => cse_codec:tbcd(IMSI),
 			isup => ISUP, vlr => VLR, msc => MSC,
 			call_ref => CallReferenceNumber,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
@@ -308,8 +330,8 @@ collect_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	end;
 collect_information(cast, {nrf_start,
 		{RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
-		#{nrf_reqid := RequestId, msisdn := MSISDN, calling := MSISDN,
-				edp := EDP, nrf_profile := Profile, nrf_uri := URI,
+		#{nrf_reqid := RequestId, edp := EDP,
+				nrf_profile := Profile, nrf_uri := URI,
 				nrf_http := LogHTTP, did := DialogueID, iid := IID,
 				dha := DHA, cco := CCO, scf := SCF, ac := AC} = Data) ->
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
@@ -696,7 +718,8 @@ terminating_call_handling(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP
 				calledPartyNumber = CalledPartyNumber,
 				locationInformation = LocationInformation,
 				locationNumber = LocationNumber,
-				iMSI = IMSI, callReferenceNumber = CallReferenceNumber,
+				iMSI = IMSI,
+				callReferenceNumber = CallReferenceNumber,
 				mscAddress = MscAddress}} = _EventContent,
 		#{did := DialogueID} = Data) ->
 	{Vlr1, Msc1, Isup1} = case LocationInformation of
@@ -710,10 +733,10 @@ terminating_call_handling(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP
 	MSC = isdn_address(Msc1, MscAddress),
 	VLR = isdn_address(Vlr1),
 	ISUP = calling_number(Isup1, LocationNumber, Data),
-	MSISDN = calling_number(CallingPartyNumber, Data),
-	DN = called_number(CalledPartyNumber, asn1_NOVALUE),
-	NewData = Data#{imsi => cse_codec:tbcd(IMSI),
-			msisdn => MSISDN, called => MSISDN, calling => DN,
+	Calling = calling_number(CallingPartyNumber, Data),
+	MSISDN = called_number(CalledPartyNumber),
+	NewData = Data#{imsi => cse_codec:tbcd(IMSI), msisdn => MSISDN,
+			calling => Calling, called => MSISDN,
 			isup => ISUP, vlr => VLR, msc => MSC,
 			call_ref => CallReferenceNumber,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
@@ -2599,21 +2622,35 @@ nrf_start4(SI, #{charging_start := DateTime} = Data)
 nrf_start4(SI, Data) ->
 	nrf_start5(SI, Data).
 %% @hidden
-nrf_start5(ServiceInformation, #{msisdn := MSISDN,
-		calling := MSISDN, called := CalledNumber} = Data) ->
+nrf_start5(SI, #{direction := originating,
+		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
 	nrf_start6(ServiceRating, Data);
-nrf_start5(ServiceInformation, #{msisdn := MSISDN,
-		called := MSISDN, calling := CallingNumber} = Data) ->
+nrf_start5(SI, #{direction := terminating,
+		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
+	nrf_start6(ServiceRating, Data);
+nrf_start5(SI, #{direction := forwarding,
+		calling := CallingNumber, called := CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
 	nrf_start6(ServiceRating, Data).
@@ -2689,23 +2726,37 @@ nrf_update4(SI, #{charging_start := DateTime} = Data)
 nrf_update4(SI, Data) ->
 	nrf_update5(SI, Data).
 %% @hidden
-nrf_update5(ServiceInformation,
-		#{msisdn := MSISDN, calling := MSISDN,
-				called := CalledNumber} = Data) ->
+nrf_update5(SI, #{direction := originating,
+		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
-			"serviceInformation" => ServiceInformation},
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
 	nrf_update6(ServiceRating, Data);
-nrf_update5(ServiceInformation,
-		#{msisdn := MSISDN, called := MSISDN,
-				calling := CallingNumber} = Data) ->
+nrf_update5(SI, #{direction := terminating,
+		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
-			"serviceInformation" => ServiceInformation},
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
+	nrf_update6(ServiceRating, Data);
+nrf_update5(SI, #{direction := forwarding,
+		calling := CallingNumber, called := CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
 	nrf_update6(ServiceRating, Data).
 %% @hidden
 nrf_update6(ServiceRating,
@@ -2823,22 +2874,33 @@ nrf_release6(SI, #{call_info := CallInfo} = Data)
 nrf_release6(SI, Data) ->
 	nrf_release7(SI, Data).
 %% @hidden
-nrf_release7(ServiceInformation,
-		#{msisdn := MSISDN, calling := MSISDN,
-				called := CalledNumber} = Data) ->
+nrf_release7(SI, #{direction := originating,
+		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
 	nrf_release8(ServiceRating, Data);
-nrf_release7(ServiceInformation,
-		#{msisdn := MSISDN, called := MSISDN,
-				calling := CallingNumber} = Data) ->
+nrf_release7(SI, #{direction := terminating,
+		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
+			"serviceInformation" => ServiceInformation},
+	nrf_release8(ServiceRating, Data);
+nrf_release7(SI, #{direction := forwarding,
+		calling := CallingNumber, called := CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
 	nrf_release8(ServiceRating, Data).
 %% @hidden
@@ -2950,24 +3012,27 @@ isdn_address(asn1_NOVALUE, Address) when is_binary(Address) ->
 isdn_address(asn1_NOVALUE, asn1_NOVALUE) ->
 	undefined.
 
--spec called_number(OriginalCalledPartyID, CalledPartyBCDNumber) -> Number
+-spec called_number(CalledPartyNumber) -> Number
 	when
-		OriginalCalledPartyID :: binary() | asn1_NOVALUE,
-		CalledPartyBCDNumber :: binary() | asn1_NOVALUE,
-		Number :: string() | undefined.
+		CalledPartyNumber :: binary() | asn1_NOVALUE,
+		Number :: [$0..$9].
 %% @doc Convert Called Party Address to E.164 string.
 %% @hidden
-called_number(OriginalCalledPartyID, _CalledPartyBCDNumber)
-		when is_binary(OriginalCalledPartyID) ->
-	#called_party{address = A} = cse_codec:called_party(OriginalCalledPartyID),
-	lists:flatten([integer_to_list(D) || D <- A]);
-called_number(asn1_NOVALUE, CalledPartyBCDNumber)
+called_number(CalledPartyNumber)
+		when is_binary(CalledPartyNumber) ->
+	#called_party{address = A} = cse_codec:called_party(CalledPartyNumber),
+	lists:flatten([integer_to_list(D) || D <- A]).
+
+-spec called_bcd_number(CalledPartyBCDNumber) -> Number
+	when
+		CalledPartyBCDNumber :: binary() | asn1_NOVALUE,
+		Number :: [$0..$9].
+%% @doc Convert Called Party Address to E.164 string.
+%% @hidden
+called_bcd_number(CalledPartyBCDNumber)
 		when is_binary(CalledPartyBCDNumber) ->
-	#called_party_bcd{address = A}
-			= cse_codec:called_party_bcd(CalledPartyBCDNumber),
-	lists:flatten([integer_to_list(D) || D <- A]);
-called_number(asn1_NOVALUE, asn1_NOVALUE) ->
-	undefined.
+	#called_party_bcd{address = A} = cse_codec:called_party_bcd(CalledPartyBCDNumber),
+	lists:flatten([integer_to_list(D) || D <- A]).
 
 -spec call_info(RequestedInformationTypeList, Data) -> Data
 	when

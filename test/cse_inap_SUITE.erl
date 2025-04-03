@@ -32,6 +32,7 @@
 		end_dialogue/0, end_dialogue/1,
 		initial_dp_mo/0, initial_dp_mo/1,
 		initial_dp_mt/0, initial_dp_mt/1,
+		initial_dp_cfu/0, initial_dp_cfu/1,
 		continue/0, continue/1,
 		dp_arming/0, dp_arming/1,
 		apply_charging/0, apply_charging/1,
@@ -172,7 +173,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
+	[start_dialogue, end_dialogue,
+			initial_dp_mo, initial_dp_mt, initial_dp_cfu,
 			continue, dp_arming, apply_charging, call_info_request,
 			mo_abandon, mt_abandon, mo_answer, mt_answer,
 			mo_disconnect, mt_disconnect].
@@ -316,6 +318,34 @@ initial_dp_mt(Config) ->
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
 	t_alerting = get_state(TcUser).
+
+initial_dp_cfu() ->
+	Description = "MO InitialDP with call divert received by SLPI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+initial_dp_cfu(Config) ->
+	OCS = ?config(ocs, Config),
+	ServiceKey = ?config(service_key, Config),
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-as-ssf-scfGenericAS',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	SN = cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, SN, Balance}),
+	UserData1 = pdu_initial_cfu(SsfTid, AC, ServiceKey, SN),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	TcUser = receive
+		{csl, _DHA, TCU} -> TCU
+	end,
+	receive
+		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
+	end,
+	o_alerting = get_state(TcUser).
 
 continue() ->
 	Description = "Continue received by SSF",
@@ -906,6 +936,39 @@ pdu_initial_mt(OTID, AC, ServiceKey, SN) ->
 			locationNumber => isup_calling_party(),
 			bearerCapability => {bearerCap,<<128,144,163>>},
 			eventTypeBCSM => termAttemptAuthorized,
+			callReferenceNumber => crypto:strong_rand_bytes(4)},
+	Invoke = #{invokeId => {present, 1},
+			opcode => ?'opcode-initialDP',
+			argument => InitialDPArg},
+	Begin = #{otid => <<OTID:32>>,
+			dialoguePortion => DialoguePortion,
+			components => [{basicROS, {invoke, Invoke}}]},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
+	UD.
+
+pdu_initial_cfu(OTID, AC, ServiceKey, SN) ->
+	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
+	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
+			{dialogueRequest, AARQ}),
+	DialoguePortion = #'EXTERNAL'{'direct-reference' = {0,0,17,773,1,1,1},
+			'indirect-reference' = asn1_NOVALUE,
+			'data-value-descriptor' = asn1_NOVALUE,
+			encoding = {'single-ASN1-type', DialoguePDUs}},
+	RedirectInfo = #redirect_info{
+			indicator = 3,
+			orig_reason = 3,
+			reason = 3,
+			counter = 1},
+	InitialDPArg = #{serviceKey => ServiceKey,
+			calledPartyNumber => isup_called_party(),
+			callingPartyNumber => isup_calling_party(),
+			callingPartysCategory => <<10>>,
+			originalCalledPartyID => isup_calling_party(SN),
+			redirectingPartyID => isup_calling_party(SN),
+			redirectionInformation => cse_codec:redirect_info(RedirectInfo),
+			locationNumber => isup_calling_party(),
+			bearerCapability => {bearerCap,<<128,144,163>>},
+			eventTypeBCSM => analysedInformation,
 			callReferenceNumber => crypto:strong_rand_bytes(4)},
 	Invoke = #{invokeId => {present, 1},
 			opcode => ?'opcode-initialDP',

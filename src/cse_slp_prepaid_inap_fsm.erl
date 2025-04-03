@@ -96,7 +96,8 @@
 		tr_state => idle | init_sent | init_received | active,
 		scf => sccp_codec:party_address(),
 		ssf => sccp_codec:party_address(),
-		direction => originating | terminating,
+		direction => originating | terminating | forwarding,
+		msisdn => [$0..$9],
 		called =>  [$0..$9],
 		calling => [$0..$9],
 		country_code => [$0..$9],
@@ -288,13 +289,34 @@ analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 				serviceKey := _ServiceKey,
 				callingPartysCategory := _CallingPartyCategory,
 				callingPartyNumber := CallingPartyNumber,
-				calledPartyNumber := CalledPartyNumber} = _InitialDPArg},
+				calledPartyNumber := CalledPartyNumber} = InitialDPArg},
 		#{did := DialogueID} = Data) ->
-	CallingDN = calling_number(CallingPartyNumber, Data),
-	CalledDN = called_number(CalledPartyNumber),
-	NewData = Data#{direction => originating,
-			calling => CallingDN, called => CalledDN,
-			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
+	Data1 = case maps:get(redirectionInformation, InitialDPArg, asn1_NOVALUE) of
+		asn1_NOVALUE ->
+			A = calling_number(CallingPartyNumber, Data),
+			B = called_number(CalledPartyNumber),
+			Data#{msisdn => A, calling => A, called => B};
+		RedirectionInformation ->
+			case cse_codec:redirect_info(RedirectionInformation) of
+				#redirect_info{indicator = Ind}
+						when Ind >= 3, Ind =< 6 ->
+					RedirectingPartyID = maps:get(redirectingPartyID,
+							InitialDPArg, asn1_NOVALUE),
+					OriginalCalledPartyID = maps:get(originalCalledPartyID,
+							InitialDPArg, asn1_NOVALUE),
+					MSISDN = calling_number(RedirectingPartyID,
+							OriginalCalledPartyID, Data),
+					A = calling_number(CallingPartyNumber, Data),
+					B = called_number(CalledPartyNumber),
+					Data#{direction => forwarding, msisdn => MSISDN,
+							calling => A, called => B};
+				#redirect_info{} ->
+					A = calling_number(CallingPartyNumber, Data),
+					B = called_number(CalledPartyNumber),
+					Data#{msisdn => A, calling => A, called => B}
+			end
+	end,
+	NewData = Data1#{call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	case nrf_start(NewData) of
 		{ok, NextData} ->
 			{keep_state, NextData};
@@ -303,8 +325,8 @@ analyse_information(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	end;
 analyse_information(cast, {nrf_start,
 		{RequestId, {{Version, 201, _Phrase}, Headers, Body}}},
-		#{direction := originating, nrf_reqid := RequestId,
-				nrf_profile := Profile, nrf_uri := URI, nrf_http := LogHTTP,
+		#{nrf_reqid := RequestId, nrf_profile := Profile,
+				nrf_uri := URI, nrf_http := LogHTTP,
 				edp := EDP, did := DialogueID, iid := IID, dha := DHA,
 				cco := CCO, scf := SCF, ac := AC} = Data) ->
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
@@ -545,7 +567,7 @@ select_facility(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 		#{did := DialogueID} = Data) ->
 	CallingDN = calling_number(CallingPartyNumber, Data),
 	CalledDN = called_number(CalledPartyNumber),
-	NewData = Data#{direction => terminating,
+	NewData = Data#{msisdn => CalledDN,
 			calling => CallingDN, called => CalledDN,
 			call_start => cse_log:iso8601(erlang:system_time(millisecond))},
 	case nrf_start(NewData) of
@@ -2117,46 +2139,53 @@ nrf_start(#{call_start := CallStart} = Data)
 		when is_list(CallStart) ->
 	nrf_start1(#{"startTime" => CallStart}, Data).
 %% @hidden
-nrf_start1(ServiceInformation,
-		#{direction := originating, called := CalledNumber} = Data) ->
+nrf_start1(SI, #{direction := originating,
+		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
 	nrf_start2(ServiceRating, Data);
-nrf_start1(ServiceInformation,
-		#{direction := terminating, calling := CallingNumber} = Data) ->
+nrf_start1(SI, #{direction := terminating,
+		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation,
 			"requestSubType" => "RESERVE"},
+	nrf_start2(ServiceRating, Data);
+nrf_start1(SI, #{direction := forwarding,
+		calling := CallingNumber, called := CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation,
+			"requestSubType" => "RESERVE"},
 	nrf_start2(ServiceRating, Data).
 %% @hidden
-nrf_start2(ServiceRating, #{direction := originating,
-		calling := CallingNumber, sequence := Sequence} = Data) ->
+nrf_start2(ServiceRating,
+		#{msisdn := MSISDN, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["msisdn-" ++ CallingNumber],
-			"serviceRating" => [ServiceRating]},
-	nrf_start3(Now, JSON, Data);
-nrf_start2(ServiceRating, #{direction := terminating,
-		called := CalledNumber, sequence := Sequence} = Data) ->
-	Now = erlang:system_time(millisecond),
-	JSON = #{"invocationSequenceNumber" => Sequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["msisdn-" ++ CalledNumber],
+			"subscriptionId" => ["msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating]},
 	nrf_start3(Now, JSON, Data).
 %% @hidden
-nrf_start3(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
-				nrf_http_options := HttpOptions, nrf_headers := Headers} = Data) ->
+nrf_start3(Now, JSON,
+		#{nrf_profile := Profile, nrf_uri := URI,
+				nrf_http_options := HttpOptions,
+				nrf_headers := Headers} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
@@ -2192,26 +2221,39 @@ nrf_update(#{call_start := CallStart} = Data)
 		when is_list(CallStart) ->
 	nrf_update1(#{"startTime" => CallStart}, Data).
 %% @hidden
-nrf_update1(ServiceInformation,
-		#{direction := originating, called := CalledNumber} = Data) ->
+nrf_update1(SI, #{direction := originating,
+		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
 	nrf_update2(ServiceRating, Data);
-nrf_update1(ServiceInformation,
-		#{direction := terminating, calling := CallingNumber} = Data) ->
+nrf_update1(SI, #{direction := terminating,
+		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
+	nrf_update2(ServiceRating, Data);
+nrf_update1(SI, #{direction := forwarding,
+		calling := CallingNumber, called := CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation},
 	nrf_update2(ServiceRating, Data).
 %% @hidden
 nrf_update2(ServiceRating,
-		#{direction := originating, calling := CallingNumber,
-				sequence := Sequence, pending := Consumed} = Data) ->
+		#{msisdn := MSISDN, sequence := Sequence,
+				pending := Consumed} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
@@ -2220,29 +2262,15 @@ nrf_update2(ServiceRating,
 	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["msisdn-" ++ CallingNumber],
-			"serviceRating" => [Debit, Reserve]},
-	NewData = Data#{sequence => NewSequence},
-	nrf_update3(Now, JSON, NewData);
-nrf_update2(ServiceRating,
-		#{direction := terminating, called := CalledNumber,
-				sequence := Sequence, pending := Consumed} = Data) ->
-	NewSequence = Sequence + 1,
-	Now = erlang:system_time(millisecond),
-	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
-			"requestSubType" => "DEBIT"},
-	Reserve = ServiceRating#{"requestSubType" => "RESERVE"},
-	JSON = #{"invocationSequenceNumber" => NewSequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["msisdn-" ++ CalledNumber],
+			"subscriptionId" => ["msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
 	NewData = Data#{sequence => NewSequence},
 	nrf_update3(Now, JSON, NewData).
 %% @hidden
-nrf_update3(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
-		nrf_location := Location, nrf_http_options := HttpOptions,
-		nrf_headers := Headers} = Data) when is_list(Location) ->
+nrf_update3(Now, JSON,
+		#{nrf_profile := Profile, nrf_uri := URI,
+				nrf_location := Location, nrf_http_options := HttpOptions,
+				nrf_headers := Headers} = Data) when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
@@ -2303,26 +2331,39 @@ nrf_release2(SI, #{call_info := #{cause := Cause}} = Data) ->
 nrf_release2(SI, Data) ->
 	nrf_release3(SI, Data).
 %% @hidden
-nrf_release3(ServiceInformation,
-		#{direction := originating, called := CalledNumber} = Data) ->
+nrf_release3(SI, #{direction := originating,
+		called := CalledNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "ORIGINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"destinationId" => [#{"destinationIdType" => "DN",
 					"destinationIdData" => CalledNumber}],
 			"serviceInformation" => ServiceInformation},
 	nrf_release4(ServiceRating, Data);
-nrf_release3(ServiceInformation,
-		#{direction := terminating, calling := CallingNumber} = Data) ->
+nrf_release3(SI, #{direction := terminating,
+		calling := CallingNumber} = Data) ->
 	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "TERMINATING"},
 	ServiceRating = #{"serviceContextId" => ServiceContextId,
 			"originationId" => [#{"originationIdType" => "DN",
 					"originationIdData" => CallingNumber}],
 			"serviceInformation" => ServiceInformation},
+	nrf_release4(ServiceRating, Data);
+nrf_release3(SI, #{direction := forwarding,
+		calling := CallingNumber, called := CalledNumber} = Data) ->
+	ServiceContextId = "32276@3gpp.org",
+	ServiceInformation = SI#{"roleOfNode" => "FORWARDING"},
+	ServiceRating = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [#{"originationIdType" => "DN",
+					"originationIdData" => CallingNumber}],
+			"destinationId" => [#{"destinationIdType" => "DN",
+					"destinationIdData" => CalledNumber}],
+			"serviceInformation" => ServiceInformation},
 	nrf_release4(ServiceRating, Data).
 %% @hidden
 nrf_release4(ServiceRating,
-		#{direction := originating, calling := CallingNumber,
-		pending := Consumed, sequence := Sequence} = Data) ->
+		#{msisdn := MSISDN, pending := Consumed,
+				sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
@@ -2330,28 +2371,15 @@ nrf_release4(ServiceRating,
 	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["msisdn-" ++ CallingNumber],
-			"serviceRating" => [Debit]},
-	NewData = Data#{sequence => NewSequence},
-	nrf_release5(Now, JSON, NewData);
-nrf_release4(ServiceRating,
-		#{direction := terminating, called := CalledNumber,
-		pending := Consumed, sequence := Sequence} = Data) ->
-	NewSequence = Sequence + 1,
-	Now = erlang:system_time(millisecond),
-	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
-			"requestSubType" => "DEBIT"},
-	JSON = #{"invocationSequenceNumber" => NewSequence,
-			"invocationTimeStamp" => cse_log:iso8601(Now),
-			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
-			"subscriptionId" => ["msisdn-" ++ CalledNumber],
+			"subscriptionId" => ["msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit]},
 	NewData = Data#{sequence => NewSequence},
 	nrf_release5(Now, JSON, NewData).
 %% @hidden
-nrf_release5(Now, JSON, #{nrf_profile := Profile, nrf_uri := URI,
-		nrf_location := Location, nrf_http_options := HttpOptions,
-		nrf_headers := Headers} = Data) when is_list(Location) ->
+nrf_release5(Now, JSON,
+		#{nrf_profile := Profile, nrf_uri := URI,
+				nrf_location := Location, nrf_http_options := HttpOptions,
+				nrf_headers := Headers} = Data) when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"accept", "application/json"} | Headers],
@@ -2398,6 +2426,23 @@ calling_number1(#calling_party{nai = 3, npi = 1, address = A},
 		#{country_code := CountryCode} = _Data)
 		when length(CountryCode) > 0 ->
 	lists:flatten([CountryCode, [integer_to_list(D) || D <- A]]).
+
+-spec calling_number(Address1, Address2, Data) -> Number
+	when
+		Address1 :: binary() | asn1_NOVALUE,
+		Address2 :: binary() | asn1_NOVALUE,
+		Data :: statedata(),
+		Number :: string() | undefined.
+%% @doc Convert Calling Party Address to E.164 string.
+%% 	Prefer `Address1', fallback to `Address2'.
+calling_number(Address1, _Address2, Data)
+		when is_binary(Address1) ->
+	calling_number(Address1, Data);
+calling_number(asn1_NOVALUE, Address, Data)
+		when is_binary(Address) ->
+	calling_number(Address, Data);
+calling_number(asn1_NOVALUE, asn1_NOVALUE, _Data) ->
+	undefined.
 
 -spec called_number(Address) -> Number
 	when
@@ -2515,19 +2560,22 @@ ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
 %% @doc Write an event to a log.
 %% @hidden
 log_nrf(HTTP,
-		#{direction := originating, calling := MSISDN} = Data) ->
-	log_nrf(MSISDN, HTTP, Data);
+		#{direction := originating, calling := DN} = Data) ->
+	log_nrf(DN, HTTP, Data);
 log_nrf(HTTP,
-		#{direction := terminating, called := MSISDN} = Data) ->
-	log_nrf(MSISDN, HTTP, Data).
+		#{direction := terminating, called := DN} = Data) ->
+	log_nrf(DN, HTTP, Data);
+log_nrf(HTTP,
+		#{direction := forwarding, calling := DN} = Data) ->
+	log_nrf(DN, HTTP, Data).
 %% @hidden
-log_nrf(MSISDN, HTTP,
+log_nrf(DN, HTTP,
 		#{nrf_start := Start,
 		nrf_address := Address,
 		nrf_port := Port,
 		nrf_req_url := URL} = _Data) ->
 	Stop = erlang:system_time(millisecond),
-	Subscriber = #{msisdn => MSISDN},
+	Subscriber = #{msisdn => DN},
 	Client = case {Address, Port} of
 		{Address, Port} when is_tuple(Address), is_integer(Port) ->
 			{Address, Port};
@@ -2548,19 +2596,22 @@ log_nrf(MSISDN, HTTP,
 %% @doc Write an event to a log.
 %% @hidden
 log_fsm(State,
-		#{direction := originating, calling := MSISDN} = Data) ->
-	log_fsm(MSISDN, State, Data);
+		#{direction := originating, calling := DN} = Data) ->
+	log_fsm(DN, State, Data);
 log_fsm(State,
-		#{direction := terminating, called := MSISDN} = Data) ->
-	log_fsm(MSISDN, State, Data).
+		#{direction := terminating, called := DN} = Data) ->
+	log_fsm(DN, State, Data);
+log_fsm(State,
+		#{direction := forwarding, calling := DN} = Data) ->
+	log_fsm(DN, State, Data).
 %% @hidden
-log_fsm(MSISDN, State,
+log_fsm(DN, State,
 		#{start := Start,
 		direction := Direction,
 		called :=  Called,
 		calling := Calling} = Data) ->
 	Stop = erlang:system_time(millisecond),
-	Subscriber = #{msisdn => MSISDN},
+	Subscriber = #{msisdn => DN},
 	Call = #{direction => Direction, calling => Calling, called => Called},
 	Network = #{context => "32276@3gpp.org"},
 	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},

@@ -32,6 +32,7 @@
 		end_dialogue/0, end_dialogue/1,
 		initial_dp_mo/0, initial_dp_mo/1,
 		initial_dp_mt/0, initial_dp_mt/1,
+		initial_dp_cfu/0, initial_dp_cfu/1,
 		continue/0, continue/1,
 		dp_arming/0, dp_arming/1,
 		apply_charging/0, apply_charging/1,
@@ -173,7 +174,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[start_dialogue, end_dialogue, initial_dp_mo, initial_dp_mt,
+	[start_dialogue, end_dialogue,
+			initial_dp_mo, initial_dp_mt, initial_dp_cfu,
 			continue, dp_arming, apply_charging, call_info_request,
 			mo_abandon, mt_abandon, mo_answer, mt_answer,
 			mo_disconnect, mt_disconnect, unknown_imsi].
@@ -317,6 +319,34 @@ initial_dp_mt(Config) ->
 		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
 	end,
 	terminating_call_handling = get_state(TcUser).
+
+initial_dp_cfu() ->
+	Description = "MO InitialDP with call divert received by SLPI",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+initial_dp_cfu(Config) ->
+	OCS = ?config(ocs, Config),
+	ServiceKey = ?config(service_key, Config),
+	TCO = ?config(tco, Config),
+	TCO ! {?MODULE, self()},
+	AC = ?'id-ac-CAP-gsmSSF-scfGenericAC',
+	SsfParty = party(),
+	ScfParty = party(),
+	SsfTid = tid(),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(10),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	UserData1 = pdu_initial_cfu(SsfTid, AC, ServiceKey, IMSI),
+	SccpParams1 = unitdata(UserData1, ScfParty, SsfParty),
+	gen_server:cast(TCO, {'N', 'UNITDATA', indication, SccpParams1}),
+	TcUser = receive
+		{csl, _DHA, TCU} -> TCU
+	end,
+	receive
+		{'N', 'UNITDATA', request, #'N-UNITDATA'{}} -> ok
+	end,
+	analyse_information = get_state(TcUser).
 
 continue() ->
 	Description = "Continue received by SSF",
@@ -974,6 +1004,53 @@ pdu_initial_mt(OTID, AC, ServiceKey, IMSI) ->
 			locationNumber = isup_calling_party(),
 			bearerCapability = {bearerCap,<<128,144,163>>},
 			eventTypeBCSM = termAttemptAuthorized,
+			iMSI = cse_codec:tbcd(IMSI),
+			locationInformation = LocationInformation,
+			callReferenceNumber = crypto:strong_rand_bytes(4),
+			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
+               npi = 1, address = "14165550001"}),
+			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
+	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
+			invokeId = {present, 1},
+			opcode = ?'opcode-initialDP',
+			argument = InitialDPArg},
+	Begin = #'GenericSSF-gsmSCF-PDUs_begin'{otid = <<OTID:32>>,
+			dialoguePortion = DialoguePortion,
+			components = [{basicROS, {invoke, Invoke}}]},
+	{ok, UD} = ?Pkgs:encode(?PDUs, {'begin', Begin}),
+	UD.
+
+pdu_initial_cfu(OTID, AC, ServiceKey, IMSI) ->
+	AARQ = #'AARQ-apdu'{'application-context-name' = AC},
+	{ok, DialoguePDUs} = 'DialoguePDUs':encode('DialoguePDU',
+			{dialogueRequest, AARQ}),
+	DialoguePortion = #'EXTERNAL'{'direct-reference' = {0,0,17,773,1,1,1},
+			'indirect-reference' = asn1_NOVALUE,
+			'data-value-descriptor' = asn1_NOVALUE,
+			encoding = {'single-ASN1-type', DialoguePDUs}},
+	LocationInformation = #'LocationInformation'{
+			ageOfLocationInformation = 0,
+			'vlr-number' = cse_codec:isdn_address(#isdn_address{nai = 1,
+					npi = 1, address = "14165550000"}),
+			cellGlobalIdOrServiceAreaIdOrLAI =
+			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
+	SubscriberDN = isup_calling_party(),
+	RedirectInfo = #redirect_info{
+			indicator = 3,
+			orig_reason = 3,
+			reason = 3,
+			counter = 1},
+	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
+			serviceKey = ServiceKey,
+			calledPartyNumber = isup_called_party(),
+			callingPartyNumber = isup_calling_party(),
+			callingPartysCategory = <<10>>,
+			originalCalledPartyID = SubscriberDN,
+			redirectingPartyID = SubscriberDN,
+			redirectionInformation = cse_codec:redirect_info(RedirectInfo),
+			locationNumber = isup_calling_party(),
+			bearerCapability = {bearerCap,<<128,144,163>>},
+			eventTypeBCSM = collectedInfo,
 			iMSI = cse_codec:tbcd(IMSI),
 			locationInformation = LocationInformation,
 			callReferenceNumber = crypto:strong_rand_bytes(4),
