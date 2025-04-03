@@ -1,3 +1,8 @@
+April 3, 2025
+-------------
+	- CAP SLP includes user location in Nrf ServiceInformation
+	- CAP/INAP SLPs handle call diversion, log as 'forwarding'
+
 March 22, 2025
 --------------
 	- INAP SLP Nrf exception handling

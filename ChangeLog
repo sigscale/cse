@@ -1,3 +1,10 @@
+2025-04-03 Vance Shipley <vances@sigscale.org>
+
+	* cap slp includes user location in nrf
+	* handle call diversion
+	* ecs prepaid log event direction enum includes forwarding
+	* codec for isup redirection information
+
 2025-03-22 Vance Shipley <vances@sigscale.org>
 
 	* handle nrf exception responses in inap slp
