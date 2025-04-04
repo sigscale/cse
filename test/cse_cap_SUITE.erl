@@ -957,6 +957,10 @@ pdu_initial_mo(OTID, AC, ServiceKey, IMSI) ->
 					npi = 1, address = "14165550000"}),
 			cellGlobalIdOrServiceAreaIdOrLAI =
 			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
+	InitialDPArgExtension = #'GenericSSF-gsmSCF-PDUs_InitialDPArg_initialDPArgExtension'{
+			gmscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
+					npi = 1, address = "14165550002"}),
+			iMEI = cse_codec:tbcd("004499991234560")},
 	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 			serviceKey = ServiceKey,
 			callingPartyNumber = isup_calling_party(),
@@ -971,7 +975,8 @@ pdu_initial_mo(OTID, AC, ServiceKey, IMSI) ->
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
                npi = 1, address = "14165550001"}),
 			calledPartyBCDNumber = called_party_bcd(),
-			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
+			timeAndTimezone = <<2,18,32,65,81,116,49,10>>,
+			initialDPArgExtension = InitialDPArgExtension},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, 1},
 			opcode = ?'opcode-initialDP',
@@ -996,6 +1001,10 @@ pdu_initial_mt(OTID, AC, ServiceKey, IMSI) ->
 					npi = 1, address = "14165550000"}),
 			cellGlobalIdOrServiceAreaIdOrLAI =
 			{cellGlobalIdOrServiceAreaIdFixedLength, <<0,1,16,0,1,0,1>>}},
+	InitialDPArgExtension = #'GenericSSF-gsmSCF-PDUs_InitialDPArg_initialDPArgExtension'{
+			gmscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
+					npi = 1, address = "14165550002"}),
+			iMEI = cse_codec:tbcd("004499991234560")},
 	InitialDPArg = #'GenericSSF-gsmSCF-PDUs_InitialDPArg'{
 			serviceKey = ServiceKey,
 			calledPartyNumber = isup_called_party(),
@@ -1009,7 +1018,8 @@ pdu_initial_mt(OTID, AC, ServiceKey, IMSI) ->
 			callReferenceNumber = crypto:strong_rand_bytes(4),
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
                npi = 1, address = "14165550001"}),
-			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
+			timeAndTimezone = <<2,18,32,65,81,116,49,10>>,
+			initialDPArgExtension = InitialDPArgExtension},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, 1},
 			opcode = ?'opcode-initialDP',
