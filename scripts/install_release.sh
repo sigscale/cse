@@ -1,13 +1,7 @@
 #!/bin/bash
 # Install an Erlang/OTP release package
 
-if [ $# -ne 1 ];
-then
-	echo "usage: $0 APP_NAME"
-	exit 1
-else
-	PKG_NAME=$1
-fi
+PKG_NAME=ocs
 
 cd ${HOME}
 if [ -f "releases/RELEASES" ];
