@@ -106,7 +106,7 @@
 -define(SERVICENAME, "Prepaid Messaging").
 -define(FSM_LOGNAME, prepaid).
 -define(NRF_LOGNAME, rating).
--define(IDLE_TIMEOUT(Data), {timeout, maps:get(idle, Data), infinity}).
+-define(IDLE_TIMEOUT(Data), {timeout, maps:get(idle, Data), idle}).
 
 -type state() :: null
 		| authorize_event_attempt | collect_information
