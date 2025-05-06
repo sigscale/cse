@@ -104,7 +104,7 @@
 -define(SERVICENAME, "Prepaid Voice").
 -define(FSM_LOGNAME, prepaid).
 -define(NRF_LOGNAME, rating).
--define(IDLE_TIMEOUT(Data), {timeout, maps:get(idle, Data), idle}).
+-define(IDLE_TIMEOUT(Data), {timeout, maps:get(idle, Data), infinity}).
 
 -type state() :: null
 		| authorize_origination_attempt | terminating_call_handling
