@@ -2240,9 +2240,9 @@ log_nrf(HTTP,
 	cse_log:blog(?NRF_LOGNAME,
 			{Start, Stop, ?SERVICENAME, Subscriber, Client, URL, HTTP}).
 
--spec log_fsm(OldState, Data) -> ok
+-spec log_fsm(State, Data) -> ok
 	when
-		OldState :: atom(),
+		State :: atom(),
 		Data :: statedata().
 %% @doc Write an event to a log.
 %% @hidden
