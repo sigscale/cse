@@ -117,11 +117,11 @@ else
 %.app:   %.app-in
 	sed -e 's/%APP_NAME%/$(PACKAGE_NAME)/' \
 			-e 's/%APP_VERSION%/$(PACKAGE_VERSION)/' \
-			-e '/^\s*cse_slp_cap_fsm,/d' \
-			-e '/^\s*cse_slp_inap_fsm,/d' \
-			-e '/^\s*cse_slp_prepaid_cap_fsm,/d' \
-			-e '/^\s*cse_slp_prepaid_inap_fsm,/d' \
-			-e '/^\s*cse_tco_server_cb,/d' < $< > $@
+			-e '/^[[:blank:]]*cse_slp_cap_fsm,/d' \
+			-e '/^[[:blank:]]*cse_slp_inap_fsm,/d' \
+			-e '/^[[:blank:]]*cse_slp_prepaid_cap_fsm,/d' \
+			-e '/^[[:blank:]]*cse_slp_prepaid_inap_fsm,/d' \
+			-e '/^[[:blank:]]*cse_tco_server_cb,/d' < $< > $@
 endif
 
 
