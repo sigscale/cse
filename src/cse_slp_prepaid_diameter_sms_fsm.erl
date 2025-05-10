@@ -1298,7 +1298,7 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 -spec nrf_start(Data) -> Result
 	when
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {keep_state, Data, Actions},
+		Result :: {keep_state, Data, Actions} | {next_state, null, Data, Actions},
 		Actions :: [Action] | Action,
 		Action :: {reply, From, #'3gpp_ro_CCA'{}} | {timeout, Time, idle},
 		From :: {pid(), reference()},
@@ -1372,7 +1372,7 @@ nrf_start2(Now, JSON,
 -spec nrf_update(Data) -> Result
 	when
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {keep_state, Data, Actions},
+		Result :: {keep_state, Data, Actions},
 		Actions :: [Action] | Action,
 		Action :: {reply, From, #'3gpp_ro_CCA'{}} | {timeout, Time, idle},
 		From :: {pid(), reference()},
@@ -1446,7 +1446,7 @@ nrf_update2(Now, JSON,
 -spec nrf_release(Data) -> Result
 	when
 		Data ::  statedata(),
-		Result :: {keep_state, Data} | {keep_state, Data, Actions},
+		Result :: {keep_state, Data, Actions} | {next_state, null, Data, Actions},
 		Actions :: [Action] | Action,
 		Action :: {reply, From, #'3gpp_ro_CCA'{}} | {timeout, Time, idle},
 		From :: {pid(), reference()},
