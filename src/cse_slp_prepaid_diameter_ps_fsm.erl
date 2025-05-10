@@ -1301,8 +1301,8 @@ nrf_start2(Now, JSON,
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
-			{keep_state, Data, Actions};
+			Actions = [{reply, From, Reply}],
+			{next_state, null, Data, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI}, {slpi, self()}]),
