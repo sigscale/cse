@@ -1,3 +1,8 @@
+May 11, 2025
+------------
+	- Release installation will unpack only if not permanent
+	- CAP SLP includes GMSC address and IMEI in Nrf Service Rating
+
 April 3, 2025
 -------------
 	- CAP SLP includes user location in Nrf ServiceInformation

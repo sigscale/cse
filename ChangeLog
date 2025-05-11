@@ -1,3 +1,13 @@
+2025-05-11 Vance Shipley <vances@sigscale.org>
+
+	* correct type specification for result in nrf functions
+	* correct ps slp state change on failed nrf connect
+	* use posix character class in sed for macos compatibility
+	* correct argument name in type spec
+	* unpack only if another application is permanent
+	* parameterize release install script with application name
+	* cap slp includes gmsc address and imei in nrf service rating
+
 2025-04-03 Vance Shipley <vances@sigscale.org>
 
 	* cap slp includes user location in nrf
