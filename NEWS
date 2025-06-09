@@ -1,3 +1,9 @@
+June 9, 2025
+------------
+	- Release handler argument is release package name
+	- Unpack only if release package name already installed
+	- Release installation option (-d) for debug output
+
 May 14, 2025
 ------------
 	- Release installation option (-p) to overide existing permanent release
