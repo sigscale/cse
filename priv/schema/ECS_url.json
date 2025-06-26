@@ -32,7 +32,7 @@
 			"description": "Path part of the URL.",
 			"type": "string",
 			"examples": [
-				"/resourceInventoryManagement/v4/resource"
+				"/resourceActivationAndConfiguration/v4/resource"
 			]
 		},
 		"query": {

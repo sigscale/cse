@@ -56,6 +56,7 @@
 -include_lib("inets/include/mod_auth.hrl").
 
 -define(PathCatalog,       <<"/resourceCatalogManagement/v4/">>).
+-define(PathActivation,    <<"/resourceActivationAndConfiguration/v4/">>).
 -define(PathInventory,     <<"/resourceInventoryManagement/v4/">>).
 -define(INDEX_TABLE_SPEC,  <<"1662614478074-19">>).
 -define(INDEX_ROW_SPEC,    <<"1662614480005-35">>).

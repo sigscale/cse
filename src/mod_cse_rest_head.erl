@@ -197,6 +197,12 @@ do_head(Resource, ModData,
 		_Query) ->
 	do_response(ModData, Resource:head_resource_spec(Id));
 do_head(Resource, ModData,
+		["resourceActivationAndConfiguration", "v4", "resource"], _Query) ->
+	do_response(ModData, Resource:head_resource());
+do_head(Resource, ModData,
+		["resourceActivationAndConfiguration", "v4", "resource", Id], _Query) ->
+	do_response(ModData, Resource:head_resource(Id));
+do_head(Resource, ModData,
 		["resourceInventoryManagement", "v4", "resource"], _Query) ->
 	do_response(ModData, Resource:head_resource());
 do_head(Resource, ModData,

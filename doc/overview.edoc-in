@@ -45,8 +45,8 @@ Provided SLPs support real-time charging for prepaid services with
 CAP (CAMEL), INAP and DIAMETER interfaces. These SLPs implement the
 Online Charging Function (OCF) of a decomposed OCS (Online Charging
 System) (3GPP TS 32.296) using the
-<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">
-NRF_Rating</a> API on the Re interface to a remote Rating Function
+<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.1.6">
+Nrf_Rating</a> API on the Re interface to a remote Rating Function
 (RF) such as SigScale OCS.
  
 <img class="diagram" alt="CSE as OCF with OCS" src="ocf-ocs.svg" />
@@ -200,14 +200,30 @@ TM Forum Open APIs</a> are used:
 			<td id="mt">TMF634</td>
 			<td id="mt">Resource Catalog Management</td>
 			<td id="mt">
-				<a href="/schema/resourceCatalogManagement.swagger.json"
+				<a href="/schema/resourceCatalogManagement.json"
 						download="resourceCatalogManagement.json">
 					<img src="oas-logo.svg" />
 				</a>
 			</td>
 			<td id="mt">
 				<a target="_blank"
-						href="https://app.swaggerhub.com/apis/SigScale/cse-resource-catalog/4.0.0">
+						href="https://app.swaggerhub.com/apis-docs/SigScale/cse-resource-catalog/4.0.0">
+					<img src="swaggerhub-logo.svg" />
+				</a>
+			</td>
+		</tr>
+		<tr id="mt">
+			<td id="mt">TMF72</td>
+			<td id="mt">Resource Activation and Configuration</td>
+			<td id="mt">
+				<a href="/schema/resourceActivationAndConfiguration.json"
+						download="resourceActivationAndConfiguration.json">
+					<img src="oas-logo.svg" />
+				</a>
+			</td>
+			<td id="mt">
+				<a target="_blank"
+						href="https://app.swaggerhub.com/apis-docs/SigScale/sig-scale_cse_resource_activation_and_configuration/4.0.0">
 					<img src="swaggerhub-logo.svg" />
 				</a>
 			</td>
@@ -216,14 +232,14 @@ TM Forum Open APIs</a> are used:
 			<td id="mt">TMF639</td>
 			<td id="mt">Resource Inventory Management</td>
 			<td id="mt">
-				<a href="/schema/resourceInventoryManagement.swagger.json"
+				<a href="/schema/resourceInventoryManagement.json"
 						download="resourceInventoryManagement.json">
 					<img src="oas-logo.svg" />
 				</a>
 			</td>
 			<td id="mt">
 				<a target="_blank"
-						href="https://app.swaggerhub.com/apis/SigScale/cse-resource-inventory/4.0.0">
+						href="https://app.swaggerhub.com/apis-docs/SigScale/cse-resource-inventory/4.0.0">
 					<img src="swaggerhub-logo.svg" />
 				</a>
 			</td>
@@ -254,7 +270,7 @@ of `Prefix' tables by querying for the `resourceSpecification' value of a
 `Prefix' table row:
 ```
 curl -su admin:admin \
-      http://localhost:8080/resourceInventoryManagement/v4/resource?resourceSpecification.id=1647577957914-66
+      http://localhost:8080/resourceActivationAndConfiguration/v4/resource?resourceSpecification.id=1647577957914-66
 '''
 
 ====Advanced Query Filter====
@@ -279,7 +295,7 @@ with a locally created `resourceSpecification', using the above filter.
 Note that the special characters in the JSONPath expression must be escaped:
 ```
 curl -su admin:admin \
-      http://localhost:8080/resourceInventoryManagement/v4/resource?resourceSpecification.id=1665845853451-392&filter=resourceCharacteristic%5B%3F(%40.name%3D%3D%27start%27%26%26%40.value%3D%3D%2730010000%27)%5D
+      http://localhost:8080/resourceActivationAndConfiguration/v4/resource?resourceSpecification.id=1665845853451-392&filter=resourceCharacteristic%5B%3F(%40.name%3D%3D%27start%27%26%26%40.value%3D%3D%2730010000%27)%5D
 '''
 
 ====Delete by Query====

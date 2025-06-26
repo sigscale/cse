@@ -126,17 +126,23 @@ parse_query(_, #mod{parsed_header = RequestHeaders,
 
 %% @hidden
 do_delete(Resource, ModData,
-		["resourceInventoryManagement", "v4", "resource", Id], []) ->
-	do_response(ModData, Resource:delete_resource(Id, []));
-do_delete(Resource, ModData,
-		["resourceInventoryManagement", "v4", "resource"], Query) ->
-	do_response(ModData, Resource:delete_resource([], Query));
-do_delete(Resource, ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification", Id], []) ->
 	do_response(ModData, Resource:delete_resource_spec(Id, []));
 do_delete(Resource, ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification"], Query) ->
 	do_response(ModData, Resource:delete_resource_spec([], Query));
+do_delete(Resource, ModData,
+		["resourceActivationAndConfiguration", "v4", "resource", Id], []) ->
+	do_response(ModData, Resource:delete_resource(Id, []));
+do_delete(Resource, ModData,
+		["resourceActivationAndConfiguration", "v4", "resource"], Query) ->
+	do_response(ModData, Resource:delete_resource([], Query));
+do_delete(Resource, ModData,
+		["resourceInventoryManagement", "v4", "resource", Id], []) ->
+	do_response(ModData, Resource:delete_resource(Id, []));
+do_delete(Resource, ModData,
+		["resourceInventoryManagement", "v4", "resource"], Query) ->
+	do_response(ModData, Resource:delete_resource([], Query));
 do_delete(_Resource, #mod{parsed_header = RequestHeaders, data = Data} = ModData,
 		_Path, _Query) ->
 	Problem = #{type => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",

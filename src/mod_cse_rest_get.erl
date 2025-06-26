@@ -195,11 +195,17 @@ do_get(Resource, #mod{parsed_header = Headers} = ModData,
 do_get(Resource, #mod{parsed_header = Headers} = ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification"], Query) ->
 	do_response(ModData, Resource:get_resource_specs(Query, Headers));
-do_get(Resource, ModData, ["resourceCatalogManagement",
-		"v4", "resourceSpecification", Id], []) ->
+do_get(Resource, ModData,
+		["resourceCatalogManagement", "v4", "resourceSpecification", Id], []) ->
 	do_response(ModData, Resource:get_resource_spec(Id));
-do_get(Resource, ModData, ["resourceInventoryManagement",
-		"v4", "resource", Id], []) ->
+do_get(Resource, ModData,
+		["resourceActivationAndConfiguration", "v4", "resource", Id], []) ->
+	do_response(ModData, Resource:get_resource(Id));
+do_get(Resource, #mod{parsed_header = Headers} = ModData,
+		["resourceActivationAndConfiguration", "v4", "resource"], Query) ->
+	do_response(ModData, Resource:get_resource(Query, Headers));
+do_get(Resource, ModData,
+		["resourceInventoryManagement", "v4", "resource", Id], []) ->
 	do_response(ModData, Resource:get_resource(Id));
 do_get(Resource, #mod{parsed_header = Headers} = ModData,
 		["resourceInventoryManagement", "v4", "resource"], Query) ->

@@ -228,7 +228,7 @@ delete_resource_spec1(Id, []) ->
 		Headers  :: [tuple()],
 		Body     :: iolist(),
 		Status   :: 400 | 404 | 500.
-%% @doc Respond to `GET /resourceInventoryManagement/v4/resource/{id}'.
+%% @doc Respond to `GET /resourceActivationAndConfiguration/v4/resource/{id}'.
 %%    Retrieve resource from inventory management.
 get_resource(Id) ->
 	case cse:find_resource(Id) of
@@ -248,7 +248,7 @@ get_resource(Id) ->
 		Result :: {ok, [], Body :: iolist()}
 				| {error, ErrorCode :: integer()}.
 %% @doc Body producing function for
-%% 	`HEAD /resourceInventoryManagement/v4/resource'
+%% 	`HEAD /resourceActivationAndConfiguration/v4/resource'
 %% 	requests.
 head_resource() ->
 	try
@@ -270,7 +270,7 @@ head_resource() ->
 		Headers  :: [tuple()],
 		Status   :: 400 | 404 | 500.
 %% @doc Body producing function for
-%% 	`HEAD /resourceInventoryManagement/v4/resource/{id}'.
+%% 	`HEAD /resourceActivationAndConfiguration/v4/resource/{id}'.
 %% 	requests.
 head_resource(Id) ->
 	case cse:find_resource(Id) of
@@ -291,7 +291,7 @@ head_resource(Id) ->
 		Result :: {ok, Headers :: [tuple()], Body :: iolist()}
 				| {error, ErrorCode :: integer()}.
 %% @doc Body producing function for
-%% 	`GET|HEAD /resourceInventoryManagement/v4/resource'
+%% 	`GET|HEAD /resourceActivationAndConfiguration/v4/resource'
 %% 	requests.
 get_resource(Query, Headers) ->
 	try
@@ -441,7 +441,7 @@ query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
 		Body     :: iolist(),
 		Status   :: 400 | 500 .
 %% @doc Respond to
-%% 	`POST /resourceInventoryManagement/v4/resource'.
+%% 	`POST /resourceActivationAndConfiguration/v4/resource'.
 %%    Add a new resource in inventory.
 add_resource(RequestBody) ->
 	try
@@ -480,7 +480,7 @@ add_resource(RequestBody) ->
 		Query :: [{unicode:chardata(), unicode:chardata() | true}],
       Result :: {ok, Headers :: [tuple()], Body :: iolist()}
             | {error, ErrorCode :: integer()} .
-%% @doc Respond to `DELETE /resourceInventoryManagement/v4/resource/{id}''
+%% @doc Respond to `DELETE /resourceActivationAndConfiguration/v4/resource/{id}''
 %%    request to remove a table row.
 %%
 %% 	A `Query' may be used on the Collection path to select the

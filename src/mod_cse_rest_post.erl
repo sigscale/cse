@@ -130,6 +130,9 @@ do_post(Resource, #mod{entity_body = Body} = ModData,
 		["resourceCatalogManagement", "v4", "resourceSpecification"], _Query) ->
 	do_response(ModData, Resource:add_resource_spec(Body));
 do_post(Resource, #mod{entity_body = Body} = ModData,
+		["resourceActivationAndConfiguration", "v4", "resource"], _Query) ->
+	do_response(ModData, Resource:add_resource(Body));
+do_post(Resource, #mod{entity_body = Body} = ModData,
 		["resourceInventoryManagement", "v4", "resource"], _Query) ->
 	do_response(ModData, Resource:add_resource(Body)).
 

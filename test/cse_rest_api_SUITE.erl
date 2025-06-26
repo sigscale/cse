@@ -57,6 +57,7 @@
 -include_lib("common_test/include/ct.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
+-define(activationPath, "/resourceActivationAndConfiguration/v4/resource/").
 -define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
 -ifdef(OTP_RELEASE).
@@ -337,7 +338,7 @@ add_static_table_resource(Config) ->
 	TableT = static_prefix_table(TableName),
 	TableM = cse_rest_res_resource:resource(TableT),
 	RequestBody = zj:encode(TableM),
-	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -362,7 +363,7 @@ add_dynamic_table_resource(Config) ->
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
 	RequestBody = zj:encode(cse_rest_res_resource:resource(TableT)),
-	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -391,7 +392,7 @@ add_static_row_resource(Config) ->
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Row)),
-	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -424,7 +425,7 @@ add_dynamic_row_resource(Config) ->
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
-	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -456,7 +457,7 @@ get_resource(Config) ->
 	Value = cse_test_lib:rand_name(20),
 	Row = static_prefix_row(RowName, Table, Prefix, Value),
 	{ok, #resource{id = Id}}= cse:add_resource(Row),
-	Request = {Host ++ ?inventoryPath ++ Id, [Accept]},
+	Request = {Host ++ ?activationPath ++ Id, [Accept]},
 	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -498,7 +499,7 @@ query_resource(Config) ->
 			"&&@.resource.name=='" ++ TableName1 ++ "')]",
 	Query = "?resourceSpecification.id=" ++ SpecId
 			++ "&filter=" ++ ?QUOTE(Filter),
-	Request = {Host ++ lists:droplast(?inventoryPath) ++ Query, [Accept]},
+	Request = {Host ++ lists:droplast(?activationPath) ++ Query, [Accept]},
 	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, Body} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -538,7 +539,7 @@ delete_static_table_resource(Config) ->
 	{ok, #resource{id = TableId}} = cse:add_resource(TableRes),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	Request = {Host ++ ?inventoryPath ++binary_to_list( TableId), [Accept]},
+	Request = {Host ++ ?activationPath ++binary_to_list( TableId), [Accept]},
 	{ok, Result1} = httpc:request(delete, Request, [], []),
 	{{"HTTP/1.1", 204, _NoContent}, _Headers1, []} = Result1,
 	{ok, Result2} = httpc:request(get, Request, [], []),
@@ -568,10 +569,10 @@ delete_dynamic_table_resource(Config) ->
 	ContentType = "application/json",
 	Accept = {"accept", "application/json"},
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
-	Request1 = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request1 = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result1} = httpc:request(post, Request1, [], []),
 	{{"HTTP/1.1", 201, _Created}, _Headers1, _ResponseBody} = Result1,
-	Request2 = {Host ++ ?inventoryPath ++ binary_to_list(TableId), [Accept]},
+	Request2 = {Host ++ ?activationPath ++ binary_to_list(TableId), [Accept]},
 	{ok, Result2} = httpc:request(delete, Request2, [], []),
 	{{"HTTP/1.1", 204, _NoContent}, _Headers2, []} = Result2,
 	{ok, Result3} = httpc:request(get, Request2, [], []),
@@ -621,7 +622,7 @@ delete_range_row(Config) ->
 	Value = cse_test_lib:rand_name(20),
 	Resource = static_range_row(RowName, Table, Start, End, Value),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
-	Request1 = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request1 = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result1} = httpc:request(post, Request1, [], []),
 	{{"HTTP/1.1", 201, _Created}, _Headers, ResponseBody} = Result1,
 	{ok, #{"id" := RowId, "href" := Href}} = zj:decode(ResponseBody),
@@ -675,7 +676,7 @@ delete_row_query(Config) ->
 	Query = "?resourceSpecification.id=" 
 			++ binary_to_list(RowSpec#resource_spec.id)
 			++ "&filter=" ++ ?QUOTE(Filter),
-	URI =  Host ++ lists:droplast(?inventoryPath) ++ Query,
+	URI =  Host ++ lists:droplast(?activationPath) ++ Query,
 	Request = {URI, []},
 	{ok, Result} = httpc:request(delete, Request, [], []),
 	{{"HTTP/1.1", 204, _NoContent}, _Headers, []} = Result,
@@ -703,7 +704,7 @@ add_range_row_resource(Config) ->
 	Value = cse_test_lib:rand_name(20),
 	Resource = static_range_row(RowName, Table, Start, End, Value),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(Resource)),
-	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -745,7 +746,7 @@ add_index_row_resource(Config) ->
 	Value1 = cse_test_lib:rand_name(20),
 	ResourceT = static_index_row(RowName1, TableR, Key1, Value1),
 	RequestBody = zj:encode(cse_rest_res_resource:resource(ResourceT)),
-	Request = {Host ++ ?inventoryPath, [Accept], ContentType, RequestBody},
+	Request = {Host ++ ?activationPath, [Accept], ContentType, RequestBody},
 	{ok, Result} = httpc:request(post, Request, [], []),
 	{{"HTTP/1.1", 201, _Created}, Headers, ResponseBody} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -793,7 +794,7 @@ query_table_row(Config) ->
 	Accept = {"accept", "application/json"},
 	Filter = "resourceCharacteristic[?(@.name=='prefix'"
 			"&&@.value=='" ++ Prefix1 ++ "')]",
-	Request = {Host ++ lists:droplast(?inventoryPath)
+	Request = {Host ++ lists:droplast(?activationPath)
 			++ "?filter=" ++ ?QUOTE(Filter), [Accept]},
 	{ok, Result} = httpc:request(get, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, ResponseBody} = Result,
@@ -845,7 +846,7 @@ head_resources(Config) ->
 	{ok, _Resource} = cse:add_resource(TableT),
 	Host = ?config(host, Config),
 	Accept = {"accept", "application/json"},
-	Request = {Host ++ ?inventoryPath, [Accept]},
+	Request = {Host ++ ?activationPath, [Accept]},
 	{ok, Result} = httpc:request(head, Request, [], []),
 	{{"HTTP/1.1", 200, _OK}, Headers, []} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers),
@@ -865,7 +866,7 @@ head_resource(Config) ->
 	TableT = static_index_table(TableNameS),
 	{ok, #resource{id = TableId}} = cse:add_resource(TableT),
 	Accept = {"accept", "application/json"},
-	Request = {Host ++ ?inventoryPath ++ TableId, [Accept]},
+	Request = {Host ++ ?activationPath ++ TableId, [Accept]},
 	{ok, Result} = httpc:request(head, Request, [], []),
 	{{"HTTP/1.1", 200, _}, Headers, []} = Result,
 	{_, "application/json"} = lists:keyfind("content-type", 1, Headers).

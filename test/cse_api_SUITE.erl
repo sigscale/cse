@@ -86,6 +86,7 @@
 -include_lib("common_test/include/ct.hrl").
 
 -define(specPath, "/resourceCatalogManagement/v4/resourceSpecification/").
+-define(activationPath, "/resourceActivationAndConfiguration/v4/resource/").
 -define(inventoryPath, "/resourceInventoryManagement/v4/resource/").
 
 %%---------------------------------------------------------------------

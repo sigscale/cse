@@ -104,6 +104,8 @@ do(#mod{request_uri = Uri, data = Data} = ModData) ->
 							check_content_type_header(cse_rest_res_health, ModData);
 						["resourceCatalogManagement", "v4", "resourceSpecification" | _] ->
 							check_content_type_header(cse_rest_res_resource, ModData);
+						["resourceActivationAndConfiguration", "v4", "resource" | _] ->
+							check_content_type_header(cse_rest_res_resource, ModData);
 						["resourceInventoryManagement", "v4", "resource" | _] ->
 							check_content_type_header(cse_rest_res_resource, ModData);
 						_Other ->
