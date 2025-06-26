@@ -1,0 +1,705 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "SigScale CSE - Resource Activation and Configuration",
+    "description" : "# TMF702 Resource Activation and Configuration Management\n\nSigScale uses the standard TM Forum [OpenAPIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF702 API is used in SigScale CSE to represent logical resources such as tables and table rows.\n\n# Prefix Tables\n\nThe Service Logic Execution Environment (SLEE) includes a general purpose facility for prefix matching tables. Multiple key-value tables may be created, using this API, where the key is a string representing a prefix. A typical use case is matching of dialed digits.\n\n## Table\n\nA table is respresented by a `Resource` entity in the inventory. The `name` attribute will be used by Service Logic Processing Programs (SLP) to select a table. Use the `PrefixTable` `ResourceSpecification`.\n\n## Row\n\nEach row in a table is an individual `Resource` entity with a `resourceRelationship` to the containing table. Use the `PrefixTableRow` `ResourceSpecification`. The `prefix` characteristic value represents the string to match while the result of the match is provided by the value of the characteristic named `value`.\n\n## Range Table\n\nThe SLEE includes a special prefix matching table type which supports ranges. The first column provides the start of a range, while the second column provides the end of the range. The third column is a value for the range.",
+    "version" : "4.0.0",
+    "license" : {
+      "name" : "Apache 2.0"
+    },
+    "contact" : {
+      "name" : "SigScale",
+      "email" : "support@sigscale.com",
+      "url" : "http://www.sigscale.com"
+    }
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/SigScale/cse-resource-activation/4.0.0"
+  }, {
+    "url" : "http://cse.example.net/resourceActivationAndConfiguration/v4"
+  } ],
+  "paths" : {
+    "/resource" : {
+      "get" : {
+        "tags" : [ "resource" ],
+        "summary" : "Retrieve Resources",
+        "description" : "Retrieve `Resource` entities",
+        "operationId" : "getResources",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "query",
+          "description" : "Id of the resource",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "category",
+          "in" : "query",
+          "description" : "Category of the resource",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "resourceSpecification.id",
+          "in" : "query",
+          "description" : "Id of the resource specification",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "resourceRelationship.name",
+          "in" : "query",
+          "description" : "Name of the resource relationship",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Resource"
+                  },
+                  "example" : [ {
+                    "id" : "1644299612300-763",
+                    "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                    "name" : "CitiesTable",
+                    "description" : "Prefix table resource",
+                    "category" : "PrefixTable",
+                    "resourceSpecification" : {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable"
+                    },
+                    "lastUpdate" : "2022-02-08T05:53:32.300Z",
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1644987999944-36",
+                    "href" : "/resourceActivationAndConfiguration/v4/resource/1644987999944-36",
+                    "name" : "CitiesRow",
+                    "description" : "Prefix table row resource",
+                    "category" : "PrefixRow",
+                    "resourceSpecification" : {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1644299612300-763",
+                        "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                        "name" : "CitiesTable"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "1416"
+                    }, {
+                      "name" : "value",
+                      "value" : "Toronto, Canada"
+                    } ],
+                    "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1651725112010-274",
+                    "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                    "name" : "SpecialNumbersTable",
+                    "description" : "Special Numbers prefix range table resource",
+                    "category" : "PrefixTable",
+                    "resourceSpecification" : {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable"
+                    },
+                    "lastUpdate" : "2022-05-04T11:20:22.367",
+                    "version" : "1.0"
+                  }, {
+                    "id" : "1651725462999-290",
+                    "href" : "/resourceActivationAndConfiguration/v4/resource/1651725462999-290",
+                    "name" : "SpecialNumbersRow",
+                    "description" : "Special Numbers prefix range table row resource",
+                    "category" : "PrefixRow",
+                    "resourceSpecification" : {
+                      "id" : "1651057291061-274",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                      "name" : "PrefixRangeRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1651725112010-274",
+                        "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                        "name" : "SpecialNumbersTable"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "start",
+                      "value" : "18001234"
+                    }, {
+                      "name" : "end",
+                      "value" : "18009999"
+                    }, {
+                      "name" : "value",
+                      "value" : "example"
+                    } ],
+                    "lastUpdate" : "2022-05-05T11:20:22.367",
+                    "version" : "1.0"
+                  } ]
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "post" : {
+        "tags" : [ "resource" ],
+        "summary" : "Create a Resource",
+        "description" : "Create a new `Resource` entity",
+        "operationId" : "createResource",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Resource"
+              },
+              "examples" : {
+                "Table Resource" : {
+                  "summary" : "Table Resource",
+                  "value" : {
+                    "name" : "CitiesTable",
+                    "description" : "Prefix table resource",
+                    "category" : "PrefixTable",
+                    "resourceSpecification" : {
+                      "id" : "1647577955926-50",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                      "name" : "PrefixTable",
+                      "version" : "1.0"
+                    }
+                  }
+                },
+                "Table Row Resource" : {
+                  "summary" : "Table Row Resource",
+                  "value" : {
+                    "name" : "CitiesRow",
+                    "description" : "Prefix table row resource",
+                    "category" : "PrefixRow",
+                    "resourceSpecification" : {
+                      "id" : "1647577957914-66",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                      "name" : "PrefixRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1644299612300-763",
+                        "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                        "name" : "CitiesTable"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "prefix",
+                      "value" : "1416"
+                    }, {
+                      "name" : "value",
+                      "value" : "Toronto, Canada"
+                    } ],
+                    "version" : "1.0"
+                  }
+                },
+                "Special Numbers Table" : {
+                  "summary" : "Special Numbers Table",
+                  "value" : {
+                    "name" : "SpecialNumbersTable",
+                    "description" : "Special numbers table resource",
+                    "category" : "PrefixTable",
+                    "resourceSpecification" : {
+                      "id" : "1651055414682-258",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                      "name" : "PrefixRangeTable",
+                      "version" : "1.0"
+                    }
+                  }
+                },
+                "Special Numbers Row" : {
+                  "summary" : "Special Numbers Row",
+                  "value" : {
+                    "name" : "SpecialNumbersRow",
+                    "description" : "Special numbers table row resource",
+                    "category" : "PrefixRow",
+                    "resourceSpecification" : {
+                      "id" : "1651057291061-274",
+                      "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                      "name" : "PrefixRangeRow"
+                    },
+                    "resourceRelationship" : [ {
+                      "resource" : {
+                        "id" : "1651725112010-274",
+                        "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                        "name" : "SpecialNumbersTable"
+                      },
+                      "relationshipType" : "contained"
+                    } ],
+                    "resourceCharacteristic" : [ {
+                      "name" : "start",
+                      "value" : "18001234"
+                    }, {
+                      "name" : "end",
+                      "value" : "18009999"
+                    }, {
+                      "name" : "value",
+                      "value" : "example"
+                    } ],
+                    "version" : "1.0"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Success",
+            "headers" : {
+              "Location" : {
+                "schema" : {
+                  "description" : "ResourceRef",
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resource"
+                },
+                "examples" : {
+                  "Table Resource" : {
+                    "summary" : "Table Resource",
+                    "value" : {
+                      "id" : "1644299612300-763",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                      "name" : "CitiesTable",
+                      "description" : "Prefix table resource",
+                      "category" : "PrefixTable",
+                      "resourceSpecification" : {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable"
+                      },
+                      "lastUpdate" : "2022-02-08T05:53:32.300Z",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Table Row Resource" : {
+                    "summary" : "Table Row Resource",
+                    "value" : {
+                      "id" : "1644987999944-36",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1644987999944-36",
+                      "name" : "CitiesRow",
+                      "description" : "Prefix table row resource",
+                      "category" : "PrefixRow",
+                      "resourceSpecification" : {
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1644299612300-763",
+                          "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                          "name" : "CitiesTable"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "1416"
+                      }, {
+                        "name" : "value",
+                        "value" : "Toronto, Canada"
+                      } ],
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Table" : {
+                    "summary" : "Special Numbers Table",
+                    "value" : {
+                      "id" : "1651725112010-274",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                      "name" : "SpecialNumbersTable",
+                      "description" : "Special Numbers prefix range table resource",
+                      "category" : "PrefixTable",
+                      "resourceSpecification" : {
+                        "id" : "1651055414682-258",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                        "name" : "PrefixRangeTable"
+                      },
+                      "lastUpdate" : "2022-05-04T11:20:22.367",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Row" : {
+                    "summary" : "Special Numbers Row",
+                    "value" : {
+                      "id" : "1651725462999-290",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1651725462999-290",
+                      "name" : "SpecialNumbersRow",
+                      "description" : "Special Numbers prefix range table row resource",
+                      "category" : "PrefixRow",
+                      "resourceSpecification" : {
+                        "id" : "1651057291061-274",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                        "name" : "PrefixRangeRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1651725112010-274",
+                          "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                          "name" : "SpecialNumbersTable"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "start",
+                        "value" : "18001234"
+                      }, {
+                        "name" : "end",
+                        "value" : "18009999"
+                      }, {
+                        "name" : "value",
+                        "value" : "example"
+                      } ],
+                      "lastUpdate" : "2022-05-05T11:20:22.367",
+                      "version" : "1.0"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    },
+    "/resource/{Id}" : {
+      "get" : {
+        "tags" : [ "resource" ],
+        "summary" : "Retrieve a Resource",
+        "description" : "Retrieve  a `Resource` entity by its identifier",
+        "operationId" : "getResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Sucess",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resource"
+                },
+                "examples" : {
+                  "Table Resource" : {
+                    "summary" : "Table Resource",
+                    "value" : {
+                      "id" : "1644299612300-763",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                      "name" : "CitiesTable",
+                      "description" : "Prefix table resource",
+                      "category" : "PrefixTable",
+                      "resourceSpecification" : {
+                        "id" : "1647577955926-50",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577955926-50",
+                        "name" : "PrefixTable"
+                      },
+                      "lastUpdate" : "2022-02-08T05:53:32.300Z",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Table Row Resource" : {
+                    "summary" : "Table Row Resource",
+                    "value" : {
+                      "id" : "1644987999944-36",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1644987999944-36",
+                      "name" : "CitiesRow",
+                      "description" : "Prefix table row resource",
+                      "category" : "PrefixRow",
+                      "resourceSpecification" : {
+                        "id" : "1647577957914-66",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1647577957914-66",
+                        "name" : "PrefixRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1644299612300-763",
+                          "href" : "/resourceActivationAndConfiguration/v4/resource/1644299612300-763",
+                          "name" : "CitiesTable"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "prefix",
+                        "value" : "1416"
+                      }, {
+                        "name" : "value",
+                        "value" : "Toronto, Canada"
+                      } ],
+                      "lastUpdate" : "2022-02-16T05:06:39.944Z",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Table" : {
+                    "summary" : "Special Numbers Table",
+                    "value" : {
+                      "id" : "1651725112010-274",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                      "name" : "SpecialNumbersTable",
+                      "description" : "Special Numbers prefix range table resource",
+                      "category" : "PrefixTable",
+                      "resourceSpecification" : {
+                        "id" : "1651055414682-258",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651055414682-258",
+                        "name" : "PrefixRangeTable"
+                      },
+                      "lastUpdate" : "2022-05-04T11:20:22.367",
+                      "version" : "1.0"
+                    }
+                  },
+                  "Special Numbers Row" : {
+                    "summary" : "Special Numbers Row",
+                    "value" : {
+                      "id" : "1651725462999-290",
+                      "href" : "/resourceActivationAndConfiguration/v4/resource/1651725462999-290",
+                      "name" : "SpecialNumbersRow",
+                      "description" : "Special Numbers prefix range table row resource",
+                      "category" : "PrefixRow",
+                      "resourceSpecification" : {
+                        "id" : "1651057291061-274",
+                        "href" : "/resourceCatalogManagement/v4/resourceSpecification/1651057291061-274",
+                        "name" : "PrefixRangeRow"
+                      },
+                      "resourceRelationship" : [ {
+                        "resource" : {
+                          "id" : "1651725112010-274",
+                          "href" : "/resourceActivationAndConfiguration/v4/resource/1651725112010-274",
+                          "name" : "SpecialNumbersTable"
+                        },
+                        "relationshipType" : "contained"
+                      } ],
+                      "resourceCharacteristic" : [ {
+                        "name" : "start",
+                        "value" : "18001234"
+                      }, {
+                        "name" : "end",
+                        "value" : "18009999"
+                      }, {
+                        "name" : "value",
+                        "value" : "example"
+                      } ],
+                      "lastUpdate" : "2022-05-05T11:20:22.367",
+                      "version" : "1.0"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      },
+      "delete" : {
+        "tags" : [ "resource" ],
+        "summary" : "Delete a Resource",
+        "description" : "Delete a `Resource` entity by it's identifier",
+        "operationId" : "deleteResource",
+        "parameters" : [ {
+          "name" : "Id",
+          "in" : "path",
+          "description" : "Id of the resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted"
+          },
+          "400" : {
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        },
+        "deprecated" : false
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Resource" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Identifier of an instance of the resource."
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "The URI for the object itself."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "A string used to give a name to the resource."
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "free-text description of the resource."
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "identifies the specific version of an instance of a resource."
+          },
+          "lifecycleState" : {
+            "type" : "string",
+            "description" : "The life cycle state of the resource."
+          },
+          "lastUpdate" : {
+            "type" : "string",
+            "description" : "The last date the resource was update on."
+          },
+          "category" : {
+            "type" : "string",
+            "description" : "Category of the resource."
+          },
+          "resourceSpecCharacteristic" : {
+            "$ref" : "#/components/schemas/ResourceCharacteristic"
+          },
+          "resourceRelationship" : {
+            "$ref" : "#/components/schemas/ResourceRelationship"
+          },
+          "resourceSpecification" : {
+            "$ref" : "#/components/schemas/ResourceSpecification"
+          }
+        },
+        "description" : "Resource is an abstract entity that describes the common set of attributes shared by all concrete resources"
+      },
+      "ResourceSpecification" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the resource specification."
+          },
+          "id" : {
+            "type" : "string",
+            "description" : "Id of the resource specification."
+          }
+        }
+      },
+      "ResourceCharacteristic" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/ResourceCharacteristicValue"
+        }
+      },
+      "ResourceCharacteristicValue" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the characteristic."
+          },
+          "value" : {
+            "description" : "Value of the characteristic."
+          }
+        }
+      },
+      "ResourceRelationship" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/ResourceRelationshipValue"
+        }
+      },
+      "ResourceRelationshipValue" : {
+        "type" : "object",
+        "properties" : {
+          "resource" : {
+            "$ref" : "#/components/schemas/RefResource"
+          },
+          "relationshipType" : {
+            "type" : "string",
+            "description" : "The type of resource relationship."
+          }
+        }
+      },
+      "RefResource" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier of the parent resource"
+          },
+          "href" : {
+            "type" : "string",
+            "description" : "Reference of the parent resource"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the parent resource"
+          }
+        }
+      }
+    }
+  }
+}

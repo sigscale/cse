@@ -3,8 +3,9 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-schema_DATA = $(abs_builddir)/resourceInventoryManagement.json \
-		$(abs_builddir)/resourceCatalogManagement.json \
+schema_DATA = $(abs_builddir)/resourceCatalogManagement.json \
+		$(abs_builddir)/resourceActivationAndConfiguration.json \
+		$(abs_builddir)/resourceInventoryManagement.json \
 		$(abs_builddir)/Nrf_Rating.json \
 		$(abs_builddir)/ECS_base.json \
 		$(abs_builddir)/ECS_ecs.json \
@@ -35,10 +36,13 @@ check_DATA = .validation_ok
 
 .validation_ok:
 	@if ajv help > /dev/null 2>&1; then \
-		if ! ajv compile -s resourceInventoryManagement.json \
+		if ! ajv compile -s resourceCatalogManagement.json \
 				--strict=false; \
 				then exit 1; fi; \
-		if ! ajv compile -s resourceCatalogManagement.json \
+		if ! ajv compile -s resourceActivationAndConfiguration.json \
+				--strict=false; \
+				then exit 1; fi; \
+		if ! ajv compile -s resourceInventoryManagement.json \
 				--strict=false; \
 				then exit 1; fi; \
 		if ! ajv compile -s Nrf_Rating.json \
