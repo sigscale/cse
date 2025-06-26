@@ -1,4 +1,11 @@
-2025-06-9 Vance Shipley <vances@sigscale.org>
+2025-06-27 Vance Shipley <vances@sigscale.org>
+
+	* produce tmf702 resource activation api
+	* add tmf702 resource activation oas
+	* fix missing newline at end of file
+	* nrf_rating oas version 1.1.6
+
+2025-06-09 Vance Shipley <vances@sigscale.org>
 
 	* install named release; do nothing if unchanged
 	* debug flag in install_release script
