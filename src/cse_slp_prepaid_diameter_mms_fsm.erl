@@ -24,7 +24,7 @@
 %%% 	This Service Logic Program (SLP) implements a 3GPP Online
 %%% 	Charging Function (OCF) interfacing across the <i>Re</i> reference
 %%% 	point interface, using the
-%%% 	<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">
+%%% 	<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.6">
 %%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
 %%%
 %%% 	This SLP specifically handles Multimedia Messaging Service (MMS)
@@ -56,7 +56,7 @@
 %%% 					client. (default: `nrf')</dd>
 %%% 		<dt>`nrf_uri'</dt>
 %%% 			<dd>Uniform Resource Identifier (URI) for a
-%%% 					<a href="https://app.swaggerhub.com/apis/SigScale/nrf-rating/1.0.0">Nrf_Rating</a>
+%%% 					<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.6">Nrf_Rating</a>
 %%% 					server (i.e. OCS).</dd>
 %%% 		<dt>`nrf_http_options'</dt>
 %%% 			<dd>HTTP request {@link //inets/httpc:http_options(). options}
