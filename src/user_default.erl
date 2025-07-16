@@ -520,20 +520,44 @@ dia_count({321, 1, error}, Count) ->
 
 %% @hidden
 tables() ->
-	Tables = [cse_service, gtt_as, gtt_ep, gtt_pc, resource, resource_spec],
-	Other = mnesia:system_info(tables)
-			-- [schema, httpd_user, httpd_group | Tables],
-	tables(Other, lists:reverse(Tables)).
+	All = mnesia:system_info(tables),
+	Base = [cse_service, cse_context, cse_client, resource, resource_spec],
+	Ignore = [schema, httpd_user, httpd_group],
+	tables(Base, (All -- Ignore) -- Base, []).
 %% @hidden
-tables([H | T], Acc) ->
-	case mnesia:table_info(H, record_name) of
-		gtt ->
-			tables(T, [H | Acc]);
-		_ ->
-			tables(T, Acc)
+tables(Base, [H | T], Acc) ->
+	try mnesia:table_info(H, user_properties) of
+		UserProperties ->
+			tables(Base, T, [{H, UserProperties} | Acc])
+	catch
+		_:_ ->
+			tables(Base, T, Acc)
 	end;
-tables([], Acc) ->
-	lists:reverse(Acc).
+tables(Base, [], Acc) ->
+	tables1(Base, Acc, []).
+%% @hidden
+tables1(Base, [{H, UserProperties} | T], Acc) ->
+	Acc1 = case lists:keyfind(cse, 1, UserProperties) of
+		{cse, true} ->
+			[H | Acc];
+		_ ->
+			Acc
+	end,
+	Acc2 = case lists:keyfind(m3ua, 1, UserProperties) of
+		{m3ua, true} ->
+			[H | Acc1];
+		_ ->
+			Acc1
+	end,
+	Acc3 = case lists:keyfind(gtt, 1, UserProperties) of
+		{gtt, true} ->
+			[H | Acc2];
+		_ ->
+			Acc2
+	end,
+	tables1(Base, T, Acc3);
+tables1(Base, [], Acc) ->
+	Base ++ lists:reverse(Acc).
 
 %% @hidden
 snodes(Nodes) ->
