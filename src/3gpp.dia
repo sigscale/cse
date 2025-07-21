@@ -204,9 +204,9 @@
    Interface-Text                                         2005  UTF8String       VM
    Interface-Type                                         2006  Enumerated       VM
    SM-Message-Type                                        2007  Enumerated       VM
-   Originator-SCCP-Address                                2008  Address          VM
+   Originator-SCCP-Address                                2008  OctetString      VM
    Originator-Interface                                   2009  Grouped          VM
-   Recipient-SCCP-Address                                 2010  Address          VM
+   Recipient-SCCP-Address                                 2010  OctetString      VM
 ;  Reply-Path-Requested                                   2011  Enumerated       VM
    SM-Discharge-Time                                      2012  Time             VM
    SM-Protocol-ID                                         2013  OctetString      VM
