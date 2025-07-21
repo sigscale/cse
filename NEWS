@@ -1,3 +1,8 @@
+July 21, 2025
+-------------
+	- Handle Originator|Recipient-SCCP-Address AVPs
+	- Devops shell table commands use m3ua/gtt tables
+
 July 14, 2025
 -------------
 	- Update documentation OAS references

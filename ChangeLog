@@ -1,3 +1,9 @@
+2025-07-21 Vance Shipley <vances@sigscale.org>
+
+	* use diameter type octetstring for sccp avps
+	* full recipient-info in 3gpp dictionary
+	* table commands include all tables with cse, m3ua, gtt user property
+
 2025-07-14 Vance Shipley <vances@sigscale.org>
 
 	* update references to nrf_rating docs to v1.1.6
