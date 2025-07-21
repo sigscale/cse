@@ -206,7 +206,7 @@
    SM-Message-Type                                        2007  Enumerated       VM
    Originator-SCCP-Address                                2008  Address          VM
    Originator-Interface                                   2009  Grouped          VM
-;  Recipient-SCCP-Address                                 2010  Address          VM
+   Recipient-SCCP-Address                                 2010  Address          VM
 ;  Reply-Path-Requested                                   2011  Enumerated       VM
    SM-Discharge-Time                                      2012  Time             VM
    SM-Protocol-ID                                         2013  OctetString      VM
@@ -1380,8 +1380,8 @@
       [ Destination-Interface ]
      *[ Recipient-Address ]
      *[ Recipient-Received-Address ]
-;     [ Recipient-SCCP-Address ]
-;     [ SM-Protocol-ID ]
+      [ Recipient-SCCP-Address ]
+      [ SM-Protocol-ID ]
 
    Recipient-Address ::= <AVP Header: 1201>
       [ Address-Type ]
