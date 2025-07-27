@@ -1,0 +1,58 @@
+{
+	"linkset": [
+		{
+			"anchor": "/health",
+			"service-doc": [
+				{
+					"href": "https://datatracker.ietf.org/doc/html/draft-inadarei-api-health-check-06",
+					"type": "text/html"
+				}
+			]
+		},
+		{
+			"anchor": "/resourceCatalogManagement/v4/",
+			"service-desc": [
+				{
+					"href": "/schema/resourceCatalogManagement.swagger.json",
+					"type": "application/json"
+				}
+			],
+			"service-doc": [
+				{
+					"href": "https://tmf-open-api-table-documents.s3.eu-west-1.amazonaws.com/OpenApiTable/TMF634_Resource_Catalog/4.1.0/user_guides/TMF634_Resource_Catalog_Management_API_v4.1.0_specification.pdf",
+					"type": "application/pdf"
+				}
+			]
+		},
+		{
+			"anchor": "/resourceActivationAndConfiguration/v4/",
+			"service-desc": [
+				{
+					"href": "/schema/resourceActivationAndConfiguration.json",
+					"type": "application/json"
+				}
+			],
+			"service-doc": [
+				{
+					"href": "https://tmf-open-api-table-documents.s3.eu-west-1.amazonaws.com/OpenApiTable/TMF702_Resource_Activation/4.0.0/user_guides/TMF702_Resource_Activation_Management_API_v4.0.0_specification.pdf",
+					"type": "application/pdf"
+				}
+			]
+		},
+		{
+			"anchor": "/resourceInventoryManagement/v4/",
+			"service-desc": [
+				{
+					"href": "/schema/resourceInventoryManagement.json",
+					"type": "application/json"
+				}
+			],
+			"service-doc": [
+				{
+					"href": "https://tmf-open-api-table-documents.s3.eu-west-1.amazonaws.com/OpenApiTable/TMF639_Resource_Inventory/4.0.0/user_guides/TMF639_Resource_Inventory_Management_API_v4.0.0_specification.pdf",
+					"type": "application/pdf"
+				}
+			]
+		}
+	]
+}

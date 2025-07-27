@@ -3,4 +3,5 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = schema mibs
+SUBDIRS = schema mibs www
+

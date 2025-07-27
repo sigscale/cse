@@ -60,6 +60,7 @@ docdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/doc
 erldir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/src
 beamdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/ebin
 eincludedir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/include
+wwwdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/www
 schemadir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/schema
 emibdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/priv/mibs
 mibsdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION/mibs
@@ -72,6 +73,7 @@ AC_SUBST(erldir)
 AC_SUBST(beamdir)
 AC_SUBST(eincludedir)
 AC_SUBST(privdir)
+AC_SUBST(wwwdir)
 AC_SUBST(schemadir)
 AC_SUBST(emibdir)
 AC_SUBST(mibsdir)
@@ -140,7 +142,7 @@ AS_VERSION_COMPARE([$ERLANG_LIB_VER_sasl], ["4.2"],
 		[RELDIR="releases"], [RELDIR="/home/otp/releases"], [RELDIR="/home/otp/releases"])
 AC_SUBST([RELDIR])
 AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile
-		src/Makefile priv/Makefile priv/schema/Makefile
+		src/Makefile priv/Makefile priv/www/Makefile priv/schema/Makefile
 		priv/mibs/Makefile mibs/Makefile test/Makefile
 		sys.config sigtran.rel $PACKAGE_NAME.rel ebin/$PACKAGE_NAME.appup
 		scripts/cse scripts/cse.service])
