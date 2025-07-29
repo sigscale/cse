@@ -1,3 +1,12 @@
+2025-07-29 Vance Shipley <vances@sigscale.org>
+
+	* map final unit indication (fui) from re to ro interface
+	* correct final-unit-action enumeration macro
+	* update nrf_rating api version
+	* final unit indication (fui) in nrf_rating api
+	* Revert "usu, not rsu, for iec in escipts for sms/mms"
+	* enable discovery with well known (rfc8615) api catalog (rfc9727)
+
 2025-07-21 Vance Shipley <vances@sigscale.org>
 
 	* use diameter type octetstring for sccp avps

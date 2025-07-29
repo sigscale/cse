@@ -1,3 +1,10 @@
+July 29, 2025
+-------------
+	- Final-Unit-Indication (FUI) fully supported
+	- Nrf_Rating OAS v1.1.7
+	- Correct DIAMETER IEC MSCC (RSU not USU) in send_sms escript
+	- Discovery with API catalog (RFC9727) at well known URL (RFC8615)
+
 July 21, 2025
 -------------
 	- Handle Originator|Recipient-SCCP-Address AVPs
