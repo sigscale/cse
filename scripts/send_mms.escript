@@ -69,11 +69,11 @@ send_mms(Options) ->
 		RGs = maps:get(rating_group, Options, "16"),
 		RatingGroups = [list_to_integer(RG) || RG <- string:lexemes(RGs, [$,])],
 		SiRg = lists:zip(ServiceIds, RatingGroups),
-		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
+		RSU = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC = [#'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Service-Identifier' = [SI],
 				'Rating-Group' = [RG],
-				'Used-Service-Unit' = [USU]} || {SI, RG} <- SiRg],
+				'Requested-Service-Unit' = [RSU]} || {SI, RG} <- SiRg],
 		Originator = #'3gpp_ro_Originator-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 				'Address-Data' = [maps:get(orig, Options, "14165551234")]},

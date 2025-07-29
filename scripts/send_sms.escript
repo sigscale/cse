@@ -69,11 +69,11 @@ send_sms(Options) ->
 		RGs = maps:get(rating_group, Options, "16"),
 		RatingGroups = [list_to_integer(RG) || RG <- string:lexemes(RGs, [$,])],
 		SiRg = lists:zip(ServiceIds, RatingGroups),
-		USU = #'3gpp_ro_Used-Service-Unit'{'CC-Service-Specific-Units' = [1]},
+		RSU = #'3gpp_ro_Requested-Service-Unit'{},
 		MSCC = [#'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Service-Identifier' = [SI],
 				'Rating-Group' = [RG],
-				'Used-Service-Unit' = [USU]} || {SI, RG} <- SiRg],
+				'Requested-Service-Unit' = [RSU]} || {SI, RG} <- SiRg],
 		Location = << <<(list_to_integer([C], 16)):4>>
 				|| C <- maps:get(location, Options, "82001100beef0011000deadbee") >>,
 		PS = #'3gpp_ro_PS-Information'{
