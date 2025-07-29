@@ -1577,6 +1577,74 @@ vality_time(#{"expiryTime" := ValidityTime})
 vality_time(_) ->
 	[].
 
+%% @hidden
+fui({ok, #{"finalUnitAction" := "TERMINATE"} = FUI}) ->
+	fui1(FUI, #'3gpp_ro_Final-Unit-Indication'{
+			'Final-Unit-Action' = ?'3GPP_FINAL-UNIT-ACTION_TERMINATE'});
+fui({ok, #{"finalUnitAction" := "REDIRECT"} = FUI}) ->
+	fui1(FUI, #'3gpp_ro_Final-Unit-Indication'{
+			'Final-Unit-Action' = ?'3GPP_FINAL-UNIT-ACTION_REDIRECT'});
+fui({ok, #{"finalUnitAction" := "RESTRICT_ACCESS"} = FUI}) ->
+	fui1(FUI, #'3gpp_ro_Final-Unit-Indication'{
+			'Final-Unit-Action' = ?'3GPP_FINAL-UNIT-ACTION_RESTRICT_ACCESS'});
+fui(_) ->
+	[].
+%% @hidden
+fui1(#{"restrictionFilterRules" := IPFilterRules} = FUI, Acc)
+		when is_list(IPFilterRules) ->
+	case lists:all(fun is_list/1, IPFilterRules) of
+		true ->
+			fui2(FUI, Acc#'3gpp_ro_Final-Unit-Indication'{
+					'Restriction-Filter-Rule' = IPFilterRules});
+		false ->
+			fui2(FUI, Acc)
+	end;
+fui1(FUI, Acc) ->
+	fui2(FUI, Acc).
+%% @hidden
+fui2(#{"filterIds" := FilterIds} = FUI, Acc)
+		when is_list(FilterIds) ->
+	case lists:all(fun is_list/1, FilterIds) of
+		true ->
+			fui3(FUI, Acc#'3gpp_ro_Final-Unit-Indication'{
+					'Filter-Id' = FilterIds});
+		false ->
+			fui3(FUI, Acc)
+	end;
+fui2(FUI, Acc) ->
+	fui3(FUI, Acc).
+%% @hidden
+fui3(#{"redirectServer" := #{"redirectAddressType" := "IPV4",
+			"redirectServerAddress" := Address}}, Acc)
+		when is_list(Address) ->
+	RS = #'3gpp_ro_Redirect-Server'{
+			'Redirect-Address-Type' = '?3GPP_RO_REDIRECT-ADDRESS-TYPE_IPV4_ADDRESS',
+			'Redirect-Server-Address' = Address},
+	[Acc#'3gpp_ro_Final-Unit-Indication'{'Redirect-Server' = RS}];
+fui3(#{"redirectServer" := #{"redirectAddressType" := "IPV6",
+			"redirectServerAddress" := Address}}, Acc)
+		when is_list(Address) ->
+	RS = #'3gpp_ro_Redirect-Server'{
+			'Redirect-Address-Type' = '?3GPP_RO_REDIRECT-ADDRESS-TYPE_IPV6_ADDRESS',
+			'Redirect-Server-Address' = Address},
+	[Acc#'3gpp_ro_Final-Unit-Indication'{'Redirect-Server' = RS}];
+fui3(#{"redirectServer" := #{"redirectAddressType" := "URL",
+			"redirectServerAddress" := Address}}, Acc)
+		when is_list(Address) ->
+	RS = #'3gpp_ro_Redirect-Server'{
+			'Redirect-Address-Type' = '?3GPP_RO_REDIRECT-ADDRESS-TYPE_URL',
+			'Redirect-Server-Address' = Address},
+	[Acc#'3gpp_ro_Final-Unit-Indication'{'Redirect-Server' = RS}];
+fui3(#{"redirectServer" := #{"redirectAddressType" := "URI",
+			"redirectServerAddress" := Address}}, Acc)
+		when is_list(Address) ->
+	RS = #'3gpp_ro_Redirect-Server'{
+			'Redirect-Address-Type' = '?3GPP_RO_REDIRECT-ADDRESS-TYPE_SIP_URI',
+			'Redirect-Server-Address' = Address},
+	[Acc#'3gpp_ro_Final-Unit-Indication'{'Redirect-Server' = RS}];
+fui3(_FUI, Acc) ->
+	[Acc].
+
 -spec service_rating(Data) -> ServiceRating
 	when
 		Data :: statedata(),
@@ -2056,6 +2124,7 @@ build_mscc1([SI], [RG], [#{"serviceId" := SI, "ratingGroup" := RG,
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
@@ -2065,6 +2134,7 @@ build_mscc1([SI], [RG], [#{"serviceId" := SI, "ratingGroup" := RG,
 			'Volume-Quota-Threshold' = QV,
 			'Unit-Quota-Threshold' = QU,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([SI], [], [#{"serviceId" := SI,
@@ -2072,6 +2142,7 @@ build_mscc1([SI], [], [#{"serviceId" := SI,
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
@@ -2080,6 +2151,7 @@ build_mscc1([SI], [], [#{"serviceId" := SI,
 			'Volume-Quota-Threshold' = QV,
 			'Unit-Quota-Threshold' = QU,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([], [RG], [#{"ratingGroup" := RG,
@@ -2087,6 +2159,7 @@ build_mscc1([], [RG], [#{"ratingGroup" := RG,
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Rating-Group' = [RG],
@@ -2095,6 +2168,7 @@ build_mscc1([], [RG], [#{"ratingGroup" := RG,
 			'Volume-Quota-Threshold' = QV,
 			'Unit-Quota-Threshold' = QU,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
@@ -2102,6 +2176,7 @@ build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
 	Validity = vality_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Granted-Service-Unit' = GSU,
@@ -2109,6 +2184,7 @@ build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
 			'Volume-Quota-Threshold' = QV,
 			'Unit-Quota-Threshold' = QU,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1(SI, RG, [_ | T], Acc) ->
