@@ -17,6 +17,11 @@ AM_INIT_AUTOMAKE([-Wno-portability])
 ##
 AC_ARG_ENABLE([debug],
 		[AS_HELP_STRING([--enable-debug], [enable debugging (default is no)])])
+AC_ARG_WITH([plantuml],
+		[AS_HELP_STRING([--with-plantuml=PATH],
+		[specify location of plantuml])],
+		[if test x$with_plantuml = x; then with_plantuml="no"; fi],
+		[with_plantuml=yes])
 PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdsystemunitdir],
 		[AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
@@ -53,6 +58,14 @@ AC_ERLANG_SUBST_ROOT_DIR
 AC_PROG_MKDIR_P
 AC_PROG_INSTALL
 AC_PROG_LN_S
+if test "x$with_plantuml" = xyes ; then
+	AC_PATH_PROG([plantuml], [plantuml])
+elif test "x$with_plantuml" = xno ; then
+	plantuml=""
+else
+	plantuml="$with_plantuml"
+fi
+AM_CONDITIONAL([PLANTUML], [test x$plantuml != x])
 AC_ERLANG_SUBST_INSTALL_LIB_DIR
 otpdir=$ERLANG_INSTALL_LIB_DIR/..
 appdir=$ERLANG_INSTALL_LIB_DIR/$PACKAGE_NAME-$PACKAGE_VERSION

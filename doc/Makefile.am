@@ -93,6 +93,13 @@ overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
 			-e 's!%DESCRIPTION%!$(PACKAGE)!' < $< > $@
 
+%.svg:$(top_srcdir)/doc/%.puml
+if PLANTUML
+	$(plantuml) -tsvg -o $(abs_builddir) $<
+else
+	cp -n $(top_srcdir)/doc/$@ .
+endif
+
 %.html:$(top_srcdir)/src/%.erl	overview.edoc $(top_srcdir)/doc/supervision.edoc
 	sed -e '/^-doc/d' $(top_builddir)/src/cse_rest_query_parser.erl > $(top_builddir)/src/cse_rest_query_parser.erl.tmp
 	mv $(top_builddir)/src/cse_rest_query_parser.erl.tmp $(top_builddir)/src/cse_rest_query_parser.erl
