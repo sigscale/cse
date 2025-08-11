@@ -15,9 +15,10 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc This {@link //stdlib/gen_server. gen_server} behaviour callback
-%%% 	module receives {@link //diameter. diameter} messages on a port assigned
-%%% 	for the 3GPP DIAMETER Rf in the {@link //cse. cse} application.
+%%% @doc This {@link //diameter/diameter_app. diameter_app}
+%%% 	behaviour callback module handles {@link //diameter. diameter}
+%%% 	messages for the 3GPP DIAMETER Rf application
+%%% 	in the {@link //cse. cse} application.
 %%%
 %%% @reference 3GPP TS 29.299 Diameter charging applications
 %%% @reference <a href="https://datatracker.ietf.org/doc/html/rfc6733">
@@ -36,6 +37,8 @@
 -include("diameter_gen_3gpp.hrl").
 -include("diameter_gen_3gpp_rf_application.hrl").
 -include("cse.hrl").
+
+-behaviour(diameter_app).
 
 -record(state, {}).
 
