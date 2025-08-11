@@ -347,8 +347,7 @@ Application environment variables configuring instances of the
 				port (`Port :: 0..65535') and options
 				(`Options :: [diameter:service_opt()
 						| {listen, [diameter:transport_opt()]}
-						| {connect, [diameter:transport_opt()]}
-						| diameter]')
+						| {connect, [diameter:transport_opt()]}]')
 				define a DIAMETER service. (default: `[]')</dd>
 </dl>
 
