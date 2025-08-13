@@ -3,7 +3,8 @@
 ##
 ## Process this file with automake to produce Makefile.in
 
-schema_DATA = $(abs_builddir)/resourceCatalogManagement.json \
+schema_DATA = $(abs_builddir)/api-catalog.linkset.jsonld \
+		$(abs_builddir)/resourceCatalogManagement.json \
 		$(abs_builddir)/resourceActivationAndConfiguration.json \
 		$(abs_builddir)/resourceInventoryManagement.json \
 		$(abs_builddir)/Nrf_Rating.json \
@@ -27,6 +28,11 @@ schema_DATA = $(abs_builddir)/resourceCatalogManagement.json \
 		$(abs_builddir)/ECS_rating.json
 
 
+$(abs_builddir)/%.jsonld: $(srcdir)/%.jsonld
+	if [ ! -e $@ ]; then \
+		$(LN_S) $< $@; \
+	fi
+
 $(abs_builddir)/%.json: $(srcdir)/%.json
 	if [ ! -e $@ ]; then \
 		$(LN_S) $< $@; \
@@ -36,6 +42,9 @@ check_DATA = .validation_ok
 
 .validation_ok:
 	@if ajv help > /dev/null 2>&1; then \
+		if ! ajv compile -s api-catalog.linkset.jsonld \
+				--strict=false; \
+				then exit 1; fi; \
 		if ! ajv compile -s resourceCatalogManagement.json \
 				--strict=false; \
 				then exit 1; fi; \

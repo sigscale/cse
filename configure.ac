@@ -157,7 +157,7 @@ AS_VERSION_COMPARE([$ERLANG_LIB_VER_sasl], ["4.2"],
 		[RELDIR="releases"], [RELDIR="/home/otp/releases"], [RELDIR="/home/otp/releases"])
 AC_SUBST([RELDIR])
 AC_OUTPUT([Makefile ebin/Makefile include/Makefile doc/Makefile
-		src/Makefile priv/Makefile priv/www/Makefile priv/schema/Makefile
+		src/Makefile priv/Makefile priv/schema/Makefile
 		priv/mibs/Makefile mibs/Makefile test/Makefile
 		sys.config sigtran.rel $PACKAGE_NAME.rel ebin/$PACKAGE_NAME.appup
 		scripts/cse scripts/cse.service])
