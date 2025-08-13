@@ -39,7 +39,7 @@
 -include("diameter_gen_cc_application_rfc4006.hrl").
 -include("cse.hrl").
 
--behaviour(diameter_app).
+%-behaviour(diameter_app).
 
 -record(state, {}).
 

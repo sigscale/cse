@@ -38,7 +38,7 @@
 -include("diameter_gen_3gpp_rf_application.hrl").
 -include("cse.hrl").
 
--behaviour(diameter_app).
+%-behaviour(diameter_app).
 
 -record(state, {}).
 
