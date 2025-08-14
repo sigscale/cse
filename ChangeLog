@@ -1,3 +1,9 @@
+2025-08-14 Vance Shipley <vances@sigscale.org>
+
+	* diameter_app supports behaviour_info from otp 27
+	* refactor including api-catalog in release
+	* diameter_app does not support behaviour_info
+
 2025-08-12 Vance Shipley <vances@sigscale.org>
 
 	* correct httpd directives for /schema, /doc directories
