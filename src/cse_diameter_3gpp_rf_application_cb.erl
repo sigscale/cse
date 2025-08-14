@@ -38,7 +38,11 @@
 -include("diameter_gen_3gpp_rf_application.hrl").
 -include("cse.hrl").
 
-%-behaviour(diameter_app).
+-ifdef(OTP_RELEASE).
+	-if(?OTP_RELEASE >= 27).
+		-behaviour(diameter_app).
+  -endif.
+-endif.
 
 -record(state, {}).
 
