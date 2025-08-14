@@ -1,5 +1,6 @@
 2025-08-14 Vance Shipley <vances@sigscale.org>
 
+	* revert inets document_root to edoc directory
 	* diameter_app supports behaviour_info from otp 27
 	* refactor including api-catalog in release
 	* diameter_app does not support behaviour_info
