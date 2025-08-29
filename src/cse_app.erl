@@ -923,18 +923,12 @@ create_table(httpd_group, Nodes) when is_list(Nodes) ->
 			{attributes, record_info(fields, httpd_group)}])).
 %% @hidden
 create_table1(cse_context = Table, {atomic, ok}) ->
-	cse:add_context("32251@3gpp.org",
-			cse_slp_prepaid_diameter_ps_fsm, [], []),
-	cse:add_context("32260@3gpp.org",
-			cse_slp_prepaid_diameter_ims_fsm, [], []),
-	cse:add_context("32270@3gpp.org",
-			cse_slp_prepaid_diameter_mms_fsm, [], []),
-	cse:add_context("32274@3gpp.org",
-			cse_slp_prepaid_diameter_sms_fsm, [], []),
-	cse:add_context("32276@3gpp.org",
-			cse_slp_prepaid_diameter_ims_fsm, [], []),
 	error_logger:info_msg("Created new ~w table.~n", [Table]),
-	ok;
+	{ok, Contexts} = application:get_env(cse, init_contexts),
+	F = fun(ContextId, {Module, Args, Opts}) ->
+			cse:add_context(ContextId, Module, Args, Opts)
+	end,
+	maps:foreach(F, Contexts);
 create_table1(Table, {atomic, ok}) ->
 	error_logger:info_msg("Created new ~w table.~n", [Table]),
 	ok;
