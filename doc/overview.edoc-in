@@ -485,10 +485,15 @@ Application environment variables configuring mnesia tables.
 <dl>
 	<dt>`wait_tables'</dt>
 		<dd>Time to wait for tables to load. (default: `60000')</dd>
-</dl>
-<dl>
 	<dt>`resource_table_type'</dt>
 		<dd>Storage type of the `resource' table. (default: `disc_copies')</dd>
+	<dt>`init_contexts'</dt>
+		<dd>Initial entries for the `cse_context' table.  (default:
+           `#{"32251@3gpp.org" => {cse_slp_prepaid_diameter_ps_fsm, [], []},
+           "32260@3gpp.org" => {cse_slp_prepaid_diameter_ims_fsm, [], []},
+           "32270@3gpp.org" => {cse_slp_prepaid_diameter_mms_fsm, [], []},
+           "32274@3gpp.org" => {cse_slp_prepaid_diameter_sms_fsm, [], []},
+           "32276@3gpp.org" => {cse_slp_prepaid_diameter_ims_fsm, [], []}}')</dd>
 </dl>
 
 ===Example sys.config===
@@ -512,7 +517,7 @@ Application environment variables configuring mnesia tables.
                  [{format, external},
                  {codec, {cse_log_codec_bx, csv}},
                  {type, wrap},
-                 {size, {10485760, 10}}]}]}]},
+                 {size, {10485760, 10}}]}]},
      {radius, []},
      {diameter,
            [{{0,0,0,0}, 3868,
@@ -528,7 +533,17 @@ Application environment variables configuring mnesia tables.
                        {dictionary, diameter_gen_3gpp_rf_application},
                        {module, cse_diameter_3gpp_rf_application_cb},
                        {request_errors, callback}]},
-                 {'Origin-Realm',"cse.mnc001.mnc001.3gppnetwork.org"}]}]}]},
+                 {'Origin-Realm',"cse.mnc001.mnc001.3gppnetwork.org"}]}]},
+     {init_contexts,
+           #{"32251@3gpp.org" =>
+                 {cse_slp_prepaid_diameter_ps_fsm,
+                       [{idle_timeout, {hours, 36}}], []},
+           "32260@3gpp.org" =>
+                 {cse_slp_prepaid_diameter_ims_fsm,
+                       [{idle_timeout, {minutes, 90}}], []},
+           "32274@3gpp.org" =>
+                 {cse_slp_prepaid_diameter_sms_fsm,
+                       [{idle_timeout, {seconds, 60}}], []}}}]},
 {m3ua,
       []},
 {gtt,
