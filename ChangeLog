@@ -1,3 +1,9 @@
+2025-09-09 Vance Shipley <vances@sigscale.org>
+
+	* document 'init_contexts' app env var
+	* initialize context table from 'init_contexts' app env var
+	* cse_app:install/1 must be reentrant, was overwriting context table
+
 2025-08-14 Vance Shipley <vances@sigscale.org>
 
 	* revert inets document_root to edoc directory

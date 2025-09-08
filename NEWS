@@ -1,3 +1,8 @@
+September 9, 2025
+-----------------
+	- Initialze context table from application environment variable
+	- Correct install script to remain reentrant (no overwriting context table)
+
 August 13, 2025
 ---------------
 	- No authentication required for discovery, schemas and doumentation
