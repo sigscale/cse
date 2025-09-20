@@ -108,7 +108,9 @@ send_sms(Options) ->
 		Fro = fun('3gpp_ro_CCA', _N) ->
 					record_info(fields, '3gpp_ro_CCA');
 				('3gpp_ro_Multiple-Services-Credit-Control', _N) ->
-					record_info(fields, '3gpp_ro_Multiple-Services-Credit-Control')
+					record_info(fields, '3gpp_ro_Multiple-Services-Credit-Control');
+				('3gpp_ro_Granted-Service-Unit', _N) ->
+					record_info(fields, '3gpp_ro_Granted-Service-Unit')
 		end,
 		Fbase = fun('diameter_base_answer-message', _N) ->
 					record_info(fields, 'diameter_base_answer-message')
