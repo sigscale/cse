@@ -80,20 +80,20 @@ doc_DATA = overview.edoc $(modhtml) \
 		messaging.svg \
 		distribution.svg \
 		ocf-ocs.svg \
-		ocf-nrf-msc.svg \
-		ocf-nrf-iec-msc.svg \
-		ctf-cdf-msc.svg \
-		slp-prepaid-cap-msc.svg \
-		prepaid-diameter-data.svg \
-		prepaid-diameter-voice.svg \
-		prepaid-diameter-event.svg \
-		postpaid-cdf.svg
+		$(abs_builddir)/ocf-nrf-msc.svg \
+		$(abs_builddir)/ocf-nrf-iec-msc.svg \
+		$(abs_builddir)/ctf-cdf-msc.svg \
+		$(abs_builddir)/slp-prepaid-cap-msc.svg \
+		$(abs_builddir)/prepaid-diameter-data.svg \
+		$(abs_builddir)/prepaid-diameter-voice.svg \
+		$(abs_builddir)/prepaid-diameter-event.svg \
+		$(abs_builddir)/postpaid-cdf.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
 			-e 's!%DESCRIPTION%!$(PACKAGE)!' < $< > $@
 
-%.svg:$(top_srcdir)/doc/%.puml
+$(abs_builddir)/%.svg:$(top_srcdir)/doc/%.puml
 if PLANTUML
 	$(plantuml) -tsvg -o $(abs_builddir) $<
 else
@@ -125,14 +125,6 @@ endif
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
 	-cp -n $(top_srcdir)/doc/ocf-ocs.svg .
-	-cp -n $(top_srcdir)/doc/ocf-nrf-msc.svg .
-	-cp -n $(top_srcdir)/doc/ocf-nrf-iec-msc.svg .
-	-cp -n $(top_srcdir)/doc/ctf-cdf-msc.svg .
-	-cp -n $(top_srcdir)/doc/slp-prepaid-cap-msc.svg .
-	-cp -n $(top_srcdir)/doc/prepaid-diameter-data.svg .
-	-cp -n $(top_srcdir)/doc/prepaid-diameter-voice.svg .
-	-cp -n $(top_srcdir)/doc/prepaid-diameter-event.svg .
-	-cp -n $(top_srcdir)/doc/postpaid-cdf.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 
