@@ -83,6 +83,9 @@ send_sms(Options) ->
 				'3GPP-SGSN-MCC-MNC' = [maps:get(vplmn, Options, "001001")],
 				'3GPP-User-Location-Info' = [Location]},
 		SMS = #'3gpp_ro_SMS-Information'{
+				'Originator-Received-Address' = [#'3gpp_ro_Originator-Received-Address'{
+						'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
+						'Address-Data' = [MSISDN]}],
 				'Recipient-Info' = [#'3gpp_ro_Recipient-Info'{
 				'Recipient-Address' = [#'3gpp_ro_Recipient-Address'{
 				'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
