@@ -33,7 +33,7 @@ send_sms(Options) ->
 				{'Origin-Realm', OriginRealm},
 				{'Vendor-Id', ?IANA_PEN_SigScale},
 				{'Supported-Vendor-Id', [?IANA_PEN_3GPP]},
-				{'Product-Name', "SigScale CSE (test script)"},
+				{'Product-Name', "SigScale Test Script"},
 				{'Auth-Application-Id', [?RO_APPLICATION_ID]},
 				{string_decode, false},
 				{restrict_connections, false},
