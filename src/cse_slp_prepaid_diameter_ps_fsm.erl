@@ -291,10 +291,11 @@ authorize_origination_attempt(cast,
 			end;
 		{{ok, #{}}, {_, Location}}
 				when is_list(Location) ->
+			NewData1 = NewData#{nrf_location => Location},
 			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 			Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
-			{next_state, collect_information, NewData, Actions1};
+			{next_state, collect_information, NewData1, Actions1};
 		{{error, Partial, Remaining}, {_, Location}}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
