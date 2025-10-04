@@ -104,10 +104,24 @@ data_session(Options) ->
 		Fro = fun('3gpp_ro_CCA', _N) ->
 					record_info(fields, '3gpp_ro_CCA');
 				('3gpp_ro_Multiple-Services-Credit-Control', _N) ->
-					record_info(fields, '3gpp_ro_Multiple-Services-Credit-Control')
+					record_info(fields, '3gpp_ro_Multiple-Services-Credit-Control');
+				('3gpp_ro_Granted-Service-Unit', _N) ->
+					record_info(fields, '3gpp_ro_Granted-Service-Unit');
+				('3gpp_ro_Final-Unit-Indication', _N) ->
+					record_info(fields, '3gpp_ro_Final-Unit-Indication');
+				('3gpp_ro_Redirect-Server', _N) ->
+					record_info(fields, '3gpp_ro_Redirect-Server')
 		end,
 		Fbase = fun('diameter_base_answer-message', _N) ->
-					record_info(fields, 'diameter_base_answer-message')
+					record_info(fields, 'diameter_base_answer-message');
+				('diameter_base_Failed-AVP', _N) ->
+					record_info(fields, 'diameter_base_Failed-AVP');
+				('diameter_base_Experimental-Result', _N) ->
+					record_info(fields, 'diameter_base_Experimental-Result');
+				('diameter_base_Vendor-Specific-Application-Id', _N) ->
+					record_info(fields, 'diameter_base_Vendor-Specific-Application-Id');
+				('diameter_base_Proxy-Info', _N) ->
+					record_info(fields, 'diameter_base_Proxy-Info')
 		end,
 		case diameter:call(Name, ro, CCR1, []) of
 			#'3gpp_ro_CCA'{} = Answer1 ->

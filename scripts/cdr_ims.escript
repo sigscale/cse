@@ -94,7 +94,15 @@ cdr_ps(Options) ->
 					record_info(fields, '3gpp_rf_ACA')
 		end,
 		Fbase = fun('diameter_base_answer-message', _N) ->
-					record_info(fields, 'diameter_base_answer-message')
+					record_info(fields, 'diameter_base_answer-message');
+				('diameter_base_Failed-AVP', _N) ->
+					record_info(fields, 'diameter_base_Failed-AVP');
+				('diameter_base_Experimental-Result', _N) ->
+					record_info(fields, 'diameter_base_Experimental-Result');
+				('diameter_base_Vendor-Specific-Application-Id', _N) ->
+					record_info(fields, 'diameter_base_Vendor-Specific-Application-Id');
+				('diameter_base_Proxy-Info', _N) ->
+					record_info(fields, 'diameter_base_Proxy-Info')
 		end,
 		case diameter:call(Name, rf, ACR1, []) of
 			#'3gpp_rf_ACA'{} = Answer1 ->
