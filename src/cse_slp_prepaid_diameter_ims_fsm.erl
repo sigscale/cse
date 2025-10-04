@@ -2258,12 +2258,7 @@ nrf_update2(Now, JSON,
 	Headers1 = [{"accept", "application/json, application/problem+json"} | Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
-	RequestURL = case hd(Location) of
-		$/ ->
-			URI ++ Location ++ "/update";
-		_ ->
-			Location ++ "/update"
-	end,
+	RequestURL = uri_string:resolve(Location, URI) ++ "/update",
 	LogHTTP = ecs_http(ContentType, Body),
 	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
@@ -2333,12 +2328,7 @@ nrf_release2(Now, JSON,
 	Headers1 = [{"accept", "application/json, application/problem+json"} | Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
-	RequestURL = case hd(Location) of
-		$/ ->
-			URI ++ Location ++ "/release";
-		_ ->
-			Location ++ "/release"
-	end,
+	RequestURL = uri_string:resolve(Location, URI) ++ "/release",
 	LogHTTP = ecs_http(ContentType, Body),
 	Request = {RequestURL, Headers1, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
