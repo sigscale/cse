@@ -133,16 +133,25 @@ send_mms(Options) ->
 					record_info(fields, 'diameter_base_Proxy-Info')
 		end,
 		case diameter:call(Name, ro, CCR, []) of
-			#'3gpp_ro_CCA'{} = Answer ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fro)]);
-			#'diameter_base_answer-message'{} = Answer ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer, Fbase)]);
-			{error, Reason} ->
-				throw(Reason)
+			#'3gpp_ro_CCA'{'Result-Code' = 2001} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
+			#'3gpp_ro_CCA'{'Result-Code' = ResultCode} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]),
+				throw(ResultCode);
+			#'diameter_base_answer-message'{'Result-Code' = ResultCode} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]),
+				throw(ResultCode);
+			{error, Reason1} ->
+				error(Reason1)
 		end
 	catch
-		Error:Reason1 ->
-			io:fwrite("~w: ~w~n", [Error, Reason1]),
+		throw:_Reason2 ->
+			halt(1);
+		error:Reason2 ->
+			io:fwrite("~w: ~w~n", [error, Reason2]),
+			halt(1);
+		exit:Reason2 ->
+			io:fwrite("~w: ~w~n", [error, Reason2]),
 			usage()
 	end.
 

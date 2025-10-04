@@ -139,12 +139,16 @@ voice_call(Options) ->
 					record_info(fields, 'diameter_base_Proxy-Info')
 		end,
 		case diameter:call(Name, ro, CCR1, []) of
-			#'3gpp_ro_CCA'{} = Answer1 ->
+			#'3gpp_ro_CCA'{'Result-Code' = 2001} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]);
-			#'diameter_base_answer-message'{} = Answer1 ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]);
+			#'3gpp_ro_CCA'{'Result-Code' = ResultCode} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fro)]),
+				throw(ResultCode);
+			#'diameter_base_answer-message'{'Result-Code' = ResultCode} = Answer1 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fbase)]),
+				throw(ResultCode);
 			{error, Reason1} ->
-				throw(Reason1)
+				error(Reason1)
 		end,
 		timer:sleep(maps:get(interval, Options, 1000)),
 		Fupdate = fun F(0, ReqNum) ->
@@ -161,12 +165,16 @@ voice_call(Options) ->
 							'Multiple-Services-Credit-Control' = MSCC2,
 							'Event-Timestamp' = [calendar:universal_time()]},
 					case diameter:call(Name, ro, CCR2, []) of
-						#'3gpp_ro_CCA'{} = Answer2 ->
+						#'3gpp_ro_CCA'{'Result-Code' = 2001} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]);
-						#'diameter_base_answer-message'{} = Answer2 ->
-							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]);
+						#'3gpp_ro_CCA'{'Result-Code' = ResultCode1} = Answer2 ->
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fro)]),
+							throw(ResultCode1);
+						#'diameter_base_answer-message'{'Result-Code' = ResultCode1} = Answer2 ->
+							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fbase)]),
+							throw(ResultCode1);
 						{error, Reason2} ->
-							throw(Reason2)
+							error(Reason2)
 					end,
 					timer:sleep(maps:get(interval, Options, 1000)),
 					F(N - 1, NewReqNum)
@@ -183,16 +191,25 @@ voice_call(Options) ->
 				'Multiple-Services-Credit-Control' = MSCC3,
 				'Event-Timestamp' = [calendar:universal_time()]},
 		case diameter:call(Name, ro, CCR3, []) of
-			#'3gpp_ro_CCA'{} = Answer3 ->
+			#'3gpp_ro_CCA'{'Result-Code' = 2001} = Answer3 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fro)]);
-			#'diameter_base_answer-message'{} = Answer3 ->
-				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fbase)]);
+			#'3gpp_ro_CCA'{'Result-Code' = ResultCode2} = Answer3 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fro)]),
+				throw(ResultCode2);
+			#'diameter_base_answer-message'{'Result-Code' = ResultCode2} = Answer3 ->
+				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fbase)]),
+				throw(ResultCode2);
 			{error, Reason3} ->
-				throw(Reason3)
+				error(Reason3)
 		end
 	catch
-		Error:Reason4 ->
-			io:fwrite("~w: ~w~n", [Error, Reason4]),
+		throw:_Reason4 ->
+			halt(1);
+		error:Reason4 ->
+			io:fwrite("~w: ~w~n", [error, Reason4]),
+			halt(1);
+		exit:Reason4 ->
+			io:fwrite("~w: ~w~n", [error, Reason4]),
 			usage()
 	end.
 
