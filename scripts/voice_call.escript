@@ -153,7 +153,7 @@ voice_call(Options) ->
 					NewReqNum = ReqNum + 1,
 					MSCC2 = [MSCC#'3gpp_ro_Multiple-Services-Credit-Control'{
 							'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
-							'CC-Time' = [rand:uniform(3500) + 100]}]}
+							'CC-Time' = [rand:uniform(60)]}]}
 							|| MSCC <- MSCC1],
 					CCR2 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 							'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_UPDATE_REQUEST',
@@ -175,7 +175,7 @@ voice_call(Options) ->
 		MSCC3 = [MSCC#'3gpp_ro_Multiple-Services-Credit-Control'{
 				'Requested-Service-Unit' = [],
 				'Used-Service-Unit' = [#'3gpp_ro_Used-Service-Unit'{
-				'CC-Time' = [rand:uniform(3500) + 100]}]}
+				'CC-Time' = [rand:uniform(60)]}]}
 				|| MSCC <- MSCC1],
 		CCR3 = CCR1#'3gpp_ro_CCR'{'Session-Id' = SId,
 				'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
