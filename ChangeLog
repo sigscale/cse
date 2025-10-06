@@ -1,5 +1,6 @@
 2025-10-06 Vance Shipley <vances@sigscale.org>
 
+	* distributed unit determination in iec test cases
 	* correct service rating for mms iec (rsu, not usu)
 	* correct iec test cases for rsu, not usu
 	* correct nrf service rating for sms iec (rsu, not usu)
