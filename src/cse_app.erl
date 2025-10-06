@@ -689,16 +689,20 @@ join9(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join10(Node, Nodes, Acc) ->
-	case rpc:call(Node, mnesia, add_table_copy, [m3ua_as, node(), ram_copies]) of
+	case rpc:call(Node, mnesia, add_table_copy, [cse_client, node(), disc_copies]) of
 		{atomic, ok} ->
-			error_logger:info_msg("Copied m3ua_as table from ~s.~n", [Node]),
-			join11(Node, Nodes, [m3ua_as | Acc]);
-		{aborted, {already_exists, m3ua_as, _}} ->
-			error_logger:info_msg("Found existing m3ua_as table on ~s.~n", [Node]),
-			join11(Node, Nodes, [m3ua_as | Acc]);
-		{aborted, {no_exists, {m3ua_as , _}}} ->
-			error_logger:info_msg("No m3ua_as table found on ~s.~n", [Node]),
-			join11(Node, Nodes, Acc);
+			error_logger:info_msg("Copied cse_client table from ~s.~n", [Node]),
+			join11(Node, Nodes, [cse_client | Acc]);
+		{aborted, {already_exists, cse_client, _}} ->
+			error_logger:info_msg("Found existing cse_client table on ~s.~n", [Node]),
+			join11(Node, Nodes, [cse_client | Acc]);
+		{aborted, {no_exists, {cse_client, _}}} ->
+			case create_table(cse_client, Nodes) of
+				ok ->
+					join11(Node, Nodes, [cse_client | Acc]);
+				{error, Reason} ->
+					{error, Reason}
+			end;
 		{aborted, Reason} ->
 			error_logger:error_report([mnesia:error_description(Reason),
 				{error, Reason}]),
@@ -706,15 +710,15 @@ join10(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join11(Node, Nodes, Acc) ->
-	case rpc:call(Node, mnesia, add_table_copy, [m3ua_asp, node(), ram_copies]) of
+	case rpc:call(Node, mnesia, add_table_copy, [m3ua_as, node(), ram_copies]) of
 		{atomic, ok} ->
-			error_logger:info_msg("Copied m3ua_asp table from ~s.~n", [Node]),
-			join12(Node, Nodes, [m3ua_asp | Acc]);
-		{aborted, {already_exists, m3ua_asp, _}} ->
-			error_logger:info_msg("Found existing m3ua_asp table on ~s.~n", [Node]),
-			join12(Node, Nodes, [m3ua_asp | Acc]);
-		{aborted, {no_exists, {m3ua_asp , _}}} ->
-			error_logger:info_msg("No m3ua_asp table found on ~s.~n", [Node]),
+			error_logger:info_msg("Copied m3ua_as table from ~s.~n", [Node]),
+			join12(Node, Nodes, [m3ua_as | Acc]);
+		{aborted, {already_exists, m3ua_as, _}} ->
+			error_logger:info_msg("Found existing m3ua_as table on ~s.~n", [Node]),
+			join12(Node, Nodes, [m3ua_as | Acc]);
+		{aborted, {no_exists, {m3ua_as , _}}} ->
+			error_logger:info_msg("No m3ua_as table found on ~s.~n", [Node]),
 			join12(Node, Nodes, Acc);
 		{aborted, Reason} ->
 			error_logger:error_report([mnesia:error_description(Reason),
@@ -723,15 +727,15 @@ join11(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join12(Node, Nodes, Acc) ->
-	case rpc:call(Node, mnesia, add_table_copy, [gtt_as, node(), disc_copies]) of
+	case rpc:call(Node, mnesia, add_table_copy, [m3ua_asp, node(), ram_copies]) of
 		{atomic, ok} ->
-			error_logger:info_msg("Copied gtt_as table from ~s.~n", [Node]),
-			join13(Node, Nodes, [gtt_as | Acc]);
-		{aborted, {already_exists, gtt_as, _}} ->
-			error_logger:info_msg("Found existing gtt_as table on ~s.~n", [Node]),
-			join13(Node, Nodes, [gtt_as | Acc]);
-		{aborted, {no_exists, {gtt_as , _}}} ->
-			error_logger:info_msg("No gtt_as table found on ~s.~n", [Node]),
+			error_logger:info_msg("Copied m3ua_asp table from ~s.~n", [Node]),
+			join13(Node, Nodes, [m3ua_asp | Acc]);
+		{aborted, {already_exists, m3ua_asp, _}} ->
+			error_logger:info_msg("Found existing m3ua_asp table on ~s.~n", [Node]),
+			join13(Node, Nodes, [m3ua_asp | Acc]);
+		{aborted, {no_exists, {m3ua_asp , _}}} ->
+			error_logger:info_msg("No m3ua_asp table found on ~s.~n", [Node]),
 			join13(Node, Nodes, Acc);
 		{aborted, Reason} ->
 			error_logger:error_report([mnesia:error_description(Reason),
@@ -740,15 +744,15 @@ join12(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join13(Node, Nodes, Acc) ->
-	case rpc:call(Node, mnesia, add_table_copy, [gtt_ep, node(), disc_copies]) of
+	case rpc:call(Node, mnesia, add_table_copy, [gtt_as, node(), disc_copies]) of
 		{atomic, ok} ->
-			error_logger:info_msg("Copied gtt_ep table from ~s.~n", [Node]),
-			join14(Node, Nodes, [gtt_ep | Acc]);
-		{aborted, {already_exists, gtt_ep, _}} ->
-			error_logger:info_msg("Found existing gtt_ep table on ~s.~n", [Node]),
-			join14(Node, Nodes, [gtt_ep | Acc]);
-		{aborted, {no_exists, {gtt_ep , _}}} ->
-			error_logger:info_msg("No gtt_ep table found on ~s.~n", [Node]),
+			error_logger:info_msg("Copied gtt_as table from ~s.~n", [Node]),
+			join14(Node, Nodes, [gtt_as | Acc]);
+		{aborted, {already_exists, gtt_as, _}} ->
+			error_logger:info_msg("Found existing gtt_as table on ~s.~n", [Node]),
+			join14(Node, Nodes, [gtt_as | Acc]);
+		{aborted, {no_exists, {gtt_as , _}}} ->
+			error_logger:info_msg("No gtt_as table found on ~s.~n", [Node]),
 			join14(Node, Nodes, Acc);
 		{aborted, Reason} ->
 			error_logger:error_report([mnesia:error_description(Reason),
@@ -757,15 +761,15 @@ join13(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join14(Node, Nodes, Acc) ->
-	case rpc:call(Node, mnesia, add_table_copy, [gtt_pc, node(), disc_copies]) of
+	case rpc:call(Node, mnesia, add_table_copy, [gtt_ep, node(), disc_copies]) of
 		{atomic, ok} ->
-			error_logger:info_msg("Copied gtt_pc table from ~s.~n", [Node]),
-			join15(Node, Nodes, [gtt_pc | Acc]);
-		{aborted, {already_exists, gtt_pc, _}} ->
-			error_logger:info_msg("Found existing gtt_pc table on ~s.~n", [Node]),
-			join15(Node, Nodes, [gtt_pc | Acc]);
-		{aborted, {no_exists, {gtt_pc , _}}} ->
-			error_logger:info_msg("No gtt_pc table found on ~s.~n", [Node]),
+			error_logger:info_msg("Copied gtt_ep table from ~s.~n", [Node]),
+			join15(Node, Nodes, [gtt_ep | Acc]);
+		{aborted, {already_exists, gtt_ep, _}} ->
+			error_logger:info_msg("Found existing gtt_ep table on ~s.~n", [Node]),
+			join15(Node, Nodes, [gtt_ep | Acc]);
+		{aborted, {no_exists, {gtt_ep , _}}} ->
+			error_logger:info_msg("No gtt_ep table found on ~s.~n", [Node]),
 			join15(Node, Nodes, Acc);
 		{aborted, Reason} ->
 			error_logger:error_report([mnesia:error_description(Reason),
@@ -774,38 +778,72 @@ join14(Node, Nodes, Acc) ->
 	end.
 %% @hidden
 join15(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [gtt_pc, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied gtt_pc table from ~s.~n", [Node]),
+			join16(Node, Nodes, [gtt_pc | Acc]);
+		{aborted, {already_exists, gtt_pc, _}} ->
+			error_logger:info_msg("Found existing gtt_pc table on ~s.~n", [Node]),
+			join16(Node, Nodes, [gtt_pc | Acc]);
+		{aborted, {no_exists, {gtt_pc , _}}} ->
+			error_logger:info_msg("No gtt_pc table found on ~s.~n", [Node]),
+			join16(Node, Nodes, Acc);
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join16(Node, Nodes, Acc) ->
+	case rpc:call(Node, mnesia, add_table_copy, [gtt_tt, node(), disc_copies]) of
+		{atomic, ok} ->
+			error_logger:info_msg("Copied gtt_tt table from ~s.~n", [Node]),
+			join17(Node, Nodes, [gtt_tt | Acc]);
+		{aborted, {already_exists, gtt_tt, _}} ->
+			error_logger:info_msg("Found existing gtt_tt table on ~s.~n", [Node]),
+			join17(Node, Nodes, [gtt_tt | Acc]);
+		{aborted, {no_exists, {gtt_tt , _}}} ->
+			error_logger:info_msg("No gtt_tt table found on ~s.~n", [Node]),
+			join17(Node, Nodes, Acc);
+		{aborted, Reason} ->
+			error_logger:error_report([mnesia:error_description(Reason),
+				{error, Reason}]),
+			{error, Reason}
+	end.
+%% @hidden
+join17(Node, Nodes, Acc) ->
    case application:load(inets) of
       ok ->
          error_logger:info_msg("Loaded inets.~n"),
-         join16(Node, Nodes, Acc);
+         join18(Node, Nodes, Acc);
       {error, {already_loaded, inets}} ->
-         join16(Node, Nodes, Acc);
+         join18(Node, Nodes, Acc);
       {error, Reason} ->
          {error, Reason}
    end.
 %% @hidden
-join16(Node, Exist, Acc) ->
+join18(Node, Exist, Acc) ->
    case is_mod_auth_mnesia() of
       true ->
-         join17(Node, Exist, Acc);
+         join19(Node, Exist, Acc);
       false ->
          error_logger:info_msg("Httpd service not defined. "
                "User table not created~n"),
-         join17(Node, Exist, Acc)
+         join19(Node, Exist, Acc)
    end.
 %% @hidden
-join17(Node, Nodes, Acc) ->
+join19(Node, Nodes, Acc) ->
 	case rpc:call(Node, mnesia, add_table_copy, [httpd_user, node(), disc_copies]) of
 		{atomic, ok} ->
 			error_logger:info_msg("Copied httpd_user table from ~s.~n", [Node]),
-			join18(Node, Nodes, [httpd_user | Acc]);
+			join20(Node, Nodes, [httpd_user | Acc]);
 		{aborted, {already_exists, httpd_user, _}} ->
 			error_logger:info_msg("Found existing httpd_user table on ~s.~n", [Node]),
-			join18(Node, Nodes, [httpd_user | Acc]);
+			join20(Node, Nodes, [httpd_user | Acc]);
 		{aborted, {no_exists, {httpd_user, _}}} ->
 			case create_table(httpd_user, Nodes) of
 				ok ->
-					join18(Node, Nodes, [httpd_user | Acc]);
+					join20(Node, Nodes, [httpd_user | Acc]);
 				{error, Reason} ->
 					{error, Reason}
 			end;
@@ -815,18 +853,18 @@ join17(Node, Nodes, Acc) ->
 			{error, Reason}
 	end.
 %% @hidden
-join18(Node, Nodes, Acc) ->
+join20(Node, Nodes, Acc) ->
 	case rpc:call(Node, mnesia, add_table_copy, [httpd_group, node(), disc_copies]) of
 		{atomic, ok} ->
 			error_logger:info_msg("Copied httpd_group table from ~s.~n", [Node]),
-			join19(Node, Nodes, [httpd_group | Acc]);
+			join21(Node, Nodes, [httpd_group | Acc]);
 		{aborted, {already_exists, httpd_group, _}} ->
 			error_logger:info_msg("Found existing httpd_group table on ~s.~n", [Node]),
-			join19(Node, Nodes, [httpd_group | Acc]);
+			join21(Node, Nodes, [httpd_group | Acc]);
 		{aborted, {no_exists, {httpd_group, _}}} ->
 			case create_table(httpd_group, Nodes) of
 				ok ->
-					join19(Node, Nodes, [httpd_group | Acc]);
+					join21(Node, Nodes, [httpd_group | Acc]);
 				{error, Reason} ->
 					{error, Reason}
 			end;
@@ -836,7 +874,7 @@ join18(Node, Nodes, Acc) ->
 			{error, Reason}
 	end.
 %% @hidden
-join19(_Node, _Nodes, Tables) ->
+join21(_Node, _Nodes, Tables) ->
 	case mnesia:wait_for_tables(Tables, ?WAITFORTABLES) of
 		ok ->
 			{ok, Tables};
