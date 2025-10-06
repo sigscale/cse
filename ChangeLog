@@ -5,7 +5,6 @@
 	* decrease usu size in voice call test script
 	* test scripts handle pretty printing all response avps
 	* correcet relative location in nrf response
-	* sms iec rsu maps to nrf debit
 	* save location on nrf_start response with no service rating
 	* include originator address in sms test script
 	* correct dependencies for building plantuml diagrams
