@@ -1,5 +1,6 @@
 2025-10-06 Vance Shipley <vances@sigscale.org>
 
+	* correct nrf service rating for sms iec (rsu, not usu)
 	* consistent diameter product name in test scripts
 	* improved exception handling in test scripts
 	* decrease usu size in voice call test script

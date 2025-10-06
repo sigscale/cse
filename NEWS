@@ -2,7 +2,8 @@ October 6, 2025
 ---------------
 	- Test script improvements
 	- Correct handling relative URI in Location: header of Nrf response
-	- Correct handle of initial Nrf response with missing service rating
+	- Correct handling of initial Nrf response with missing ServiceRatingRequest
+	- Correct SMS IEC RSU in Nrf request ServiceRatingRequest
 
 September 9, 2025
 -----------------
