@@ -24,6 +24,7 @@
 -export([parse_query/1, range/1, fields/2]).
 -export([format_problem/2]).
 -export([id/0, etag/1, date/1, iso8601/1]).
+-export([resolve/1, resolve/2]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(EPOCH, 62167219200).
@@ -416,6 +417,64 @@ fields(Filters, JsonObject) when is_list(Filters) ->
 	Filters3 = [string:tokens(F, ".") || F <- Filters2],
 	Filters4 = lists:usort(Filters3),
 	fields1(Filters4, JsonObject, []).
+
+-spec resolve(ServiceURI) -> HostURI
+	when
+		ServiceURI :: uri_string:uri_string(),
+		HostURI :: uri_string:uri_string().
+%% @doc Resolve a service URI to a specific host URI.
+%% @equiv resolve(ServiceURI, random)
+resolve(ServiceURI) ->
+	resolve(ServiceURI, random).
+
+-spec resolve(ServiceURI, Method) -> HostURI
+	when
+		ServiceURI :: uri_string:uri_string(),
+		Method :: random,
+		HostURI :: uri_string:uri_string().
+%% @doc Resolve a service URI to a specific host URI.
+resolve(ServiceURI, Method)
+		when (is_list(ServiceURI) or is_binary(ServiceURI)),
+		Method == random ->
+	resolve1(uri_string:parse(ServiceURI), Method).
+%% @hidden
+resolve1(#{host := Name} = URIMap, Method)
+		when is_list(Name) ->
+	resolve2(URIMap, Method, inet:getaddrs(Name, inet));
+resolve1(#{host := Name} = URIMap, Method)
+		when is_binary(Name) ->
+	Name1 = binary_to_list(Name),
+	resolve2(URIMap, Method, inet:getaddrs(Name1, inet));
+resolve1(URIMap, _Method) when is_map(URIMap) ->
+	error(invalid_uri);
+resolve1({error, Reason, _}, _Method) ->
+	error(Reason).
+%% @hidden
+resolve2(URIMap, _Method, {ok, [Address]}) ->
+	resolve3(URIMap, Address);
+resolve2(URIMap, random = _Method, {ok, Addresses}) ->
+	N = rand:uniform(length(Addresses)),
+	Address = lists:nth(N, Addresses),
+	resolve3(URIMap, Address);
+resolve2(_URIMap, _Method, {error, Reason}) ->
+	error(Reason).
+%% @hidden
+resolve3(#{host := Name} = URIMap, Address)
+		when is_list(Name) ->
+	Host = inet:ntoa(Address),
+	URIMap1 = URIMap#{host => Host},
+	resolve4(uri_string:recompose(URIMap1));
+resolve3(#{host := Name} = URIMap, Address)
+		when is_binary(Name) ->
+	Host = inet:ntoa(Address),
+	URIMap1 = URIMap#{host => list_to_binary(Host)},
+	resolve4(uri_string:recompose(URIMap1)).
+%% @hidden
+resolve4(HostURI)
+		when is_list(HostURI); is_binary(HostURI) ->
+	HostURI;
+resolve4({error, Reason, _}) ->
+	error(Reason).
 
 %%----------------------------------------------------------------------
 %%  internal functions
