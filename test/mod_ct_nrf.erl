@@ -216,7 +216,7 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
-					"grantedUnit" => #{"serviceSpecificUnit" => Reserve}},
+					"grantedUnit" => #{"serviceSpecificUnit" => 1}},
 			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
