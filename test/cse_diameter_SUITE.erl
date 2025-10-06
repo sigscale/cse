@@ -1455,7 +1455,7 @@ iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
 	IMSI1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = IMSI},
-	RSU = #'3gpp_ro_Requested-Service-Unit'{},
+	RSU = #'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [1]},
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
 			'Rating-Group' = [RG],
@@ -1517,7 +1517,7 @@ iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 	IMSI1 = #'3gpp_ro_Subscription-Id'{
 			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
 			'Subscription-Id-Data' = IMSI},
-	RSU = #'3gpp_ro_Requested-Service-Unit'{},
+	RSU = #'3gpp_ro_Requested-Service-Unit'{'CC-Service-Specific-Units' = [1]},
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Service-Identifier' = [SI],
 			'Rating-Group' = [RG],
