@@ -1,5 +1,6 @@
 2025-10-06 Vance Shipley <vances@sigscale.org>
 
+	* nrf test server result for iec is always 1 unit
 	* distributed unit determination in iec test cases
 	* correct service rating for mms iec (rsu, not usu)
 	* correct iec test cases for rsu, not usu
