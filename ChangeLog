@@ -1,3 +1,16 @@
+2025-10-06 Vance Shipley <vances@sigscale.org>
+
+	* consistent diameter product name in test scripts
+	* improved exception handling in test scripts
+	* decrease usu size in voice call test script
+	* test scripts handle pretty printing all response avps
+	* correcet relative location in nrf response
+	* sms iec rsu maps to nrf debit
+	* save location on nrf_start response with no service rating
+	* include originator address in sms test script
+	* correct dependencies for building plantuml diagrams
+	* pretty print mscc gsu in send_sms cca
+
 2025-09-09 Vance Shipley <vances@sigscale.org>
 
 	* document 'init_contexts' app env var
