@@ -406,39 +406,6 @@ authorize_origination_attempt(cast,
 			RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast,
-		{nrf_release, {RequestId, {{Version, Code, Phrase}, Headers, Body}}},
-		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, nrf_location := Location,
-				nrf_http := LogHTTP, ohost := OHost, orealm := ORealm,
-				reqno := RequestNum, req_type := RequestType} = Data) ->
-	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
-	?LOG_WARNING([{?MODULE, nrf_release},
-			{code, Code}, {reason, Phrase}, {request_id, RequestId},
-			{profile, Profile}, {uri, URI}, {location, Location},
-			{slpi, self()}, {origin_host, OHost}, {origin_realm, ORealm},
-			{state, ?FUNCTION_NAME}]),
-	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
-	{next_state, null, NewData, Actions};
-authorize_origination_attempt(cast,
-		{NrfOperation, {RequestId, {error, Reason}}},
-		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
-				nrf_uri := URI, ohost := OHost, orealm := ORealm,
-				req_type := RequestType, reqno := RequestNum} = Data)
-		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
-	NewData = remove_nrf(Data),
-	?LOG_ERROR([{?MODULE, NrfOperation}, {error, Reason},
-			{request_id, RequestId}, {profile, Profile},
-			{uri, URI}, {slpi, self()},
-			{origin_host, OHost}, {origin_realm, ORealm},
-			{state, ?FUNCTION_NAME}]),
-	Reply = diameter_error(?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-			RequestType, RequestNum),
-	Actions = [{reply, From, Reply}],
-	{next_state, null, NewData, Actions};
 authorize_origination_attempt(timeout, idle, Data) ->
 	{next_state, null, Data}.
 
