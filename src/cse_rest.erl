@@ -423,58 +423,80 @@ fields(Filters, JsonObject) when is_list(Filters) ->
 		ServiceURI :: uri_string:uri_string(),
 		HostURI :: uri_string:uri_string().
 %% @doc Resolve a service URI to a specific host URI.
-%% @equiv resolve(ServiceURI, random)
+%% @equiv resolve(ServiceURI, [{sort, random}, {max_uri, 1}])
 resolve(ServiceURI) ->
-	resolve(ServiceURI, random).
+	Options = [{sort, random}, {max_uri, 1}],
+	resolve(ServiceURI, Options).
 
--spec resolve(ServiceURI, Method) -> HostURI
+-spec resolve(ServiceURI, Options) -> Result
 	when
 		ServiceURI :: uri_string:uri_string(),
-		Method :: random,
+		Options :: [Option],
+		Option :: {sort, SortMethod} | {max_uri, NumURI},
+		SortMethod :: random | none,
+		NumURI :: pos_integer(),
+		Result :: HostURI | [HostURI],
 		HostURI :: uri_string:uri_string().
-%% @doc Resolve a service URI to a specific host URI.
-resolve(ServiceURI, Method)
+%% @doc Resolve a service URI to specific host URI(s).
+resolve(ServiceURI, Options)
 		when (is_list(ServiceURI) or is_binary(ServiceURI)),
-		Method == random ->
-	resolve1(uri_string:parse(ServiceURI), Method).
+		is_list(Options) ->
+	DefaultOptions = #{sort => none, max_uri => 1},
+	Options1 = maps:merge(DefaultOptions, proplists:to_map(Options)),
+	resolve1(uri_string:parse(ServiceURI), Options1).
 %% @hidden
-resolve1(#{host := Name} = URIMap, Method)
+resolve1(#{host := Name} = URIMap, Options)
 		when is_list(Name) ->
-	resolve2(URIMap, Method, inet:getaddrs(Name, inet));
-resolve1(#{host := Name} = URIMap, Method)
+	resolve2(URIMap, Options, inet:getaddrs(Name, inet));
+resolve1(#{host := Name} = URIMap, Options)
 		when is_binary(Name) ->
 	Name1 = binary_to_list(Name),
-	resolve2(URIMap, Method, inet:getaddrs(Name1, inet));
-resolve1(URIMap, _Method) when is_map(URIMap) ->
+	resolve2(URIMap, Options, inet:getaddrs(Name1, inet));
+resolve1(URIMap, _Options) when is_map(URIMap) ->
 	error(invalid_uri);
-resolve1({error, Reason, _}, _Method) ->
+resolve1({error, Reason, _}, _Options) ->
 	error(Reason).
 %% @hidden
-resolve2(URIMap, _Method, {ok, [Address]}) ->
-	resolve3(URIMap, Address);
-resolve2(URIMap, random = _Method, {ok, Addresses}) ->
-	N = rand:uniform(length(Addresses)),
-	Address = lists:nth(N, Addresses),
-	resolve3(URIMap, Address);
-resolve2(_URIMap, _Method, {error, Reason}) ->
+resolve2(URIMap, #{sort := none} = Options, {ok, Addresses}) ->
+	resolve3(URIMap, Options, Addresses);
+resolve2(URIMap, #{sort := random} = Options, {ok, Addresses}) ->
+	F = fun(_A, _B) ->
+			case rand:uniform(2) of
+				1 ->
+					true;
+				2 ->
+					false
+			end
+	end,
+	Addresses1 = lists:sort(F, Addresses),
+	resolve3(URIMap, Options, Addresses1);
+resolve2(_URIMap, _Options, {error, Reason}) ->
 	error(Reason).
 %% @hidden
-resolve3(#{host := Name} = URIMap, Address)
-		when is_list(Name) ->
+resolve3(URIMap, #{max_uri := 1} = _Options, [Address | _] = _Addresses) ->
 	Host = inet:ntoa(Address),
 	URIMap1 = URIMap#{host => Host},
-	resolve4(uri_string:recompose(URIMap1));
-resolve3(#{host := Name} = URIMap, Address)
-		when is_binary(Name) ->
-	Host = inet:ntoa(Address),
-	URIMap1 = URIMap#{host => list_to_binary(Host)},
-	resolve4(uri_string:recompose(URIMap1)).
+	case uri_string:recompose(URIMap1) of
+		{error, Reason, _} ->
+			error(Reason);
+		HostURI ->
+			HostURI
+	end;
+resolve3(URIMap, Options, Addresses) ->
+	resolve4(URIMap, Options, Addresses, []).
 %% @hidden
-resolve4(HostURI)
-		when is_list(HostURI); is_binary(HostURI) ->
-	HostURI;
-resolve4({error, Reason, _}) ->
-	error(Reason).
+resolve4(URIMap, #{max_uri := MaxURI} = Options, [Address | T], Acc)
+		when length(Acc) < MaxURI ->
+	Host = inet:ntoa(Address),
+	URIMap1 = URIMap#{host => Host},
+	case uri_string:recompose(URIMap1) of
+		{error, Reason, _} ->
+			error(Reason);
+		HostURI ->
+			resolve4(URIMap, Options, T, [HostURI | Acc])
+	end;
+resolve4(_URIMap, _Options, _Addresses, Acc) ->
+	lists:reverse(Acc).
 
 %%----------------------------------------------------------------------
 %%  internal functions
