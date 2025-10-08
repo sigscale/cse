@@ -422,7 +422,7 @@ fields(Filters, JsonObject) when is_list(Filters) ->
 	when
 		ServiceURI :: uri_string:uri_string(),
 		HostURI :: uri_string:uri_string().
-%% @doc Resolve a service URI to a specific host URI.
+%% @doc Resolve a service URI to a specific host address URI.
 %% @equiv resolve(ServiceURI, [{sort, random}, {max_uri, 1}])
 resolve(ServiceURI) ->
 	Options = [{sort, random}, {max_uri, 1}],
@@ -437,7 +437,7 @@ resolve(ServiceURI) ->
 		NumURI :: pos_integer(),
 		Result :: HostURI | [HostURI],
 		HostURI :: uri_string:uri_string().
-%% @doc Resolve a service URI to specific host URI(s).
+%% @doc Resolve a service URI to specific host address URI(s).
 resolve(ServiceURI, Options)
 		when (is_list(ServiceURI) or is_binary(ServiceURI)),
 		is_list(Options) ->
