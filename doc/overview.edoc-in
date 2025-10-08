@@ -51,6 +51,19 @@ Nrf_Rating</a> API on the Re interface to a remote Rating Function
  
 <img class="diagram" alt="CSE as OCF with OCS" src="ocf-ocs.svg" />
 
+==DIAMETER==
+SigScale CSE provides a configurable DIAMETER protocol stack on which
+Service Logic Processing Programs (SLP) may be implemented for
+a wide range of use cases. Performing interworking functions (IWF)
+is a cmmon application. The provided OCF SLPs are examples of IWFs:
+3GPP Ro/Gy to Re (prepaid), and RF to Bx (postpaid). Other IWF use
+cases include RADIUS to DIAMETER and DIAMETER to DIAMETER with filtering
+and adaptation.
+
+==RADIUS==
+A RADIUS protocol stack is also included which enables SLPs for AAA
+and other use cases with wireline and WiFi networks.
+
 ==Inteligent Network (IN)==
 SigScale CSE performs the Service Control Function (SCF) in an
 Intelligent Network (IN), providing a platform to support a network
@@ -105,7 +118,7 @@ external Intelligent Peripheral (IP). The bearer channels of an
 IP are established with a Service Switching Point (SSP) using
 telephony signaling (i.e. ISUP).
 
-==Service Logic Processing Programs (SLP)==
+===IN Service Logic Processing Programs (SLP)===
 The SLP instances (SLPI) are implemented as finte state machines
 with the {@link //stdlib/gen_statem. gen_statem} behaviour.
 
@@ -123,7 +136,7 @@ is depicted in <a href="#figure1-2">Figure 1-2</a>.
 		name="figure1-2" src="t-bcsm-camel.svg" /><br />
 Figure 1-2: T-BCSM</p>
 
-==Messaging==
+===IN Messaging===
 Interprocess communication is depicted in
 <a href="#figure1-2">Figure 1-2</a>. An SLPI process sends primitive
 requests to Dialogue Handler (DHA) and Component Coordinator (CCO)
@@ -140,7 +153,7 @@ process in the {@link //tcap. tcap} application's Transaction Sublayer
 		name="figure1-2" src="messaging.svg" /><br />
 Figure 1-2: Messaging</p>
 
-==Distribution==
+===IN Distribution===
 Process instances of the applications may be distributed across nodes
 as depicted in <a href="#figure1-3">Figure 1-3</a>.
 
@@ -431,6 +444,10 @@ API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 		<dd>Uniform Resource Identifier (URI) for a
 				<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">Nrf_Rating</a>
 				server (i.e. OCS).</dd>
+	<dt>`nrf_sort'</dt>
+		<dd>Method for sorting the resolved Nrf host addresses. (default: `random')</dd>
+	<dt>`nrf_retries'</dt>
+		<dd>Number of times to retry with another Nrf host address. (default: `1')</dd>
 	<dt>`nrf_options'</dt>
 		<dd>HTTP client ({@link //inets/httpc. httpc}) behaviour
 				{@link //inets/httpc:options(). options}.
