@@ -1269,7 +1269,7 @@ o_active(cast, {nrf_update,
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData, 0}
 	end;
-o_active(cast, {nrf_start,
+o_active(cast, {nrf_update,
 		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 				nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1288,13 +1288,13 @@ o_active(cast, {nrf_start,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, NewData#{iid => NewIID}, 0};
 		{{error, Partial, Remaining}, _} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
-o_active(cast, {nrf_start,
+o_active(cast, {nrf_update,
 		{RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 				nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1313,19 +1313,19 @@ o_active(cast, {nrf_start,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, NewData#{iid => NewIID}, 0};
 		{{error, Partial, Remaining}, _} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 404},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
-o_active(cast, {nrf_start,
+o_active(cast, {nrf_update,
 		{_RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
 		nrf_uri := URI, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
-	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
+	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
@@ -1338,11 +1338,11 @@ o_active(cast, {nrf_start,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, exception, NewData, 0};
-o_active(cast, {nrf_start, {RequestId, {error, Reason}}},
+o_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
 		nrf_uri := URI} = Data) ->
-	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
+	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
@@ -1535,7 +1535,7 @@ t_active(cast, {nrf_update,
 			NewData = remove_nrf(Data),
 			{next_state, exception, NewData, 0}
 	end;
-t_active(cast, {nrf_start,
+t_active(cast, {nrf_update,
 		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 				nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1554,13 +1554,13 @@ t_active(cast, {nrf_start,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, NewData#{iid => NewIID}, 0};
 		{{error, Partial, Remaining}, _} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 403},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
-t_active(cast, {nrf_start,
+t_active(cast, {nrf_update,
 		{RequestId, {{Version, 404, _Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 				nrf_reqid := RequestId, nrf_profile := Profile,
@@ -1579,19 +1579,19 @@ t_active(cast, {nrf_start,
 			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 			{next_state, exception, NewData#{iid => NewIID}, 0};
 		{{error, Partial, Remaining}, _} ->
-			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
+			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {status, 404},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining},
 					{state, ?FUNCTION_NAME}]),
 			{next_state, exception, NewData, 0}
 	end;
-t_active(cast, {nrf_start,
+t_active(cast, {nrf_update,
 		{_RequestId, {{Version, Code, Phrase}, Headers, Body}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
 		nrf_uri := URI, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
-	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
+	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
@@ -1604,11 +1604,11 @@ t_active(cast, {nrf_start,
 			class = 4, parameters = ReleaseCallArg},
 	gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 	{next_state, exception, NewData, 0};
-t_active(cast, {nrf_start, {RequestId, {error, Reason}}},
+t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 		#{did := DialogueID, iid := IID, cco := CCO,
 		nrf_reqid := RequestId, nrf_profile := Profile,
 		nrf_uri := URI} = Data) ->
-	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
+	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
 	Data1 = remove_nrf(Data),
