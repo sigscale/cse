@@ -2721,7 +2721,7 @@ add_nrf(URI, Data, #{host := Address} = _URIMap)
 add_nrf1(URI,
 		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
 	add_nrf2(cse_rest:resolve(URI,
-			[{sort, Sort}, {max_uris, Retries + 1}]), Data).
+			[{sort, Sort}, {max_uri, Retries + 1}]), Data).
 %% @hidden
 add_nrf2(HostURI,
 		#{nrf_retries := 0} = Data) ->
@@ -2773,7 +2773,7 @@ add_location(_URI, Data, #{} = URIMap) ->
 add_location1(URI,
 		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
 	add_location2(cse_rest:resolve(URI,
-			[{sort, Sort}, {max_uris, Retries + 1}]), Data).
+			[{sort, Sort}, {max_uri, Retries + 1}]), Data).
 %% @hidden
 add_location2(HostURI,
 		#{nrf_retries := 0} = Data) ->
