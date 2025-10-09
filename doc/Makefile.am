@@ -81,21 +81,21 @@ doc_DATA = overview.edoc $(modhtml) \
 		distribution.svg \
 		ocf-ocs.svg \
 		ocf-re-rf.svg \
-		$(abs_builddir)/ocf-nrf-msc.svg \
-		$(abs_builddir)/ocf-nrf-iec-msc.svg \
-		$(abs_builddir)/ctf-cdf-msc.svg \
-		$(abs_builddir)/re-load-balance-msc.svg \
-		$(abs_builddir)/slp-prepaid-cap-msc.svg \
-		$(abs_builddir)/prepaid-diameter-data.svg \
-		$(abs_builddir)/prepaid-diameter-voice.svg \
-		$(abs_builddir)/prepaid-diameter-event.svg \
-		$(abs_builddir)/postpaid-cdf.svg
+		ocf-nrf-msc.svg \
+		ocf-nrf-iec-msc.svg \
+		ctf-cdf-msc.svg \
+		re-load-balance-msc.svg \
+		slp-prepaid-cap-msc.svg \
+		prepaid-diameter-data.svg \
+		prepaid-diameter-voice.svg \
+		prepaid-diameter-event.svg \
+		postpaid-cdf.svg
 
 overview.edoc: overview.edoc-in
 	sed -e 's!%VERSION%!$(VERSION)!' \
 			-e 's!%DESCRIPTION%!$(PACKAGE)!' < $< > $@
 
-$(abs_builddir)/%.svg:$(top_srcdir)/doc/%.puml
+%.svg:$(top_srcdir)/doc/%.puml
 if PLANTUML
 	$(plantuml) -tsvg -o $(abs_builddir) $<
 else
