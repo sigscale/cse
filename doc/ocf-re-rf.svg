@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="-277 -35.5 621.8242 293" width="621.8242" height="293">
+  <defs/>
+  <g id="Re_Interfaces" fill="none" fill-opacity="1" stroke-dasharray="none" stroke="none" stroke-opacity="1">
+    <title>Re Interfaces</title>
+    <g id="Re_Interfaces_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_30">
+        <path d="M -76.90666 -33 L 108.59334 -33 C 115.22076 -33 120.59334 -27.627417 120.59334 -21 L 120.59334 243 C 120.59334 249.62742 115.22076 255 108.59334 255 L -76.90666 255 C -83.53407 255 -88.90666 249.62742 -88.90666 243 L -88.90666 -21 C -88.90666 -27.627417 -83.53407 -33 -76.90666 -33 Z" fill="white"/>
+        <path d="M -76.90666 -33 L 108.59334 -33 C 115.22076 -33 120.59334 -27.627417 120.59334 -21 L 120.59334 243 C 120.59334 249.62742 115.22076 255 108.59334 255 L -76.90666 255 C -83.53407 255 -88.90666 249.62742 -88.90666 243 L -88.90666 -21 C -88.90666 -27.627417 -83.53407 -33 -76.90666 -33 Z" stroke="#ffa900" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(-83.90666 -13)" fill="black">
+          <tspan font-family="Roboto" font-size="18" fill="black" x="46.73877" y="17" xml:space="preserve">SigScale CSE</tspan>
+        </text>
+      </g>
+      <g id="Graphic_28">
+        <path d="M 251.82422 38.5 L 335.8242 38.5 C 340.2425 38.5 343.8242 42.08172 343.8242 46.5 L 343.8242 105.5 C 343.8242 109.91828 340.2425 113.5 335.8242 113.5 L 251.82422 113.5 C 247.40594 113.5 243.82422 109.91828 243.82422 105.5 L 243.82422 46.5 C 243.82422 42.08172 247.40594 38.5 251.82422 38.5 Z" fill="#ffa900"/>
+        <text transform="translate(248.82422 61.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="28.728" y="23" xml:space="preserve">RF</tspan>
+        </text>
+      </g>
+      <g id="Line_26">
+        <line x1="65.84334" y1="76" x2="243.82422" y2="76" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_25">
+        <rect x="162.4671" y="64" width="25.886" height="24" fill="white"/>
+        <text transform="translate(163.4671 65)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="0" y="17" xml:space="preserve">Re</tspan>
+        </text>
+      </g>
+      <g id="Graphic_24">
+        <path d="M -262.963 80.02825 C -279.125 76 -272.68 42.08875 -246.898 47.875 C -244.506 36.59575 -214.525 38.4265 -214.721 47.875 C -195.922 35.79025 -171.898 59.887 -188.012 71.97175 C -168.676 77.83075 -188.256 109.39825 -204.125 104.125 C -205.395 112.91425 -233.764 115.99 -236.254 104.125 C -252.318 116.79625 -285.814 97.3135 -262.963 80.02825 Z" fill="#ccc"/>
+        <text transform="translate(-256 61.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="4.728" y="23" xml:space="preserve">EPC</tspan>
+        </text>
+      </g>
+      <g id="Graphic_23">
+        <path d="M -262.963 184.02825 C -279.125 180 -272.68 146.08875 -246.898 151.875 C -244.506 140.59575 -214.525 142.4265 -214.721 151.875 C -195.922 139.79025 -171.898 163.887 -188.012 175.97175 C -168.676 181.83075 -188.256 213.39825 -204.125 208.125 C -205.395 216.91425 -233.764 219.99 -236.254 208.125 C -252.318 220.79625 -285.814 201.3135 -262.963 184.02825 Z" fill="#ccc"/>
+        <text transform="translate(-256 165.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="7.536" y="23" xml:space="preserve">IMS</tspan>
+        </text>
+      </g>
+      <g id="Line_22">
+        <line x1="-181.88944" y1="180" x2="-34.156656" y2="180" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_21">
+        <rect x="-146.8363" y="168" width="26.3" height="24" fill="white"/>
+        <text transform="translate(-145.8363 169)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="0" y="17" xml:space="preserve">Ro</tspan>
+        </text>
+      </g>
+      <g id="Line_20">
+        <line x1="-181.88944" y1="76" x2="-34.156656" y2="76" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_19">
+        <rect x="-146.51316" y="64" width="25.67" height="24" fill="white"/>
+        <text transform="translate(-145.51316 65)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="0" y="17" xml:space="preserve">Gy</tspan>
+        </text>
+      </g>
+      <g id="Line_18">
+        <line x1="65.84334" y1="180" x2="243.82422" y2="180" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_10">
+        <path d="M -26.156656 38.5 L 57.843344 38.5 C 62.26162 38.5 65.84334 42.08172 65.84334 46.5 L 65.84334 105.5 C 65.84334 109.91828 62.26162 113.5 57.843344 113.5 L -26.156656 113.5 C -30.574934 113.5 -34.156656 109.91828 -34.156656 105.5 L -34.156656 46.5 C -34.156656 42.08172 -30.574934 38.5 -26.156656 38.5 Z" fill="#ffa900"/>
+        <text transform="translate(-29.156656 61.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="18.708" y="23" xml:space="preserve">OCF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_9">
+        <path d="M -26.156656 142.5 L 57.843344 142.5 C 62.26162 142.5 65.84334 146.08172 65.84334 150.5 L 65.84334 209.5 C 65.84334 213.91828 62.26162 217.5 57.843344 217.5 L -26.156656 217.5 C -30.574934 217.5 -34.156656 213.91828 -34.156656 209.5 L -34.156656 150.5 C -34.156656 146.08172 -30.574934 142.5 -26.156656 142.5 Z" fill="#ffa900"/>
+        <text transform="translate(-29.156656 165.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="18.708" y="23" xml:space="preserve">OCF</tspan>
+        </text>
+      </g>
+      <g id="Graphic_33">
+        <path d="M 251.82422 142.5 L 335.8242 142.5 C 340.2425 142.5 343.8242 146.08172 343.8242 150.5 L 343.8242 209.5 C 343.8242 213.91828 340.2425 217.5 335.8242 217.5 L 251.82422 217.5 C 247.40594 217.5 243.82422 213.91828 243.82422 209.5 L 243.82422 150.5 C 243.82422 146.08172 247.40594 142.5 251.82422 142.5 Z" fill="#ffa900"/>
+        <text transform="translate(248.82422 165.5)" fill="white">
+          <tspan font-family="Montserrat" font-size="24" fill="white" x="28.728" y="23" xml:space="preserve">RF</tspan>
+        </text>
+      </g>
+      <g id="Line_35">
+        <line x1="65.84334" y1="161.29368" x2="243.82422" y2="94.70632" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Line_36">
+        <line x1="65.84334" y1="94.70632" x2="243.82422" y2="161.29368" stroke="#aaa" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_37">
+        <rect x="163.99835" y="168" width="25.886" height="24" fill="white"/>
+        <text transform="translate(164.99835 169)" fill="black">
+          <tspan font-family="Montserrat" font-size="18" fill="black" x="0" y="17" xml:space="preserve">Re</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

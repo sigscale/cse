@@ -136,6 +136,8 @@
 				{nrf_headers, []},
 				{nrf_http_options, [{timeout, 1500}, {connect_timeout, 1500}]},
 				{nrf_options, [{keep_alive_timeout, 4000}]},
+				{nrf_sort, random},
+				{nrf_retries, 1},
 				{rest_page_size, 1000},
 				{statistics_interval, 60},
 				{rest_page_timeout, 60000},

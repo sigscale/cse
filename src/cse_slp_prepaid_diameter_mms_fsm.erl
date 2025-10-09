@@ -136,6 +136,10 @@
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
+		nrf_sort => random | none,
+		nrf_retries => pos_integer(),
+		nrf_next_uris => [string()],
+		nrf_host => string(),
 		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
 		nrf_location => string(),
@@ -177,6 +181,8 @@ callback_mode() ->
 init(Args) ->
 	{ok, Profile} = application:get_env(cse, nrf_profile),
 	{ok, URI} = application:get_env(cse, nrf_uri),
+	{ok, Sort} = application:get_env(cse, nrf_sort),
+	{ok, Retries} = application:get_env(cse, nrf_retries),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
 	IdleTime = case proplists:get_value(idle_timeout, Args) of
@@ -191,13 +197,15 @@ init(Args) ->
 		_ ->
 			infinity
 	end,
-	Data = #{nrf_profile => Profile, nrf_uri => URI,
+	Data = #{nrf_profile => Profile,
+			nrf_sort => Sort, nrf_retries => Retries,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond),
 			idle => IdleTime, sequence => 1},
+	Data1 = add_nrf(URI, Data),
 	case httpc:get_options([ip, port], Profile) of
 		{ok, Options} ->
-			init1(Options, Data);
+			init1(Options, Data1);
 		{error, Reason} ->
 			{stop, Reason}
 	end.
@@ -299,7 +307,7 @@ authorize_event_attempt(cast,
 		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
 				when is_list(Location) ->
 			try
-				NewData1 = NewData#{nrf_location => Location},
+				NewData1 = add_location(Location, NewData),
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
@@ -332,7 +340,7 @@ authorize_event_attempt(cast,
 			end;
 		{{ok, #{}}, {_, Location}}
 				when is_list(Location) ->
-			NewData1 = NewData#{nrf_location => Location},
+			NewData1 = add_location(Location, NewData),
 			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 			Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
@@ -423,6 +431,12 @@ authorize_event_attempt(cast,
 	Reply = diameter_error(ResultCode, RequestType, RequestNum),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
+authorize_event_attempt(cast,
+		{nrf_start, {RequestId, {error, {failed_connect, _}}}},
+		#{nrf_reqid := RequestId, nrf_next_uris := [URI | T]} = Data) ->
+	Data1 = maps:remove(nrf_reqid, Data),
+	NewData = Data1#{nrf_uri => URI, nrf_next_uris => T},
+	nrf_start(NewData);
 authorize_event_attempt(timeout, idle, Data) ->
 	{next_state, null, Data}.
 
@@ -654,6 +668,18 @@ collect_information(cast,
 		nrf_release ->
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
+	end;
+collect_information(cast,
+		{NrfOperation, {RequestId, {error, {failed_connect, _}}}},
+		#{nrf_reqid := RequestId, nrf_next_uris := [URI | T]} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(nrf_reqid, Data),
+	NewData = Data1#{nrf_uri => URI, nrf_next_uris => T},
+	case NrfOperation of
+		nrf_update ->
+			nrf_update(NewData);
+		nrf_release ->
+			nrf_release(NewData)
 	end;
 collect_information(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
@@ -905,6 +931,18 @@ analyse_information(cast,
 			{next_state, null, NewData, Actions}
 	end;
 analyse_information(cast,
+		{NrfOperation, {RequestId, {error, {failed_connect, _}}}},
+		#{nrf_reqid := RequestId, nrf_next_uris := [URI | T]} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(nrf_reqid, Data),
+	NewData = Data1#{nrf_uri => URI, nrf_next_uris => T},
+	case NrfOperation of
+		nrf_update ->
+			nrf_update(NewData);
+		nrf_release ->
+			nrf_release(NewData)
+	end;
+analyse_information(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
@@ -1149,6 +1187,18 @@ active(cast,
 			{next_state, null, NewData, Actions}
 	end;
 active(cast,
+		{NrfOperation, {RequestId, {error, {failed_connect, _}}}},
+		#{nrf_reqid := RequestId, nrf_next_uris := [URI | T]} = Data)
+		when NrfOperation == nrf_update; NrfOperation == nrf_release ->
+	Data1 = maps:remove(nrf_reqid, Data),
+	NewData = Data1#{nrf_uri => URI, nrf_next_uris => T},
+	case NrfOperation of
+		nrf_update ->
+			nrf_update(NewData);
+		nrf_release ->
+			nrf_release(NewData)
+	end;
+active(cast,
 		{NrfOperation, {RequestId, {error, Reason}}},
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_location := Location,
@@ -1300,14 +1350,17 @@ nrf_start1(JSON, #{one_time := false, sequence := Sequence} = Data) ->
 	nrf_start2(Now, JSON1, Data).
 %% @hidden
 nrf_start2(Now, JSON,
-		#{from := From, nrf_profile := Profile, nrf_uri := URI,
+		#{from := From, nrf_profile := Profile,
+				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	% @todo synchronous start
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers1 = [{"accept", "application/json, application/problem+json"} | Headers],
+	Headers1 = [{"host", Host},
+			{"accept", "application/json, application/problem+json"}
+			| Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
 	RequestURL = URI ++ "/ratingdata",
@@ -1319,6 +1372,11 @@ nrf_start2(Now, JSON,
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData, ?IDLE_TIMEOUT(Data)};
+		{error, {failed_connect, _} = _Reason}
+				when length(NextURIs) > 0 ->
+			NewData = Data#{nrf_uri => hd(NextURIs),
+					nrf_next_uris => tl(NextURIs)},
+			nrf_start2(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
 					{profile, Profile}, {uri, URI},
@@ -1366,14 +1424,17 @@ nrf_update1(JSON, #{sequence := Sequence} = Data) ->
 	nrf_update2(Now, JSON1, NewData).
 %% @hidden
 nrf_update2(Now, JSON,
-		#{from := From, nrf_profile := Profile, nrf_uri := URI,
+		#{from := From, nrf_profile := Profile,
+				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers1 = [{"accept", "application/json, application/problem+json"} | Headers],
+	Headers1 = [{"host", Host},
+			{"accept", "application/json, application/problem+json"}
+			| Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
 	RequestURL = uri_string:resolve(Location, URI) ++ "/update",
@@ -1385,6 +1446,11 @@ nrf_update2(Now, JSON,
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData, ?IDLE_TIMEOUT(Data)};
+		{error, {failed_connect, _} = _Reason}
+				when length(NextURIs) > 0 ->
+			NewData = Data#{nrf_uri => hd(NextURIs),
+					nrf_next_uris => tl(NextURIs)},
+			nrf_update2(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
@@ -1435,14 +1501,17 @@ nrf_release1(JSON, #{sequence := Sequence} = Data) ->
 	nrf_release2(Now, JSON1, NewData).
 %% @hidden
 nrf_release2(Now, JSON,
-		#{from := From, nrf_profile := Profile, nrf_uri := URI,
+		#{from := From, nrf_profile := Profile,
+				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location, ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
-	Headers1 = [{"accept", "application/json, application/problem+json"} | Headers],
+	Headers1 = [{"host", Host},
+			{"accept", "application/json, application/problem+json"}
+			| Headers],
 	Body = zj:encode(JSON),
 	ContentType = "application/json",
 	RequestURL = uri_string:resolve(Location, URI) ++ "/release",
@@ -1454,6 +1523,11 @@ nrf_release2(Now, JSON,
 			NewData = Data#{nrf_start => Now, nrf_reqid => RequestId,
 					nrf_req_url => RequestURL, nrf_http => LogHTTP},
 			{keep_state, NewData, ?IDLE_TIMEOUT(Data)};
+		{error, {failed_connect, _} = _Reason}
+				when length(NextURIs) > 0 ->
+			NewData = Data#{nrf_uri => hd(NextURIs),
+					nrf_next_uris => tl(NextURIs)},
+			nrf_release2(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
@@ -2620,4 +2694,90 @@ content_info([#'3gpp_ro_Additional-Content-Information'{
 	content_info(T, [ContentInfo3 | Acc]);
 content_info([], Acc) ->
 	lists:reverse(Acc).
+
+%% @hidden
+add_nrf(URI, Data) ->
+	add_nrf(URI, Data, uri_string:parse(URI)).
+%% @hidden
+add_nrf(URI, Data, #{host := Address, port := Port} = _URIMap)
+		when is_list(Address) ->
+	Host = Address ++ ":" ++ integer_to_list(Port),
+	Data1 = Data#{nrf_host => Host},
+	add_nrf1(URI, Data1);
+add_nrf(URI, Data, #{host := Address, port := Port} = _URIMap)
+		when is_binary(Address) ->
+	Host = binary_to_list(Address) ++ ":" ++ integer_to_list(Port),
+	Data1 = Data#{nrf_host => Host},
+	add_nrf1(URI, Data1);
+add_nrf(URI, Data, #{host := Address} = _URIMap)
+		when is_list(Address) ->
+	Data1 = Data#{nrf_host => Address},
+	add_nrf1(URI, Data1);
+add_nrf(URI, Data, #{host := Address} = _URIMap)
+		when is_binary(Address) ->
+	Data1 = Data#{nrf_host => binary_to_list(Address)},
+	add_nrf1(URI, Data1).
+%% @hidden
+add_nrf1(URI,
+		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
+	add_nrf2(cse_rest:resolve(URI,
+			[{sort, Sort}, {max_uris, Retries + 1}]), Data).
+%% @hidden
+add_nrf2(HostURI,
+		#{nrf_retries := 0} = Data) ->
+	Data#{nrf_uri => HostURI, nrf_next_uris => []};
+add_nrf2([H | T], Data) ->
+	Data#{nrf_uri => H, nrf_next_uris => T}.
+
+%% @hidden
+add_location(URI, Data) ->
+	add_location(URI, Data, uri_string:parse(URI)).
+%% @hidden
+add_location(URI, Data, #{host := Address, port := Port} = URIMap)
+		when is_list(Address) ->
+	Host = Address ++ ":" ++ integer_to_list(Port),
+	Filter = #{path => [], query => [], fragment => []},
+	URIMap1 = maps:intersect(Filter, URIMap),
+	Location = uri_string:recompose(URIMap1),
+	Data1 = Data#{nrf_host => Host, nrf_location => Location},
+	add_location1(URI, Data1);
+add_location(URI, Data, #{host := Address, port := Port} = URIMap)
+		when is_binary(Address) ->
+	Host = binary_to_list(Address) ++ ":" ++ integer_to_list(Port),
+	Filter = #{path => [], query => [], fragment => []},
+	URIMap1 = maps:intersect(Filter, URIMap),
+	Location = uri_string:recompose(URIMap1),
+	Data1 = Data#{nrf_host => Host, nrf_location => Location},
+	add_location1(URI, Data1);
+add_location(URI, Data, #{host := Address} = URIMap)
+		when is_list(Address) ->
+	Filter = #{path => [], query => [], fragment => []},
+	URIMap1 = maps:intersect(Filter, URIMap),
+	Location = uri_string:recompose(URIMap1),
+	Data1 = Data#{nrf_host => Address, nrf_location => Location},
+	add_location1(URI, Data1);
+add_location(URI, Data, #{host := Address} = URIMap)
+		when is_binary(Address) ->
+	Host = binary_to_list(Address),
+	Filter = #{path => [], query => [], fragment => []},
+	URIMap1 = maps:intersect(Filter, URIMap),
+	Location = uri_string:recompose(URIMap1),
+	Data1 = Data#{nrf_host => Host, nrf_location => Location},
+	add_location1(URI, Data1);
+add_location(_URI, Data, #{} = URIMap) ->
+	Filter = #{path => [], query => [], fragment => []},
+	URIMap1 = maps:intersect(Filter, URIMap),
+	Location = uri_string:recompose(URIMap1),
+	Data#{nrf_location => Location}.
+%% @hidden
+add_location1(URI,
+		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
+	add_location2(cse_rest:resolve(URI,
+			[{sort, Sort}, {max_uris, Retries + 1}]), Data).
+%% @hidden
+add_location2(HostURI,
+		#{nrf_retries := 0} = Data) ->
+	Data#{nrf_uri => HostURI, nrf_next_uris => []};
+add_location2([H | T], Data) ->
+	Data#{nrf_uri => H, nrf_next_uris => T}.
 

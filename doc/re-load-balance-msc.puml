@@ -1,0 +1,36 @@
+@startuml
+
+skinparam shadowing false
+skinparam sequence {
+ParticipantBorderColor #f57f17
+ParticipantBackgroundColor white
+LifeLineBorderColor #f57f17
+LifeLineBackgroundColor white
+}
+box CSE
+entity config as cnf
+participant OCF as ocf
+entity resolver as res
+end box
+participant "RF1\n172.16.16.1" as rf1
+participant "RF2\n172.16.32.1" as rf2
+participant "RF3\n172.16.64.1" as rf3
+hide footbox
+
+cnf //-- ocf : ""nrf_uri""
+cnf --// ocf : ""http://ocs.example.net:8080/nrf-rating/v1""
+ocf --\\ res : ""ocs.example.net""
+ocf \\-- res : ""172.16.16.1""\n""172.16.32.1""\n""172.16.64.1""
+cnf //-- ocf : ""nrf_sort""
+cnf --// ocf : ""random""
+cnf //-- ocf : ""nrf_http_options""
+cnf --// ocf : ""[{timeout, 1500}, {connect_timeout, 1500}]""
+...
+ocf ->x rf2 : ""POST /nrf-rating/v1/ratingdata HTTP/1.1""\n""Host: ocs.example.net:8080""
+...
+note right : timeout after 1500ms
+ocf -> rf1 : ""POST /nrf-rating/v1/ratingdata HTTP/1.1""\n""Host: ocs.example.net:8080""
+ocf <- rf1 : ""201 Created""
+...
+
+@enduml

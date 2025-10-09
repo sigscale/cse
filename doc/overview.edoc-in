@@ -20,15 +20,18 @@
 		href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=29&amp;GSMSpecPart2=078">
 		3GPP TS 29.078</a> Customised Applications for Mobile network Enhanced Logic (CAMEL)
 		Application Part (CAP)
+@reference <a target="_blank"
+		href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=32&amp;GSMSpecPart2=296">
+		3GPP TS 32.296</a> Online Charging System (OCS): Applications and interfaces
 
 @doc This application implements a Custom Service Environment (CSE).
 
 ==Table of Contents==
 <ul>
 	<li><a href="#Intoduction">Introduction</a><br /></li>
-	<li><a href="#Service_Logic_Processing_Programs_(SLP)">Service Logic Processing Programs (SLP)</a><br /></li>
-	<li><a href="#Messaging">Messaging</a><br /></li>
-	<li><a href="#Distribution">Distribution</a><br /></li>
+	<li><a href="#DIAMETER">DIAMETER</a><br /></li>
+	<li><a href="#Inteligent_Network_(IN)">Inteligent Network (IN)</a><br /></li>
+	<li><a href="#Re_Interface">Re Interface</a><br /></li>
 	<li><a href="#Installation">Installation</a><br /></li>
 	<li><a href="#Operation">Operation</a><br /></li>
 	<li><a href="#Configuration">Configuration</a><br /></li>
@@ -46,7 +49,7 @@ CAP (CAMEL), INAP and DIAMETER interfaces. These SLPs implement the
 Online Charging Function (OCF) of a decomposed OCS (Online Charging
 System) (3GPP TS 32.296) using the
 <a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">
-Nrf_Rating</a> API on the Re interface to a remote Rating Function
+<i>Nrf_Rating</i></a> API on the Re interface to a remote Rating Function
 (RF) such as SigScale OCS.
  
 <img class="diagram" alt="CSE as OCF with OCS" src="ocf-ocs.svg" />
@@ -138,7 +141,7 @@ Figure 1-2: T-BCSM</p>
 
 ===IN Messaging===
 Interprocess communication is depicted in
-<a href="#figure1-2">Figure 1-2</a>. An SLPI process sends primitive
+<a href="#figure1-3">Figure 1-3</a>. An SLPI process sends primitive
 requests to Dialogue Handler (DHA) and Component Coordinator (CCO)
 processes of the {@link //tcap. tcap} application's Component Sublayer
 (CSL).  It receives primitive indications from DHA.
@@ -150,20 +153,50 @@ process in the {@link //tcap. tcap} application's Transaction Sublayer
 
 <p><img id="messaging" class="diagram"
 		alt="diagram of interprocess communication"
-		name="figure1-2" src="messaging.svg" /><br />
-Figure 1-2: Messaging</p>
+		name="figure1-3" src="messaging.svg" /><br />
+Figure 1-3: Messaging</p>
 
 ===IN Distribution===
 Process instances of the applications may be distributed across nodes
-as depicted in <a href="#figure1-3">Figure 1-3</a>.
+as depicted in <a href="#figure1-4">Figure 1-4</a>.
 
 <p><img class="diagram" alt="diagram of process distribution"
-		name="figure1-3" src="distribution.svg" /><br />
-Figure 1-3: Distribution</p>
+		name="figure1-4" src="distribution.svg" /><br />
+Figure 1-4: Distribution</p>
 
 ==Installation==
 Before running the {@link //cse. cse} application for the first time
 it is necessary to initialize {@link //mnesia. mnesia} tables.
+
+==Re Interface==
+In 3GPP TS <a target="_blank"
+href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=32&amp;GSMSpecPart2=296">
+32.296</a> the OCS/CCS is functionally decomposed as OCF/CHF, ABMF and RF.
+SigScale CSE provides SLPs implementing an OCF interworking with
+remote RF/ABMF over the <i>Re</i> interface.
+
+<p><img class="diagram" alt="diagram of re interface"
+		name="figure2-1" src="ocf-re-rf.svg" /><br />
+Figure 2-1: Re Interface</p>
+
+The provided OCFs are consumers of the
+<a target="_blank"
+href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">Nrf_Rating</a>
+OpenAPI Specification (OAS). SigScale OCS is one example of an
+<i>Nrf_Rating</i> producer.
+
+===HTTP Resilience===
+The <i>Nrf_Rating</i> REST API uses an HTTP(S) transport. A base URI
+is configured for the service (`nrf_uri'). The OCFs use the host's
+resolver to discover one or more IP addresses for the host portion
+of the base URI. A method for sorting the host addresses is configured
+(`nrf_sort') as well as the number of addresses to try in sequence
+(`nrf_retries') on failure to connect (i.e. `timeout'). This ensures
+load balancing and resilience.
+
+<p><img class="diagram" alt="message sequence diagram of http resilience"
+		name="figure2-2" src="re-load-balance-msc.svg" /><br />
+Figure 2-2: HTTP Resilience</p>
 
 ===Initialize CSE===
 ```
@@ -433,7 +466,8 @@ ApplicationContexts ::
 Application environment variables configuring HTTP client
 ({@link //inets/httpc. httpc}) behaviour for the
 <a target="_blank"
-href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">Nrf_Rating</a>
+href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">
+<i>Nrf_Rating</i></a>
 API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 <dl>
 	<dt>`nrf_profile'</dt>
@@ -442,8 +476,8 @@ API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 				client. (default: `nrf')</dd>
 	<dt>`nrf_uri'</dt>
 		<dd>Uniform Resource Identifier (URI) for a
-				<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">Nrf_Rating</a>
-				server (i.e. OCS).</dd>
+				<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.7">
+				<i>Nrf_Rating</i></a> server (i.e. OCS).</dd>
 	<dt>`nrf_sort'</dt>
 		<dd>Method for sorting the resolved Nrf host addresses. (default: `random')</dd>
 	<dt>`nrf_retries'</dt>

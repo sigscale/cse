@@ -80,9 +80,11 @@ doc_DATA = overview.edoc $(modhtml) \
 		messaging.svg \
 		distribution.svg \
 		ocf-ocs.svg \
+		ocf-re-rf.svg \
 		$(abs_builddir)/ocf-nrf-msc.svg \
 		$(abs_builddir)/ocf-nrf-iec-msc.svg \
 		$(abs_builddir)/ctf-cdf-msc.svg \
+		$(abs_builddir)/re-load-balance-msc.svg \
 		$(abs_builddir)/slp-prepaid-cap-msc.svg \
 		$(abs_builddir)/prepaid-diameter-data.svg \
 		$(abs_builddir)/prepaid-diameter-voice.svg \
@@ -125,6 +127,7 @@ endif
 	-cp -n $(top_srcdir)/doc/messaging.svg .
 	-cp -n $(top_srcdir)/doc/distribution.svg .
 	-cp -n $(top_srcdir)/doc/ocf-ocs.svg .
+	-cp -n $(top_srcdir)/doc/ocf-re-rf.svg .
 
 CLEANFILES = $(doc_DATA) $(modhtml) erlang.png
 
