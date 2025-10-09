@@ -137,7 +137,7 @@
 		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
 		nrf_sort => random | none,
-		nrf_retries => pos_integer(),
+		nrf_retries => non_neg_integer(),
 		nrf_next_uris => [string()],
 		nrf_host => string(),
 		nrf_http_options => httpc:http_options(),
