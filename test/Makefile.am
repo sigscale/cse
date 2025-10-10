@@ -63,6 +63,7 @@ endif
 	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
 	@if [ ! -d cse_diameter_SUITE_data ]; then mkdir cse_diameter_SUITE_data; fi
 	@if [ ! -d cse_radius_SUITE_data ]; then mkdir cse_radius_SUITE_data; fi
+	@if [ ! -d cse_re_SUITE_data ]; then mkdir cse_re_SUITE_data; fi
 	ct_run -no_auto_compile \
 			-pa $(top_builddir)/ebin \
 			$(CT_ARGS) \

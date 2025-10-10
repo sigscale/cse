@@ -67,12 +67,25 @@ suite() ->
 	Description = "Test suite for Re interface in CSE",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]},
-	{require, cse},
 	{require, diameter},
 	{default_config, diameter,
 			[{address, {127,0,0,1}},
 			{port, 3868},
 			{realm, "mnc001.mcc001.3gppnetwork.org"}]},
+	{require, log},
+	{default_config, log,
+			[{logs,
+					[{'3gpp_ro',
+							[{format, external},
+							{codec, {cse_log_codec_ecs, codec_diameter_ecs}}]},
+					{rating,
+							[{format, external},
+							{codec, {cse_log_codec_ecs, codec_rating_ecs}}]},
+					{cdr,
+							[{format, external}]},
+					{prepaid,
+							[{format, external},
+							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
    {timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
@@ -86,6 +99,10 @@ init_per_suite(Config) ->
 	ok = cse_test_lib:unload(cse),
 	ok = cse_test_lib:load(cse),
 	ok = cse_test_lib:init_tables(),
+	LogDir = ct:get_config({log, log_dir}, ?config(priv_dir, Config)),
+	ok = application:set_env(cse, log_dir, LogDir),
+	Logs = ct:get_config({log, logs}, []),
+	ok = application:set_env(cse, logs, Logs),
 	DiameterAddress = ct:get_config({diameter, address}, {127,0,0,1}),
 	DiameterPort = ct:get_config({diameter, port},
 			rand:uniform(64511) + 1024),
@@ -195,7 +212,7 @@ all() ->
 %%---------------------------------------------------------------------
 
 default() ->
-	Description = "Re interface with default configuration",
+	Description = "Re interface with default configuration (reference case)",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -205,7 +222,7 @@ default(Config) ->
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer.
 
 http_connect_timeout() ->
-	Description = "First Re interface host address URI unreachable",
+	Description = "First host address URI connection timeout",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -217,7 +234,7 @@ http_connect_timeout(Config) ->
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_CC_APP_RESULT-CODE_USER_UNKNOWN'} = Answer.
 
 http_refused() ->
-	Description = "First Re interface host address URI is refused",
+	Description = "First host address URI connection is refused",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -299,7 +316,7 @@ client_acct_service_opts(Config) ->
 resolve1(ServiceURI, Options) ->
 	URIMap = uri_string:parse(ServiceURI),
 	Options1 = maps:merge(#{max_uri => 2}, proplists:to_map(Options)),
-	BogusAddress = inet:ntoa(ct_test_lib:rand_ipv4()),
+	BogusAddress = inet:ntoa(cse_test_lib:rand_ipv4()),
 	BogusURI = URIMap#{host => BogusAddress},
 	LocalURI = URIMap#{host => "127.0.0.1"},
 	resolve3(Options1, [BogusURI, LocalURI], []).
@@ -312,8 +329,8 @@ resolve2(ServiceURI, Options) ->
 	LocalURI = URIMap#{host => "127.0.0.1"},
 	resolve3(Options1, [BogusURI, LocalURI], []).
 
-resolve3(Options, [H | T], Acc) -> 
+resolve3(Options, [H | T], Acc) ->
 	resolve3(Options, T, [uri_string:recompose(H) | Acc]);
-resolve3(#{max_uris := N} = _Options, [], Acc) -> 
+resolve3(#{max_uri := N} = _Options, [], Acc) ->
 	lists:sublist(lists:reverse(Acc), N).
 
