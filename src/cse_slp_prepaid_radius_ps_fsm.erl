@@ -658,7 +658,6 @@ nrf_start2(Now, JSON,
 				nrf_host := Host, nrf_http_options := HttpOptions,
 				nrf_headers := Headers } = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
-	% @todo synchronous start
 	Options = [{sync, false}, {receiver, MFA}],
 	AcceptType = "application/json, application/problem+json",
 	Headers1 = [{"host", Host}, {"accept", AcceptType} | Headers],

@@ -2243,7 +2243,6 @@ nrf_start2(Now, JSON,
 				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
-	% @todo synchronous start
 	Options = [{sync, false}, {receiver, MFA}],
 	Headers1 = [{"host", Host},
 			{"accept", "application/json, application/problem+json"}
