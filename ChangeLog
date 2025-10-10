@@ -1,3 +1,16 @@
+2025-10-10 Vance Shipley <vances@sigscale.org>
+
+	* revert change to generated diagram paths in makefile
+	* correct type specification on nrf_retries
+	* http transport load balancing and resilience
+	* correct nrf response handlers in active state of inap slp
+	* indent in subsections, add diameter and radius sections
+	* update resolve/1,2 description for host address uris
+	* refactor ocs_rest:resolve/2 options
+	* remove unreachable function clauses for uodate/release in initial state
+	* add ocs_rest:resolve/1,2 for rest client based load balancing
+	* add missing tables in cse_app:join/1
+
 2025-10-06 Vance Shipley <vances@sigscale.org>
 
 	* nrf test server result for iec is always 1 unit

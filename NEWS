@@ -1,3 +1,8 @@
+October 10, 2025
+----------------
+	- Re interface HTTP transport load balancing and resilience 
+	- Joining a node to a cluster was missing new tables
+
 October 6, 2025
 ---------------
 	- Test script improvements
