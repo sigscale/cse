@@ -1,6 +1,6 @@
 October 10, 2025
 ----------------
-	- Re interface HTTP transport load balancing and resilience 
+	- Re interface HTTP transport load balancing and resilience
 	- Joining a node to a cluster was missing new tables
 
 October 6, 2025
@@ -119,7 +119,7 @@ January 7, 2025
 	- TCAP TCO improvements:
 		- multiple TCOs
 		- sends replies to requesting MTP SAP (ASP/SGP)
-		- consistent signaling link selector (SLS) 
+		- consistent signaling link selector (SLS)
 		- allow M3UA application to choose consistent SCTP stream
 		- SCCP party addresses include point code
 	- CAP/INAP SLP failure handling fixes
@@ -184,7 +184,7 @@ August 25, 2024
 August 22, 2024
 ---------------
 	- DIAMETER disconnect cause changed to REBOOTING
- 
+
 August 13, 2024
 ---------------
 	- Nrf_Rating OAS v1.1.1
@@ -290,7 +290,7 @@ May 28, 2023
 
 May 27, 2023
 ------------
-	- Map all service unit types in prepaid DIAMETER SLPs 
+	- Map all service unit types in prepaid DIAMETER SLPs
 	- SMS escript inludes Address-Type in Recipient-Info
 
 May 18, 2023
@@ -307,7 +307,7 @@ April 17, 2023
 April 16, 2023
 --------------
 	- Add APN to ServiceRating in Nrf API
-	- Deprecate string support in resources tables (migrate vefore upgrade) 
+	- Deprecate string support in resources tables (migrate vefore upgrade)
 
 April 11, 2023
 --------------
