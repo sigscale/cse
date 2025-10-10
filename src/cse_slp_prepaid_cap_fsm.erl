@@ -122,6 +122,7 @@
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
+		nrf_resolver => {Module :: atom(), Function :: atom},
 		nrf_sort => random | none,
 		nrf_retries => non_neg_integer(),
 		nrf_next_uris => [string()],
@@ -219,6 +220,7 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	NrfPort = proplists:get_value(port, HttpcOptions),
 	{ok, URI} = application:get_env(nrf_uri),
 	{ok, Sort} = application:get_env(cse, nrf_sort),
+	{ok, Resolver} = application:get_env(cse, nrf_resolver),
 	{ok, Retries} = application:get_env(cse, nrf_retries),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
@@ -226,6 +228,7 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 			start => erlang:system_time(millisecond),
 			direction => originating,
 			nrf_address => NrfAddress, nrf_port => NrfPort,
+			nrf_resolver => Resolver,
 			nrf_sort => Sort, nrf_retries => Retries,
 			nrf_profile => Profile, nrf_headers => Headers,
 			nrf_http_options => HttpOptions},
@@ -242,6 +245,7 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 	NrfAddress = proplists:get_value(ip, HttpcOptions),
 	NrfPort = proplists:get_value(port, HttpcOptions),
 	{ok, URI} = application:get_env(nrf_uri),
+	{ok, Resolver} = application:get_env(cse, nrf_resolver),
 	{ok, Sort} = application:get_env(cse, nrf_sort),
 	{ok, Retries} = application:get_env(cse, nrf_retries),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
@@ -250,6 +254,7 @@ null(internal, {#'TC-INVOKE'{operation = ?'opcode-initialDP',
 			start => erlang:system_time(millisecond),
 			direction => terminating,
 			nrf_address => NrfAddress, nrf_port => NrfPort,
+			nrf_resolver => Resolver,
 			nrf_sort => Sort, nrf_retries => Retries,
 			nrf_profile => Profile, nrf_headers => Headers,
 			nrf_http_options => HttpOptions},
@@ -3472,10 +3477,9 @@ add_nrf(URI, Data, #{host := Address} = _URIMap)
 	Data1 = Data#{nrf_host => binary_to_list(Address)},
 	add_nrf1(URI, Data1).
 %% @hidden
-add_nrf1(URI,
-		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
-	add_nrf2(cse_rest:resolve(URI,
-			[{sort, Sort}, {max_uri, Retries + 1}]), Data).
+add_nrf1(URI, #{nrf_resolver := {M, F},
+		nrf_sort := Sort, nrf_retries := Retries} = Data) ->
+	add_nrf2(M:F(URI, [{sort, Sort}, {max_uri, Retries + 1}]), Data).
 %% @hidden
 add_nrf2(HostURI,
 		#{nrf_retries := 0} = Data) ->
@@ -3524,10 +3528,9 @@ add_location(_URI, Data, #{} = URIMap) ->
 	Location = uri_string:recompose(URIMap1),
 	Data#{nrf_location => Location}.
 %% @hidden
-add_location1(URI,
-		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
-	add_location2(cse_rest:resolve(URI,
-			[{sort, Sort}, {max_uri, Retries + 1}]), Data).
+add_location1(URI, #{nrf_resolver := {M, F},
+		nrf_sort := Sort, nrf_retries := Retries} = Data) ->
+	add_location2(M:F(URI, [{sort, Sort}, {max_uri, Retries + 1}]), Data).
 %% @hidden
 add_location2(HostURI,
 		#{nrf_retries := 0} = Data) ->

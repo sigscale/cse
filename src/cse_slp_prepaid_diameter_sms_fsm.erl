@@ -136,6 +136,7 @@
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
+		nrf_resolver => {Module :: atom(), Function :: atom},
 		nrf_sort => random | none,
 		nrf_retries => non_neg_integer(),
 		nrf_next_uris => [string()],
@@ -181,6 +182,7 @@ callback_mode() ->
 init(Args) ->
 	{ok, Profile} = application:get_env(cse, nrf_profile),
 	{ok, URI} = application:get_env(cse, nrf_uri),
+	{ok, Resolver} = application:get_env(cse, nrf_resolver),
 	{ok, Sort} = application:get_env(cse, nrf_sort),
 	{ok, Retries} = application:get_env(cse, nrf_retries),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
@@ -199,6 +201,7 @@ init(Args) ->
 	end,
 	Data = #{nrf_profile => Profile,
 			nrf_sort => Sort, nrf_retries => Retries,
+			nrf_resolver => Resolver,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			start => erlang:system_time(millisecond),
 			idle => IdleTime, sequence => 1},
@@ -2400,10 +2403,9 @@ add_nrf(URI, Data, #{host := Address} = _URIMap)
 	Data1 = Data#{nrf_host => binary_to_list(Address)},
 	add_nrf1(URI, Data1).
 %% @hidden
-add_nrf1(URI,
-		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
-	add_nrf2(cse_rest:resolve(URI,
-			[{sort, Sort}, {max_uri, Retries + 1}]), Data).
+add_nrf1(URI, #{nrf_resolver := {M, F},
+		nrf_sort := Sort, nrf_retries := Retries} = Data) ->
+	add_nrf2(M:F(URI, [{sort, Sort}, {max_uri, Retries + 1}]), Data).
 %% @hidden
 add_nrf2(HostURI,
 		#{nrf_retries := 0} = Data) ->
@@ -2452,10 +2454,9 @@ add_location(_URI, Data, #{} = URIMap) ->
 	Location = uri_string:recompose(URIMap1),
 	Data#{nrf_location => Location}.
 %% @hidden
-add_location1(URI,
-		#{nrf_sort := Sort, nrf_retries := Retries} = Data) ->
-	add_location2(cse_rest:resolve(URI,
-			[{sort, Sort}, {max_uri, Retries + 1}]), Data).
+add_location1(URI, #{nrf_resolver := {M, F},
+		nrf_sort := Sort, nrf_retries := Retries} = Data) ->
+	add_location2(M:F(URI, [{sort, Sort}, {max_uri, Retries + 1}]), Data).
 %% @hidden
 add_location2(HostURI,
 		#{nrf_retries := 0} = Data) ->

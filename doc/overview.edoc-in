@@ -493,6 +493,9 @@ API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 	<dt>`nrf_headers'</dt>
 		<dd>HTTP {@link //inets/httpc:headers(). headers} added by the
 				{@link //inets/httpc. httpc} client (default: `[]').</dd>
+	<dt>`nrf_resolver'</dt>
+		<dd>Overide the default resolver used for deriving host address URIs from
+				a service name URI (`nrf_uri'). (default: `[{cse_rest, resolve}]').</dd>
 </dl>
 
 ===REST===
