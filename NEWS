@@ -1,3 +1,10 @@
+October 13, 2025
+----------------
+	- IMS calling/called party parsed as DN from tel/sip URI
+	- Use calling/called party from initial service request only
+	- Test suite for Re interface
+	- Configurable HTTP resolver
+
 October 10, 2025
 ----------------
 	- Re interface HTTP transport load balancing and resilience

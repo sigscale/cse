@@ -1,3 +1,11 @@
+2025-10-13 Vance Shipley <vances@sigscale.org>
+
+	* parse tel/sip uri calling/called party from initial ims service request
+	* corrections for re interface http resilience test cases
+	* test suite for re interface
+	* application environment variable configures choice of http resolver
+	* remove completed @todo
+
 2025-10-10 Vance Shipley <vances@sigscale.org>
 
 	* revert change to generated diagram paths in makefile
