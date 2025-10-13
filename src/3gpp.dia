@@ -2502,8 +2502,8 @@
    SEND_TO_UE                     1
 
 @enum Forwarding-Pending
-	FORWARDING_NOT_PENDING         0
-	FORWARDING_PENDING             1
+   FORWARDING_NOT_PENDING         0
+   FORWARDING_PENDING             1
 
 @enum LCS-Client-Type
    EMERGENCY_SERVICES             0
