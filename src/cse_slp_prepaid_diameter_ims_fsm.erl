@@ -2664,8 +2664,16 @@ service_rating(#{mscc := MSCC} = Data) ->
 %% @hidden
 service_rating([MSCC | T],
 		#{context := ServiceContextId,
+		calling := Calling,
+		called := Called,
 		service_info := ServiceInformation} = Data, Acc) ->
-	SR1 = #{"serviceContextId" => ServiceContextId},
+	OriginationId = #{"originationIdType" => "DN",
+			"originationIdData" => Calling},
+	DestinationId = #{"destinationIdType" => "DN",
+			"destinationIdData" => Called},
+	SR1 = #{"serviceContextId" => ServiceContextId,
+			"originationId" => [OriginationId],
+			"destinationId" => [DestinationId]},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_ps(ServiceInformation, SR3),
@@ -2826,51 +2834,17 @@ service_rating_ims2(IMS, ServiceRating, Info) ->
 	service_rating_ims3(IMS, ServiceRating, Info).
 %% @hidden
 service_rating_ims3([#'3gpp_ro_IMS-Information'{
-		'IMS-Visited-Network-Identifier' = [VisitedNetwork]}] = IMS,
+		'IMS-Visited-Network-Identifier' = [VisitedNetwork]}] = _IMS,
 		ServiceRating, Info) ->
 	Info1 = Info#{"visitedNetworkIdentifier" => VisitedNetwork},
-	service_rating_ims4(IMS, ServiceRating, Info1);
-service_rating_ims3(IMS, ServiceRating, Info) ->
-	service_rating_ims4(IMS, ServiceRating, Info).
+	service_rating_ims4(ServiceRating, Info1);
+service_rating_ims3(_IMS, ServiceRating, Info) ->
+	service_rating_ims4(ServiceRating, Info).
 %% @hidden
-service_rating_ims4([#'3gpp_ro_IMS-Information'{
-		'Calling-Party-Address' = [<<"sip:", NAI/binary>>]}] = IMS,
-		ServiceRating, Info) ->
-	OriginationId = #{"originationIdType" => "NAI",
-			"originationIdData" => binary_to_list(NAI)},
-	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
-	service_rating_ims5(IMS, ServiceRating1, Info);
-service_rating_ims4([#'3gpp_ro_IMS-Information'{
-		'Calling-Party-Address' = [<<"tel:", DN/binary>>]}] = IMS,
-		ServiceRating, Info) ->
-	OriginationId = #{"originationIdType" => "DN",
-			"originationIdData" => binary_to_list(DN)},
-	ServiceRating1 = ServiceRating#{"originationId" => [OriginationId]},
-	service_rating_ims5(IMS, ServiceRating1, Info);
-service_rating_ims4(IMS, ServiceRating, Info) ->
-	service_rating_ims5(IMS, ServiceRating, Info).
-%% @hidden
-service_rating_ims5([#'3gpp_ro_IMS-Information'{
-		'Called-Party-Address' = [<<"sip:", NAI/binary>>]}],
-		ServiceRating, Info) ->
-	DestinationId = #{"destinationIdType" => "NAI",
-			"destinationIdData" => binary_to_list(NAI)},
-	ServiceRating1 = ServiceRating#{"destinationId" => [DestinationId]},
-	service_rating_ims6(ServiceRating1, Info);
-service_rating_ims5([#'3gpp_ro_IMS-Information'{
-		'Called-Party-Address' = [<<"tel:", DN/binary>>]}],
-		ServiceRating, Info) ->
-	DestinationId = #{"destinationIdType" => "DN",
-			"destinationIdData" => binary_to_list(DN)},
-	ServiceRating1 = ServiceRating#{"destinationId" => [DestinationId]},
-	service_rating_ims6(ServiceRating1, Info);
-service_rating_ims5(_IMS, ServiceRating, Info) ->
-	service_rating_ims6(ServiceRating, Info).
-%% @hidden
-service_rating_ims6(ServiceRating, Info)
+service_rating_ims4(ServiceRating, Info)
 		when map_size(Info) > 0 ->
 	ServiceRating#{"serviceInformation" => Info};
-service_rating_ims6(ServiceRating, _Info) ->
+service_rating_ims4(ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden
@@ -3259,10 +3233,15 @@ call_parties([]) ->
 	{[], []}.
 
 %% @hidden
-address(<<"tel:", Dest/binary>>) ->
-	binary_to_list(Dest);
-address(Dest) ->
-	binary_to_list(Dest).
+address(URI) ->
+	address1(cse_codec:ims_uri(binary_to_list(URI))).
+%% @hidden
+address1(#{scheme := tel, user := DN} = _URIMap) ->
+	DN;
+address1(#{scheme := sip, user := DN} = _URIMap) ->
+	DN;
+address1(#{scheme := sips, user := DN} = _URIMap) ->
+	DN.
 
 -spec ecs_http(MIME, Body) -> HTTP
 	when
