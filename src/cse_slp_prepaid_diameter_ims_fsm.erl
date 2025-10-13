@@ -3236,11 +3236,11 @@ call_parties([]) ->
 address(URI) ->
 	address1(cse_codec:ims_uri(binary_to_list(URI))).
 %% @hidden
-address1(#{scheme := tel, user := DN} = _URIMap) ->
+address1(#ims_uri{scheme = tel, user = DN}) ->
 	DN;
-address1(#{scheme := sip, user := DN} = _URIMap) ->
+address1(#ims_uri{scheme = sip, user = DN}) ->
 	DN;
-address1(#{scheme := sips, user := DN} = _URIMap) ->
+address1(#ims_uri{scheme = sips, user = DN}) ->
 	DN.
 
 -spec ecs_http(MIME, Body) -> HTTP
