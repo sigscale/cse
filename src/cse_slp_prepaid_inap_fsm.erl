@@ -2689,7 +2689,7 @@ log_nrf(DN, HTTP,
 		#{nrf_start := Start,
 		nrf_address := Address,
 		nrf_port := Port,
-		nrf_req_url := URL} = _Data) ->
+		nrf_req_url := URL} = Data) ->
 	Stop = erlang:system_time(millisecond),
 	Subscriber = #{msisdn => DN},
 	Client = case {Address, Port} of
@@ -2702,8 +2702,9 @@ log_nrf(DN, HTTP,
 		{_, _} ->
 			{[], 0}
 	end,
-	cse_log:blog(?NRF_LOGNAME,
-			{Start, Stop, ?SERVICENAME, Subscriber, Client, URL, HTTP}).
+	Ref = maps:get(nrf_ref, Data, []),
+	cse_log:blog(?NRF_LOGNAME, {Start, Stop, ?SERVICENAME,
+			Subscriber, Client, URL, HTTP, Ref}).
 
 -spec log_fsm(OldState, Data) -> ok
 	when
@@ -2731,8 +2732,9 @@ log_fsm(DN, State,
 	Call = #{direction => Direction, calling => Calling, called => Called},
 	Network = #{context => "32276@3gpp.org"},
 	OCS = #{nrf_location => maps:get(nrf_location, Data, [])},
+	Ref = maps:get(nrf_ref, Data, []),
 	cse_log:blog(?FSM_LOGNAME, {Start, Stop, ?SERVICENAME,
-			State, Subscriber, Call, Network, OCS}).
+			State, Subscriber, Call, Network, OCS, Ref}).
 
 %% @hidden
 remove_nrf(Data) ->
@@ -2836,7 +2838,7 @@ add_location2([H | T], Data) ->
 
 %% @hidden
 rating_data_ref(#{path := Path} = _URIMap) ->
-	rating_data_ref1(string:lexemes(Path, [$/]).
+	rating_data_ref1(string:lexemes(Path, [$/])).
 %% @hidden
 rating_data_ref1(["release", RatingDataRef | _]) ->
 	RatingDataRef;

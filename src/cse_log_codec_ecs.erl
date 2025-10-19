@@ -26,9 +26,9 @@
 %% export the cse_log_codec_ecs  public API
 -export([codec_diameter_ecs/1, codec_prepaid_ecs/1, codec_postpaid_ecs/1,
 		codec_rating_ecs/1]).
--export([ecs_base/1, ecs_server/4, ecs_client/4, ecs_network/2,
-		ecs_source/5, ecs_destination/1, ecs_service/2, ecs_event/7,
-		ecs_url/1]).
+-export([ecs_base/1, ecs_base/2, ecs_server/4, ecs_client/4,
+		ecs_network/2, ecs_source/5, ecs_destination/1, ecs_service/2,
+		ecs_event/7, ecs_url/1]).
 -export([subscriber_id/1]).
 
 -include("diameter_gen_3gpp_ro_application.hrl").
@@ -247,7 +247,9 @@ codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 -spec codec_prepaid_ecs(Term) -> iodata()
 	when
 		Term :: {Start, Stop, ServiceName,
-				State, Subscriber, Call, Network, OCS},
+						State, Subscriber, Call, Network, OCS}
+				| {Start, Stop, ServiceName,
+						State, Subscriber, Call, Network, OCS, RatingDataRef},
 		Start :: pos_integer(),
 		Stop :: pos_integer(),
 		ServiceName :: string(),
@@ -272,7 +274,8 @@ codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 		NrfURL :: string(),
 		NrfLocation :: string(),
 		NrfResult :: string(),
-		NrfCause :: string().
+		NrfCause :: string(),
+		RatingDataRef :: string().
 %% @doc Prepaid SLP event CODEC for Elastic Stack logs.
 %%
 %% 	Formats call detail events for consumption by
@@ -293,6 +296,10 @@ codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 %% @todo Refactor `outcome' after eliminating `exception' state.
 codec_prepaid_ecs({Start, Stop, ServiceName,
 		State, Subscriber, Call, Network, OCS} = _Term) ->
+	codec_prepaid_ecs({Start, Stop, ServiceName,
+			State, Subscriber, Call, Network, OCS, []});
+codec_prepaid_ecs({Start, Stop, ServiceName,
+		State, Subscriber, Call, Network, OCS, RatingDataRef} = _Term) ->
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
 	Duration = integer_to_list((Stop - Start) * 1000000),
@@ -308,8 +315,11 @@ codec_prepaid_ecs({Start, Stop, ServiceName,
 			Location ->
 				Location
 	end,
+	TS = cse_log:iso8601(erlang:system_time(millisecond)),
+	Labels = #{"application" => "sigscale-cse",
+			"nrf_ref" => RatingDataRef},
 	[${,
-			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
+			ecs_base(TS, Labels), $,,
 			ecs_service(ServiceName, "slp"), $,,
 			ecs_network("nrf", "http"), $,,
 			ecs_user(sub_name(Subscriber), sub_id(Subscriber), []), $,,
@@ -380,7 +390,10 @@ codec_postpaid_ecs({Start, Stop, ServiceName,
 
 -spec codec_rating_ecs(Term) -> iodata()
 	when
-		Term :: {Start, Stop, ServiceName, Subscriber, Client, URL, HTTP},
+		Term :: {Start, Stop, ServiceName,
+						Subscriber, Client, URL, HTTP}
+				| {Start, Stop, ServiceName,
+						Subscriber, Client, URL, HTTP, RatingDataRef},
 		Start :: pos_integer(),
 		Stop :: pos_integer(),
 		ServiceName :: string(),
@@ -391,7 +404,8 @@ codec_postpaid_ecs({Start, Stop, ServiceName,
 		Address :: inet:ip_address() | string(),
 		Port :: non_neg_integer(),
 		URL :: uri_string:uri_string() | uri_string:uri_map(),
-		HTTP :: map().
+		HTTP :: map(),
+		RatingDataRef :: string().
 %% @doc Nrf_Rating event CODEC for Elastic Stack logs.
 %%
 %% 	Formats Nrf_Rating message transaction events on the Re interface
@@ -411,8 +425,13 @@ codec_postpaid_ecs({Start, Stop, ServiceName,
 %% 	`event.duration' will be included in the log event.
 %%
 codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
+		Client, URL, HTTP} = _Term) ->
+	codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
+			Client, URL, HTTP, []});
+codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
 		{Address, Port} = _Client, URL,
-		#{"response" := #{"status_code" := StatusCode}} = HTTP} = _Term) ->
+		#{"response" := #{"status_code" := StatusCode}} = HTTP,
+		RatingDataRef} = _Term) ->
 	StartTime = cse_log:iso8601(Start),
 	StopTime = cse_log:iso8601(Stop),
 	Duration = integer_to_list((Stop - Start) * 1000000),
@@ -422,7 +441,11 @@ codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
 		false ->
 			"failure"
 	end,
+	TS = cse_log:iso8601(erlang:system_time(millisecond)),
+	Labels = #{"application" => "sigscale-cse",
+			"nrf_ref" => RatingDataRef},
 	[${,
+			ecs_base(TS, Labels), $,,
 			ecs_base(cse_log:iso8601(erlang:system_time(millisecond))), $,,
 			ecs_service(ServiceName, "slp"), $,,
 			ecs_network("nrf", "http"), $,,
@@ -438,17 +461,40 @@ codec_rating_ecs({Start, Stop, ServiceName, Subscriber,
 		Timestamp :: string().
 %% @doc Elastic Common Schema (ECS): Base attributes.
 %%
-%% 	`Timestamp' is milliseconds since the epoch
-%% 	(e.g. `erlang:system_time(millisecond)')..
+%% 	`Timestamp' is ISO8601.
 %%
-ecs_base(Timestamp) ->
+ecs_base(Timestamp)
+		when is_list(Timestamp) ->
+	Labels = #{"application" => "sigscale-cse"},
+	ecs_base(Timestamp, Labels).
+
+-spec ecs_base(Timestamp, Labels) -> iodata()
+	when
+		Timestamp :: string(),
+		Labels :: map().
+%% @doc Elastic Common Schema (ECS): Base attributes.
+%%
+%% 	`Timestamp' is ISO8601.
+%%
+%% 	`Labels' are key/value `string()'s.
+%%
+ecs_base(Timestamp, Labels)
+		when is_list(Timestamp), is_map(Labels) ->
 	TS = [$", "@timestamp", $", $:, $", Timestamp, $"],
-	Labels = [$", "labels", $", $:, ${,
-			$", "application", $", $:, $", "sigscale-cse", $", $}],
+	F = fun(Key, Value, [] = _Acc)
+					when is_list(Key), is_list(Value) ->
+				[$", Key, $", $:, $", Value, $"];
+			(Key, Value, Acc)
+					when is_list(Key), is_list(Value) ->
+				Acc ++ [$,, $", Key, $", $:, $", Value, $"];
+			(_Key, _Value, Acc) ->
+				Acc
+	end,
+	Labels1 = [$", "labels", $", $:, ${, maps:fold(F, [], Labels), $}],
 	Tags = [$", "tags", $", $:, $[, $]],
 	Version = [$", "ecs", $", $:, ${,
 			$", "version", $", $:, $", "8.5", $", $}],
-	[TS, $,, Labels, $,, Tags, $,, Version].
+	[TS, $,, Labels1, $,, Tags, $,, Version].
 
 -spec ecs_server(Address, Domain, IP, Port) -> iodata()
 	when

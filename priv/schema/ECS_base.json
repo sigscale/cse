@@ -25,7 +25,8 @@
 			"type": "object",
 			"examples": [
 				{
-					"application": "sigscale-cse"
+					"application": "sigscale-cse",
+					"nrf_ref": "1760665549766157893122"
 				}
 			]
 		}
