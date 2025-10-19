@@ -2795,12 +2795,14 @@ add_location2([H | T], Data) ->
 
 %% @hidden
 rating_data_ref(#{path := Path} = _URIMap) ->
-	rating_data_ref1(string:lexemes(Path, [$/])).
+	rating_data_ref1(lists:reverse(string:lexemes(Path, [$/]))).
 %% @hidden
 rating_data_ref1(["release", RatingDataRef | _]) ->
 	RatingDataRef;
 rating_data_ref1(["update", RatingDataRef | _]) ->
 	RatingDataRef;
+rating_data_ref1(["ratingdata" | _]) ->
+	[];
 rating_data_ref1([RatingDataRef | _]) ->
 	RatingDataRef;
 rating_data_ref1([]) ->
