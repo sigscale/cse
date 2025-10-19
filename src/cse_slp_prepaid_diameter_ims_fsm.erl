@@ -3443,7 +3443,11 @@ add_location2([H | T], Data) ->
 	Data#{nrf_uri => H, nrf_next_uris => T}.
 
 %% @hidden
-rating_data_ref(#{path := Path} = _URIMap) ->
+rating_data_ref(#{path := Path} = _URIMap)
+		when is_binary(Path) ->
+	rating_data_ref(#{path => binary_to_list(Path)});
+rating_data_ref(#{path := Path} = _URIMap)
+		when is_list(Path) ->
 	rating_data_ref1(lists:reverse(string:lexemes(Path, [$/]))).
 %% @hidden
 rating_data_ref1(["release", RatingDataRef | _]) ->
