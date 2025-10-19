@@ -133,6 +133,7 @@
 		nrf_http_options => httpc:http_options(),
 		nrf_headers => httpc:headers(),
 		nrf_location => string(),
+		nrf_ref => string(),
 		nrf_start => pos_integer(),
 		nrf_req_url => string(),
 		nrf_http => map(),
@@ -2216,7 +2217,9 @@ add_location(URI, Data, #{host := Address, port := Port} = URIMap)
 	Filter = #{path => [], query => [], fragment => []},
 	URIMap1 = maps:intersect(Filter, URIMap),
 	Location = uri_string:recompose(URIMap1),
-	Data1 = Data#{nrf_host => Host, nrf_location => Location},
+	RatingDataRef = rating_data_ref(URIMap1),
+	Data1 = Data#{nrf_host => Host,
+			nrf_location => Location, nrf_ref => RatingDataRef},
 	add_location1(URI, Data1);
 add_location(URI, Data, #{host := Address, port := Port} = URIMap)
 		when is_binary(Address) ->
@@ -2224,14 +2227,18 @@ add_location(URI, Data, #{host := Address, port := Port} = URIMap)
 	Filter = #{path => [], query => [], fragment => []},
 	URIMap1 = maps:intersect(Filter, URIMap),
 	Location = uri_string:recompose(URIMap1),
-	Data1 = Data#{nrf_host => Host, nrf_location => Location},
+	RatingDataRef = rating_data_ref(URIMap1),
+	Data1 = Data#{nrf_host => Host,
+			nrf_location => Location, nrf_ref => RatingDataRef},
 	add_location1(URI, Data1);
 add_location(URI, Data, #{host := Address} = URIMap)
 		when is_list(Address) ->
 	Filter = #{path => [], query => [], fragment => []},
 	URIMap1 = maps:intersect(Filter, URIMap),
 	Location = uri_string:recompose(URIMap1),
-	Data1 = Data#{nrf_host => Address, nrf_location => Location},
+	RatingDataRef = rating_data_ref(URIMap1),
+	Data1 = Data#{nrf_host => Address,
+			nrf_location => Location, nrf_ref => RatingDataRef},
 	add_location1(URI, Data1);
 add_location(URI, Data, #{host := Address} = URIMap)
 		when is_binary(Address) ->
@@ -2239,13 +2246,16 @@ add_location(URI, Data, #{host := Address} = URIMap)
 	Filter = #{path => [], query => [], fragment => []},
 	URIMap1 = maps:intersect(Filter, URIMap),
 	Location = uri_string:recompose(URIMap1),
-	Data1 = Data#{nrf_host => Host, nrf_location => Location},
+	RatingDataRef = rating_data_ref(URIMap1),
+	Data1 = Data#{nrf_host => Host,
+			nrf_location => Location, nrf_ref => RatingDataRef},
 	add_location1(URI, Data1);
 add_location(_URI, Data, #{} = URIMap) ->
 	Filter = #{path => [], query => [], fragment => []},
 	URIMap1 = maps:intersect(Filter, URIMap),
 	Location = uri_string:recompose(URIMap1),
-	Data#{nrf_location => Location}.
+	RatingDataRef = rating_data_ref(URIMap1),
+	Data#{nrf_location => Location, nrf_ref => RatingDataRef}.
 %% @hidden
 add_location1(URI, #{nrf_resolver := {M, F},
 		nrf_sort := Sort, nrf_retries := Retries} = Data) ->
@@ -2256,4 +2266,17 @@ add_location2(HostURI,
 	Data#{nrf_uri => HostURI, nrf_next_uris => []};
 add_location2([H | T], Data) ->
 	Data#{nrf_uri => H, nrf_next_uris => T}.
+
+%% @hidden
+rating_data_ref(#{path := Path} = _URIMap) ->
+	rating_data_ref1(string:lexemes(Path, [$/]).
+%% @hidden
+rating_data_ref1(["release", RatingDataRef | _]) ->
+	RatingDataRef;
+rating_data_ref1(["update", RatingDataRef | _]) ->
+	RatingDataRef;
+rating_data_ref1([RatingDataRef | _]) ->
+	RatingDataRef;
+rating_data_ref1([]) ->
+	[].
 
