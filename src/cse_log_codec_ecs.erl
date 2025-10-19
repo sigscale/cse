@@ -482,10 +482,10 @@ ecs_base(Timestamp, Labels)
 		when is_list(Timestamp), is_map(Labels) ->
 	TS = [$", "@timestamp", $", $:, $", Timestamp, $"],
 	F = fun(Key, Value, [] = _Acc)
-					when is_list(Key), is_list(Value) ->
+					when length(Key) > 0, length(Value) > 0  ->
 				[$", Key, $", $:, $", Value, $"];
 			(Key, Value, Acc)
-					when is_list(Key), is_list(Value) ->
+					when length(Key) > 0, length(Value) > 0  ->
 				Acc ++ [$,, $", Key, $", $:, $", Value, $"];
 			(_Key, _Value, Acc) ->
 				Acc
