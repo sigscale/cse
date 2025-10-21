@@ -305,30 +305,30 @@ authorize_event_attempt(cast,
 				ohost := OHost, orealm := ORealm, reqno := RequestNum,
 				req_type := RequestType, mscc := MSCC,
 				recipient := Recipient, one_time := OneTime} = Data) ->
-	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
-	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
+	Data1 = add_location(Headers, Data),
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
+	NewData = remove_nrf(Data1),
+	case {zj:decode(Body), maps:get(nrf_location, NewData, undefined)} of
+		{{ok, #{"serviceRating" := ServiceRating}}, Location}
 				when is_list(Location) ->
 			try
-				NewData1 = add_location(Location, NewData),
 				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
 				Reply = diameter_answer(NewMSCC,
 						ResultCode, RequestType, RequestNum),
 				case {ResultCode, OneTime, Recipient} of
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', true, _} ->
-						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
-						{next_state, null, NewData1, Actions};
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(NewData)],
+						{next_state, null, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false, Destination}
 							when length(Destination) > 0 ->
-						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
-						{next_state, analyse_information, NewData1, Actions};
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(NewData)],
+						{next_state, analyse_information, NewData, Actions};
 					{?'DIAMETER_BASE_RESULT-CODE_SUCCESS', false, _} ->
-						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
-						{next_state, collect_information, NewData1, Actions};
+						Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(NewData)],
+						{next_state, collect_information, NewData, Actions};
 					{_, _, _} ->
 						Actions = [{reply, From, Reply}],
-						{next_state, null, NewData1, Actions}
+						{next_state, null, NewData, Actions}
 				end
 			catch
 				_:Reason ->
@@ -342,15 +342,13 @@ authorize_event_attempt(cast,
 					Actions1 = [{reply, From, Reply1}],
 					{next_state, null, NewData, Actions1}
 			end;
-		{{ok, #{}}, {_, Location}}
+		{{ok, #{}}, Location}
 				when is_list(Location) ->
-			NewData1 = add_location(Location, NewData),
 			ResultCode1 = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-			Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(Data)],
-			{next_state, collect_information, NewData1, Actions1};
-		{{error, Partial, Remaining}, {_, Location}}
-				when is_list(Location) ->
+			Actions1 = [{reply, From, Reply1}, ?IDLE_TIMEOUT(NewData)],
+			{next_state, collect_information, NewData, Actions1};
+		{{error, Partial, Remaining}, Location} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {location, Location}, {slpi, self()},
@@ -361,7 +359,7 @@ authorize_event_attempt(cast,
 			Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
 			Actions1 = [{reply, From, Reply1}],
 			{next_state, null, NewData, Actions1};
-		{{ok, _}, false} ->
+		{{ok, _}, undefined} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
@@ -2734,8 +2732,13 @@ add_nrf2([H | T], Data) ->
 	Data#{nrf_uri => H, nrf_next_uris => T}.
 
 %% @hidden
-add_location(URI, Data) ->
-	add_location(URI, Data, uri_string:parse(URI)).
+add_location(Headers, Data) ->
+	case lists:keyfind("location", 1, Headers) of
+		{_, URI} ->
+			add_location(URI, Data, uri_string:parse(URI));
+		false ->
+			Data
+	end.
 %% @hidden
 add_location(URI, Data, #{host := Address, port := Port} = URIMap)
 		when is_list(Address) ->
