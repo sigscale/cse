@@ -2770,12 +2770,14 @@ nrf_start8(SI, #{direction := forwarding,
 			"requestSubType" => "RESERVE"},
 	nrf_start9(ServiceRating, Data).
 %% @hidden
-nrf_start9(ServiceRating, #{imsi := IMSI, msisdn := MSISDN,
-		sequence := Sequence} = Data) ->
+nrf_start9(ServiceRating,
+		#{imsi := IMSI, msisdn := MSISDN,
+				context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating]},
 	nrf_start10(Now, JSON, Data).
@@ -2903,7 +2905,8 @@ nrf_update8(SI, #{direction := forwarding,
 %% @hidden
 nrf_update9(ServiceRating,
 		#{imsi := IMSI, msisdn := MSISDN,
-				sequence := Sequence, pending := Consumed} = Data) ->
+				context := Context, sequence := Sequence,
+				pending := Consumed} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
@@ -2912,6 +2915,7 @@ nrf_update9(ServiceRating,
 	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
 	NewData = Data#{sequence => NewSequence, pending => 0},
@@ -3070,7 +3074,8 @@ nrf_release10(SI, #{direction := forwarding,
 %% @hidden
 nrf_release11(ServiceRating,
 		#{imsi := IMSI, msisdn := MSISDN,
-				pending := Consumed, sequence := Sequence} = Data) ->
+				context := Context, sequence := Sequence,
+				pending := Consumed} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	ServiceRating1 = ServiceRating#{"requestSubType" => "DEBIT",
@@ -3078,6 +3083,7 @@ nrf_release11(ServiceRating,
 	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => ["imsi-" ++ IMSI, "msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating1]},
 	NewData = Data#{sequence => NewSequence, pending => 0},

@@ -2260,11 +2260,13 @@ nrf_start1(SI, #{direction := forwarding,
 	nrf_start2(ServiceRating, Data).
 %% @hidden
 nrf_start2(ServiceRating,
-		#{msisdn := MSISDN, sequence := Sequence} = Data) ->
+		#{msisdn := MSISDN,
+				context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON = #{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => ["msisdn-" ++ MSISDN],
 			"serviceRating" => [ServiceRating]},
 	nrf_start3(Now, JSON, Data).
@@ -2347,7 +2349,8 @@ nrf_update1(SI, #{direction := forwarding,
 	nrf_update2(ServiceRating, Data).
 %% @hidden
 nrf_update2(ServiceRating,
-		#{msisdn := MSISDN, sequence := Sequence,
+		#{msisdn := MSISDN,
+				context := Context, sequence := Sequence,
 				pending := Consumed} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
@@ -2357,6 +2360,7 @@ nrf_update2(ServiceRating,
 	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => ["msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit, Reserve]},
 	NewData = Data#{sequence => NewSequence},
@@ -2460,8 +2464,9 @@ nrf_release3(SI, #{direction := forwarding,
 	nrf_release4(ServiceRating, Data).
 %% @hidden
 nrf_release4(ServiceRating,
-		#{msisdn := MSISDN, pending := Consumed,
-				sequence := Sequence} = Data) ->
+		#{msisdn := MSISDN,
+				context := Context, sequence := Sequence,
+				pending := Consumed} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	Debit = ServiceRating#{"consumedUnit" => #{"time" => Consumed},
@@ -2469,6 +2474,7 @@ nrf_release4(ServiceRating,
 	JSON = #{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => ["msisdn-" ++ MSISDN],
 			"serviceRating" => [Debit]},
 	NewData = Data#{sequence => NewSequence},

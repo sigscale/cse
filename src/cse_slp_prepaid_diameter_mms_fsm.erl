@@ -1334,20 +1334,26 @@ nrf_start(Data) ->
 			nrf_start1(#{}, Data)
 	end.
 %% @hidden
-nrf_start1(JSON, #{one_time := true, sequence := Sequence} = Data) ->
+nrf_start1(JSON,
+		#{context := Context, sequence := Sequence,
+				one_time := true} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data),
 			"oneTimeEvent" => true,
 			"oneTimeEventType" => "IEC"},
 	nrf_start2(Now, JSON1, Data);
-nrf_start1(JSON, #{one_time := false, sequence := Sequence} = Data) ->
+nrf_start1(JSON,
+		#{context := Context, sequence := Sequence,
+				one_time := false} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	nrf_start2(Now, JSON1, Data).
 %% @hidden
@@ -1414,12 +1420,14 @@ nrf_update(Data) ->
 			nrf_update1(#{}, Data)
 	end.
 %% @hidden
-nrf_update1(JSON, #{sequence := Sequence} = Data) ->
+nrf_update1(JSON,
+		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	NewData = Data#{sequence => NewSequence},
 	nrf_update2(Now, JSON1, NewData).
@@ -1491,12 +1499,14 @@ nrf_release(Data) ->
 			nrf_release1(#{}, Data)
 	end.
 %% @hidden
-nrf_release1(JSON, #{sequence := Sequence} = Data) ->
+nrf_release1(JSON,
+		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	NewData = Data#{sequence => NewSequence},
 	nrf_release2(Now, JSON1, NewData).
