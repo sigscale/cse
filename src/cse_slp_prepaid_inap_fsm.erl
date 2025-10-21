@@ -347,14 +347,14 @@ analyse_information(cast, {nrf_start,
 				nrf_uri := URI, nrf_http := LogHTTP,
 				edp := EDP, did := DialogueID, iid := IID, dha := DHA,
 				cco := CCO, scf := SCF, ac := AC} = Data) ->
-	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
-	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
+	Data1 = add_location(Headers, Data),
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
+	Data2 = remove_nrf(Data1),
+	case {zj:decode(Body), maps:get(nrf_location, Data2, undefined)} of
+		{{ok, #{"serviceRating" := ServiceRating}}, Location}
 				when is_list(ServiceRating), is_list(Location) ->
 			case granted(ServiceRating) of
 				{ok, _GrantedTime} ->
-					Data1 = remove_nrf(Data),
-					Data2 = add_location(Location, Data1),
 					NewData = Data2#{iid => IID + 4,
 							call_info => #{}, tr_state => active},
 					BCSMEvents = [#{eventTypeBCSM => routeSelectFailure,
@@ -402,8 +402,6 @@ analyse_information(cast, {nrf_start,
 					{next_state, o_alerting, NewData};
 				{error, _Reason} ->
 					NewIID = IID + 1,
-					Data1 = remove_nrf(Data),
-					Data2 = add_location(Location, Data1),
 					NewData = Data2#{iid => NewIID},
 					Cause = #cause{location = local_public, value = 31},
 					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -414,29 +412,23 @@ analyse_information(cast, {nrf_start,
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 					{next_state, exception, NewData, 0}
 			end;
-		{{ok, JSON}, {_, Location}}
+		{{ok, JSON}, Location}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			Data1 = remove_nrf(Data),
-			NewData = add_location(Location, Data1),
-			{next_state, exception, NewData, 0};
-		{{error, Partial, Remaining}, {_, Location}}
-				when is_list(Location) ->
+			{next_state, exception, Data2, 0};
+		{{error, Partial, Remaining}, Location} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			Data1 = remove_nrf(Data),
-			NewData = add_location(Location, Data1),
-			{next_state, exception, NewData, 0};
-		{{ok, _}, false} ->
+			{next_state, exception, Data2, 0};
+		{{ok, _}, undefined} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
 					{state, ?FUNCTION_NAME}]),
-			NewData = remove_nrf(Data),
-			{next_state, exception, NewData, 0}
+			{next_state, exception, Data2, 0}
 	end;
 analyse_information(cast, {nrf_start,
 		{RequestId, {{Version, 403, _Phrase}, Headers, Body}}},
@@ -612,14 +604,14 @@ select_facility(cast, {nrf_start,
 				nrf_profile := Profile, nrf_uri := URI, nrf_http := LogHTTP,
 				edp := EDP, did := DialogueID, iid := IID, dha := DHA,
 				cco := CCO, scf := SCF, ac := AC} = Data) ->
-	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
-	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := ServiceRating}}, {_, Location}}
+	Data1 = add_location(Headers, Data),
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
+	Data2 = remove_nrf(Data1),
+	case {zj:decode(Body), maps:get(nrf_location, Data2, undefined)} of
+		{{ok, #{"serviceRating" := ServiceRating}}, Location}
 				when is_list(ServiceRating), is_list(Location) ->
 			case granted(ServiceRating) of
 				{ok, _GrantedTime} ->
-					Data1 = remove_nrf(Data),
-					Data2 = add_location(Location, Data1),
 					NewData = Data2#{iid => IID + 4, call_info => #{}, tr_state => active},
 					BCSMEvents = [#{eventTypeBCSM => routeSelectFailure,
 									monitorMode => map_get(route_fail, EDP)},
@@ -666,8 +658,6 @@ select_facility(cast, {nrf_start,
 					{next_state, t_alerting, NewData};
 				{error, _Reason} ->
 					NewIID = IID + 1,
-					Data1 = remove_nrf(Data),
-					Data2 = add_location(Location, Data1),
 					NewData = Data2#{iid => NewIID},
 					Cause = #cause{location = local_public, value = 31},
 					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -678,23 +668,18 @@ select_facility(cast, {nrf_start,
 					gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
 					{next_state, exception, NewData, 0}
 			end;
-		{{ok, JSON}, {_, Location}}
+		{{ok, JSON}, Location}
 				when is_list(Location) ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			Data1 = remove_nrf(Data),
-			NewData = add_location(Location, Data1),
-			{next_state, exception, NewData, 0};
-		{{error, Partial, Remaining}, {_, Location}}
-				when is_list(Location) ->
+			{next_state, exception, Data2, 0};
+		{{error, Partial, Remaining}, Location} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			Data1 = remove_nrf(Data),
-			NewData = add_location(Location, Data1),
-			{next_state, exception, NewData, 0};
-		{{ok, _}, false} ->
+			{next_state, exception, Data2, 0};
+		{{ok, _}, undefined} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, missing_location},
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
@@ -2777,8 +2762,13 @@ add_nrf2([H | T], Data) ->
 	Data#{nrf_uri => H, nrf_next_uris => T}.
 
 %% @hidden
-add_location(URI, Data) ->
-	add_location(URI, Data, uri_string:parse(URI)).
+add_location(Headers, Data) ->
+	case lists:keyfind("location", 1, Headers) of
+		{_, URI} ->
+			add_location(URI, Data, uri_string:parse(URI));
+		false ->
+			Data
+	end.
 %% @hidden
 add_location(URI, Data, #{host := Address, port := Port} = URIMap)
 		when is_list(Address) ->

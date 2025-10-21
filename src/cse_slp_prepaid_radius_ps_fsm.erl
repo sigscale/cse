@@ -227,13 +227,13 @@ authorize_origination_attempt(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := LogHTTP,
 				nas_id := NasId} = Data) ->
-	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
-	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := _ServiceRating}}, {_, Location}}
+	Data1 = add_location(Headers, Data),
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
+	case {zj:decode(Body), maps:get(nrf_location, Data1, undefined)} of
+		{{ok, #{"serviceRating" := _ServiceRating}}, Location}
 				when is_list(Location) ->
-			Reply = radius_result("SUCCESS", Data),
-			Data1 = remove_req(Data),
-			NewData = add_location(Location, Data1),
+			Reply = radius_result("SUCCESS", Data1),
+			NewData = remove_req(Data1),
 			Actions = [{reply, From, Reply}],
 			{next_state, collect_information, NewData, Actions};
 		{{error, Partial, Remaining}, Location} ->
@@ -243,8 +243,8 @@ authorize_origination_attempt(cast,
 					{slpi, self()}, {nas, NasId},
 					{partial, Partial}, {remaining, Remaining},
 					{state, ?FUNCTION_NAME}]),
-			Reply = radius_result("SYSTEM_FAILURE", Data),
-			NewData = remove_req(Data),
+			Reply = radius_result("SYSTEM_FAILURE", Data1),
+			NewData = remove_req(Data1),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -415,13 +415,13 @@ active(cast,
 		#{from := From, nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_uri := URI, nrf_http := LogHTTP,
 				nas_id := NasId} = Data) ->
-	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data),
-	case {zj:decode(Body), lists:keyfind("location", 1, Headers)} of
-		{{ok, #{"serviceRating" := _ServiceRating}}, {_, Location}}
+	Data1 = add_location(Headers, Data),
+	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
+	case {zj:decode(Body), maps:get(nrf_location, Data1, undefined)} of
+		{{ok, #{"serviceRating" := _ServiceRating}}, Location}
 				when is_list(Location) ->
-			Reply = radius_response(?AccountingResponse, [], Data),
-			Data1 = remove_req(Data),
-			NewData = add_location(Location, Data1),
+			Reply = radius_response(?AccountingResponse, [], Data1),
+			NewData = remove_req(Data1),
 			Actions = [{reply, From, Reply}],
 			{keep_state, NewData, Actions};
 		{{error, Partial, Remaining}, Location} ->
@@ -431,7 +431,7 @@ active(cast,
 					{slpi, self()}, {nas, NasId},
 					{partial, Partial}, {remaining, Remaining},
 					{state, ?FUNCTION_NAME}]),
-			NewData = remove_req(Data),
+			NewData = remove_req(Data1),
 			Actions = [{reply, From, ignore}],
 			{next_state, null, NewData, Actions}
 	end;
@@ -1095,8 +1095,13 @@ add_nrf2([H | T], Data) ->
 	Data#{nrf_uri => H, nrf_next_uris => T}.
 
 %% @hidden
-add_location(URI, Data) ->
-	add_location(URI, Data, uri_string:parse(URI)).
+add_location(Headers, Data) ->
+	case lists:keyfind("location", 1, Headers) of
+		{_, URI} ->
+			add_location(URI, Data, uri_string:parse(URI));
+		false ->
+			Data
+	end.
 %% @hidden
 add_location(URI, Data, #{host := Address, port := Port} = URIMap)
 		when is_list(Address) ->
