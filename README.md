@@ -23,7 +23,7 @@ Provided SLPs support real-time charging for prepaid services with
 CAP (CAMEL), INAP and DIAMETER interfaces. These SLPs implement the
 Online Charging Function (OCF) of a decomposed OCS (Online Charging
 System) (3GPP TS 32.296) using the
-[NRF_Rating](https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.8)
+[NRF_Rating](https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0)
 API on the Re interface to a remote Rating Function (RF) such as
 SigScale OCS.
  

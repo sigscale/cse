@@ -48,7 +48,7 @@ Provided SLPs support real-time charging for prepaid services with
 CAP (CAMEL), INAP and DIAMETER interfaces. These SLPs implement the
 Online Charging Function (OCF) of a decomposed OCS (Online Charging
 System) (3GPP TS 32.296) using the
-<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.8">
+<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">
 <i>Nrf_Rating</i></a> API on the Re interface to a remote Rating Function
 (RF) such as SigScale OCS.
  
@@ -181,7 +181,7 @@ Figure 2-1: Re Interface</p>
 
 The provided OCFs are consumers of the
 <a target="_blank"
-href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.8">Nrf_Rating</a>
+href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">Nrf_Rating</a>
 OpenAPI Specification (OAS). SigScale OCS is one example of an
 <i>Nrf_Rating</i> producer.
 
@@ -466,7 +466,7 @@ ApplicationContexts ::
 Application environment variables configuring HTTP client
 ({@link //inets/httpc. httpc}) behaviour for the
 <a target="_blank"
-href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.8">
+href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">
 <i>Nrf_Rating</i></a>
 API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 <dl>
@@ -476,7 +476,7 @@ API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 				client. (default: `nrf')</dd>
 	<dt>`nrf_uri'</dt>
 		<dd>Uniform Resource Identifier (URI) for a
-				<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.1.8">
+				<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">
 				<i>Nrf_Rating</i></a> server (i.e. OCS).</dd>
 	<dt>`nrf_sort'</dt>
 		<dd>Method for sorting the resolved Nrf host addresses. (default: `random')</dd>
