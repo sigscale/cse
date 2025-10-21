@@ -1,5 +1,6 @@
 2025-10-22 Vance Shipley <vances@sigscale.org>
 
+	* static service context id in cap/inap
 	* add service context id to top level rating of data request (nrf 1.2.0)
 	* update nrf v1.2.0
 	* add nrf data ref to state before logging
