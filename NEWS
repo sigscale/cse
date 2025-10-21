@@ -1,3 +1,9 @@
+October 22, 2025
+----------------
+	- Nrf_Rating v1.2.0
+	- Include serviceContextId at top level RatingDataRequest
+	- Include ECS label with Nrf RatingDataRef
+
 October 13, 2025
 ----------------
 	- IMS calling/called party parsed as DN from tel/sip URI

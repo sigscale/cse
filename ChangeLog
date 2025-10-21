@@ -1,3 +1,15 @@
+2025-10-22 Vance Shipley <vances@sigscale.org>
+
+	* add service context id to top level rating of data request (nrf 1.2.0)
+	* update nrf v1.2.0
+	* add nrf data ref to state before logging
+	* handle binary path in uri map
+	* ignore empty labels in ecs log codec
+	* correct order in matching rating data ref
+	* ecs log codec includes rating data ref as label
+	* break out rating data ref from location uri, keep in state data
+	* update for nrf oas v1.1.8
+
 2025-10-13 Vance Shipley <vances@sigscale.org>
 
 	* parse tel/sip uri calling/called party from initial ims service request
