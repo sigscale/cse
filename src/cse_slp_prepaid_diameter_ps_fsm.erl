@@ -1282,12 +1282,7 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @doc Start rating a session.
 %% @hidden
 nrf_start(Data) ->
-	case service_rating(Data) of
-		ServiceRating when length(ServiceRating) > 0 ->
-			nrf_start1(#{"serviceRating" => ServiceRating}, Data);
-		[] ->
-			nrf_start1(#{}, Data)
-	end.
+	nrf_start1(#{"serviceRating" => service_rating(Data)}, Data).
 %% @hidden
 nrf_start1(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
@@ -1351,12 +1346,7 @@ nrf_start2(Now, JSON,
 		Time :: erlang:timeout().
 %% @doc Update rating a session.
 nrf_update(Data) ->
-	case service_rating(Data) of
-		ServiceRating when length(ServiceRating) > 0 ->
-			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
-		[] ->
-			nrf_update1(#{}, Data)
-	end.
+	nrf_update1(#{"serviceRating" => service_rating(Data)}, Data).
 %% @hidden
 nrf_update1(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
@@ -1428,12 +1418,7 @@ nrf_update2(Now, JSON,
 		Time :: erlang:timeout().
 %% @doc Finish rating a session.
 nrf_release(Data) ->
-	case service_rating(Data) of
-		ServiceRating when length(ServiceRating) > 0 ->
-			nrf_release1(#{"serviceRating" => ServiceRating}, Data);
-		[] ->
-			nrf_release1(#{}, Data)
-	end.
+	nrf_release1(#{"serviceRating" => service_rating(Data)}, Data).
 %% @hidden
 nrf_release1(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
