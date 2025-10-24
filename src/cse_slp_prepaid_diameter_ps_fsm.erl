@@ -1698,15 +1698,26 @@ service_rating(#{mscc := MSCC} = Data) ->
 	service_rating(MSCC, Data, []).
 %% @hidden
 service_rating([MSCC | T],
-		#{context := ServiceContextId,
+		#{req_type := RequestType,
+		context := ServiceContextId,
 		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
 	SR3 = service_rating_rg(MSCC, SR2),
 	SR4 = service_rating_ps(ServiceInformation, SR3),
 	SR5 = service_rating_imei(Data, SR4),
-	Acc1 = service_rating_rsu(MSCC, SR5, Acc),
-	Acc2 = service_rating_usu(MSCC, SR5, Acc1),
+	Acc1 = case RequestType of
+		?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
+			Acc;
+		_ ->
+			service_rating_rsu(MSCC, SR5, Acc)
+	end,
+	Acc2 = case RequestType of
+		?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
+			Acc1;
+		_ ->
+			service_rating_usu(MSCC, SR5, Acc1)
+	end,
 	service_rating(T, Data, Acc2);
 service_rating([], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -1846,11 +1857,11 @@ service_rating_usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
 			[ServiceRating#{"requestSubType" => "DEBIT",
 					"consumedUnit" => usu(USU)} | Acc];
 		_UsedUnit ->
-			Acc
+			[ServiceRating#{"requestSubType" => "DEBIT"} | Acc]
 	end;
 service_rating_usu(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Used-Service-Unit' = []}, _ServiceRating, Acc) ->
-	Acc.
+		'Used-Service-Unit' = []}, ServiceRating, Acc) ->
+	[ServiceRating#{"requestSubType" => "DEBIT"} | Acc].
 
 %% @hidden
 service_rating_imei(#{imei := IMEI}, ServiceRating)
