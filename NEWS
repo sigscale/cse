@@ -1,3 +1,8 @@
+October 25, 2025
+----------------
+	- Do not drop empty DEBIT request sub type in Nrf
+	- Do not drop empty service rating in Nrf
+
 October 22, 2025
 ----------------
 	- Nrf_Rating v1.2.0
