@@ -2490,7 +2490,9 @@ remove_nrf(Data) ->
 	Data2 = maps:remove(nrf_start, Data1),
 	Data3 = maps:remove(nrf_req_url, Data2),
 	Data4 = maps:remove(nrf_http, Data3),
-	maps:remove(nrf_reqid, Data4).
+	Data5 = maps:remove(nrf_reqid, Data4),
+	Data6 = maps:remove(mscc, Data5),
+	maps:remove(service_info, Data6).
 
 %% @hidden
 type_number([?'3GPP_RO_TYPE-NUMBER_ALL_ALL']) ->
