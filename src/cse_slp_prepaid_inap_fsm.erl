@@ -349,7 +349,7 @@ analyse_information(cast, {nrf_start,
 				cco := CCO, scf := SCF, ac := AC} = Data) ->
 	Data1 = add_location(Headers, Data),
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
-	Data2 = remove_nrf(Data1),
+	Data2 = remove_req(Data1),
 	case {zj:decode(Body), maps:get(nrf_location, Data2, undefined)} of
 		{{ok, #{"serviceRating" := ServiceRating}}, Location}
 				when is_list(ServiceRating), is_list(Location) ->
@@ -436,7 +436,7 @@ analyse_information(cast, {nrf_start,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -461,7 +461,7 @@ analyse_information(cast, {nrf_start,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -489,7 +489,7 @@ analyse_information(cast, {nrf_start,
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -517,7 +517,7 @@ analyse_information(cast, {nrf_start, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -606,7 +606,7 @@ select_facility(cast, {nrf_start,
 				cco := CCO, scf := SCF, ac := AC} = Data) ->
 	Data1 = add_location(Headers, Data),
 	log_nrf(ecs_http(Version, 201, Headers, Body, LogHTTP), Data1),
-	Data2 = remove_nrf(Data1),
+	Data2 = remove_req(Data1),
 	case {zj:decode(Body), maps:get(nrf_location, Data2, undefined)} of
 		{{ok, #{"serviceRating" := ServiceRating}}, Location}
 				when is_list(ServiceRating), is_list(Location) ->
@@ -684,7 +684,7 @@ select_facility(cast, {nrf_start,
 					{request_id, RequestId}, {profile, Profile},
 					{uri, URI}, {slpi, self()},
 					{state, ?FUNCTION_NAME}]),
-			NewData = remove_nrf(Data),
+			NewData = remove_req(Data),
 			{next_state, exception, NewData, 0}
 	end;
 select_facility(cast, {nrf_start,
@@ -693,7 +693,7 @@ select_facility(cast, {nrf_start,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -718,7 +718,7 @@ select_facility(cast, {nrf_start,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -746,7 +746,7 @@ select_facility(cast, {nrf_start,
 	?LOG_WARNING([{nrf_start, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -774,7 +774,7 @@ select_facility(cast, {nrf_start, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_start, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -1257,7 +1257,7 @@ o_active(cast, {nrf_update,
 			case granted(ServiceRating) of
 				{ok, _GrantedTime} ->
 					NewIID = IID + 1,
-					Data1 = remove_nrf(Data),
+					Data1 = remove_req(Data),
 					NewData = Data1#{iid => NewIID, tr_state => active},
 					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ApplyChargingArg',
 							#{aChBillingChargingCharacteristics => <<0>>,
@@ -1272,7 +1272,7 @@ o_active(cast, {nrf_update,
 					{keep_state, NewData};
 				{error, _Reason} ->
 					NewIID = IID + 1,
-					Data1 = remove_nrf(Data),
+					Data1 = remove_req(Data),
 					NewData = Data1#{iid := NewIID},
 					Cause = #cause{location = local_public, value = 31},
 					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
@@ -1287,13 +1287,13 @@ o_active(cast, {nrf_update,
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			NewData = remove_nrf(Data),
+			NewData = remove_req(Data),
 			{next_state, exception, NewData, 0};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			NewData = remove_nrf(Data),
+			NewData = remove_req(Data),
 			{next_state, exception, NewData, 0}
 	end;
 o_active(cast, {nrf_update,
@@ -1302,7 +1302,7 @@ o_active(cast, {nrf_update,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -1327,7 +1327,7 @@ o_active(cast, {nrf_update,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -1355,7 +1355,7 @@ o_active(cast, {nrf_update,
 	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -1384,7 +1384,7 @@ o_active(cast, {nrf_start, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -1535,7 +1535,7 @@ t_active(cast, {nrf_update,
 			case granted(ServiceRating) of
 				{ok, _GrantedTime} ->
 					NewIID = IID + 1,
-					Data1 = remove_nrf(Data),
+					Data1 = remove_req(Data),
 					NewData = Data1#{iid => NewIID, tr_state => active},
 					{ok, ApplyChargingArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ApplyChargingArg',
 							#{aChBillingChargingCharacteristics => <<0>>,
@@ -1550,7 +1550,7 @@ t_active(cast, {nrf_update,
 					{keep_state, NewData};
 				{error, _Reason} ->
 					NewIID = IID + 1,
-					Data1 = remove_nrf(Data),
+					Data1 = remove_req(Data),
 					NewData = Data1#{iid => NewIID},
 					Cause = #cause{location = local_public, value = 31},
 					{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSCF-SSF-PDUs_ReleaseCallArg',
@@ -1565,13 +1565,13 @@ t_active(cast, {nrf_update,
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_syntax},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {json, JSON}]),
-			NewData = remove_nrf(Data),
+			NewData = remove_req(Data),
 			{next_state, exception, NewData, 0};
 		{error, Partial, Remaining} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, invalid_json},
 					{profile, Profile}, {uri, URI}, {location, Location},
 					{slpi, self()}, {partial, Partial}, {remaining, Remaining}]),
-			NewData = remove_nrf(Data),
+			NewData = remove_req(Data),
 			{next_state, exception, NewData, 0}
 	end;
 t_active(cast, {nrf_update,
@@ -1580,7 +1580,7 @@ t_active(cast, {nrf_update,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -1605,7 +1605,7 @@ t_active(cast, {nrf_update,
 				nrf_reqid := RequestId, nrf_profile := Profile,
 				nrf_http := LogHTTP, nrf_uri := URI} = Data) ->
 	log_nrf(ecs_http(Version, 404, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
@@ -1633,7 +1633,7 @@ t_active(cast, {nrf_update,
 	?LOG_WARNING([{nrf_update, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -1662,7 +1662,7 @@ t_active(cast, {nrf_update, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_update, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {slpi, self()}]),
 	NewIID = IID + 1,
-	Data1 = remove_nrf(Data),
+	Data1 = remove_req(Data),
 	NewData = Data1#{iid => NewIID},
 	Cause = #cause{location = local_public, value = 41},
 	{ok, ReleaseCallArg} = ?Pkgs:encode('GenericSSF-SCF-PDUs_ReleaseCallArg',
@@ -1789,7 +1789,7 @@ abandon(cast, {nrf_release,
 		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 abandon(cast, {nrf_release,
 		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
@@ -1800,7 +1800,7 @@ abandon(cast, {nrf_release,
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 abandon(cast,
 		{nrf_update, {RequestId, {error, {failed_connect, _}}}},
@@ -1820,7 +1820,7 @@ abandon(cast, {nrf_release, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 abandon(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -1907,7 +1907,7 @@ disconnect(cast, {nrf_release,
 		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 disconnect(cast, {nrf_release,
 		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
@@ -1918,7 +1918,7 @@ disconnect(cast, {nrf_release,
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 disconnect(cast,
 		{nrf_update, {RequestId, {error, {failed_connect, _}}}},
@@ -1938,7 +1938,7 @@ disconnect(cast, {nrf_release, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 disconnect(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -2065,7 +2065,7 @@ exception(cast, {nrf_release,
 		{RequestId, {{Version, 200, _Phrase}, Headers, Body}}},
 		#{nrf_reqid := RequestId, nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 exception(cast, {nrf_release,
 		{RequestId, {{Version, Code, Phrase}, Headers, Body}}},
@@ -2073,7 +2073,7 @@ exception(cast, {nrf_release,
 				nrf_uri := URI, nrf_location := Location,
 			nrf_http := LogHTTP} = Data) ->
 	log_nrf(ecs_http(Version, Code, Headers, Body, LogHTTP), Data),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	?LOG_WARNING([{nrf_release, RequestId}, {code, Code}, {reason, Phrase},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
@@ -2096,7 +2096,7 @@ exception(cast, {nrf_release, {RequestId, {error, Reason}}},
 	?LOG_ERROR([{nrf_release, RequestId}, {error, Reason},
 			{profile, Profile}, {uri, URI}, {location, Location},
 			{slpi, self()}]),
-	NewData = remove_nrf(Data),
+	NewData = remove_req(Data),
 	{next_state, null, NewData};
 exception(cast, {'TC', 'L-CANCEL', indication,
 		#'TC-L-CANCEL'{dialogueID = DialogueID}} = _EventContent,
@@ -2728,7 +2728,7 @@ log_fsm(DN, State,
 			State, Subscriber, Call, Network, OCS, Ref}).
 
 %% @hidden
-remove_nrf(Data) ->
+remove_req(Data) ->
 	Data1 = maps:remove(nrf_start, Data),
 	Data2 = maps:remove(nrf_req_url, Data1),
 	Data3 = maps:remove(nrf_http, Data2),
