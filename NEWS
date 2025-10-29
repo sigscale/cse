@@ -1,3 +1,7 @@
+October 29, 2025
+----------------
+	- Idle timeout for postpaid SLPs
+
 October 25, 2025
 ----------------
 	- Do not drop empty DEBIT request sub type in Nrf

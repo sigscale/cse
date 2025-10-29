@@ -1,3 +1,11 @@
+2025-10-29 Vance Shipley <vances@sigscale.org>
+
+	* idle timeout for postpaid slps
+	* correct type specification of diameter message
+	* correct type specification for datetime
+	* rename remove request function for clarity
+	* clean diameter request info from state after use
+
 2025-10-22 Vance Shipley <vances@sigscale.org>
 
 	* always send debit service rating on update/release
