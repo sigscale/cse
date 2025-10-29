@@ -1,5 +1,7 @@
 2025-10-29 Vance Shipley <vances@sigscale.org>
 
+	* include access network information in postpaid ims bx cdr
+	* generalize application upgrade template
 	* idle timeout for postpaid slps
 	* correct type specification of diameter message
 	* correct type specification for datetime
