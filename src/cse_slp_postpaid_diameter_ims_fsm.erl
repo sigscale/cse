@@ -689,10 +689,17 @@ bx19(RecordType, IMS, Data, CDR) ->
 bx20(RecordType, IMS, #{context := Context} = Data, CDR) ->
 	bx21(RecordType, IMS, Data, CDR#{serviceContextID => Context}).
 %% @hidden
-bx21(_RecordType,
-		#'3gpp_rf_IMS-Information'{'IMS-Visited-Network-Identifier' = [Visited]},
+bx21(RecordType,
+		#'3gpp_rf_IMS-Information'{'IMS-Visited-Network-Identifier' = [Visited]} = IMS,
+		Data, CDR) ->
+	bx22(RecordType, IMS, Data, CDR#{iMSVisitedNetworkIdentifier => Visited});
+bx21(RecordType, IMS, Data, CDR) ->
+	bx22(RecordType, IMS, Data, CDR).
+%% @hidden
+bx22(_RecordType,
+		#'3gpp_rf_IMS-Information'{'Access-Network-Information' = [ANI]} = _IMS,
 		_Data, CDR) ->
-	CDR#{iMSVisitedNetworkIdentifier => Visited};
-bx21(_RecordType, _IMS, _Data, CDR) ->
+	CDR#{accessNetworkInformation => ANI};
+bx22(_RecordType, _IMS, _Data, CDR) ->
 	CDR.
 
