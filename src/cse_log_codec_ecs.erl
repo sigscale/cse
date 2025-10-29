@@ -48,8 +48,8 @@
 		Address :: inet:ip_address(),
 		Port :: non_neg_integer(),
 		Peer :: diameter_app:peer(),
-		Request :: diameter:message(),
-		Reply :: {reply,  diameter:message()}
+		Request :: diameter_codec:message(),
+		Reply :: {reply,  diameter_codec:message()}
 				| {answer_message, 3000..3999 | 5000..5999}.
 %% @doc DIAMETER event CODEC for Elastic Stack logs.
 %%
