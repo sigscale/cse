@@ -39,6 +39,29 @@
 %%%
 %%% 	<img alt="state machine" src="postpaid-cdf.svg" />
 %%%
+%%% 	== Configuration ==
+%%% 	Extra start arguments supported with
+%%% 	{@link //cse/cse:add_context/4. cse:add_context/4} include:
+%%% 	<dl>
+%%% 		<dt>`interim_interval'</dt>
+%%% 			<dd>A value to use for the `Acct-Interim-Interval' AVP
+%%% 			in an `Accounting-Answer' (ACA).</dd>
+%%% 		<dt>`bx_summary'</dt>
+%%% 			<dd>Log only on ACR STOP. (default: `true')</dd>
+%%% 		<dt>`bx_log'</dt>
+%%% 			<dd>Name of the Bx interface log. (default: `cdr')</dd>
+%%% 		<dt>`bx_logger'</dt>
+%%% 			<dd>The module and function for logging on the Bx interface.
+%%% 					(default: `{cse_log, blog}')</dd>
+%%% 		<dt>`bx_codec'</dt>
+%%% 			<dd>The module and function for encoding on the Bx interface.
+%%% 					(default: `{cse_log_codec_bx, csv}')</dd>
+%%% 		<dt>`idle_timeout'</dt>
+%%% 			<dd>The idle time after which an SLPI will be shutdown:
+%%% 					`{seconds | minutes | hours | days, N :: pos_integer()}'
+%%% 					(default: `infinity')</dd>
+%%% 	</dl>
+%%%
 -module(cse_slp_postpaid_diameter_mms_fsm).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
 -author('Vance Shipley <vances@sigscale.org>').
@@ -64,10 +87,12 @@
 -define(MMS_CONTEXTID, "32270@3gpp.org").
 -define(SERVICENAME, "Postpaid Data").
 -define(FSM_LOGNAME, postpaid).
+-define(IDLE_TIMEOUT(Data), {timeout, maps:get(idle, Data), idle}).
 
 -type state() :: null | active.
 
 -type statedata() :: #{start := pos_integer(),
+		idle := erlang:timeout(),
 		from => pid(),
 		session_id => binary(),
 		context => string(),
@@ -113,7 +138,8 @@ callback_mode() ->
 				| {bx_summary, boolean()}
 				| {bx_log, atom()}
 				| {bx_logger, {Module, Function}}
-				| {bx_codec, {Module, Function}},
+				| {bx_codec, {Module, Function}}
+				| {idle_timeout, pos_integer()},
 		Module :: atom(),
 		Function :: atom(),
 		Result :: {ok, State, Data} | {ok, State, Data, Actions}
@@ -134,7 +160,20 @@ init(Args) when is_list(Args) ->
 	Log = proplists:get_value(bx_log, Args, cdr),
 	Logger = proplists:get_value(bx_logger, Args, {cse_log, blog}),
 	LogCodec = proplists:get_value(bx_codec, Args, {cse_log_codec_bx, csv}),
+	IdleTime = case proplists:get_value(idle_timeout, Args) of
+		{days, Days} when is_integer(Days), Days > 0 ->
+			Days * 86400000;
+		{hours, Hours} when is_integer(Hours), Hours > 0 ->
+			Hours * 3600000;
+		{minutes, Minutes} when is_integer(Minutes), Minutes > 0 ->
+			Minutes * 60000;
+		{seconds, Seconds} when is_integer(Seconds), Seconds > 0 ->
+			Seconds * 1000;
+		_ ->
+			infinity
+	end,
 	Data = #{start => erlang:system_time(millisecond),
+			idle => IdleTime,
 			volume_in => 0, volume_out => 0, bx_summary => Summary,
 			bx_log => Log, bx_logger => Logger, bx_codec => LogCodec},
 	NewData = case proplists:get_value(interim_interval, Args) of
@@ -143,7 +182,7 @@ init(Args) when is_list(Args) ->
 		undefined ->
 			Data#{interim_interval => []}
 	end,
-	{ok, null, NewData}.
+	{ok, null, NewData, ?IDLE_TIMEOUT(Data)}.
 
 -spec null(EventType, EventContent, Data) -> Result
 	when
@@ -159,7 +198,9 @@ null(enter = _EventType, OldState, Data) ->
 	catch log_fsm(OldState, Data),
 	{stop, shutdown};
 null({call, _From}, #'3gpp_rf_ACR'{}, Data) ->
-	{next_state, active, Data, postpone}.
+	{next_state, active, Data, postpone};
+null(timeout, idle, _Data) ->
+	{stop, shutdown}.
 
 -spec active(EventType, EventContent, Data) -> Result
 	when
@@ -200,7 +241,7 @@ active({call, From},
 			?'DIAMETER_BASE_RESULT-CODE_OUT_OF_SPACE'
 	end,
 	Reply = diameter_answer(ResultCode, NewData),
-	Actions = [{reply, From, Reply}],
+	Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
@@ -223,7 +264,7 @@ active({call, From},
 			?'DIAMETER_BASE_RESULT-CODE_OUT_OF_SPACE'
 	end,
 	Reply = diameter_answer(ResultCode, NewData),
-	Actions = [{reply, From, Reply}],
+	Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 	{keep_state, NewData, Actions};
 active({call, From},
 		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
@@ -247,7 +288,9 @@ active({call, From},
 	end,
 	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
-	{next_state, null, NewData, Actions}.
+	{next_state, null, NewData, Actions};
+active(timeout, idle, Data) ->
+	{next_state, null, Data}.
 
 -spec handle_event(EventType, EventContent, State, Data) -> Result
 	when
