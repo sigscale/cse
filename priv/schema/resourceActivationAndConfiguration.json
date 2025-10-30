@@ -3,7 +3,7 @@
   "info" : {
     "title" : "SigScale CSE - Resource Activation and Configuration",
     "description" : "# TMF702 Resource Activation and Configuration Management\n\nSigScale uses the standard TM Forum [OpenAPIs](https://www.tmforum.org/open-apis/) for open interoperability. The TMF702 API is used in SigScale CSE to represent logical resources such as tables and table rows.\n\n# Prefix Tables\n\nThe Service Logic Execution Environment (SLEE) includes a general purpose facility for prefix matching tables. Multiple key-value tables may be created, using this API, where the key is a string representing a prefix. A typical use case is matching of dialed digits.\n\n## Table\n\nA table is respresented by a `Resource` entity in the inventory. The `name` attribute will be used by Service Logic Processing Programs (SLP) to select a table. Use the `PrefixTable` `ResourceSpecification`.\n\n## Row\n\nEach row in a table is an individual `Resource` entity with a `resourceRelationship` to the containing table. Use the `PrefixTableRow` `ResourceSpecification`. The `prefix` characteristic value represents the string to match while the result of the match is provided by the value of the characteristic named `value`.\n\n## Range Table\n\nThe SLEE includes a special prefix matching table type which supports ranges. The first column provides the start of a range, while the second column provides the end of the range. The third column is a value for the range.",
-    "version" : "4.0.0",
+    "version" : "4.0.1",
     "license" : {
       "name" : "Apache 2.0"
     },
@@ -15,7 +15,7 @@
   },
   "servers" : [ {
     "description" : "SwaggerHub API Auto Mocking",
-    "url" : "https://virtserver.swaggerhub.com/SigScale/cse-resource-activation/4.0.0"
+    "url" : "https://virtserver.swaggerhub.com/SigScale/cse-resource-activation/4.0.1"
   }, {
     "url" : "http://cse.example.net/resourceActivationAndConfiguration/v4"
   } ],
@@ -622,7 +622,7 @@
             "type" : "string",
             "description" : "Category of the resource."
           },
-          "resourceSpecCharacteristic" : {
+          "resourceCharacteristic" : {
             "$ref" : "#/components/schemas/ResourceCharacteristic"
           },
           "resourceRelationship" : {
