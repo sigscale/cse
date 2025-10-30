@@ -1,3 +1,11 @@
+2025-10-30 Vance Shipley <vances@sigscale.org>
+
+	* correct typo in resource activation api schema
+	* keep track of rating groups and release all on ccr-t
+	* skip building mscc for cca-t
+	* only build mscc in cca when ccr mscc has rsu
+	* shell shortcut handles any diameter application
+
 2025-10-29 Vance Shipley <vances@sigscale.org>
 
 	* include access network information in postpaid ims bx cdr
