@@ -1,5 +1,6 @@
 2025-10-30 Vance Shipley <vances@sigscale.org>
 
+	* use lists:usort/1 rather than lists:uniq/1 (only otp > 24)
 	* correct rate group tracking and release
 	* remove unused clause from inets mod for nrf
 	* correct ccr-t test cases for empty mscc in cca-t
