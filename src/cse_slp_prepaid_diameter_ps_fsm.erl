@@ -1227,8 +1227,8 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @hidden
 nrf_start(Data) ->
 	ServiceRating = service_rating(Data),
-	Groups = [maps:get("ratingGroup", SR, undefined)
-			|| SR <- ServiceRating],
+	Groups = lists:uniq([maps:get("ratingGroup", SR, undefined)
+			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	Data1 = Data#{nrf_groups => Groups},
 	nrf_start1(#{"serviceRating" => ServiceRating}, Data1).
 %% @hidden
@@ -1295,8 +1295,8 @@ nrf_start2(Now, JSON,
 %% @doc Update rating a session.
 nrf_update(#{nrf_groups := PreviousGroups} = Data) ->
 	ServiceRating = service_rating(Data),
-	Groups = [maps:get("ratingGroup", SR, undefined)
-			|| SR <- ServiceRating],
+	Groups = lists:uniq([maps:get("ratingGroup", SR, undefined)
+			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	case Groups -- PreviousGroups of
 		[] ->
 			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
@@ -1376,10 +1376,11 @@ nrf_update2(Now, JSON,
 %% @doc Finish rating a session.
 nrf_release(#{nrf_groups := PreviousGroups} = Data) ->
 	ServiceRating = service_rating(Data),
-	Groups = [maps:get("ratingGroup", SR, undefined)
-			|| SR <- ServiceRating],
-	Missing = [#{"ratingGroup" => RG,
-			"requestSubType" => "DEBIT"} || RG <- PreviousGroups -- Groups],
+	Groups = lists:uniq([maps:get("ratingGroup", SR, undefined)
+			|| #{"requestSubType" := RST} = SR <- ServiceRating,
+			((RST == "DEBIT") or (RST == "RELEASE"))]),
+	Missing = [#{"ratingGroup" => RG, "requestSubType" => "RELEASE"}
+			|| RG <- PreviousGroups -- Groups],
 	ServiceRating1 = ServiceRating ++ Missing,
 	nrf_release1(#{"serviceRating" => ServiceRating1}, Data).
 %% @hidden
