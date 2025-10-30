@@ -146,7 +146,8 @@
 		nrf_start => pos_integer(),
 		nrf_req_url => string(),
 		nrf_http => map(),
-		nrf_reqid => reference()}.
+		nrf_reqid => reference(),
+		nrf_groups => []}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_prepaid_diameter_ims_fsm gen_statem callbacks
@@ -2109,7 +2110,11 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @doc Start rating a session.
 %% @hidden
 nrf_start(Data) ->
-	nrf_start1(#{"serviceRating" => service_rating(Data)}, Data).
+	ServiceRating = service_rating(Data),
+	Groups = [maps:get("ratingGroup", SR, undefined)
+			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating],
+	Data1 = Data#{nrf_groups => Groups},
+	nrf_start1(#{"serviceRating" => ServiceRating}, Data1).
 %% @hidden
 nrf_start1(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
@@ -2176,8 +2181,17 @@ nrf_start2(Now, JSON,
 		From :: {pid(), reference()},
 		Time :: erlang:timeout().
 %% @doc Update rating a session.
-nrf_update(Data) ->
-	nrf_update1(#{"serviceRating" => service_rating(Data)}, Data).
+nrf_update(#{nrf_groups := PreviousGroups} = Data) ->
+	ServiceRating = service_rating(Data),
+	Groups = [maps:get("ratingGroup", SR, undefined)
+			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating],
+	case Groups -- PreviousGroups of
+		[] ->
+			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
+		NewGroups ->
+			Data1 = Data#{nrf_groups => PreviousGroups ++ NewGroups},
+			nrf_update1(#{"serviceRating" => ServiceRating}, Data1)
+	end.
 %% @hidden
 nrf_update1(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
@@ -2250,8 +2264,16 @@ nrf_update2(Now, JSON,
 		From :: {pid(), reference()},
 		Time :: erlang:timeout().
 %% @doc Finish rating a session.
-nrf_release(Data) ->
-	nrf_release1(#{"serviceRating" => service_rating(Data)}, Data).
+nrf_release(#{nrf_groups := PreviousGroups} = Data) ->
+	ServiceRating = service_rating(Data),
+	Groups = [maps:get("ratingGroup", SR, undefined)
+			|| #{"requestSubType" := SubType} = SR <- ServiceRating,
+			((SubType == "DEBIT") or (SubType == "RELEASE"))],
+	Missing = [#{"ratingGroup" => RG,
+					"requestSubType" => "RELEASE"}
+			|| RG <- PreviousGroups -- Groups],
+	ServiceRating1 = ServiceRating ++ Missing,
+	nrf_release1(#{"serviceRating" => ServiceRating1}, Data).
 %% @hidden
 nrf_release1(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
@@ -2269,7 +2291,7 @@ nrf_release2(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				nrf_location := Location, 
+				nrf_location := Location,
 				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
