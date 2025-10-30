@@ -1,5 +1,9 @@
 2025-10-30 Vance Shipley <vances@sigscale.org>
 
+	* correct rate group tracking and release
+	* remove unused clause from inets mod for nrf
+	* correct ccr-t test cases for empty mscc in cca-t
+	* update inets test module for nrf 1.2.0
 	* correct typo in resource activation api schema
 	* keep track of rating groups and release all on ccr-t
 	* skip building mscc for cca-t
