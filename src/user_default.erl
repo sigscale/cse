@@ -335,6 +335,10 @@ dia_application(0) ->
 	io:fwrite("    Base: ~n");
 dia_application(1) ->
 	io:fwrite("    Nas: ~n");
+dia_application(3) ->
+	io:fwrite("    Rf: ~n");
+dia_application(4) ->
+	io:fwrite("    Ro: ~n");
 dia_application(5) ->
 	io:fwrite("    EAP: ~n");
 dia_application(16777250) ->
@@ -347,10 +351,10 @@ dia_application(16777251) ->
 	io:fwrite("    S6a: ~n");
 dia_application(16777272) ->
 	io:fwrite("    S6b: ~n");
-dia_application(4) ->
-	io:fwrite("    Ro: ~n");
 dia_application(16777238) ->
-	io:fwrite("    Gx: ~n").
+	io:fwrite("    Gx: ~n");
+dia_application(N) ->
+	io:fwrite("    ~b: ~n", [N]).
 
 -spec dia_count(Command, Count) -> ok
 	when
