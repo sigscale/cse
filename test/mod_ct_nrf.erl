@@ -193,24 +193,6 @@ rate1(Subscriber, ?IMS = Context,
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, Context,
-		[#{"requestSubType" := "DEBIT"} = H | T],
-		ModData, Acc)
-		when Context == ?SMS; Context == ?MMS ->
-	Amount = rand:uniform(5),
-	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
-		{ok, {_Balance, _Reserve}} ->
-			H1 = maps:remove("requestedUnit", H),
-			ServiceRating = H1#{"resultCode" => "SUCCESS",
-					"grantedUnit" => #{"serviceSpecificUnit" => 1}},
-			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
-		{error, out_of_credit} ->
-			do_response(ModData, {error, 403});
-		{error, not_found} ->
-			do_response(ModData, {error, 404});
-		{error, _Reason} ->
-			do_response(ModData, {error, 500})
-	end;
-rate1(Subscriber, Context,
 		[#{"requestSubType" := "RESERVE"} = H | T],
 		ModData, Acc)
 		when Context == ?SMS; Context == ?MMS ->
