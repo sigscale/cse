@@ -149,25 +149,25 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 		ModData :: #mod{},
 		Response :: map().
 %% @doc Build a rating response.
-rate(Subscriber, #{"serviceRating" := ServiceRating}, ModData) ->
-	F = fun(#{"serviceContextId" := Context} = SR)
-					when length(Context) > 14 ->
-				Context1 = lists:sublist(Context, length(Context) - 13, 14),
-				SR#{"serviceContextId" => Context1};
-			(SR) ->
-				SR
-	end,
-	rate1(Subscriber, lists:map(F, ServiceRating), ModData, []).
+rate(Subscriber, #{"serviceContextId" := Context,
+		"serviceRating" := ServiceRating} = _Request,
+		ModData) when length(Context) > 14 ->
+	Context1 = lists:sublist(Context, length(Context) - 13, 14),
+	rate1(Subscriber, Context1, ServiceRating, ModData, []);
+rate(Subscriber, #{"serviceContextId" := Context,
+		"serviceRating" := ServiceRating} = _Request,
+		ModData) ->
+	rate1(Subscriber, Context, ServiceRating, ModData, []).
 %% @hidden
-rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?PS} = H | T], ModData, Acc) ->
+rate1(Subscriber, ?PS = Context,
+		[#{"requestSubType" := "RESERVE"} = H | T], ModData, Acc) ->
 	Amount = (rand:uniform(10) + 5) * 1048576,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"totalVolume" => Reserve}},
-			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -175,15 +175,16 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?IMS} = H | T], ModData, Acc) ->
+rate1(Subscriber, ?IMS = Context,
+		[#{"requestSubType" := "RESERVE"} = H | T],
+		ModData, Acc) ->
 	Amount = rand:uniform(50) * 30,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"time" => Reserve}},
-			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -191,16 +192,17 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(Subscriber, [#{"requestSubType" := "DEBIT",
-		"serviceContextId" := ContextId} = H | T], ModData, Acc)
-		when ContextId == ?SMS; ContextId == ?MMS ->
+rate1(Subscriber, Context,
+		[#{"requestSubType" := "DEBIT"} = H | T],
+		ModData, Acc)
+		when Context == ?SMS; Context == ?MMS ->
 	Amount = rand:uniform(5),
 	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
 		{ok, {_Balance, _Reserve}} ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"serviceSpecificUnit" => 1}},
-			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -208,16 +210,17 @@ rate1(Subscriber, [#{"requestSubType" := "DEBIT",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ContextId} = H | T], ModData, Acc)
-		when ContextId == ?SMS; ContextId == ?MMS ->
+rate1(Subscriber, Context,
+		[#{"requestSubType" := "RESERVE"} = H | T],
+		ModData, Acc)
+		when Context == ?SMS; Context == ?MMS ->
 	Amount = rand:uniform(5),
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"serviceSpecificUnit" => 1}},
-			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -225,15 +228,16 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(Subscriber, [#{"requestSubType" := "RESERVE",
-		"serviceContextId" := ?VCS} = H | T], ModData, Acc) ->
+rate1(Subscriber, ?VCS = Context,
+		[#{"requestSubType" := "RESERVE"} = H | T],
+		ModData, Acc) ->
 	Amount = rand:uniform(50) * 30,
 	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
 		{ok, {_Balance, Reserve}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"time" => Reserve}},
-			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -241,14 +245,14 @@ rate1(Subscriber, [#{"requestSubType" := "RESERVE",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(Subscriber, [#{"requestSubType" := "DEBIT",
-		"consumedUnit" := ConsumedUnit} = H | T], ModData, Acc) ->
+rate1(Subscriber, Context,
+		[#{"requestSubType" := "DEBIT",
+		"consumedUnit" := ConsumedUnit} = _H | T],
+		ModData, Acc) ->
 	Amount = get_units(ConsumedUnit),
 	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
 		{ok, {Balance, _Reserve}} when Balance >= 0 ->
-			ServiceRating = H#{"consumedUnit" => ConsumedUnit,
-					"resultCode" => "SUCCESS"},
-			rate1(Subscriber, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, ModData, Acc);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -256,7 +260,20 @@ rate1(Subscriber, [#{"requestSubType" := "DEBIT",
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(_, [], _, Acc) ->
+rate1(Subscriber, Context,
+		[#{"requestSubType" := "RELEASE"} = _H | T],
+		ModData, Acc) ->
+	case gen_server:call(ocs, {debit, Subscriber, 0}) of
+		{ok, {_Balance, _Reserve}} ->
+			rate1(Subscriber, Context, T, ModData, Acc);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(_, _, [], _, Acc) ->
 	lists:reverse(Acc).
 
 %% @hidden
