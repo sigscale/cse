@@ -428,14 +428,7 @@ final_scur_ims(Config) ->
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
-	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Service-Identifier' = [SI],
-			'Rating-Group' = [RG],
-			'Requested-Service-Unit' = [],
-			'Used-Service-Unit' = [],
-			'Granted-Service-Unit' = [],
-			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
+			'Multiple-Services-Credit-Control' = []} = Answer1.
 
 final_scur_ims_nrf() ->
 	Description = "IMS SCUR CCR-T with Nrf release",
@@ -630,14 +623,7 @@ final_scur_ps(Config) ->
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
-	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Service-Identifier' = [SI],
-			'Rating-Group' = [RG],
-			'Requested-Service-Unit' = [],
-			'Used-Service-Unit' = [],
-			'Granted-Service-Unit' = [],
-			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
+			'Multiple-Services-Credit-Control' = []} = Answer1.
 
 final_scur_ps_nrf() ->
 	Description = "IMS SCUR CCR-T with Nrf release",
@@ -862,14 +848,7 @@ final_in_call(Config) ->
 			'Auth-Application-Id' = ?RO_APPLICATION_ID,
 			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST',
 			'CC-Request-Number' = RequestNum1,
-			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
-	#'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Service-Identifier' = [SI],
-			'Rating-Group' = [RG],
-			'Requested-Service-Unit' = [],
-			'Used-Service-Unit' = [],
-			'Granted-Service-Unit' = [],
-			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC1.
+			'Multiple-Services-Credit-Control' = []} = Answer1.
 
 idle_timeout_ps() ->
 	Description = "PS SCUR idle timeout in active state",
