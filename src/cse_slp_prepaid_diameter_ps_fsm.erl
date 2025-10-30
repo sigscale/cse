@@ -562,29 +562,10 @@ collect_information(cast,
 				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType,
-				mscc := MSCC} = Data) ->
+				mscc := _MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := ServiceRating}} ->
-			try
-				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(NewMSCC,
-						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
-				{next_state, null, NewData, Actions}
-			catch
-				_:Reason ->
-					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
-							{request_id, RequestId}, {profile, Profile},
-							{uri, URI}, {location, Location}, {slpi, self()},
-							{origin_host, OHost}, {origin_realm, ORealm},
-							{state, ?FUNCTION_NAME}]),
-					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
-					{next_state, null, NewData, Actions1}
-			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
@@ -823,29 +804,10 @@ analyse_information(cast,
 				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType,
-				mscc := MSCC} = Data) ->
+				mscc := _MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := ServiceRating}} ->
-			try
-				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(NewMSCC,
-						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
-				{next_state, null, NewData, Actions}
-			catch
-				_:Reason ->
-					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
-							{request_id, RequestId}, {profile, Profile},
-							{uri, URI}, {location, Location}, {slpi, self()},
-							{origin_host, OHost}, {origin_realm, ORealm},
-							{state, ?FUNCTION_NAME}]),
-					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
-					{next_state, null, NewData, Actions1}
-			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
@@ -1079,29 +1041,10 @@ active(cast,
 				nrf_uri := URI, nrf_location := Location, nrf_http := LogHTTP,
 				ohost := OHost, orealm := ORealm,
 				reqno := RequestNum, req_type := RequestType,
-				mscc := MSCC} = Data) ->
+				mscc := _MSCC} = Data) ->
 	log_nrf(ecs_http(Version, 200, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case zj:decode(Body) of
-		{ok, #{"serviceRating" := ServiceRating}} ->
-			try
-				{ResultCode, NewMSCC} = build_mscc(MSCC, ServiceRating),
-				Reply = diameter_answer(NewMSCC,
-						ResultCode, RequestType, RequestNum),
-				Actions = [{reply, From, Reply}],
-				{next_state, null, NewData, Actions}
-			catch
-				_:Reason ->
-					?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
-							{request_id, RequestId}, {profile, Profile},
-							{uri, URI}, {location, Location}, {slpi, self()},
-							{origin_host, OHost}, {origin_realm, ORealm},
-							{state, ?FUNCTION_NAME}]),
-					ResultCode1 = ?'DIAMETER_CC_APP_RESULT-CODE_RATING_FAILED',
-					Reply1 = diameter_error(ResultCode1, RequestType, RequestNum),
-					Actions1 = [{reply, From, Reply1}],
-					{next_state, null, NewData, Actions1}
-			end;
 		{ok, #{}} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			Reply = diameter_answer([], ResultCode, RequestType, RequestNum),
