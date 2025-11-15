@@ -1642,7 +1642,7 @@ service_rating(true, [MSCC | T],
 	SR4 = service_rating_ps(ServiceInformation, SR3),
 	SR5 = service_rating_sms(ServiceInformation, SR4),
 	SR6 = service_rating_vcs(ServiceInformation, SR5),
-	Acc1 = service_rating_reserve(MSCC, SR6, Acc),
+	Acc1 = service_rating_debit(MSCC, SR6, Acc),
 	service_rating(true, T, Data, Acc1);
 service_rating(false, [MSCC | T],
 		#{req_type := RequestType,
