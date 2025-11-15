@@ -157,7 +157,7 @@ stop_diameter(Pid) when is_pid(Pid) ->
 		Result :: Result :: {ok, Pid} | {error, Reason},
 		Pid :: pid(),
 		Reason :: term().
-%% @doc Start a DIAMETER request handler.
+%% @doc Start a RADIUS request handler.
 start_radius(Address, Port, Module, Args, Options) ->
 	gen_server:call(cse, {start, radius, Address, Port, Module, Args, Options}).
 
