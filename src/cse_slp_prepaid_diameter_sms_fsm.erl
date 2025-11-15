@@ -1634,7 +1634,8 @@ service_rating(#{one_time := OneTime, mscc := MSCC} = Data) ->
 	service_rating(OneTime, MSCC, Data, []).
 %% @hidden
 service_rating(true, [MSCC | T],
-		#{context := ServiceContextId,
+		#{action := direct_debiting,
+		context := ServiceContextId,
 		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
@@ -1642,7 +1643,7 @@ service_rating(true, [MSCC | T],
 	SR4 = service_rating_ps(ServiceInformation, SR3),
 	SR5 = service_rating_sms(ServiceInformation, SR4),
 	SR6 = service_rating_vcs(ServiceInformation, SR5),
-	Acc1 = service_rating_debit(MSCC, SR6, Acc),
+	Acc1 = service_rating_reserve(iec, MSCC, SR6, Acc),
 	service_rating(true, T, Data, Acc1);
 service_rating(false, [MSCC | T],
 		#{req_type := RequestType,
@@ -1658,7 +1659,7 @@ service_rating(false, [MSCC | T],
 		?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
 			Acc;
 		_ ->
-			service_rating_reserve(MSCC, SR6, Acc)
+			service_rating_reserve(pec, MSCC, SR6, Acc)
 	end,
 	Acc2 = case RequestType of
 		?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
@@ -1937,8 +1938,21 @@ service_rating_vcs1(_VCS, ServiceRating, _Info) ->
 	ServiceRating.
 
 %% @hidden
-service_rating_reserve(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = [RSU]}, ServiceRating, Acc) ->
+service_rating_reserve(iec,
+		#'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Requested-Service-Unit' = [RSU]},
+		ServiceRating, Acc) ->
+	case rsu(RSU) of
+		ResquestedUnit when map_size(ResquestedUnit) > 0 ->
+			[ServiceRating#{"requestSubType" => "DEBIT",
+					"consumedUnit" => ResquestedUnit} | Acc];
+		_ResquestedUnit ->
+			[ServiceRating#{"requestSubType" => "DEBIT"} | Acc]
+	end;
+service_rating_reserve(pec,
+		#'3gpp_ro_Multiple-Services-Credit-Control'{
+				'Requested-Service-Unit' = [RSU]},
+		ServiceRating, Acc) ->
 	case rsu(RSU) of
 		ResquestedUnit when map_size(ResquestedUnit) > 0 ->
 			[ServiceRating#{"requestSubType" => "RESERVE",
@@ -1946,7 +1960,7 @@ service_rating_reserve(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		_ResquestedUnit ->
 			[ServiceRating#{"requestSubType" => "RESERVE"} | Acc]
 	end;
-service_rating_reserve(#'3gpp_ro_Multiple-Services-Credit-Control'{
+service_rating_reserve(_, #'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Requested-Service-Unit' = []}, _ServiceRating, Acc) ->
 	Acc.
 
@@ -1956,7 +1970,7 @@ service_rating_debit(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	case usu(USU) of
 		UsedUnit when map_size(UsedUnit) > 0 ->
 			[ServiceRating#{"requestSubType" => "DEBIT",
-					"consumedUnit" => usu(USU)} | Acc];
+					"consumedUnit" => UsedUnit} | Acc];
 		_UsedUnit ->
 			[ServiceRating#{"requestSubType" => "DEBIT"} | Acc]
 	end;
