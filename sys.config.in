@@ -64,6 +64,7 @@
       [{services,
             [{httpd,
                [{server_name, "cse"},
+               {directory_index, ["index.html"]},
                {directory, {"/schema", []}},
                {directory, {"/doc", []}},
                {directory, {"/health", []}},
