@@ -489,38 +489,38 @@ dia_count({272, 1, error}, Count) ->
 	io:fwrite("        CCR error: ~b~n", [Count]);
 dia_count({272, 0, error}, Count) ->
 	io:fwrite("        CCA error: ~b~n", [Count]);
-dia_count({268, 0, error}, Count) ->
-	io:fwrite("        DEA error: ~b~n", [Count]);
 dia_count({268, 1, error}, Count) ->
 	io:fwrite("        DER error: ~b~n", [Count]);
-dia_count({265, 0, error}, Count) ->
-	io:fwrite("        AAA error: ~b~n", [Count]);
+dia_count({268, 0, error}, Count) ->
+	io:fwrite("        DEA error: ~b~n", [Count]);
 dia_count({265, 1, error}, Count) ->
 	io:fwrite("        AAR error: ~b~n", [Count]);
-dia_count({301, 0, error}, Count) ->
-	io:fwrite("        SAA error: ~b~n", [Count]);
+dia_count({265, 0, error}, Count) ->
+	io:fwrite("        AAA error: ~b~n", [Count]);
 dia_count({301, 1, error}, Count) ->
 	io:fwrite("        SAR error: ~b~n", [Count]);
+dia_count({301, 0, error}, Count) ->
+	io:fwrite("        SAA error: ~b~n", [Count]);
+dia_count({303, 1, error}, Count) ->
+	io:fwrite("        MAR error: ~b~n", [Count]);
 dia_count({303, 0, error}, Count) ->
 	io:fwrite("        MAA error: ~b~n", [Count]);
-dia_count({303, 1, error}, Count) ->
-	io:fwrite("        MAA error: ~b~n", [Count]);
-dia_count({304, 0, error}, Count) ->
-	io:fwrite("        RTA error: ~b~n", [Count]);
 dia_count({304, 1, error}, Count) ->
 	io:fwrite("        RTR error: ~b~n", [Count]);
-dia_count({316, 0, error}, Count) ->
-	io:fwrite("        ULA error: ~b~n", [Count]);
+dia_count({304, 0, error}, Count) ->
+	io:fwrite("        RTA error: ~b~n", [Count]);
 dia_count({316, 1, error}, Count) ->
 	io:fwrite("        ULR error: ~b~n", [Count]);
-dia_count({318, 0, error}, Count) ->
-	io:fwrite("        RTA error: ~b~n", [Count]);
+dia_count({316, 0, error}, Count) ->
+	io:fwrite("        ULA error: ~b~n", [Count]);
 dia_count({318, 1, error}, Count) ->
-	io:fwrite("        AIA error: ~b~n", [Count]);
-dia_count({321, 0, error}, Count) ->
 	io:fwrite("        AIR error: ~b~n", [Count]);
+dia_count({318, 0, error}, Count) ->
+	io:fwrite("        AIA error: ~b~n", [Count]);
 dia_count({321, 1, error}, Count) ->
-	io:fwrite("        PUR error: ~b~n", [Count]).
+	io:fwrite("        PUR error: ~b~n", [Count]);
+dia_count({321, 0, error}, Count) ->
+	io:fwrite("        PUA error: ~b~n", [Count]).
 
 %% @hidden
 tables() ->
