@@ -502,6 +502,13 @@ get_diameter_counters(diameter_gen_3gpp_swx_application, [Service | T], Counters
 get_diameter_counters(diameter_gen_3gpp_swx_application, [], Counters) ->
 	Components = get_components(Counters),
 	{"diameter-swx:counters", Components};
+get_diameter_counters(diameter_gen_3gpp_sy_application, [Service | T], Counters) ->
+	Statistics = diameter:service_info(Service, statistics),
+	NewCounters = service_counters(16777302, Statistics, Counters),
+	get_diameter_counters(diameter_gen_3gpp_sy_application, T, NewCounters);
+get_diameter_counters(diameter_gen_3gpp_sy_application, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-sy:counters", Components};
 get_diameter_counters(diameter_gen_eap_application_rfc4072, [Service | T], Counters) ->
 	Statistics = diameter:service_info(Service, statistics),
 	NewCounters = service_counters(5, Statistics, Counters),
