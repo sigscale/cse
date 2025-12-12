@@ -63,6 +63,7 @@
 				diameter_gen_3gpp,
 				diameter_gen_3gpp_ro_application,
 				diameter_gen_3gpp_rf_application,
+				diameter_gen_3gpp_sy_application,
 				cse_mib,
 				user_default]},
 		{registered,

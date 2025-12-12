@@ -10,7 +10,8 @@ einclude_DATA = cse.hrl \
 		diameter_gen_cc_application_rfc4006.hrl \
 		diameter_gen_nas_application_rfc7155.hrl \
 		diameter_gen_3gpp_ro_application.hrl \
-		diameter_gen_3gpp_rf_application.hrl
+		diameter_gen_3gpp_rf_application.hrl \
+		diameter_gen_3gpp_sy_application.hrl
 
 DIAMETERC=$(ERLANG_LIB_DIR_diameter)/bin/diameterc
 
@@ -76,6 +77,11 @@ diameter_gen_3gpp_ro_application.hrl:	$(top_srcdir)/src/3gpp_ro_application.dia 
 diameter_gen_3gpp_rf_application.hrl:	$(top_srcdir)/src/3gpp_rf_application.dia \
 		$(top_builddir)/ebin/diameter_gen_ietf.beam \
 		$(top_builddir)/ebin/diameter_gen_etsi.beam \
+		$(top_builddir)/ebin/diameter_gen_3gpp.beam
+	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
+
+diameter_gen_3gpp_sy_application.hrl:	$(top_srcdir)/src/3gpp_sy_application.dia \
+		$(top_builddir)/ebin/diameter_gen_ietf.beam \
 		$(top_builddir)/ebin/diameter_gen_3gpp.beam
 	$(DIAMETERC) -i $(top_builddir)/ebin -E $<
 
