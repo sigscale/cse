@@ -33,7 +33,9 @@
 
 -include("diameter_gen_3gpp_ro_application.hrl").
 -include("diameter_gen_3gpp_rf_application.hrl").
+-include("diameter_gen_3gpp_sy_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
+-include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
 %%----------------------------------------------------------------------
 %%  The cse_log_codec_ecs public API
@@ -94,6 +96,11 @@ codec_diameter_ecs1(#'3gpp_rf_ACR'{} = Request,
 		Reply, Start, Stop, Duration, Acc) ->
 	NewAcc = [Acc, $,,
 			ecs_network("rf", "diameter")],
+	codec_diameter_ecs2(Request, Reply, Start, Stop, Duration, NewAcc);
+codec_diameter_ecs1(#'3gpp_sy_SLR'{} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	NewAcc = [Acc, $,,
+			ecs_network("sy", "diameter")],
 	codec_diameter_ecs2(Request, Reply, Start, Stop, Duration, NewAcc).
 %% @hidden
 codec_diameter_ecs2(#'3gpp_ro_CCR'{
@@ -144,6 +151,26 @@ codec_diameter_ecs2(#'3gpp_rf_ACR'{
 			ecs_service("sigscale-cse", "ocf"), $,,
 			ecs_source(OriginHost, OriginHost, OriginRealm,
 					UserName, UserIds), $,,
+			ecs_destination(DestinationRealm)],
+	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc);
+codec_diameter_ecs2(#'3gpp_sy_SLR'{
+		'SL-Request-Type' = RequestType,
+		'Origin-Host' = OriginHost,
+		'Origin-Realm' = OriginRealm,
+		'Destination-Realm' = DestinationRealm,
+		'Subscription-Id' = SubscriptionId} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	EventType = case RequestType of
+		?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST' ->
+			["protocol", "start"];
+		?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST' ->
+			["protocol"]
+	end,
+	UserIds = subscriber_id(SubscriptionId),
+	NewAcc = [Acc, $,,
+			ecs_service("sigscale-cse", "ocf"), $,,
+			ecs_source(OriginHost, OriginHost, OriginRealm,
+					[], UserIds), $,,
 			ecs_destination(DestinationRealm)],
 	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc).
 %% @hidden
@@ -242,7 +269,85 @@ codec_diameter_ecs3(#'3gpp_rf_ACR'{} = ACR,
 	[Acc, $,,
 			ecs_event(Start, Stop, Duration,
 					"event", "network", ["denied" | EventType], "failure"), $,,
-			ecs_3gpp_rf(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}].
+			ecs_3gpp_rf(ACR, #'3gpp_rf_ACA'{'Result-Code' = ResultCode}), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{reply, #'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = SLA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_sy(SLR, SLA), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{reply, #'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = SLA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_sy(SLR, SLA), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{reply, #'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = SLA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_sy(SLR, SLA), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_sy(SLR, #'3gpp_sy_SLA'{'Result-Code' = [ResultCode]}), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_sy(SLR, #'3gpp_sy_SLA'{'Result-Code' = [ResultCode]}), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{answer_message, ResultCode},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_sy(SLR, #'3gpp_sy_SLA'{'Result-Code' = [ResultCode]}), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{reply, #'3gpp_sy_SLA'{'Experimental-Result' = [
+				#'diameter_base_Experimental-Result'{
+						'Experimental-Result-Code' = ResultCode}]} = SLA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 1000, ResultCode < 2000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", EventType, "unknown"), $,,
+			ecs_3gpp_sy(SLR, SLA), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{reply, #'3gpp_sy_SLA'{'Experimental-Result' = [
+				#'diameter_base_Experimental-Result'{
+						'Experimental-Result-Code' = ResultCode}]} = SLA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 2000, ResultCode  < 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["allowed" | EventType], "success"), $,,
+			ecs_3gpp_sy(SLR, SLA), $}];
+codec_diameter_ecs3(#'3gpp_sy_SLR'{} = SLR,
+		{reply, #'3gpp_sy_SLA'{'Experimental-Result' = [
+				#'diameter_base_Experimental-Result'{
+						'Experimental-Result-Code' = ResultCode}]} = SLA},
+		EventType, Start, Stop, Duration, Acc)
+		when ResultCode >= 3000 ->
+	[Acc, $,,
+			ecs_event(Start, Stop, Duration,
+					"event", "network", ["denied" | EventType], "failure"), $,,
+			ecs_3gpp_sy(SLR, SLA), $}].
 
 -spec codec_prepaid_ecs(Term) -> iodata()
 	when
@@ -815,6 +920,28 @@ ecs_3gpp_rf(#'3gpp_rf_ACR'{'Session-Id' = SessionId,
 			$", "acct_record_type", $", $:, integer_to_list(RecordType), $,,
 			$", "acct_record_number", $", $:, integer_to_list(RecordNumber), $,,
 			$", "service_context_id", $", $:, $", ServiceContextId, $", $,,
+			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
+
+%% @hidden
+ecs_3gpp_sy(#'3gpp_sy_SLR'{'Session-Id' = SessionId,
+			'SL-Request-Type' = RequestType,
+			'Auth-Application-Id' = _ApplicationId,
+			'Policy-Counter-Identifier' = _PolicyCounterId},
+		#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]}) ->
+	[$", "3gpp_sy", $", $:, ${,
+			$", "session_id", $", $:, $", SessionId, $", $,,
+			$", "sl_request_type", $", $:, integer_to_list(RequestType), $,,
+			$", "result_code", $", $:, integer_to_list(ResultCode), $}];
+ecs_3gpp_sy(#'3gpp_sy_SLR'{'Session-Id' = SessionId,
+			'SL-Request-Type' = RequestType,
+			'Auth-Application-Id' = _ApplicationId,
+			'Policy-Counter-Identifier' = _PolicyCounterId},
+		#'3gpp_sy_SLA'{'Experimental-Result' = [
+				#'3gpp_sy_Experimental-Result'{
+						'Experimental-Result-Code' = [ResultCode]}]}) ->
+	[$", "3gpp_sy", $", $:, ${,
+			$", "session_id", $", $:, $", SessionId, $", $,,
+			$", "sl_request_type", $", $:, integer_to_list(RequestType), $,,
 			$", "result_code", $", $:, integer_to_list(ResultCode), $}].
 
 %% @hidden
