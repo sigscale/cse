@@ -33,6 +33,8 @@
 -include("cse.hrl").
 -include("diameter_gen_3gpp.hrl").
 -include("diameter_gen_3gpp_ro_application.hrl").
+-include("diameter_gen_3gpp_rf_application.hrl").
+-include("diameter_gen_3gpp_sy_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
 
 -define(MAX_HEAP_SIZE, 1000000).
@@ -353,6 +355,8 @@ dia_application(16777272) ->
 	io:fwrite("    S6b: ~n");
 dia_application(16777238) ->
 	io:fwrite("    Gx: ~n");
+dia_application(16777302) ->
+	io:fwrite("    Sy: ~n");
 dia_application(N) ->
 	io:fwrite("    ~b: ~n", [N]).
 
@@ -425,6 +429,14 @@ dia_count({321, 1}, Count) ->
 	io:fwrite("        PUR: ~b~n", [Count]);
 dia_count({321, 0}, Count) ->
 	io:fwrite("        PUA: ~b~n", [Count]);
+dia_count({8388635, 1}, Count) ->
+	io:fwrite("        SLR: ~b~n", [Count]);
+dia_count({8388635, 0}, Count) ->
+	io:fwrite("        SLA: ~b~n", [Count]);
+dia_count({8388636, 1}, Count) ->
+	io:fwrite("        SNR: ~b~n", [Count]);
+dia_count({8388636, 0}, Count) ->
+	io:fwrite("        SNA: ~b~n", [Count]);
 dia_count({257, 0, 'Result-Code', ResultCode}, Count) ->
 	io:fwrite("        CEA ~w ~b: ~b~n", ['Result-Code', ResultCode, Count]);
 dia_count({280, 0, 'Result-Code', ResultCode}, Count) ->
@@ -457,6 +469,10 @@ dia_count({318, 0, 'Result-Code', ResultCode}, Count) ->
 	io:fwrite("        AIA ~w ~b: ~b~n", ['Result-Code', ResultCode, Count]);
 dia_count({321, 0, 'Result-Code', ResultCode}, Count) ->
 	io:fwrite("        PUA ~w ~b: ~b~n", ['Result-Code', ResultCode, Count]);
+dia_count({8388635, 0, 'Result-Code', ResultCode}, Count) ->
+	io:fwrite("        SLA ~w ~b: ~b~n", ['Result-Code', ResultCode, Count]);
+dia_count({8388636, 0, 'Result-Code', ResultCode}, Count) ->
+	io:fwrite("        SNA ~w ~b: ~b~n", ['Result-Code', ResultCode, Count]);
 dia_count({257, 1, error}, Count) ->
 	io:fwrite("        CER error: ~b~n", [Count]);
 dia_count({257, 0, error}, Count) ->
@@ -520,7 +536,15 @@ dia_count({318, 0, error}, Count) ->
 dia_count({321, 1, error}, Count) ->
 	io:fwrite("        PUR error: ~b~n", [Count]);
 dia_count({321, 0, error}, Count) ->
-	io:fwrite("        PUA error: ~b~n", [Count]).
+	io:fwrite("        PUA error: ~b~n", [Count]);
+dia_count({8388635, 1, error}, Count) ->
+	io:fwrite("        SLR error: ~b~n", [Count]);
+dia_count({8388635, 0, error}, Count) ->
+	io:fwrite("        SLA error: ~b~n", [Count]);
+dia_count({8388636, 1, error}, Count) ->
+	io:fwrite("        SNR error: ~b~n", [Count]);
+dia_count({8388636, 0, error}, Count) ->
+	io:fwrite("        SNA error: ~b~n", [Count]).
 
 %% @hidden
 tables() ->
