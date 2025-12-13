@@ -141,100 +141,135 @@ start5(Profile) ->
 	end.
 %% @hidden
 start6() ->
+	case inets:services_info() of
+		ServicesInfo when is_list(ServicesInfo) ->
+			{ok, Profile} = application:get_env(nchf_profile),
+			start7(Profile, ServicesInfo);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start7(Profile, [{httpc, _Pid, Info} | T]) ->
+	case proplists:lookup(profile, Info) of
+		{profile, Profile} ->
+			start8(Profile);
+		_ ->
+			start7(Profile, T)
+	end;
+start7(Profile, [_ | T]) ->
+	start7(Profile, T);
+start7(Profile, []) ->
+	case inets:start(httpc, [{profile, Profile}]) of
+		{ok, _Pid} ->
+			start8(Profile);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start8(Profile) ->
+	{ok, Options} = application:get_env(nchf_options),
+	case httpc:set_options(Options, Profile) of
+		ok ->
+			start9();
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start9() ->
 	Options = [set, public, named_table, {write_concurrency, true}],
 	ets:new(cse_counters, Options),
 	case catch ets:insert(cse_counters, {nrf_seq, 0}) of
 		true ->
-			start7();
+			start10();
 		{'EXIT', Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start7() ->
+start10() ->
 	Options = [set, public, named_table,
 			{write_concurrency, true}, {keypos, 1}],
 	case catch ets:new(cse_session, Options) of
 		{'EXIT', Reason} ->
 			{error, Reason};
 		_TID ->
-			start8()
+			start11()
 	end.
 %% @hidden
-start8() ->
+start11() ->
 	case supervisor:start_link({local, cse_sup}, cse_sup, []) of
 		{ok, TopSup} ->
 			{ok, Logs} = application:get_env(logs),
-			start9(TopSup, Logs);
+			start12(TopSup, Logs);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start9(TopSup, [{LogName, Options} | T]) ->
+start12(TopSup, [{LogName, Options} | T]) ->
 	case cse_log:open(LogName, Options) of
 		ok ->
-			start9(TopSup, T);
+			start12(TopSup, T);
 		{error, Reason} ->
 			{error, Reason}
 	end;
-start9(TopSup, []) ->
+start12(TopSup, []) ->
 	{ok, RadiusServices} = application:get_env(radius),
-	start10(TopSup, RadiusServices).
+	start13(TopSup, RadiusServices).
 %% @hidden
-start10(TopSup, [] = RadiusServices) ->
-	start11(TopSup, RadiusServices);
-start10(TopSup, RadiusServices) ->
+start13(TopSup, [] = RadiusServices) ->
+	start14(TopSup, RadiusServices);
+start13(TopSup, RadiusServices) ->
 	case application:start(radius) of
 		ok ->
-			start11(TopSup, RadiusServices);
+			start13(TopSup, RadiusServices);
 		{error, {already_started, _}} ->
-			start11(TopSup, RadiusServices);
+			start14(TopSup, RadiusServices);
 		{error, Reason} ->
 			{error, Reason}
 	end.
 %% @hidden
-start11(TopSup, [{Addr, Port, Module, Args, Options} | T]) ->
+start14(TopSup, [{Addr, Port, Module, Args, Options} | T]) ->
 	case cse:start_radius(Addr, Port, Module, Args, Options) of
-		{ok, _Sup} ->
-			start11(TopSup, T);
-		{error, Reason} ->
-			{error, Reason}
-	end;
-start11(TopSup, [] = _RadiusServices) ->
-	{ok, DiameterServices} = application:get_env(diameter),
-	start12(TopSup, DiameterServices).
-%% @hidden
-start12(TopSup, [] = DiameterServices) ->
-	start13(TopSup, DiameterServices);
-start12(TopSup, DiameterServices) ->
-	case application:start(diameter) of
-		ok ->
-			start13(TopSup, DiameterServices);
-		{error, {already_started, _}} ->
-			start13(TopSup, DiameterServices);
-		{error, Reason} ->
-			{error, Reason}
-	end.
-%% @hidden
-start13(TopSup, [{Addr, Port, Options} | T]) ->
-	case cse:start_diameter(Addr, Port, Options) of
-		{ok, _Sup} ->
-			start13(TopSup, T);
-		{error, Reason} ->
-			{error, Reason}
-	end;
-start13(TopSup, []) ->
-	{ok, Tsl} = application:get_env(tsl),
-	start14(TopSup, maps:to_list(Tsl)).
-%% @hidden
-start14(TopSup, [{Name, {Callback, Args, Options}} | T]) ->
-	case supervisor:start_child(cse_tco_sup_sup,
-			[[TopSup, Name, Callback, Args, Options]]) of
 		{ok, _Sup} ->
 			start14(TopSup, T);
 		{error, Reason} ->
 			{error, Reason}
 	end;
-start14(TopSup, []) ->
+start14(TopSup, [] = _RadiusServices) ->
+	{ok, DiameterServices} = application:get_env(diameter),
+	start15(TopSup, DiameterServices).
+%% @hidden
+start15(TopSup, [] = DiameterServices) ->
+	start16(TopSup, DiameterServices);
+start15(TopSup, DiameterServices) ->
+	case application:start(diameter) of
+		ok ->
+			start16(TopSup, DiameterServices);
+		{error, {already_started, _}} ->
+			start16(TopSup, DiameterServices);
+		{error, Reason} ->
+			{error, Reason}
+	end.
+%% @hidden
+start16(TopSup, [{Addr, Port, Options} | T]) ->
+	case cse:start_diameter(Addr, Port, Options) of
+		{ok, _Sup} ->
+			start16(TopSup, T);
+		{error, Reason} ->
+			{error, Reason}
+	end;
+start16(TopSup, []) ->
+	{ok, Tsl} = application:get_env(tsl),
+	start17(TopSup, maps:to_list(Tsl)).
+%% @hidden
+start17(TopSup, [{Name, {Callback, Args, Options}} | T]) ->
+	case supervisor:start_child(cse_tco_sup_sup,
+			[[TopSup, Name, Callback, Args, Options]]) of
+		{ok, _Sup} ->
+			start17(TopSup, T);
+		{error, Reason} ->
+			{error, Reason}
+	end;
+start17(TopSup, []) ->
 	catch cse_mib:load(),
 	{ok, TopSup}.
 

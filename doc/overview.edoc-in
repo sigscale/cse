@@ -462,7 +462,7 @@ ApplicationContexts ::
 		</dd>
 </dl>
 
-===Nrf_Rating===
+===Nrf===
 Application environment variables configuring HTTP client
 ({@link //inets/httpc. httpc}) behaviour for the
 <a target="_blank"
@@ -496,6 +496,23 @@ API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 	<dt>`nrf_resolver'</dt>
 		<dd>Overide the default resolver used for deriving host address URIs from
 				a service name URI (`nrf_uri'). (default: `[{cse_rest, resolve}]').</dd>
+</dl>
+
+===Nchf===
+Application environment variables configuring HTTP client
+({@link //inets/httpc. httpc}) behaviour for the
+<a target="_blank"
+href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=29&amp;GSMSpecPart2=594">
+<i>Nchf</i></a> API on the 3GPP N28 interface to a remote CHF.
+<dl>
+	<dt>`nchf_profile'</dt>
+		<dd>Provides the {@link //inets/httpc:profile(). profile}
+				name of a manager process for the {@link //inets/httpc. httpc}
+				client. (default: `nchf')</dd>
+	<dt>`nchf_options'</dt>
+		<dd>HTTP client ({@link //inets/httpc. httpc}) behaviour
+				{@link //inets/httpc:options(). options}.
+				(default: `[{keep_alive_timeout, 4000}]').</dd>
 </dl>
 
 ===REST===

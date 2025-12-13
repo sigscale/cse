@@ -141,6 +141,8 @@
 				{nrf_sort, random},
 				{nrf_retries, 1},
 				{nrf_resolver, {cse_rest, resolve}},
+				{nchf_profile, nchf},
+				{nchf_options, [{keep_alive_timeout, 4000}]},
 				{rest_page_size, 1000},
 				{statistics_interval, 60},
 				{rest_page_timeout, 60000},
