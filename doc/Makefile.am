@@ -17,6 +17,7 @@ modhtml = cse.html \
 		cse_diameter_base_application_cb.html \
 		cse_diameter_3gpp_ro_application_cb.html \
 		cse_diameter_3gpp_rf_application_cb.html \
+		cse_diameter_3gpp_sy_application_cb.html \
 		cse_radius_sup.html \
 		cse_radius_server_sup.html \
 		cse_radius_auth_server.html \
