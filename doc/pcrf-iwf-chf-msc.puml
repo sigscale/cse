@@ -1,0 +1,42 @@
+@startuml
+
+skinparam shadowing false
+skinparam sequence {
+ParticipantBorderColor #f57f17
+ParticipantBackgroundColor white
+LifeLineBorderColor #f57f17
+LifeLineBackgroundColor white
+}
+participant PCRF as pcrf
+participant IWF as iwf
+participant CHF as chf
+hide footbox
+
+pcrf -> iwf : SLR-I
+activate iwf
+iwf -> chf : POST /subscriptions
+activate chf
+iwf <- chf : 201 Created
+deactivate chf
+pcrf <- iwf : SLA-I
+deactivate iwf
+
+pcrf -> iwf : SLR-U
+activate iwf
+iwf -> chf : PUT /subscriptions/{subscriptionId}
+activate chf
+iwf <- chf : 200 OK
+deactivate chf
+pcrf <- iwf : CCA-U
+deactivate iwf
+
+pcrf -> iwf : SLR-T
+activate iwf
+iwf -> chf : DELETE /subscriptions/{subscriptionId}
+activate chf
+iwf <- chf : 204 No Content
+deactivate chf
+pcrf <- iwf : SLA-T
+deactivate iwf
+
+@enduml

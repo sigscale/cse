@@ -30,6 +30,11 @@
 %%% <i>Nchf_SpendingLimitControl</i> service produced by a Charging
 %%% Function (CHF) of the 5G Core (5GC).
 %%%
+%%% == Message Sequence ==
+%%% The diagram below depicts the normal sequence of exchanged messages:
+%%%
+%%% <img alt="message sequence chart" src="pcrf-iwf-chf-msc.svg" />
+%%%
 %%% ==Configuration==
 %%% DIAMETER services provided by the {@link //cse. cse} application
 %%% are configured with the `diameter' application environment variable.

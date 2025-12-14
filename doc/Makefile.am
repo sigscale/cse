@@ -88,6 +88,7 @@ doc_DATA = overview.edoc $(modhtml) \
 		ctf-cdf-msc.svg \
 		re-load-balance-msc.svg \
 		slp-prepaid-cap-msc.svg \
+		pcrf-iwf-chf-msc.svg \
 		prepaid-diameter-data.svg \
 		prepaid-diameter-voice.svg \
 		prepaid-diameter-event.svg \
