@@ -614,8 +614,8 @@ nchf_initial(Body, SessionId, Config) ->
 	Request = {RequestURL, RequestHeaders, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, [], Profile) of
-		{{_Version, 201 = StatusCode, _Phrase},
-				ResponseHeaders, ResponseBody} ->
+		{ok, {{_Version, 201 = StatusCode, _Phrase},
+				ResponseHeaders, ResponseBody}} ->
 			case lists:keymember("location", 1, ResponseHeaders) of
 				true ->
 					ok;
@@ -637,8 +637,8 @@ nchf_initial(Body, SessionId, Config) ->
 							{status_code, StatusCode},
 							{partial, Partial}, {remaining, Remaining}])
 			end;
-		{{_Version, StatusCode, _Phrase},
-				ResponseHeaders, ResponseBody} ->
+		{ok, {{_Version, StatusCode, _Phrase},
+				ResponseHeaders, ResponseBody}} ->
 			{StatusCode, ResponseHeaders, ResponseBody};
 		{error, {failed_connect, _} = _Reason}
 				when length(NextURIs) > 0 ->
@@ -688,8 +688,8 @@ SubscriptionId = "foo",
 	Request = {RequestURL, RequestHeaders, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(put, Request, HttpOptions1, [], Profile) of
-		{{_Version, 200 = StatusCode, _Phrase},
-				ResponseHeaders, ResponseBody} ->
+		{ok, {{_Version, 200 = StatusCode, _Phrase},
+				ResponseHeaders, ResponseBody}} ->
 			case zj:decode(ResponseBody) of
 				{ok, SpendingLimitStatus}
 						when is_map(SpendingLimitStatus) ->
@@ -701,8 +701,8 @@ SubscriptionId = "foo",
 							{status_code, StatusCode},
 							{partial, Partial}, {remaining, Remaining}])
 			end;
-		{{_Version, StatusCode, _Phrase},
-				ResponseHeaders, ResponseBody} ->
+		{ok, {{_Version, StatusCode, _Phrase},
+				ResponseHeaders, ResponseBody}} ->
 			{StatusCode, ResponseHeaders, ResponseBody};
 		{error, {failed_connect, _} = _Reason}
 				when length(NextURIs) > 0 ->
