@@ -13,7 +13,8 @@ testmods = cse_api_SUITE \
 		cse_log_codec_ecs_SUITE \
 		cse_codec_SUITE \
 		cse_test_lib \
-		cse_diameter_SUITE \
+		cse_diameter_ro_SUITE \
+		cse_diameter_rf_SUITE \
 		cse_radius_SUITE \
 		cse_re_SUITE \
 		cse_snmp_SUITE \
@@ -61,7 +62,8 @@ endif
 	@if [ ! -d cse_log_SUITE_data ]; then mkdir cse_log_SUITE_data; fi
 	@if [ ! -d cse_cap_SUITE_data ]; then mkdir cse_cap_SUITE_data; fi
 	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
-	@if [ ! -d cse_diameter_SUITE_data ]; then mkdir cse_diameter_SUITE_data; fi
+	@if [ ! -d cse_diameter_ro_SUITE_data ]; then mkdir cse_diameter_ro_SUITE_data; fi
+	@if [ ! -d cse_diameter_rf_SUITE_data ]; then mkdir cse_diameter_rf_SUITE_data; fi
 	@if [ ! -d cse_radius_SUITE_data ]; then mkdir cse_radius_SUITE_data; fi
 	@if [ ! -d cse_re_SUITE_data ]; then mkdir cse_re_SUITE_data; fi
 	ct_run -no_auto_compile \
