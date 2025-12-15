@@ -26,8 +26,7 @@
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 % export test case functions
--export([
-		accounting_ims/0, accounting_ims/1,
+-export([accounting_ims/0, accounting_ims/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1]).
 
