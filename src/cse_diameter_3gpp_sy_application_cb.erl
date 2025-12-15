@@ -610,7 +610,6 @@ nchf_initial(Body, SessionId, Config) ->
 			| Headers],
 	ContentType = "application/json",
 	RequestURL = URI ++ "/subscriptions",
-	LogHTTP = ecs_http(ContentType, Body),
 	Request = {RequestURL, RequestHeaders, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, [], Profile) of
@@ -684,7 +683,6 @@ nchf_intermediate(Body, SessionId, Config) ->
 	ContentType = "application/json",
 SubscriptionId = "foo",
 	RequestURL = URI ++ "/subscriptions/" ++ SubscriptionId,
-	LogHTTP = ecs_http(ContentType, Body),
 	Request = {RequestURL, RequestHeaders, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(put, Request, HttpOptions1, [], Profile) of
@@ -848,49 +846,4 @@ add_nchf2(HostURI,
 	Config#{nchf_uri => HostURI, nchf_next_uris => []};
 add_nchf2([H | T], Config) ->
 	Config#{nchf_uri => H, nchf_next_uris => T}.
-
--spec ecs_http(MIME, Body) -> HTTP
-	when
-		MIME :: string(),
-		Body :: binary() | iolist(),
-		HTTP :: map().
-%% @doc Construct ECS JSON map() for Nchf request.
-%% @hidden
-ecs_http(MIME, Body) ->
-	Body1 = #{"bytes" => iolist_size(Body),
-			%"content" => cse_rest:stringify(zj:encode(Body))},
-			"content" => zj:encode(Body)},
-	Request = #{"method" => "post",
-			"mime_type" => MIME,
-			"body" => Body1},
-	#{"request" => Request}.
-
--spec ecs_http(Version, StatusCode, Headers, Body, HTTP) -> HTTP
-	when
-		Version :: string(),
-		StatusCode :: pos_integer(),
-		Headers :: [HttpHeader],
-		HttpHeader :: {Field, Value},
-		Field :: [byte()],
-		Value :: binary() | iolist(),
-		Body :: binary() | iolist(),
-		HTTP :: map().
-%% @doc Construct ECS JSON map() for Nchf response.
-%% @hidden
-ecs_http(Version, StatusCode, Headers, Body, HTTP) ->
-	Response = case {lists:keyfind("content-length", 1, Headers),
-			lists:keyfind("content-type", 1, Headers)} of
-		{{_, Bytes}, {_, MIME}} ->
-			Body1 = #{"bytes" => Bytes,
-					"content" => zj:encode(Body)},
-			#{"status_code" => StatusCode,
-					"mime_type" => MIME, "body" => Body1};
-		{{_, Bytes}, false} ->
-			Body1 = #{"bytes" => Bytes,
-					"content" => zj:encode(Body)},
-			#{"status_code" => StatusCode, "body" => Body1};
-		_ ->
-			#{"status_code" => StatusCode}
-	end,
-	HTTP#{"version" => Version, "response" => Response}.
 
