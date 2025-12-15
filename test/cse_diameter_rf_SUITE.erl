@@ -31,7 +31,6 @@
 		client_reconnect/0, client_reconnect/1]).
 
 -include_lib("common_test/include/ct.hrl").
--include_lib("inets/include/mod_auth.hrl").
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 -include_lib("diameter/include/diameter_gen_acct_rfc6733.hrl").
