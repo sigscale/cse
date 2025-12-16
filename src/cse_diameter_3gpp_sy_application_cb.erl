@@ -53,13 +53,13 @@
 %%% 			<li>
 %%% 				<tt>
 %%% 					Config = #{nchf_profile => Profile,
-%%% 					nchf_uri => URI,
+%%% 					nchf_uri := URI,
 %%% 					nchf_resolver => Resolver,
 %%% 					nchf_sort => Sort,
 %%% 					nchf_retries => Retries,
 %%% 					nchf_http_options => HttpOptions,
 %%% 					nchf_Headers => Headers,
-%%% 					notify_uri => URI}
+%%% 					notify_uri := URI}
 %%% 				</tt>
 %%% 			</li>
 %%% 			<li>
@@ -116,6 +116,7 @@
 %%% 		</ul>
 %%% 	</p>
 %%% </div>
+%%% Mandatory in `Config': `nchf_uri', `notify_uri'.
 %%%
 %%% @reference 3GPP TS <a
 %%% href="https://webapp.etsi.org/key/key.asp?GSMSpecPart1=29&amp;GSMSpecPart2=219">
