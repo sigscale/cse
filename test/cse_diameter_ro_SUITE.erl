@@ -159,6 +159,7 @@ init_per_suite(Config) ->
             when element(1, Info) == up ->
 			init_per_suite1(Config1)
    end.
+%% @hidden
 init_per_suite1(Config) ->
 	case inets:start(httpd,
 			[{port, 0},
