@@ -10,6 +10,7 @@
 		cse_inap_SUITE,
 		cse_diameter_ro_SUITE,
 		cse_diameter_rf_SUITE,
+		cse_diameter_sy_SUITE,
 		cse_radius_SUITE,
 		cse_re_SUITE,
 		cse_snmp_SUITE]}.

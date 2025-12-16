@@ -15,12 +15,14 @@ testmods = cse_api_SUITE \
 		cse_test_lib \
 		cse_diameter_ro_SUITE \
 		cse_diameter_rf_SUITE \
+		cse_diameter_sy_SUITE \
 		cse_radius_SUITE \
 		cse_re_SUITE \
 		cse_snmp_SUITE \
 		cse_test_diameter_cb \
 		cse_test_ocs_server \
 		mod_ct_nrf \
+		mod_ct_nchf \
 		cse_snmpm_cb
 
 DIA_ARGS := ${DIALYZER_ARGS}
@@ -64,6 +66,7 @@ endif
 	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
 	@if [ ! -d cse_diameter_ro_SUITE_data ]; then mkdir cse_diameter_ro_SUITE_data; fi
 	@if [ ! -d cse_diameter_rf_SUITE_data ]; then mkdir cse_diameter_rf_SUITE_data; fi
+	@if [ ! -d cse_diameter_sy_SUITE_data ]; then mkdir cse_diameter_sy_SUITE_data; fi
 	@if [ ! -d cse_radius_SUITE_data ]; then mkdir cse_radius_SUITE_data; fi
 	@if [ ! -d cse_re_SUITE_data ]; then mkdir cse_re_SUITE_data; fi
 	ct_run -no_auto_compile \
