@@ -90,29 +90,29 @@ do2(#mod{method = Method, parsed_header = Headers} = ModData)
 do2(ModData) ->
 	do3(ModData).
 %% @hidden
-do3(#mod{method = "POST", request_uri = Uri} = ModData) ->
-	case ?URI_DECODE(Uri) of
+do3(#mod{method = "POST" = _Method, request_uri = Path} = ModData) ->
+	case string:lexemes(?URI_DECODE(Path),  [$/]) of
 		["nchf-spendinglimitcontrol", "v1" | T] ->
 			do_post(ModData, T);
-		_ ->
+		_Other ->
 			do_response(ModData, {error, 404})
 	end;
-do3(#mod{method = "PUT", request_uri = Uri} = ModData) ->
-	case ?URI_DECODE(Uri) of
+do3(#mod{method = "PUT" = _Method, request_uri = Path} = ModData) ->
+	case string:lexemes(?URI_DECODE(Path),  [$/]) of
 		["nchf-spendinglimitcontrol", "v1" | T] ->
 			do_put(ModData, T);
 		_ ->
 			do_response(ModData, {error, 404})
 	end;
-do3(#mod{method = "DELETE", request_uri = Uri} = ModData) ->
-	case ?URI_DECODE(Uri) of
+do3(#mod{method = "DELETE" = _Method, request_uri = Path} = ModData) ->
+	case string:lexemes(?URI_DECODE(Path),  [$/]) of
 		["nchf-spendinglimitcontrol", "v1" | T] ->
 			do_delete(ModData, T);
 		_ ->
 			do_response(ModData, {error, 404})
 	end;
-do3(#mod{method = _, request_uri = Uri} = ModData) ->
-	case ?URI_DECODE(Uri) of
+do3(#mod{method = _Method, request_uri = Path} = ModData) ->
+	case string:lexemes(?URI_DECODE(Path),  [$/]) of
 		["nchf-spendinglimitcontrol", "v1" | _] ->
 			do_response(ModData, {error, 405});
 		_ ->
@@ -180,9 +180,9 @@ add_subscription2(ModData, SubscriptionId,
 	F = fun F(0, Acc) ->
 				Acc;
 			F(N, Acc) ->
-				F(N - 1, [cse_test_lib:random_dn() | Acc])
+				F(N - 1, [cse_test_lib:rand_name() | Acc])
 	end,
-	PolicyCounterIds = F(rand:uniform(10), []),
+	PolicyCounterIds = F(rand:uniform(5), []),
 	add_subscription3(ModData, SubscriptionId, SpendingLimitContext,
 			SpendingLimitStatus, PolicyCounterIds).
 %% @hidden
