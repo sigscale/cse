@@ -202,8 +202,8 @@ slr_initial(Config) ->
 	MSISDN = cse_test_lib:rand_dn(11),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	{ok, Answer} = subscribe(Config, Session, IMSI, MSISDN, initial),
-	Success = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	#'3gpp_sy_SLA'{'Result-Code' = Success} = Answer.
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer.
 
 client_connect() ->
 	Description = "Connect as client to peer server",
