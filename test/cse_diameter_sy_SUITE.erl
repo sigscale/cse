@@ -60,7 +60,7 @@ suite() ->
 	{require, nchf},
 	{default_config, nchf,
 			[{address, {127,0,0,1}},
-			{path, "/nchf-spendinglimitcontrol/v1/"}]},
+			{path, "/nchf-spendinglimitcontrol/v1"}]},
 	{require, sy},
 	{default_config, sy,
 			[{address, {127,0,0,1}},
@@ -84,7 +84,7 @@ init_per_suite(Config) ->
 		{ok, HttpdPid} ->
 			[{port, Port}] = httpd:info(HttpdPid, [port]),
 			Path = ct:get_config({nchf, path},
-					"/nchf-spendinglimitcontrol/v1/"),
+					"/nchf-spendinglimitcontrol/v1"),
 			NchfUri = "http://localhost:" ++ integer_to_list(Port) ++ Path,
 			Config1 = [{nchf_uri, NchfUri} | Config],
 			init_per_suite1(Config1);

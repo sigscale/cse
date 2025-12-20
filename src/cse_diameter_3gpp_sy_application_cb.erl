@@ -386,7 +386,7 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 		nchf_initial(Body, SessionId, Config)
 	of
 		{201 = _StatusCode, ResponseHeaders,
-				#{"statusInfos" := StatusInfos} = _SpendingLimitStatus}
+				#{"statusInfos" := StatusInfos} = _ResponseBody}
 				when is_map(StatusInfos) ->
 			case lists:keyfind("location", 1, ResponseHeaders) of
 				{_, Location} ->
@@ -807,7 +807,7 @@ add_nchf(#{nchf_uri := URI} = Config) ->
 	add_nchf(URI, Config, uri_string:parse(URI));
 add_nchf(Config) ->
 	URI = "http://chf.5gc.mnc001.mcc001.3gppnetwork.org"
-			"/nchf-spendinglimitcontrol/v1/",
+			"/nchf-spendinglimitcontrol/v1",
 	add_nchf(Config#{nchf_uri => URI}).
 %% @hidden
 add_nchf(URI, Config, #{host := Address, port := Port} = _URIMap)
