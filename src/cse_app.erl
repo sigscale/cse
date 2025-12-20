@@ -143,8 +143,12 @@ start5(Profile) ->
 start6() ->
 	case inets:services_info() of
 		ServicesInfo when is_list(ServicesInfo) ->
-			{ok, Profile} = application:get_env(nchf_profile),
-			start7(Profile, ServicesInfo);
+			case application:get_env(nchf_profile) of
+				{ok, Profile} ->
+					start7(Profile, ServicesInfo);
+				undefined ->
+					start9()
+			end;
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -167,12 +171,16 @@ start7(Profile, []) ->
 	end.
 %% @hidden
 start8(Profile) ->
-	{ok, Options} = application:get_env(nchf_options),
-	case httpc:set_options(Options, Profile) of
-		ok ->
-			start9();
-		{error, Reason} ->
-			{error, Reason}
+	case application:get_env(nchf_options) of
+		{ok, Options} ->
+			case httpc:set_options(Options, Profile) of
+				ok ->
+					start9();
+				{error, Reason} ->
+					{error, Reason}
+			end;
+		undefined ->
+			start9()
 	end.
 %% @hidden
 start9() ->
