@@ -86,7 +86,7 @@ suite() ->
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
-   {timetrap, {minutes, 1}}].
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
@@ -121,17 +121,17 @@ init_per_suite(Config) ->
 	DiameterAppVar = [{DiameterAddress, DiameterPort, DiameterOptions}],
 	ok = application:set_env(cse, diameter, DiameterAppVar),
 	InterimInterval = 60 * rand:uniform(10),
-   Config1 = [{realm, Realm}, {ct_host, CtHost},
+	Config1 = [{realm, Realm}, {ct_host, CtHost},
 			{ct_realm, CtRealm}, {sut_realm, SutRealm},
-         {diameter_address, DiameterAddress},
+			{diameter_address, DiameterAddress},
 			{interim_interval, InterimInterval} | Config],
 	ok = cse_test_lib:start(),
-   Service = {?MODULE, client},
-   true = diameter:subscribe(Service),
-   ok = diameter:start_service(Service,
+	Service = {?MODULE, client},
+	true = diameter:subscribe(Service),
+	ok = diameter:start_service(Service,
 			client_acct_service_opts(Config1)),
-   receive
-      #diameter_event{service = Service, info = start} ->
+	receive
+		#diameter_event{service = Service, info = start} ->
 			ok
 	end,
 	TransportConfig = [{raddr, DiameterAddress},
@@ -140,13 +140,13 @@ init_per_suite(Config) ->
 	TransportOpts = [{connect_timer, 4000},
 			{transport_module, diameter_tcp},
 			{transport_config, TransportConfig}],
-   {ok, _Ref} = diameter:add_transport(Service,
+	{ok, _Ref} = diameter:add_transport(Service,
 			{connect, TransportOpts}),
-   receive
-      #diameter_event{service = Service, info = Info}
-            when element(1, Info) == up ->
+	receive
+		#diameter_event{service = Service, info = Info}
+				when element(1, Info) == up ->
 			init_per_suite1(Config1)
-   end.
+	end.
 init_per_suite1(Config) ->
 	case inets:start(httpd,
 			[{port, 0},

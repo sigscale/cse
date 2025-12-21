@@ -81,7 +81,7 @@ suite() ->
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
-   {timetrap, {minutes, 1}}].
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -155,7 +155,7 @@ end_per_suite(Config) ->
 %% Initiation before each test case.
 %%
 init_per_testcase(_TestCase, Config) ->
-   Config.
+	Config.
 
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.

@@ -82,7 +82,7 @@ suite() ->
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
-   {timetrap, {minutes, 1}}].
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initiation before the whole suite.
@@ -156,7 +156,7 @@ end_per_suite(Config) ->
 %% Initiation before each test case.
 %%
 init_per_testcase(_TestCase, Config) ->
-   Config.
+	Config.
 
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.
@@ -973,7 +973,7 @@ pdu_initial_mo(OTID, AC, ServiceKey, IMSI) ->
 			'ext-basicServiceCode' = {'ext-Teleservice', <<17>>},
 			callReferenceNumber = crypto:strong_rand_bytes(4),
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
-               npi = 1, address = "14165550001"}),
+					npi = 1, address = "14165550001"}),
 			calledPartyBCDNumber = called_party_bcd(),
 			timeAndTimezone = <<2,18,32,65,81,116,49,10>>,
 			initialDPArgExtension = InitialDPArgExtension},
@@ -1017,7 +1017,7 @@ pdu_initial_mt(OTID, AC, ServiceKey, IMSI) ->
 			locationInformation = LocationInformation,
 			callReferenceNumber = crypto:strong_rand_bytes(4),
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
-               npi = 1, address = "14165550001"}),
+					npi = 1, address = "14165550001"}),
 			timeAndTimezone = <<2,18,32,65,81,116,49,10>>,
 			initialDPArgExtension = InitialDPArgExtension},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
@@ -1065,7 +1065,7 @@ pdu_initial_cfu(OTID, AC, ServiceKey, IMSI) ->
 			locationInformation = LocationInformation,
 			callReferenceNumber = crypto:strong_rand_bytes(4),
 			mscAddress = cse_codec:isdn_address(#isdn_address{nai = 1,
-               npi = 1, address = "14165550001"}),
+					npi = 1, address = "14165550001"}),
 			timeAndTimezone = <<2,18,32,65,81,116,49,10>>},
 	Invoke = #'GenericSSF-gsmSCF-PDUs_begin_components_SEQOF_basicROS_invoke'{
 			invokeId = {present, 1},

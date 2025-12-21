@@ -117,14 +117,14 @@ init_per_suite(Config) ->
 			{'Auth-Application-Id', [?RO_APPLICATION_ID]}],
 	DiameterAppVar = [{DiameterAddress, DiameterPort, DiameterOptions}],
 	ok = application:set_env(cse, diameter, DiameterAppVar),
-   Config1 = [{diameter_host, Host}, {realm, Realm},
-         {diameter_address, DiameterAddress},
+	Config1 = [{diameter_host, Host}, {realm, Realm},
+			{diameter_address, DiameterAddress},
 			{diameter_port, DiameterPort} | Config],
 	Alarms = [{dbpPeerConnectionUpNotif, []}, {dbpPeerConnectionDownNotif, []}],
 	ok = application:set_env(cse, snmp_alarms, Alarms),
 	ok = cse_test_lib:start(),
 	true = diameter:subscribe(?MODULE),
-   ok = diameter:start_service(?MODULE, client_service_opts(Config1)),
+	ok = diameter:start_service(?MODULE, client_service_opts(Config1)),
 	receive
 		#diameter_event{service = ?MODULE, info = start} ->
 			Config1
@@ -254,7 +254,7 @@ get_next_peers(Config) ->
 	{value, DccaPeerEntry} = snmpa:name_to_oid(dccaPeerEntry),
 	OID1 = SnmpTrapOID ++ [0],
 	Reversed = lists:reverse(DccaPeerEntry),
-   {ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
+	{ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
 	receive
 		{noError, _, [_, {_, OID1, _, DbpPeerConnectionUpNotif, _} | _]} ->
 			ok
@@ -288,7 +288,7 @@ get_next_stats(Config) ->
 	{value, DccaPerPeerStatsEntry} = snmpa:name_to_oid(dccaPerPeerStatsEntry),
 	OID1 = SnmpTrapOID ++ [0],
 	Reversed = lists:reverse(DccaPerPeerStatsEntry),
-   {ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
+	{ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
 	receive
 		{noError, _, [_, {_, OID1, _, DbpPeerConnectionUpNotif, _} | _]} ->
 			ok
@@ -326,7 +326,7 @@ peer_up(Config) ->
 	OID2 = SnmpTrapOID ++ [0],
 	OID3 = DbpLocalId ++ [0],
 	OID4 = DbpPeerId ++ [0],
-   {ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
+	{ok, _Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
 	receive
 		{noError, 0, Varbinds} ->
 			[{_, OID1, 'TimeTicks', _, _},
@@ -360,10 +360,10 @@ peer_down(Config) ->
 	OID3 = DbpLocalId ++ [0],
 	OID4 = DbpPeerId ++ [0],
 	true = diameter:subscribe(?MODULE),
-   {ok, Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
+	{ok, Ref} = connect(?MODULE, DiameterAddress, DiameterPort, diameter_tcp),
 	receive
-      #diameter_event{service = ?MODULE, info = Info}
-            when element(1, Info) == up ->
+		#diameter_event{service = ?MODULE, info = Info}
+				when element(1, Info) == up ->
 			ok
 	after
 		4000 ->

@@ -70,7 +70,7 @@ suite() ->
 					{prepaid,
 							[{format, external},
 							{codec, {cse_log_codec_ecs, codec_prepaid_ecs}}]}]}]},
-   {timetrap, {minutes, 1}}].
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config) -> NewConfig
 	when
@@ -111,7 +111,7 @@ init_per_suite(Config) ->
 					cse_radius_acct_server, AcctArgs, AcctOptions}],
 	ok = application:set_env(cse, radius, RadiusAppVar),
 	InterimInterval = 60 * rand:uniform(10),
-   Config1 = [{radius_address, RadiusAddress},
+	Config1 = [{radius_address, RadiusAddress},
 			{auth_port, AuthPort},
 			{acct_port, AcctPort},
 			{secret, Secret},

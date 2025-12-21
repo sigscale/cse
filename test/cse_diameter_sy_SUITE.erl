@@ -65,7 +65,7 @@ suite() ->
 	{default_config, sy,
 			[{address, {127,0,0,1}},
 			{realm, "ocs.mnc001.mcc001.3gppnetwork.org"}]},
-   {timetrap, {minutes, 1}}].
+	{timetrap, {minutes, 1}}].
 
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
@@ -122,17 +122,17 @@ init_per_suite1(Config) ->
 	ok = application:set_env(cse, nchf_options,
 			[{keep_alive_timeout, 4000}]),
 	InterimInterval = 60 * rand:uniform(10),
-   Config1 = [{realm, Realm}, {ct_host, CtHost},
+	Config1 = [{realm, Realm}, {ct_host, CtHost},
 			{ct_realm, CtRealm}, {sut_realm, SutRealm},
-         {sy_address, SyAddress},
+			{sy_address, SyAddress},
 			{interim_interval, InterimInterval} | Config],
 	ok = cse_test_lib:start(),
-   CtService = {?MODULE, client},
-   true = diameter:subscribe(CtService),
-   ok = diameter:start_service(CtService,
+	CtService = {?MODULE, client},
+	true = diameter:subscribe(CtService),
+	ok = diameter:start_service(CtService,
 			client_auth_service_opts(Config1)),
-   receive
-      #diameter_event{service = CtService, info = start} ->
+	receive
+		#diameter_event{service = CtService, info = start} ->
 			ok
 	end,
 	TransportConfig = [{raddr, SyAddress},
@@ -141,13 +141,13 @@ init_per_suite1(Config) ->
 	TransportOpts = [{connect_timer, 4000},
 			{transport_module, diameter_tcp},
 			{transport_config, TransportConfig}],
-   {ok, _Ref} = diameter:add_transport(CtService,
+	{ok, _Ref} = diameter:add_transport(CtService,
 			{connect, TransportOpts}),
-   receive
-      #diameter_event{service = CtService, info = Info}
-            when element(1, Info) == up ->
+	receive
+		#diameter_event{service = CtService, info = Info}
+				when element(1, Info) == up ->
 			Config1
-   end.
+	end.
 
 -spec end_per_suite(Config :: [tuple()]) -> any().
 %% Cleanup after the whole suite.
@@ -167,10 +167,10 @@ init_per_testcase(_TestCase, Config) ->
 %%
 end_per_testcase(TestCase, _Config)
 		when TestCase == client_connect; TestCase == client_reconnect ->
-   Service = {?MODULE, server},
-   ok = diameter:stop_service(Service),
-   receive
-      #diameter_event{service = Service, info = stop} ->
+	Service = {?MODULE, server},
+	ok = diameter:stop_service(Service),
+	receive
+		#diameter_event{service = Service, info = stop} ->
 			ok
 	after
 		4000 ->
@@ -217,12 +217,12 @@ client_connect(Config) ->
 	Realm = "ct." ++ ?config(realm, Config),
 	Address = ?config(sy_address, Config),
 	Port = rand:uniform(64511) + 1024,
-   Service = {?MODULE, server},
-   true = diameter:subscribe(Service),
-   ok = diameter:start_service(Service,
+	Service = {?MODULE, server},
+	true = diameter:subscribe(Service),
+	ok = diameter:start_service(Service,
 			server_auth_service_opts(Config)),
-   receive
-      #diameter_event{service = Service, info = start} ->
+	receive
+		#diameter_event{service = Service, info = start} ->
 			ok
 	after
 		4000 ->
@@ -232,7 +232,7 @@ client_connect(Config) ->
 			{ip, Address}, {port, Port}],
 	ServerTransportOpts = [{transport_module, diameter_tcp},
 			{transport_config, ServerTransportConfig}],
-   {ok, _Ref} = diameter:add_transport(Service,
+	{ok, _Ref} = diameter:add_transport(Service,
 			{listen, ServerTransportOpts}),
 	Application = [{alias, ?SY_APPLICATION},
 			{dictionary, ?SY_APPLICATION_DICT},
@@ -249,11 +249,11 @@ client_connect(Config) ->
 			{'Auth-Application-Id', [?SY_APPLICATION_ID]},
 			{connect, ClientTransportOpts}],
 	{ok, Pid} = cse:start_diameter(Address, 0, Options),
-   receive
-      #diameter_event{service = Service, info = Info}
-            when element(1, Info) == up ->
+	receive
+		#diameter_event{service = Service, info = Info}
+				when element(1, Info) == up ->
 			ok = cse:stop_diameter(Pid)
-   end.
+	end.
 
 client_reconnect() ->
 	Description = "Reconnect disconnected client to peer server",
@@ -264,12 +264,12 @@ client_reconnect(Config) ->
 	Realm = "ct." ++ ?config(realm, Config),
 	Address = ?config(sy_address, Config),
 	Port = rand:uniform(64511) + 1024,
-   Service = {?MODULE, server},
-   true = diameter:subscribe(Service),
-   ok = diameter:start_service(Service,
+	Service = {?MODULE, server},
+	true = diameter:subscribe(Service),
+	ok = diameter:start_service(Service,
 			server_auth_service_opts(Config)),
-   receive
-      #diameter_event{service = Service, info = start} ->
+	receive
+		#diameter_event{service = Service, info = start} ->
 			ok
 	after
 		4000 ->
@@ -279,7 +279,7 @@ client_reconnect(Config) ->
 			{ip, Address}, {port, Port}],
 	ServerTransportOpts = [{transport_module, diameter_tcp},
 			{transport_config, ServerTransportConfig}],
-   {ok, _Ref} = diameter:add_transport(Service,
+	{ok, _Ref} = diameter:add_transport(Service,
 			{listen, ServerTransportOpts}),
 	Application = [{alias, ?SY_APPLICATION},
 			{dictionary, ?SY_APPLICATION_DICT},
@@ -296,35 +296,35 @@ client_reconnect(Config) ->
 			{'Auth-Application-Id', [?SY_APPLICATION_ID]},
 			{connect, ClientTransportOpts}],
 	{ok, Pid} = cse:start_diameter(Address, 0, Options),
-   receive
-      #diameter_event{service = Service, info = Info1}
-            when element(1, Info1) == up ->
+	receive
+		#diameter_event{service = Service, info = Info1}
+				when element(1, Info1) == up ->
 			ok
 	after
 		4000 ->
 			ct:fail(timeout)
-   end,
-   ok = diameter:stop_service(Service),
-   receive
-      #diameter_event{service = Service, info = stop} ->
+	end,
+	ok = diameter:stop_service(Service),
+	receive
+		#diameter_event{service = Service, info = stop} ->
 			ok
 	after
 		4000 ->
 			ct:fail(timeout)
-   end,
+	end,
 	ct:sleep(1000),
-   ok = diameter:start_service(Service,
+	ok = diameter:start_service(Service,
 			server_auth_service_opts(Config)),
-   receive
-      #diameter_event{service = Service, info = start} ->
+	receive
+		#diameter_event{service = Service, info = start} ->
 			ok
 	after
 		4000 ->
 			ct:fail(timeout)
-   end,
-   receive
-      #diameter_event{service = Service, info = Info2}
-            when element(1, Info2) == up ->
+	end,
+	receive
+		#diameter_event{service = Service, info = Info2}
+				when element(1, Info2) == up ->
 			ok = cse:stop_diameter(Pid)
 	end.
 

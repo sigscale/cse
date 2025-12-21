@@ -78,7 +78,7 @@ init_per_testcase(start_cse, Config) ->
 	Config;
 init_per_testcase(_TestCase, Config) ->
 	ok = cse:start(),
-   Config.
+	Config.
 
 -spec end_per_testcase(TestCase :: atom(), Config :: [tuple()]) -> any().
 %% Cleanup after each test case.
