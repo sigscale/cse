@@ -157,6 +157,12 @@
 	-define(SET_STACK, StackTrace = erlang:get_stacktrace()).
 -endif.
 
+-ifdef(OTP_RELEASE).
+	-if(?OTP_RELEASE >= 27).
+		-behaviour(diameter_app).
+	-endif.
+-endif.
+
 %%----------------------------------------------------------------------
 %%  The DIAMETER application callbacks
 %%----------------------------------------------------------------------
