@@ -41,6 +41,7 @@
 		options := list(),
 		backoff := pos_integer(),
 		alarms := list()}.
+-export_type([statedata/0]).
 
 -define(DIAMETER_SERVICE(A, P), {cse, A, P}).
 -define(BASE_APPLICATION, cse_diameter_base_application).
@@ -87,17 +88,44 @@ init([Address, Port, Options] = _Args) ->
 	diameter:subscribe(SvcName),
 	case diameter:start_service(SvcName, SOptions2) of
 		ok ->
-			process_flag(trap_exit, true),
-			case diameter:add_transport(SvcName, TOptions2) of
-				{ok, Ref} ->
-					{ok, Alarms} = application:get_env(cse, snmp_alarms),
-					Data = #{service => SvcName, transport_ref => Ref,
-							address => Address, port => Port,
-							options => Options, alarms => Alarms},
-					{ok, wait_for_start, Data};
+			Data = #{address => Address, port => Port,
+					options => Options, service => SvcName},
+			init1(TOptions2, SOptions2, Data);
+		{error, Reason} ->
+			{stop, Reason}
+	end.
+%% @hidden
+init1(TOptions, [{application, AOptions} | T] = _SOptions, Data) ->
+	Module = case lists:keyfind(module, 1, AOptions) of
+		{_, Mod} when is_atom(Mod) ->
+			Mod;
+		{_, [Mod | _]} when is_atom(Mod) ->
+			Mod
+	end,
+	ok = code:ensure_modules_loaded([Module]),
+	case erlang:function_exported(Module, init, 1) of
+		true ->
+			case Module:init(Data) of
+				ok ->
+					init1(TOptions, T, Data);
 				{error, Reason} ->
 					{stop, Reason}
 			end;
+		false ->
+			init1(TOptions, T, Data)
+	end;
+init1(TOptions, [_App | T] = _SOptions, Data) ->
+	init1(TOptions, T, Data);
+init1(TOptions, [] = _SOptions, Data) ->
+	init2(TOptions, Data).
+%% @hidden
+init2(TOptions, #{service := SvcName} = Data) ->
+	process_flag(trap_exit, true),
+	case diameter:add_transport(SvcName, TOptions) of
+		{ok, Ref} ->
+			{ok, Alarms} = application:get_env(cse, snmp_alarms),
+			Data1 = Data#{transport_ref => Ref, alarms => Alarms},
+			{ok, wait_for_start, Data1};
 		{error, Reason} ->
 			{stop, Reason}
 	end.
