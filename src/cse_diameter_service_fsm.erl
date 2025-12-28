@@ -16,7 +16,7 @@
 %%% limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc This {@link //stdlib/gen_statem. gen_statem} behaviour callback
-%%% 	module handles {@link //diameter. diameter} service  events.
+%%% 	module handles {@link //diameter. diameter} service events.
 %%%
 -module(cse_diameter_service_fsm).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
