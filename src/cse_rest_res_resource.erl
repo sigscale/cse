@@ -435,7 +435,7 @@ query_start({M, F, A}, Codec, Query, Filters, RangeStart, RangeEnd) ->
 
 -spec add_resource(RequestBody) -> Result
 	when
-		RequestBody :: [tuple()],
+		RequestBody :: list(),
 		Result   :: {ok, Headers, Body} | {error, Status},
 		Headers  :: [tuple()],
 		Body     :: iolist(),
