@@ -215,7 +215,6 @@ add_subscription5(ModData, SubscriptionId, SpendingLimitStatus) ->
 update_subscription(ModData, SubscriptionId,
 		{ok, #{"supi" := SUPI} = SpendingLimitContext})
 		when is_list(SUPI) ->
-	SubscriptionId = integer_to_list(rand:uniform(16#ffff)),
 	SpendingLimitStatus = #{"supi" => SUPI},
 	update_subscription1(ModData, SubscriptionId,
 			SpendingLimitContext, SpendingLimitStatus);
@@ -240,7 +239,7 @@ update_subscription1(ModData, SubscriptionId,
 	F = fun F(0, Acc) ->
 				Acc;
 			F(N, Acc) ->
-				F(N - 1, [cse_test_lib:random_dn() | Acc])
+				F(N - 1, [cse_test_lib:rand_name() | Acc])
 	end,
 	PolicyCounterIds = F(rand:uniform(10), []),
 	update_subscription2(ModData, SubscriptionId,
@@ -259,7 +258,7 @@ update_subscription2(ModData, SubscriptionId,
 update_subscription3(ModData, _SubscriptionId, SpendingLimitStatus) ->
 	Headers = [{content_type, "application/json"}],
 	Body = zj:encode(SpendingLimitStatus),
-	do_response(ModData, {201, Headers, Body}).
+	do_response(ModData, {200, Headers, Body}).
 
 %% @hidden
 do_response(#mod{data = Data} = ModData, {Code, Headers, ResponseBody}) ->
@@ -275,7 +274,7 @@ do_response(#mod{data = Data} = _ModData, {error, Status}) ->
 do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
 		{error, 404},
 		#{cause := "RESOURCE_URI_STRUCTURE_NOT_FOUND"} = ProblemDetails) ->
-	ProblemDetails1 = ProblemDetails#{status => 404,
+	ProblemDetails1 = ProblemDetails#{status => 404, code => "", 
 			title => "TS 29.594 API resource path is not found",
 			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
 					"TS29571_CommonData.yaml#/components/responses/404"},
@@ -287,8 +286,8 @@ do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
 do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
 		{error, 400},
 		#{cause := "INVALID_MSG_FORMAT"} = ProblemDetails) ->
-	ProblemDetails1 = ProblemDetails#{status => 404,
-			title => "Decode SpendingLimitContext failed",
+	ProblemDetails1 = ProblemDetails#{status => 400, code => "",
+			title => "JSON decode of SpendingLimitContext failed",
 			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
 					"TS29571_CommonData.yaml#/components/responses/400"},
 	{ContentType, ResponseBody} = cse_rest:format_problem(ProblemDetails1, RequestHeaders),
@@ -299,10 +298,49 @@ do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
 do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
 		{error, 400},
 		#{cause := "MANDATORY_IE_MISSING"} = ProblemDetails) ->
-	ProblemDetails1 = ProblemDetails#{status => 404,
-			title => "TS 29.594 API resource path is not found",
+	ProblemDetails1 = ProblemDetails#{status => 400, code => "",
+			title => "Missing mandatory attribute in JSON body",
 			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
-					"TS29571_CommonData.yaml#/components/responses/404"},
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{ContentType, ResponseBody} = cse_rest:format_problem(ProblemDetails1, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 400, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 400, Size}} | Data]};
+do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
+		{error, 400},
+		#{cause := "USER_UNKNOWN"} = ProblemDetails) ->
+	ProblemDetails1 = ProblemDetails#{status => 400, code => "",
+			title => "The subscriber specified in the request is not known"
+					" at the CHF and the subscription cannot be created.",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{ContentType, ResponseBody} = cse_rest:format_problem(ProblemDetails1, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 400, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 400, Size}} | Data]};
+do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
+		{error, 400},
+		#{cause := "NO_AVAILABLE_POLICY_COUNTERS"} = ProblemDetails) ->
+	ProblemDetails1 = ProblemDetails#{status => 400, code => "",
+			title => "There are no policy counters available for the"
+					" subscriber at the CHF",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{ContentType, ResponseBody} = cse_rest:format_problem(ProblemDetails1, RequestHeaders),
+	Size = integer_to_list(iolist_size(ResponseBody)),
+	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
+	send(ModData, 400, ResponseHeaders, ResponseBody),
+	{proceed, [{response, {already_sent, 400, Size}} | Data]};
+do_response(#mod{data = Data, parsed_header = RequestHeaders} = ModData,
+		{error, 400},
+		#{cause := "UNKNOWN_POLICY_COUNTERS"} = ProblemDetails) ->
+	ProblemDetails1 = ProblemDetails#{status => 400, code => "",
+			title => "The policy counter identifiers in the request are"
+					"not known at the CHF.",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
 	{ContentType, ResponseBody} = cse_rest:format_problem(ProblemDetails1, RequestHeaders),
 	Size = integer_to_list(iolist_size(ResponseBody)),
 	ResponseHeaders = [{content_length, Size}, {content_type, ContentType}],
