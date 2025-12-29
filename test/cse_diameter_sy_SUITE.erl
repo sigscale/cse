@@ -27,6 +27,7 @@
 
 % export test case functions
 -export([slr_initial/0, slr_initial/1,
+		slr_intermediate/0, slr_intermediate/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1]).
 
@@ -189,7 +190,8 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[slr_initial, client_connect, client_reconnect].
+	[slr_initial, slr_intermediate,
+			client_connect, client_reconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
@@ -207,6 +209,21 @@ slr_initial(Config) ->
 	{ok, Answer} = subscribe(Config, Session, IMSI, MSISDN, initial),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer.
+
+slr_intermediate() ->
+	Description = "Intermediate Spending-Limit-Request (SLR)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+slr_intermediate(Config) ->
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
+	{ok, Answer1} = subscribe(Config, Session, IMSI, MSISDN, initial),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer1,
+	{ok, Answer2} = subscribe(Config, Session, IMSI, MSISDN, intermediate),
+	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer2.
 
 client_connect() ->
 	Description = "Connect as client to peer server",
