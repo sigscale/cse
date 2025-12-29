@@ -1,0 +1,35 @@
+@startuml
+
+skinparam shadowing false
+skinparam sequence {
+ParticipantBorderColor #f57f17
+ParticipantBackgroundColor white
+LifeLineBorderColor #f57f17
+LifeLineBackgroundColor white
+}
+participant diameter
+participant cse_diameter_3gpp_sy_application_cb
+participant httpc
+database sy_session
+database nchf_session
+participant httpd
+participant cse_rest_res_nchf
+hide footbox
+
+create cse_diameter_3gpp_sy_application_cb
+diameter -> cse_diameter_3gpp_sy_application_cb : SLR
+activate cse_diameter_3gpp_sy_application_cb
+cse_diameter_3gpp_sy_application_cb -> httpc : POST /subscriptions
+cse_diameter_3gpp_sy_application_cb <- httpc : 201 Created
+cse_diameter_3gpp_sy_application_cb -\ sy_session : {SessionId, SUPI, SubscriptionId}
+cse_diameter_3gpp_sy_application_cb -\ nchf_session : {SUPI, SessionId}
+diameter <- cse_diameter_3gpp_sy_application_cb : SLA
+destroy cse_diameter_3gpp_sy_application_cb
+...
+httpd -> cse_rest_res_nchf : POST /notify
+nchf_session -/ cse_rest_res_nchf : SessionId
+diameter <- cse_rest_res_nchf : SNR
+diameter -> cse_rest_res_nchf : SNA
+httpd <- cse_rest_res_nchf : 204 No Content
+
+@enduml

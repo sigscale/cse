@@ -130,6 +130,7 @@
 -export([peer_up/4, peer_down/4, pick_peer/5, prepare_request/4,
 			prepare_retransmit/4, handle_answer/5, handle_error/5,
 			handle_request/4]).
+-export([init/1]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -166,6 +167,23 @@
 %%----------------------------------------------------------------------
 %%  The DIAMETER application callbacks
 %%----------------------------------------------------------------------
+
+-spec init(ServiceStateData) -> Result
+	when
+		ServiceStateData :: cse_diameter_service_fsm:statedata(),
+		Result :: ok | {error, Reason},
+		Reason :: term().
+%% @doc Initialize Sy application diameter service.
+init(_ServiceStateData) ->
+	Module = cse_slp_spending_limit_iwf_fsm,
+	Args = [[]],
+	Opts = [],
+	case supervisor:start_child(cse_slp_sup, [Module, Args, Opts]) of
+		{ok, _Child} ->
+			ok;
+		{error, Reason} ->
+			{error, Reason}
+	end.
 
 -spec peer_up(ServiceName, Peer, State, Config) -> NewState
 	when

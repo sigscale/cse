@@ -38,6 +38,7 @@ modhtml = cse.html \
 		cse_slp_postpaid_diameter_sms_fsm.html \
 		cse_slp_postpaid_diameter_mms_fsm.html \
 		cse_slp_prepaid_radius_ps_fsm.html \
+		cse_slp_spending_limit_iwf_fsm.html \
 		cse_tco_server_cb.html \
 		cse_codec.html \
 		cse_log.html \
@@ -88,6 +89,7 @@ doc_DATA = overview.edoc $(modhtml) \
 		ctf-cdf-msc.svg \
 		re-load-balance-msc.svg \
 		slp-prepaid-cap-msc.svg \
+		slp-spending-limit-iwf-msc.svg \
 		pcrf-iwf-chf-msc.svg \
 		prepaid-diameter-data.svg \
 		prepaid-diameter-voice.svg \
