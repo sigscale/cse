@@ -54,6 +54,7 @@ modhtml = cse.html \
 		mod_cse_rest_patch.html \
 		cse_rest_res_health.html \
 		cse_rest_res_resource.html \
+		cse_rest_res_nchf.html \
 		cse_rest_pagination_server.html \
 		cse_rest_pagination_sup.html \
 		cse_rest_query_scanner.html \

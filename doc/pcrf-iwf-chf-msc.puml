@@ -12,31 +12,51 @@ participant IWF as iwf
 participant CHF as chf
 hide footbox
 
-pcrf -> iwf : SLR-I
+pcrf -> iwf : SLR-Initial
 activate iwf
 iwf -> chf : POST /subscriptions
 activate chf
 iwf <- chf : 201 Created
 deactivate chf
-pcrf <- iwf : SLA-I
+pcrf <- iwf : SLA
 deactivate iwf
-
-pcrf -> iwf : SLR-U
+...
+iwf <- chf : POST /notify
+activate iwf
+pcrf <- iwf : SNR
+activate pcrf
+pcrf -> iwf : SNA
+deactivate pcrf
+iwf -> chf : 204 No Content
+deactivate iwf
+...
+opt
+pcrf -> iwf : SLR-Intermediate
 activate iwf
 iwf -> chf : PUT /subscriptions/{subscriptionId}
 activate chf
 iwf <- chf : 200 OK
 deactivate chf
-pcrf <- iwf : CCA-U
+pcrf <- iwf : SLA
 deactivate iwf
-
-pcrf -> iwf : SLR-T
+end
+...
+alt PCRF initiated
+pcrf -> iwf : STR
 activate iwf
 iwf -> chf : DELETE /subscriptions/{subscriptionId}
 activate chf
 iwf <- chf : 204 No Content
 deactivate chf
-pcrf <- iwf : SLA-T
+pcrf <- iwf : STA
 deactivate iwf
+else CHF initiated
+iwf <- chf : POST /terminate
+activate iwf
+pcrf <- iwf : SNR-ASR
+pcrf -> iwf : SNA
+iwf -> chf : 204 No Content
+deactivate iwf
+end
 
 @enduml

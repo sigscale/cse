@@ -263,8 +263,8 @@ prepare_retransmit(Packet, ServiceName, Peer, Config) ->
 		Config :: map(),
 		Result :: term().
 %% @doc Invoked when an answer message is received from a peer.
-handle_answer(_Packet, _Request, _ServiceName, _Peer, _Config) ->
-	not_implemented.
+handle_answer(Packet, _Request, _ServiceName, _Peer, _Config) ->
+	{ok, Packet}.
 
 -spec handle_error(Reason, Request, ServiceName, Peer, Config) -> Result
 	when
@@ -275,8 +275,8 @@ handle_answer(_Packet, _Request, _ServiceName, _Peer, _Config) ->
 		Config :: map(),
 		Result :: term().
 %% @doc Invoked when an error occurs before an answer message is received.
-handle_error(_Reason, _Request, _ServiceName, _Peer, _Config) ->
-	not_implemented.
+handle_error(Reason, _Request, _ServiceName, _Peer, _Config) ->
+	{error, Reason}.
 
 -spec handle_request(Packet, ServiceName, Peer, Config) -> Action
 	when
@@ -296,7 +296,7 @@ handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
 		ServiceName, {_, Capabilities} = Peer,
 		Config) ->
 	Start = erlang:system_time(millisecond),
-	Reply = process_request(Capabilities, Request, Config),
+	Reply = process_request(ServiceName, Capabilities, Request, Config),
 	Stop = erlang:system_time(millisecond),
 	catch cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
 	Reply;
@@ -314,7 +314,7 @@ handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
 
 -spec errors(ServiceName, Capabilities, Request, Errors) -> Action
 	when
-		ServiceName :: atom(),
+		ServiceName :: term(),
 		Capabilities :: capabilities(),
 		Request :: message(),
 		Errors :: [Error],
@@ -376,8 +376,9 @@ errors(_ServiceName, _Capabilities, _Request, [{ResultCode, _} | _]) ->
 errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 	{answer_message, ResultCode}.
 
--spec process_request(Caps, Request, Config) -> Result
+-spec process_request(ServiceName, Caps, Request, Config) -> Result
 	when
+		ServiceName :: term(),
 		Caps :: capabilities(),
 		Request :: #'3gpp_sy_SLR'{},
 		Config :: map(),
@@ -388,8 +389,9 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 %% @todo `ASR' feature
 %% @todo `Pending-Policy-Counter-Information' AVP
 %% @private
-process_request(#diameter_caps{origin_host = {OHost, _DHost},
-				origin_realm = {ORealm, _DRealm}},
+process_request(ServiceName,
+		#diameter_caps{origin_host = {OHost, DHost},
+				origin_realm = {ORealm, DRealm}} = _Caps,
 		#'3gpp_sy_SLR'{'Session-Id' = SessionId,
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'Origin-Host' = OriginHost,
@@ -401,19 +403,24 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 		Config)
 		when RequestType == ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST' ->
 	try
-		SLC1 = supi(SubscriptionId, #{}),
+		#{supi := SUPI} = SLC1 = supi(SubscriptionId, #{}),
 		SLC2 = gpsi(SubscriptionId, SLC1),
 		SLC3 = pcid(PolicyCounterId, SLC2),
 		SLC4 = notify(Config, SLC3),
-		SpendingLimitContext = SLC4#{"supportedFeatures" => "0"},
+		SpendingLimitContext = SLC4#{supportedFeatures => "0"},
 		Body = zj:encode(SpendingLimitContext),
-		nchf_initial(Body, SessionId, Config)
+		nchf_initial(Body, Config)
 	of
 		{201 = _StatusCode, ResponseHeaders,
 				#{"statusInfos" := StatusInfos} = _ResponseBody}
 				when is_map(StatusInfos) ->
 			case lists:keyfind("location", 1, ResponseHeaders) of
 				{_, Location} ->
+					ets:insert(sy_session,
+							{SessionId, SUPI, list_to_binary(Location)}),
+					ets:insert(nchf_session,
+							{SUPI, ServiceName, SessionId,
+									OHost, ORealm, DHost, DRealm}),
 					F = fun(PolicyCounterId1,
 								#{"policyCounterId" := PolicyCounterId1,
 								"currentStatus" := CurrentStatus}, Acc)
@@ -471,7 +478,22 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 							diameter_error(SessionId, OHost, ORealm,
 									ResultCode, [Title], [])
 					end;
+				{ok, #{"title" := Title} = _ProblemDetails} ->
+					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					diameter_error(SessionId, OHost, ORealm,
+							ResultCode, [Title], []);
 				_ ->
+					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					diameter_error(SessionId, OHost, ORealm,
+							ResultCode, [], [])
+			end;
+		{500 = _StatusCode, _ResponseHeaders, ResponseBody} ->
+			case zj:decode(ResponseBody) of
+				{ok, #{"title" := Title} = _ProblemDetails} ->
+					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					diameter_error(SessionId, OHost, ORealm,
+							ResultCode, [Title], []);
+				_Other ->
 					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					diameter_error(SessionId, OHost, ORealm,
 							ResultCode, [], [])
@@ -499,26 +521,30 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 			diameter_error(SessionId, OHost, ORealm,
 					ResultCode, [], [])
 	end;
-process_request(#diameter_caps{origin_host = {OHost, _DHost},
+process_request(_ServiceName,
+		#diameter_caps{origin_host = {OHost, _DHost},
 				origin_realm = {ORealm, _DRealm}},
 		#'3gpp_sy_SLR'{'Session-Id' = SessionId,
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'Origin-Host' = OriginHost,
 				'Origin-Realm' = OriginRealm,
 				'SL-Request-Type' = RequestType,
-				'Subscription-Id' = SubscriptionId,
 				'Supported-Features' = _SupportedFeatures,
 				'Policy-Counter-Identifier' = PolicyCounterId} = Request,
 		Config)
 		when RequestType == ?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST' ->
 	try
-		SLC1 = supi(SubscriptionId, #{}),
-		SLC2 = gpsi(SubscriptionId, SLC1),
-		SLC3 = pcid(PolicyCounterId, SLC2),
-		SLC4 = notify(Config, SLC3),
-		SpendingLimitContext = SLC4#{"supportedFeatures" => "0"},
-		Body = zj:encode(SpendingLimitContext),
-		nchf_intermediate(Body, SessionId, Config)
+		case ets:lookup(sy_session, SessionId) of
+			[{_, SUPI, Location}] ->
+				SLC1 = pcid(PolicyCounterId, #{}),
+				SLC2 = notify(Config, SLC1),
+				SpendingLimitContext = SLC2#{supi => SUPI,
+						supportedFeatures => "0"},
+				Body = zj:encode(SpendingLimitContext),
+				nchf_intermediate(Location, Body, Config);
+			[] ->
+				throw(session)
+		end
 	of
 		{200 = _StatusCode, _ResponseHeaders,
 				#{"statusInfos" := StatusInfos} = _SpendingLimitStatus}
@@ -575,7 +601,22 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 							diameter_error(SessionId, OHost, ORealm,
 									ResultCode, [Title], [])
 					end;
+				{ok, #{"title" := Title} = _ProblemDetails} ->
+					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					diameter_error(SessionId, OHost, ORealm,
+							ResultCode, [Title], []);
 				_ ->
+					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					diameter_error(SessionId, OHost, ORealm,
+							ResultCode, [], [])
+			end;
+		{500 = _StatusCode, _ResponseHeaders, ResponseBody} ->
+			case zj:decode(ResponseBody) of
+				{ok, #{"title" := Title} = _ProblemDetails} ->
+					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					diameter_error(SessionId, OHost, ORealm,
+							ResultCode, [Title], []);
+				_Other ->
 					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					diameter_error(SessionId, OHost, ORealm,
 							ResultCode, [], [])
@@ -589,8 +630,8 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 			diameter_error(SessionId, OHost, ORealm,
 					ResultCode, [], [])
 	catch
-		throw:supi ->
-			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_VALUE',
+		throw:session ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNKNOWN_SESSION_ID',
 			diameter_error(SessionId, OHost, ORealm,
 					ResultCode, [], []);
 		?CATCH_STACK ->
@@ -604,10 +645,9 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 					ResultCode, [], [])
 	end.
 
--spec nchf_initial(Body, SessionId, Config) -> Reply
+-spec nchf_initial(Body, Config) -> Reply
 	when
 		Body :: iolist() | binary(),
-		SessionId :: binary(),
 		Config :: map(),
 		Reply :: {StatusCode, ResponseHeaders, ResponseBody}
 				| {error, Reason},
@@ -621,7 +661,7 @@ process_request(#diameter_caps{origin_host = {OHost, _DHost},
 		Reason :: term().
 %% @doc Perform an initial Nchf_SpendingLimitControl_Subscribe operation.
 %% @private
-nchf_initial(Body, SessionId, Config) ->
+nchf_initial(Body, Config) ->
 	Config1 = add_nchf(Config),
 	Profile = maps:get(nchf_profile, Config1, nchf),
 	URI = maps:get(nchf_uri, Config1),
@@ -634,7 +674,7 @@ nchf_initial(Body, SessionId, Config) ->
 			{"accept", "application/json, application/problem+json"}
 			| Headers],
 	ContentType = "application/json",
-	RequestURL = URI ++ "/subscriptions",
+	RequestURL = list_to_binary([URI, <<"/subscriptions">>]),
 	Request = {RequestURL, RequestHeaders, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(post, Request, HttpOptions1, [], Profile) of
@@ -668,18 +708,17 @@ nchf_initial(Body, SessionId, Config) ->
 				when length(NextURIs) > 0 ->
 			NewConfig = Config#{nchf_uri => hd(NextURIs),
 					nchf_next_uris => tl(NextURIs)},
-			?FUNCTION_NAME(Body, SessionId, NewConfig);
+			?FUNCTION_NAME(Body, NewConfig);
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME}, {error, Reason},
-					{profile, Profile}, {uri, RequestURL}, {host, Host},
 					{profile, Profile}, {uri, RequestURL}, {host, Host}]),
 			{error, Reason}
 	end.
 
--spec nchf_intermediate(Body, SessionId, Config) -> Reply
+-spec nchf_intermediate(Location, Body, Config) -> Reply
 	when
+		Location :: binary(),
 		Body :: iolist() | binary(),
-		SessionId :: binary(),
 		Config :: map(),
 		Reply :: {StatusCode, ResponseHeaders, ResponseBody}
 				| {error, Reason},
@@ -693,7 +732,7 @@ nchf_initial(Body, SessionId, Config) ->
 		Reason :: term().
 %% @doc Perform an intermediate Nchf_SpendingLimitControl_Subscribe operation.
 %% @private
-nchf_intermediate(Body, SessionId, Config) ->
+nchf_intermediate(Location, Body, Config) ->
 	Config1 = add_nchf(Config),
 	Profile = maps:get(nchf_profile, Config1, nchf),
 	URI = maps:get(nchf_uri, Config1),
@@ -706,8 +745,7 @@ nchf_intermediate(Body, SessionId, Config) ->
 			{"accept", "application/json, application/problem+json"}
 			| Headers],
 	ContentType = "application/json",
-SubscriptionId = "foo",
-	RequestURL = URI ++ "/subscriptions/" ++ SubscriptionId,
+	RequestURL = uri_string:resolve(Location, URI),
 	Request = {RequestURL, RequestHeaders, ContentType, Body},
 	HttpOptions1 = [{relaxed, true} | HttpOptions],
 	case httpc:request(put, Request, HttpOptions1, [], Profile) of
@@ -731,7 +769,7 @@ SubscriptionId = "foo",
 				when length(NextURIs) > 0 ->
 			NewConfig = Config#{nchf_uri => hd(NextURIs),
 					nchf_next_uris => tl(NextURIs)},
-			?FUNCTION_NAME(Body, SessionId, NewConfig);
+			?FUNCTION_NAME(Location, Body, NewConfig);
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME}, {error, Reason},
 					{profile, Profile}, {uri, RequestURL}, {host, Host}]),
@@ -782,13 +820,13 @@ diameter_error(SessionId, OriginHost, OriginRealm,
 supi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = IMSI,
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI'} | _],
 		SLC) ->
-	SUPI = "imsi-" ++ binary_to_list(IMSI),
-	SLC#{"supi" => SUPI};
+	SUPI = <<"imsi-", IMSI/binary>>,
+	SLC#{supi => SUPI};
 supi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = NAI,
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_NAI'} | _],
 		SLC) ->
-	SUPI = "nai-" ++ binary_to_list(NAI),
-	SLC#{"supi" => SUPI};
+	SUPI = <<"nai-", NAI/binary>>,
+	SLC#{supi => SUPI};
 supi([_H | T], SLC) ->
 	supi(T, SLC);
 supi([], _SLC) ->
@@ -798,18 +836,18 @@ supi([], _SLC) ->
 gpsi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = MSISDN,
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164'} | _],
 		SLC) ->
-	GPSI = "msisdn-" ++ binary_to_list(MSISDN),
-	SLC#{"gpsi" => GPSI};
+	GPSI = <<"msisdn-", MSISDN/binary>>,
+	SLC#{gpsi => GPSI};
 gpsi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = URI,
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_SIP_URI'} | _],
 		SLC) ->
-	GPSI = "extid-" ++ binary_to_list(URI),
-	SLC#{"gpsi" => GPSI};
+	GPSI = <<"extid-", URI/binary>>,
+	SLC#{gpsi => GPSI};
 gpsi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = PRIVATE,
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_PRIVATE'} | _],
 		SLC) ->
-	GPSI = "extid-" ++ binary_to_list(PRIVATE),
-	SLC#{"gpsi" => GPSI};
+	GPSI = <<"extid-", PRIVATE/binary>>,
+	SLC#{gpsi => GPSI};
 gpsi([_H | T], SLC) ->
 	gpsi(T, SLC);
 gpsi([], SLC) ->
@@ -818,13 +856,13 @@ gpsi([], SLC) ->
 %% @hidden
 pcid(PolicyCounterId, SLC)
 		when length(PolicyCounterId) > 0 ->
-	SLC#{"policyCounterIds" => PolicyCounterId};
+	SLC#{policyCounterIds => PolicyCounterId};
 pcid([], SLC) ->
 	SLC.
 
 %% @hidden
 notify(#{notify_uri := URI} = _Config, SLC) ->
-	SLC#{"notifUri" => URI}.
+	SLC#{notifUri => URI}.
 
 %% @hidden
 add_nchf(#{nchf_uri := URI} = Config) ->
