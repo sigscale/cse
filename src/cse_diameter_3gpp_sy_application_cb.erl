@@ -442,75 +442,91 @@ process_request(ServiceName,
 					{reply, SLA};
 				false ->
 					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					ErrorMessage = ["Nchf response missing Location"],
 					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [], [])
+							ResultCode, ErrorMessage, [])
 			end;
-		{400 = _StatusCode, _ResponseHeaders, ResponseBody} ->
-			case zj:decode(ResponseBody) of
-				{ok, #{"title" := Title,
-						"cause" := "USER_UNKNOWN"} = _ProblemDetails} ->
-					ResultCode = ?'IETF_RESULT-CODE_USER_UNKNOWN',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
-				{ok, #{"title" := Title,
-						"cause" := "NO_AVAILABLE_POLICY_COUNTERS"} = _ProblemDetails} ->
-					ResultCode = ?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_NO_AVAILABLE_POLICY_COUNTERS',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
-				{ok, #{"title" := Title,
-						"cause" := "UNKNOWN_POLICY_COUNTERS"} = ProblemDetails} ->
-					ResultCode = ?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_UNKNOWN_POLICY_COUNTERS',
-					case maps:get("invalidParams", ProblemDetails, undefined) of
-						InvalidParams when is_list(InvalidParams) ->
-							F = fun(#{"param" := PolicyCounterId2})
-									when is_list(PolicyCounterId2) ->
-								#diameter_avp{code = 2901,
-										vendor_id = 10415,
-										name = 'Policy-Counter-Identifier',
-										type = 'UTF8String',
-										is_mandatory = true,
-										data = list_to_binary(PolicyCounterId2)}
-							end,
-							FailedAVP = lists:map(F, InvalidParams),
-							diameter_error(SessionId, OHost, ORealm,
-									ResultCode, [Title], FailedAVP);
-						undefined ->
-							diameter_error(SessionId, OHost, ORealm,
-									ResultCode, [Title], [])
+		{StatusCode, ResponseHeaders, ResponseBody} ->
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, StatusCode}),
+			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
+					1, ResponseHeaders) of
+				{_, "application/problem+json"} ->
+					case zj:decode(ResponseBody) of
+						{ok, #{"title" := Title,
+								"cause" := "USER_UNKNOWN"} = _ProblemDetails}
+								when StatusCode == 400 ->
+							{?'IETF_RESULT-CODE_USER_UNKNOWN', [Title], []};
+						{ok, #{"title" := Title,
+								"cause" := "NO_AVAILABLE_POLICY_COUNTERS"} = _ProblemDetails}
+								when StatusCode == 400 ->
+							{?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_NO_AVAILABLE_POLICY_COUNTERS',
+									[Title], []};
+						{ok, #{"title" := Title,
+								"cause" := "UNKNOWN_POLICY_COUNTERS"} = ProblemDetails}
+								when StatusCode == 400 ->
+							RC = ?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_UNKNOWN_POLICY_COUNTERS',
+							case maps:get("invalidParams", ProblemDetails, undefined) of
+								InvalidParams when is_list(InvalidParams) ->
+									F = fun(#{"param" := PolicyCounterId2})
+											when is_list(PolicyCounterId2) ->
+										#diameter_avp{code = 2901,
+												vendor_id = 10415,
+												name = 'Policy-Counter-Identifier',
+												type = 'UTF8String',
+												is_mandatory = true,
+												data = list_to_binary(PolicyCounterId2)}
+									end,
+									FailedAVP = lists:map(F, InvalidParams),
+									{RC, [Title], FailedAVP};
+								undefined ->
+									{RC, [Title], []}
+							end;
+						{ok, #{"title" := Title} = _ProblemDetails} ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									[Title], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 400 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf client error"], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 401 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf client unauthorized"], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 500 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf server error"], []};
+						{ok, #{} = _ProblemDetails} ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf unexpected problem response"], []};
+						_ ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf decoding ProblemDetails failed"], []}
 					end;
-				{ok, #{"title" := Title} = _ProblemDetails} ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
+				_ when StatusCode == 400 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf client error"], []};
+				_ when StatusCode == 401 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf client unauthorized"], []};
+				_ when StatusCode == 500 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf server error"], []};
 				_ ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [], [])
-			end;
-		{500 = _StatusCode, _ResponseHeaders, ResponseBody} ->
-			case zj:decode(ResponseBody) of
-				{ok, #{"title" := Title} = _ProblemDetails} ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
-				_Other ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [], [])
-			end;
-		{_StatusCode, _ResponseHeaders, _ResponseBody} ->
-			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf unexpected response"], []}
+			end,
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], []);
+							ResultCode, ErrorMessage, Failed);
 		{error, _Reason} ->
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, _Reason}),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Nchf transport error"],
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], [])
+					ResultCode, ErrorMessage, [])
 	catch
 		throw:supi ->
-			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_VALUE',
+			ResultCode = ?'IETF_RESULT-CODE_USER_UNKNOWN',
+			ErrorMessage = ["SUPI (IMSI/NAI) missing"],
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], []);
+					ResultCode, ErrorMessage, []);
 		?CATCH_STACK ->
 			?SET_STACK,
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME},
@@ -518,8 +534,9 @@ process_request(ServiceName,
 					{request, Request},
 					{error, Reason}, {stack, StackTrace}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Unspecified error"],
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], [])
+					ResultCode, ErrorMessage, [])
 	end;
 process_request(_ServiceName,
 		#diameter_caps{origin_host = {OHost, _DHost},
@@ -568,72 +585,85 @@ process_request(_ServiceName,
 					'Supported-Features' = [],
 					'Policy-Counter-Status-Report' = PCSR},
 			{reply, SLA};
-		{400 = _StatusCode, _ResponseHeaders, ResponseBody} ->
-			case zj:decode(ResponseBody) of
-				{ok, #{"title" := Title,
-						"cause" := "USER_UNKNOWN"} = _ProblemDetails} ->
-					ResultCode = ?'IETF_RESULT-CODE_USER_UNKNOWN',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
-				{ok, #{"title" := Title,
-						"cause" := "NO_AVAILABLE_POLICY_COUNTERS"} = _ProblemDetails} ->
-					ResultCode = ?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_NO_AVAILABLE_POLICY_COUNTERS',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
-				{ok, #{"title" := Title,
-						"cause" := "UNKNOWN_POLICY_COUNTERS"} = ProblemDetails} ->
-					ResultCode = ?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_UNKNOWN_POLICY_COUNTERS',
-					case maps:get("invalidParams", ProblemDetails, undefined) of
-						InvalidParams when is_list(InvalidParams) ->
-							F = fun(#{"param" := PolicyCounterId2})
-									when is_list(PolicyCounterId2) ->
-								#diameter_avp{code = 2901,
-										vendor_id = 10415,
-										name = 'Policy-Counter-Identifier',
-										type = 'UTF8String',
-										is_mandatory = true,
-										data = list_to_binary(PolicyCounterId2)}
-							end,
-							FailedAVP = lists:map(F, InvalidParams),
-							diameter_error(SessionId, OHost, ORealm,
-									ResultCode, [Title], FailedAVP);
-						undefined ->
-							diameter_error(SessionId, OHost, ORealm,
-									ResultCode, [Title], [])
+		{StatusCode, ResponseHeaders, ResponseBody} ->
+			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
+					1, ResponseHeaders) of
+				{_, "application/problem+json"} ->
+					case zj:decode(ResponseBody) of
+						{ok, #{"title" := Title,
+								"cause" := "USER_UNKNOWN"} = _ProblemDetails}
+								when StatusCode == 400 ->
+							{?'IETF_RESULT-CODE_USER_UNKNOWN', [Title], []};
+						{ok, #{"title" := Title,
+								"cause" := "NO_AVAILABLE_POLICY_COUNTERS"} = _ProblemDetails}
+								when StatusCode == 400 ->
+							{?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_NO_AVAILABLE_POLICY_COUNTERS',
+									[Title], []};
+						{ok, #{"title" := Title,
+								"cause" := "UNKNOWN_POLICY_COUNTERS"} = ProblemDetails}
+								when StatusCode == 400 ->
+							RC = ?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_UNKNOWN_POLICY_COUNTERS',
+							case maps:get("invalidParams", ProblemDetails, undefined) of
+								InvalidParams when is_list(InvalidParams) ->
+									F = fun(#{"param" := PolicyCounterId2})
+											when is_list(PolicyCounterId2) ->
+										#diameter_avp{code = 2901,
+												vendor_id = 10415,
+												name = 'Policy-Counter-Identifier',
+												type = 'UTF8String',
+												is_mandatory = true,
+												data = list_to_binary(PolicyCounterId2)}
+									end,
+									FailedAVP = lists:map(F, InvalidParams),
+									{RC, [Title], FailedAVP};
+								undefined ->
+									{RC, [Title], []}
+							end;
+						{ok, #{"title" := Title} = _ProblemDetails} ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									[Title], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 400 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf client error"], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 401 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf client unauthorized"], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 500 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf server error"], []};
+						{ok, #{} = _ProblemDetails} ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf unexpected problem response"], []};
+						_ ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf decoding ProblemDetails failed"], []}
 					end;
-				{ok, #{"title" := Title} = _ProblemDetails} ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
+				_ when StatusCode == 400 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf client error"], []};
+				_ when StatusCode == 401 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf client unauthorized"], []};
+				_ when StatusCode == 500 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf server error"], []};
 				_ ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [], [])
-			end;
-		{500 = _StatusCode, _ResponseHeaders, ResponseBody} ->
-			case zj:decode(ResponseBody) of
-				{ok, #{"title" := Title} = _ProblemDetails} ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [Title], []);
-				_Other ->
-					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
-					diameter_error(SessionId, OHost, ORealm,
-							ResultCode, [], [])
-			end;
-		{_StatusCode, _ResponseHeaders, _ResponseBody} ->
-			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf unexpected response"], []}
+			end,
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], []);
+							ResultCode, ErrorMessage, Failed);
 		{error, _Reason} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Nchf transport error"],
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], [])
+					ResultCode, ErrorMessage, [])
 	catch
 		throw:session ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNKNOWN_SESSION_ID',
+			ErrorMessage = ["Sy Session-Id not found"],
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], []);
+					ResultCode, ErrorMessage, []);
 		?CATCH_STACK ->
 			?SET_STACK,
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME},
@@ -641,8 +671,9 @@ process_request(_ServiceName,
 					{request, Request},
 					{error, Reason}, {stack, StackTrace}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Unspecified error"],
 			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, [], [])
+					ResultCode, ErrorMessage, [])
 	end.
 
 -spec nchf_initial(Body, Config) -> Reply
@@ -783,7 +814,7 @@ nchf_intermediate(Location, Body, Config) ->
 		OriginHost :: string(),
 		OriginRealm :: string(),
 		ResultCode :: pos_integer(),
-		ErrorMessage :: string() | binary(),
+		ErrorMessage :: [string() | binary()],
 		Failed :: [#diameter_avp{}],
 		Reply :: {reply, #'3gpp_sy_SLA'{}}.
 %% @doc Send SLA to DIAMETER client indicating an operation failure.
