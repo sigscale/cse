@@ -134,7 +134,10 @@ do_post(Resource, #mod{entity_body = Body} = ModData,
 	do_response(ModData, Resource:add_resource(Body));
 do_post(Resource, #mod{entity_body = Body} = ModData,
 		["resourceInventoryManagement", "v4", "resource"], _Query) ->
-	do_response(ModData, Resource:add_resource(Body)).
+	do_response(ModData, Resource:add_resource(Body));
+do_post(Resource, #mod{entity_body = Body} = ModData,
+		["nchf-spendinglimitcontrol", "v1", "notify"], _Query) ->
+	do_response(ModData, Resource:notification(Body)).
 
 %% @hidden
 do_response(#mod{data = Data} = ModData,
