@@ -20,7 +20,8 @@ script_SCRIPTS = scripts/install_tables.escript \
 		scripts/send_sms.escript \
 		scripts/send_mms.escript \
 		scripts/cdr_ps.escript \
-		scripts/cdr_ims.escript
+		scripts/cdr_ims.escript \
+		scripts/spending_limit.escript
 
 RELEASE_NAME = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
 
