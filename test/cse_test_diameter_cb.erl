@@ -143,8 +143,8 @@ handle_error(Reason, _Request, _SvcName, _Peer) ->
 		Opt :: diameter:call_opt(),
 		PostF :: diameter:evaluable().
 %% @doc Invoked when a request message is received from the peer.
-handle_request(#diameter_packet{msg = Request, errors = []}, _SvcName, {_Peer, _Caps}) ->
-	true = is_record(Request, diameter_base_ASR),
+handle_request(#diameter_packet{msg = Request, errors = []}, _, _)
+		when is_record(Request, diameter_base_ASR) ->
 	#diameter_base_ASR{'Session-Id' = SId, 'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
 			'Destination-Realm' = _DRealm, 'Destination-Host' = _DHost,
 			'Auth-Application-Id' = 4} = Request,
