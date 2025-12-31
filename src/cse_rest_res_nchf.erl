@@ -75,7 +75,7 @@ notification(RequestBody) ->
 %% @hidden
 notification1({ok, #{"supi" := SUPI} = SpendingLimitStatus})
 		when is_list(SUPI) ->
-	notification2(SUPI, SpendingLimitStatus);
+	notification2(list_to_binary(SUPI), SpendingLimitStatus);
 notification1({ok, #{} = _SpendingLimitStatus}) ->
 	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
 			invalidParams => [#{param => "/supi"}],
@@ -184,6 +184,22 @@ notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
 		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA}
 				when ResultCode == ?'DIAMETER_BASE_RESULT-CODE_SUCCESS' ->
 			{ok, [], []};
+		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA} ->
+			ProblemDetails = #{cause => "SYSTEM_FAILURE",
+					status => 500, code => integer_to_list(ResultCode),
+					title => "The request is rejected due to generic error"
+							" condition in the NF",
+					type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+							"TS29571_CommonData.yaml#/components/responses/500"},
+			{error, 500, ProblemDetails};
+		{ok, #'diameter_base_answer-message'{'Result-Code' = ResultCode}} ->
+			ProblemDetails = #{cause => "SYSTEM_FAILURE",
+					status => 500, code => integer_to_list(ResultCode),
+					title => "The request is rejected due to generic error"
+							" condition in the NF",
+					type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+							"TS29571_CommonData.yaml#/components/responses/500"},
+			{error, 500, ProblemDetails};
 		{error, _Reason} ->
 			ProblemDetails = #{cause => "SYSTEM_FAILURE",
 					status => 500, code => "",

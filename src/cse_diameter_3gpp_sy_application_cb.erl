@@ -261,10 +261,17 @@ prepare_retransmit(Packet, ServiceName, Peer, Config) ->
 		ServiceName :: diameter:service_name(),
 		Peer :: peer(),
 		Config :: map(),
-		Result :: term().
+		Result :: {ok, Answer} | {error, ResultCode},
+		Answer :: diameter_app:message(),
+		ResultCode :: 0..4294967295.
 %% @doc Invoked when an answer message is received from a peer.
-handle_answer(Packet, _Request, _ServiceName, _Peer, _Config) ->
-	{ok, Packet}.
+handle_answer(#diameter_packet{errors = [], msg = Answer} = _Packet,
+		_Request, _ServiceName, _Peer, _Config) ->
+	{ok, Answer};
+handle_answer(#diameter_packet{errors = Errors, msg = Request} = _Packet,
+		_Request, ServiceName, {_, Capabilities} = _Peer, _Config) ->
+	ResultCode = errors(ServiceName, Capabilities, Request, Errors),
+	{error, ResultCode}.
 
 -spec handle_error(Reason, Request, ServiceName, Peer, Config) -> Result
 	when
@@ -287,7 +294,7 @@ handle_error(Reason, _Request, _ServiceName, _Peer, _Config) ->
 		Action :: Reply | {relay, [Opt]} | discard
 			| {eval | eval_packet, Action, PostF},
 		Reply :: {reply, packet() | message()}
-			| {answer_message, 3000..3999|5000..5999}
+			| {answer_message, 3000..3999 | 5000..5999}
 			| {protocol_error, 3000..3999},
 		Opt :: diameter:call_opt(),
 		PostF :: diameter:evaluable().
@@ -303,7 +310,8 @@ handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
 handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
 		ServiceName, {_, Capabilities} = Peer, _Config) ->
 	Start = erlang:system_time(millisecond),
-	Reply = errors(ServiceName, Capabilities, Request, Errors),
+	ResultCode = errors(ServiceName, Capabilities, Request, Errors),
+	Reply = {answer_message, ResultCode},
 	Stop = erlang:system_time(millisecond),
 	catch cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
 	Reply.
@@ -312,69 +320,62 @@ handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
 %%  internal functions
 %%----------------------------------------------------------------------
 
--spec errors(ServiceName, Capabilities, Request, Errors) -> Action
+-spec errors(ServiceName, Capabilities, Request, Errors) -> ResultCode
 	when
 		ServiceName :: term(),
 		Capabilities :: capabilities(),
 		Request :: message(),
 		Errors :: [Error],
-		Error :: {Code, #diameter_avp{}} | Code,
-		Code :: 0..4294967295,
-		Action :: Reply | {relay, [Opt]} | discard
-			| {eval | eval_packet, Action, PostF},
-		Reply :: {reply, packet() | message()}
-			| {answer_message, 3000..3999|5000..5999}
-			| {protocol_error, 3000..3999},
-		Opt :: diameter:call_opt(),
-		PostF :: diameter:evaluable().
-%% @doc Handle errors in requests.
+		Error :: {ResultCode, #diameter_avp{}} | ResultCode,
+		ResultCode :: 0..4294967295.
+%% @doc Parse and log errors.
 %% @private
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_AVP_UNSUPPORTED', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVP unsupported",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_AVP_UNSUPPORTED'};
+	?'DIAMETER_BASE_RESULT-CODE_AVP_UNSUPPORTED';
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_VALUE', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVP invalid",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_VALUE'};
+	?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_VALUE';
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_MISSING_AVP', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVP missing",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_MISSING_AVP'};
+	?'DIAMETER_BASE_RESULT-CODE_MISSING_AVP';
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_CONTRADICTING_AVPS', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVPs contradicting",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_CONTRADICTING_AVPS'};
+	?'DIAMETER_BASE_RESULT-CODE_CONTRADICTING_AVPS';
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_AVP_NOT_ALLOWED', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVP not allowed",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_AVP_NOT_ALLOWED'};
+	?'DIAMETER_BASE_RESULT-CODE_AVP_NOT_ALLOWED';
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_AVP_OCCURS_TOO_MANY_TIMES', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVP too many times",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_AVP_OCCURS_TOO_MANY_TIMES'};
+	?'DIAMETER_BASE_RESULT-CODE_AVP_OCCURS_TOO_MANY_TIMES';
 errors(ServiceName, Capabilities, _Request,
 		[{?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_LENGTH', _} | _] = Errors) ->
 	error_logger:error_report(["DIAMETER AVP invalid length",
 			{service_name, ServiceName}, {capabilities, Capabilities},
 			{errors, Errors}]),
-	{answer_message, ?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_LENGTH'};
+	?'DIAMETER_BASE_RESULT-CODE_INVALID_AVP_LENGTH';
 errors(_ServiceName, _Capabilities, _Request, [{ResultCode, _} | _]) ->
-	{answer_message, ResultCode};
+	ResultCode;
 errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
-	{answer_message, ResultCode}.
+	ResultCode.
 
 -spec process_request(ServiceName, Caps, Request, Config) -> Result
 	when
@@ -390,8 +391,8 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 %% @todo `Pending-Policy-Counter-Information' AVP
 %% @private
 process_request(ServiceName,
-		#diameter_caps{origin_host = {OHost, DHost},
-				origin_realm = {ORealm, DRealm}} = _Caps,
+		#diameter_caps{origin_host = {OHost, _DHost},
+				origin_realm = {ORealm, _DRealm}} = _Caps,
 		#'3gpp_sy_SLR'{'Session-Id' = SessionId,
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'Origin-Host' = OriginHost,
@@ -420,7 +421,7 @@ process_request(ServiceName,
 							{SessionId, SUPI, list_to_binary(Location)}),
 					ets:insert(nchf_session,
 							{SUPI, ServiceName, SessionId,
-									OHost, ORealm, DHost, DRealm}),
+									OHost, ORealm, OriginHost, OriginRealm}),
 					F = fun(PolicyCounterId1,
 								#{"policyCounterId" := PolicyCounterId1,
 								"currentStatus" := CurrentStatus}, Acc)
@@ -447,7 +448,6 @@ process_request(ServiceName,
 							ResultCode, ErrorMessage, [])
 			end;
 		{StatusCode, ResponseHeaders, ResponseBody} ->
-erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, StatusCode}),
 			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
 					1, ResponseHeaders) of
 				{_, "application/problem+json"} ->
@@ -516,7 +516,6 @@ erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, StatusCode}),
 			diameter_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, Failed);
 		{error, _Reason} ->
-erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, _Reason}),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf transport error"],
 			diameter_error(SessionId, OHost, ORealm,
