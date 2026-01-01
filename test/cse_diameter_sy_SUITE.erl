@@ -29,6 +29,7 @@
 -export([slr_initial/0, slr_initial/1,
 		slr_intermediate/0, slr_intermediate/1,
 		snr_normal/0, snr_normal/1,
+		final_str/0, final_str/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1]).
 % export private API
@@ -80,7 +81,6 @@ suite() ->
 -spec init_per_suite(Config :: [tuple()]) -> Config :: [tuple()].
 %% Initialization before the whole suite.
 %%
-%% @hidden
 init_per_suite(Config) ->
 	application:start(inets),
 	Port = ct:get_config({nchf, port},
@@ -102,7 +102,6 @@ init_per_suite(Config) ->
 		{error, Reason} ->
 			ct:fail(Reason)
 	end.
-%% @hidden
 init_per_suite1(Config) ->
 	Profile = ct:get_config({iwf, profile}, iwf),
 	{ok, _Pid} = inets:start(httpc, [{profile, Profile}]),
@@ -132,7 +131,6 @@ init_per_suite1(Config) ->
 		{error, Reason} ->
 			ct:fail(Reason)
 	end.
-%% @hidden
 init_per_suite2(Config) ->
 	DataDir = ?config(priv_dir, Config),
 	ok = cse_test_lib:unload(mnesia),
@@ -230,7 +228,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[slr_initial, slr_intermediate, snr_normal,
+	[slr_initial, slr_intermediate, snr_normal, final_str,
 			client_connect, client_reconnect].
 
 %%---------------------------------------------------------------------
@@ -298,6 +296,23 @@ snr_normal(Config) ->
 		1000 ->
 			ct:fail(timeout)
 	end.
+
+final_str() ->
+	Description = "Final Session-Termination-Request (STR)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+final_str(Config) ->
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Session = session_id(Config),
+	Answer1 = subscribe(Config, Session, IMSI, MSISDN),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	#'3gpp_sy_SLA'{'Session-Id' = Session,
+			'Result-Code' = [ResultCode],
+			'Origin-Host' = Host} = Answer1,
+	Answer2 = terminate(Config, Session, Host),
+	#'3gpp_sy_STA'{'Result-Code' = [ResultCode]} = Answer2.
 
 client_connect() ->
 	Description = "Connect as client to peer server",
@@ -453,7 +468,59 @@ slr(Config, Session, IMSI, MSISDN, SLR)
 			'Subscription-Id' = [IMSI1, MSISDN1]},
 	diameter:call({?MODULE, client}, sy_app_test, SLR1, []).
 
-%% @hidden
+terminate(Config, Session, Host) ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	STR = #'3gpp_sy_STR'{'Session-Id' = Session,
+			'Auth-Application-Id' = 16777302,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Host' = [Host],
+			'Destination-Realm' = DestinationRealm,
+			'Termination-Cause' = ?'DIAMETER_BASE_TERMINATION-CAUSE_LOGOUT'},
+	diameter:call({?MODULE, client}, sy_app_test, STR, []).
+
+send_notification(Config, SpendingLimitStatus) ->
+	Profile = ?config(iwf_profile, Config),
+	URI = ?config(iwf_uri, Config),
+	Accept = "application/json, application/problem+json",
+	Headers = [{"accept", Accept}],
+	ContentType = "application/json",
+	RequestURL = list_to_binary([URI, <<"/notify">>]),
+	Request = {RequestURL, Headers, ContentType, SpendingLimitStatus},
+	{ok, {{_, 204, _}, _, []}} = httpc:request(post,
+			Request, [], [], Profile),
+	ok.
+
+handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
+		_ServiceName, {_, Capabilities} = _Peer)
+		when is_record(Request, '3gpp_sy_SNR') ->
+	handle_request1(Request, Capabilities).
+handle_request1(#'3gpp_sy_SNR'{'Session-Id' = Session,
+				'Auth-Application-Id' = 16777302,
+				'SN-Request-Type' = [0],
+				'Policy-Counter-Status-Report' = PCSR},
+		#diameter_caps{origin_host = {OHost, _DHost},
+				origin_realm = {ORealm, _DRealm}}) ->
+	F = fun(#'3gpp_sy_Policy-Counter-Status-Report'{
+					'Policy-Counter-Identifier' = Id,
+					'Policy-Counter-Status' = Status}, Acc) ->
+				PCI = #{policyCounterId => Id, currentStatus => Status},
+				Acc#{Id => PCI}
+	end,
+	StatusInfos = lists:foldl(F, #{}, PCSR),
+	global:send(Session, {Session, StatusInfos}),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
+			'Origin-Host' = OHost,
+			'Origin-Realm' = ORealm,
+			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
+	{reply, SNA}.
+
+session_id(Config) ->
+	Host = ?config(ct_host, Config),
+	iolist_to_binary(diameter:session_id(Host)).
+
 client_auth_service_opts(Config) ->
 	Realm = ?config(ct_realm, Config),
 	Host = ?config(ct_host, Config),
@@ -474,7 +541,6 @@ client_auth_service_opts(Config) ->
 					{dictionary, ?SY_APPLICATION_DICT},
 					{module, Callbacks}]}].
 
-%% @hidden
 server_auth_service_opts(_Config) ->
 	[{'Origin-Host', cse_test_lib:rand_name()},
 			{'Origin-Realm', cse_test_lib:rand_name() ++ ".net"},
@@ -490,47 +556,4 @@ server_auth_service_opts(_Config) ->
 			{application, [{alias, auth_app_test},
 					{dictionary, ?SY_APPLICATION_DICT},
 					{module, #diameter_callback{}}]}].
-
-session_id(Config) ->
-	Host = ?config(ct_host, Config),
-	iolist_to_binary(diameter:session_id(Host)).
-
-%% @hidden
-send_notification(Config, SpendingLimitStatus) ->
-	Profile = ?config(iwf_profile, Config),
-	URI = ?config(iwf_uri, Config),
-	Accept = "application/json, application/problem+json",
-	Headers = [{"accept", Accept}],
-	ContentType = "application/json",
-	RequestURL = list_to_binary([URI, <<"/notify">>]),
-	Request = {RequestURL, Headers, ContentType, SpendingLimitStatus},
-	{ok, {{_, 204, _}, _, []}} = httpc:request(post,
-			Request, [], [], Profile),
-	ok.
-
-%% @private
-handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
-		_ServiceName, {_, Capabilities} = _Peer)
-		when is_record(Request, '3gpp_sy_SNR') ->
-	handle_request1(Request, Capabilities).
-%% @hidden
-handle_request1(#'3gpp_sy_SNR'{'Session-Id' = Session,
-				'Auth-Application-Id' = 16777302,
-				'SN-Request-Type' = [0],
-				'Policy-Counter-Status-Report' = PCSR},
-		#diameter_caps{origin_host = {OHost, _DHost},
-				origin_realm = {ORealm, _DRealm}}) ->
-	F = fun(#'3gpp_sy_Policy-Counter-Status-Report'{
-					'Policy-Counter-Identifier' = Id,
-					'Policy-Counter-Status' = Status}, Acc) ->
-				PCI = #{policyCounterId => Id, currentStatus => Status},
-				Acc#{Id => PCI}
-	end,
-	StatusInfos = lists:foldl(F, #{}, PCSR),
-	global:send(Session, {Session, StatusInfos}),
-	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
-			'Origin-Host' = OHost,
-			'Origin-Realm' = ORealm,
-			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
-	{reply, SNA}.
 

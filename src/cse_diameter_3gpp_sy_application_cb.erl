@@ -673,6 +673,93 @@ process_request(_ServiceName,
 			ErrorMessage = ["Unspecified error"],
 			diameter_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
+	end;
+process_request(_ServiceName,
+		#diameter_caps{origin_host = {OHost, _DHost},
+				origin_realm = {ORealm, _DRealm}},
+		#'3gpp_sy_STR'{'Session-Id' = SessionId,
+				'Auth-Application-Id' = ?SY_APPLICATION_ID,
+				'Origin-Host' = OriginHost,
+				'Origin-Realm' = OriginRealm,
+				'Termination-Cause' = _TerminationCause} = Request,
+		Config) ->
+	try
+		case ets:lookup(sy_session, SessionId) of
+			[{_, SUPI, Location}] ->
+				ets:delete(sy_session, SessionId),
+				ets:delete(nchf_session, SUPI),
+				nchf_final(Location, Config);
+			[] ->
+				throw(session)
+		end
+	of
+		{204 = _StatusCode, _ResponseHeaders, _ResponseBody} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			STA = #'3gpp_sy_STA'{'Session-Id' = SessionId,
+					'Origin-Host' = OHost,
+					'Origin-Realm' = ORealm,
+					'Result-Code' = [ResultCode]},
+			{reply, STA};
+		{StatusCode, ResponseHeaders, ResponseBody} ->
+			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
+					1, ResponseHeaders) of
+				{_, "application/problem+json"} ->
+					case zj:decode(ResponseBody) of
+						{ok, #{"title" := Title} = _ProblemDetails} ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									[Title], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 400 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf client error"], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 401 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf client unauthorized"], []};
+						{ok, #{} = _ProblemDetails} when StatusCode == 500 ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf server error"], []};
+						{ok, #{} = _ProblemDetails} ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf unexpected problem response"], []};
+						_ ->
+							{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+									["Nchf decoding ProblemDetails failed"], []}
+					end;
+				_ when StatusCode == 400 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf client error"], []};
+				_ when StatusCode == 401 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf client unauthorized"], []};
+				_ when StatusCode == 500 ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf server error"], []};
+				_ ->
+					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+							["Nchf unexpected response"], []}
+			end,
+			diameter_error(SessionId, OHost, ORealm,
+							ResultCode, ErrorMessage, Failed);
+		{error, _Reason} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Nchf transport error"],
+			diameter_error(SessionId, OHost, ORealm,
+					ResultCode, ErrorMessage, [])
+	catch
+		throw:session ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNKNOWN_SESSION_ID',
+			ErrorMessage = ["Sy Session-Id not found"],
+			diameter_error(SessionId, OHost, ORealm,
+					ResultCode, ErrorMessage, []);
+		?CATCH_STACK ->
+			?SET_STACK,
+			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME},
+					{origin_host, OriginHost}, {origin_realm, OriginRealm},
+					{request, Request},
+					{error, Reason}, {stack, StackTrace}]),
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Unspecified error"],
+			diameter_error(SessionId, OHost, ORealm,
+					ResultCode, ErrorMessage, [])
 	end.
 
 -spec nchf_initial(Body, Config) -> Reply
@@ -689,7 +776,7 @@ process_request(_ServiceName,
 		HttpHeader :: {Field :: [byte()], Value :: binary() | iolist()},
 		ResponseBody :: string() | binary() | map(),
 		Reason :: term().
-%% @doc Perform an initial Nchf_SpendingLimitControl_Subscribe operation.
+%% @doc Perform an initial `Nchf_SpendingLimitControl_Subscribe' operation.
 %% @private
 nchf_initial(Body, Config) ->
 	Config1 = add_nchf(Config),
@@ -760,7 +847,7 @@ nchf_initial(Body, Config) ->
 		HttpHeader :: {Field :: [byte()], Value :: binary() | iolist()},
 		ResponseBody :: string() | binary() | map(),
 		Reason :: term().
-%% @doc Perform an intermediate Nchf_SpendingLimitControl_Subscribe operation.
+%% @doc Perform an intermediate `Nchf_SpendingLimitControl_Subscribe' operation.
 %% @private
 nchf_intermediate(Location, Body, Config) ->
 	Config1 = add_nchf(Config),
@@ -800,6 +887,53 @@ nchf_intermediate(Location, Body, Config) ->
 			NewConfig = Config#{nchf_uri => hd(NextURIs),
 					nchf_next_uris => tl(NextURIs)},
 			?FUNCTION_NAME(Location, Body, NewConfig);
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME}, {error, Reason},
+					{profile, Profile}, {uri, RequestURL}, {host, Host}]),
+			{error, Reason}
+	end.
+
+-spec nchf_final(Location, Config) -> Reply
+	when
+		Location :: binary(),
+		Config :: map(),
+		Reply :: {StatusCode, ResponseHeaders, ResponseBody}
+				| {error, Reason},
+		StatusCode :: non_neg_integer(),
+		ResponseHeaders :: [HttpHeader],
+		HttpHeader :: {HeaderField, HeaderValue},
+		HeaderField :: [byte()],
+		HeaderValue :: binary() | iolist(),
+		HttpHeader :: {Field :: [byte()], Value :: binary() | iolist()},
+		ResponseBody :: string() | binary() | map(),
+		Reason :: term().
+%% @doc Perform a final `Nchf_SpendingLimitControl_Unsubscribe' operation.
+%% @private
+nchf_final(Location, Config) ->
+	Config1 = add_nchf(Config),
+	Profile = maps:get(nchf_profile, Config1, nchf),
+	URI = maps:get(nchf_uri, Config1),
+	NextURIs = maps:get(nchf_next_uris, Config1),
+	Host = maps:get(nchf_host, Config1),
+	Headers = maps:get(nchf_headers, Config1, []),
+	HttpOptions = maps:get(nchf_http_options, Config,
+			[{timeout, 1500}, {connect_timeout, 1500}]),
+	RequestHeaders = [{"host", Host},
+			{"accept", "application/problem+json"}
+			| Headers],
+	ContentType = [],
+	RequestURL = uri_string:resolve(Location, URI),
+	Request = {RequestURL, RequestHeaders, ContentType, []},
+	HttpOptions1 = [{relaxed, true} | HttpOptions],
+	case httpc:request(delete, Request, HttpOptions1, [], Profile) of
+		{ok, {{_Version, StatusCode, _Phrase},
+				ResponseHeaders, ResponseBody}} ->
+			{StatusCode, ResponseHeaders, ResponseBody};
+		{error, {failed_connect, _} = _Reason}
+				when length(NextURIs) > 0 ->
+			NewConfig = Config#{nchf_uri => hd(NextURIs),
+					nchf_next_uris => tl(NextURIs)},
+			?FUNCTION_NAME(Location, NewConfig);
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME}, {error, Reason},
 					{profile, Profile}, {uri, RequestURL}, {host, Host}]),
