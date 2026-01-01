@@ -30,8 +30,8 @@
 %%% which together implement the SLP providing the IWF.
 %%%
 %%% == Tables ==
-%%% The `sy_session' table contains `{SessionId, SUPI, SubscriptionId}'.<br/>
-%%% The `nchf_session' table contains `{SUPI, SessionId}'.
+%%% The `sy_session' table contains `{SessionId, SUPI, SubscriptionURL}'.<br/>
+%%% The `nchf_session' table contains `{SUPI, Service, SessionId, OriginHost, OriginRealm, DestinationHost, DestinationRealm, SupportedFeatures}'.
 %%%
 %%% == SLP Call Sequence ==
 %%% The diagram below depicts the normal call sequence for the overall SLP:
