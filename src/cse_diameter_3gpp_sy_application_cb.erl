@@ -681,8 +681,8 @@ process_request(_ServiceName,
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'Origin-Host' = OriginHost,
 				'Origin-Realm' = OriginRealm,
-				'Termination-Cause' = _TerminationCause} = Request,
-		Config) ->
+				'Termination-Cause' = Cause} = Request,
+		Config) when Cause == ?'DIAMETER_BASE_TERMINATION-CAUSE_LOGOUT' ->
 	try
 		case ets:lookup(sy_session, SessionId) of
 			[{_, SUPI, Location}] ->
