@@ -45,7 +45,7 @@ INAP, DIAMETER, RADIUS and REST.
 
 ==Provided SLPs==
 Provided SLPs support real-time charging for prepaid services with
-CAP (CAMEL), INAP and DIAMETER interfaces. These SLPs implement the
+CAP (CAMEL), INAP, DIAMETER and SBI interfaces. These SLPs implement the
 Online Charging Function (OCF) of a decomposed OCS (Online Charging
 System) (3GPP TS 32.296) using the
 <a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">
@@ -58,14 +58,19 @@ System) (3GPP TS 32.296) using the
 SigScale CSE provides a configurable DIAMETER protocol stack on which
 Service Logic Processing Programs (SLP) may be implemented for
 a wide range of use cases. Performing interworking functions (IWF)
-is a cmmon application. The provided OCF SLPs are examples of IWFs:
-3GPP Ro/Gy to Re (prepaid), and RF to Bx (postpaid). Other IWF use
-cases include RADIUS to DIAMETER and DIAMETER to DIAMETER with filtering
-and adaptation.
+is a common application. The provided OCF SLPs are examples of IWFs:
+<ul>
+	<li>3GPP Ro/Gy to Nrf (prepaid)<br /></li>
+	<li>3GPP Sy to Nchf (spending limits)<br /></li>
+	<li>3GPP RF to Bx (postpaid)<br /></li>
+</ul>
+Other IWF use cases include RADIUS to DIAMETER and DIAMETER to DIAMETER
+with filtering and adaptation.
 
 ==RADIUS==
 A RADIUS protocol stack is also included which enables SLPs for AAA
-and other use cases with wireline and WiFi networks.
+and other use cases with wireline and WiFi networks. An IWF for RADIUS
+to Re is included for adapting external RFs (i.e. SigScale OCS).
 
 ==Inteligent Network (IN)==
 SigScale CSE performs the Service Control Function (SCF) in an
