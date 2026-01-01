@@ -245,7 +245,7 @@ slr_initial() ->
 slr_initial(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
-	Session = diameter:session_id(atom_to_list(?MODULE)),
+	Session = session_id(Config),
 	Answer = subscribe(Config, Session, IMSI, MSISDN),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer.
@@ -258,7 +258,7 @@ slr_intermediate() ->
 slr_intermediate(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
-	Session = diameter:session_id(atom_to_list(?MODULE)),
+	Session = session_id(Config),
 	Answer1 = subscribe(Config, Session, IMSI, MSISDN),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode],
@@ -274,10 +274,10 @@ snr_normal() ->
 snr_normal(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
-	Session = diameter:session_id(atom_to_list(?MODULE)),
+	Session = session_id(Config),
 	Answer1 = subscribe(Config, Session, IMSI, MSISDN),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	#'3gpp_sy_SLA'{'Session-Id' = SessionId,
+	#'3gpp_sy_SLA'{'Session-Id' = Session,
 			'Result-Code' = [ResultCode],
 			'Policy-Counter-Status-Report' = PCSR} = Answer1,
 	F = fun(#'3gpp_sy_Policy-Counter-Status-Report'{
@@ -289,10 +289,10 @@ snr_normal(Config) ->
 	StatusInfos = lists:foldl(F, #{}, PCSR),
 	SpendingLimitStatus = #{supi => "imsi-" ++ IMSI,
 			statusInfos => StatusInfos},
-	yes = global:register_name(SessionId, self()), 
+	yes = global:register_name(Session, self()),
 	ok = send_notification(Config, zj:encode(SpendingLimitStatus)),
 	receive
-		{SessionId, StatusInfos} ->
+		{Session, StatusInfos} ->
 			StatusInfos
 	after
 		1000 ->
@@ -491,6 +491,10 @@ server_auth_service_opts(_Config) ->
 					{dictionary, ?SY_APPLICATION_DICT},
 					{module, #diameter_callback{}}]}].
 
+session_id(Config) ->
+	Host = ?config(ct_host, Config),
+	iolist_to_binary(diameter:session_id(Host)).
+
 %% @hidden
 send_notification(Config, SpendingLimitStatus) ->
 	Profile = ?config(iwf_profile, Config),
@@ -510,7 +514,7 @@ handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
 		when is_record(Request, '3gpp_sy_SNR') ->
 	handle_request1(Request, Capabilities).
 %% @hidden
-handle_request1(#'3gpp_sy_SNR'{'Session-Id' = SessionId,
+handle_request1(#'3gpp_sy_SNR'{'Session-Id' = Session,
 				'Auth-Application-Id' = 16777302,
 				'SN-Request-Type' = [0],
 				'Policy-Counter-Status-Report' = PCSR},
@@ -523,8 +527,8 @@ handle_request1(#'3gpp_sy_SNR'{'Session-Id' = SessionId,
 				Acc#{Id => PCI}
 	end,
 	StatusInfos = lists:foldl(F, #{}, PCSR),
-	global:send(SessionId, {SessionId, StatusInfos}),
-	SNA = #'3gpp_sy_SNA'{'Session-Id' = SessionId,
+	global:send(Session, {Session, StatusInfos}),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
 			'Origin-Host' = OHost,
 			'Origin-Realm' = ORealm,
 			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
