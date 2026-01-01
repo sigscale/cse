@@ -27,7 +27,7 @@
 
 % export cse_rest_res_nchf public API
 -export([content_types_accepted/0, content_types_provided/0]).
--export([notification/1]).
+-export([notification/1, termination/1]).
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -121,6 +121,69 @@ notification3([], _PCSR) ->
 					"TS29571_CommonData.yaml#/components/responses/404"},
 	{error, 404, ProblemDetails}.
 
+-spec termination(RequestBody) -> Result
+	when
+		RequestBody :: list(),
+		Result   :: {ok, Headers, Body} | {error, Status, Problem},
+		Headers  :: [tuple()],
+		Body     :: iolist(),
+		Status   :: 400 | 500,
+		Problem :: cse_rest:problem().
+%% @doc Respond to
+%% 	`POST /nchf-spendinglimitcontrol/v1/terminate'.
+%%
+%%    Handle a termination of the subscription of status changes
+%% 	for all policy counters for a subscriber.
+%%
+termination(RequestBody) ->
+	termination1(zj:decode(RequestBody)).
+%% @hidden
+termination1({ok, #{"supi" := SUPI} = SubscriptionTerminationInfo})
+		when is_list(SUPI) ->
+	termination2(list_to_binary(SUPI), SubscriptionTerminationInfo);
+termination1({ok, #{} = _SubscriptionTerminationInfo}) ->
+	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
+			invalidParams => [#{param => "/supi"}],
+			status => 400, code => "",
+			title => "Missing mandatory attribute in JSON body",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{error, 400, ProblemDetails};
+termination1({error, _Partial, _Remaining}) ->
+	ProblemDetails = #{cause => "INVALID_MSG_FORMAT",
+			status => 400, code => "",
+			title => "JSON decode of SubscriptionTerminationInfo failed",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{error, 400, ProblemDetails}.
+%% @hidden
+termination2(SUPI,
+		#{"termCause" := "REMOVED_SUBSCRIBER" = Cause}) ->
+	termination3(ets:lookup(nchf_session, SUPI), Cause);
+termination2(_SUPI,
+		#{"termCause" := _Cause}) ->
+	ProblemDetails = #{cause => "OPTIONAL_IE_INCORRECT ",
+			invalidParams => [#{param => "/termCause"}],
+			status => 400, code => "",
+			title => "Optional attribute in JSON body with"
+					"  semantically incorrect value",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{error, 400, ProblemDetails};
+termination2(SUPI, _SubscriptionTerminationInfo) ->
+	termination3(ets:lookup(nchf_session, SUPI), []).
+%% @hidden
+termination3([Object], Cause) ->
+	terminate(Object, Cause);
+termination3([], _Cause) ->
+	ProblemDetails = #{cause => "SUBSCRIPTION_NOT_FOUND",
+			status => 404, code => "",
+			title => "The termination request is rejected because the"
+					" subscription is not found in the NF",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/404"},
+	{error, 404, ProblemDetails}.
+
 %%----------------------------------------------------------------------
 %%  cse_rest_res_nchf private API functions
 %%----------------------------------------------------------------------
@@ -179,6 +242,47 @@ notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
 			'Destination-Realm' = DRealm,
 			'SN-Request-Type' = [0],
 			'Policy-Counter-Status-Report' = PCSR},
+	Options = [],
+	case diameter:call(ServiceName, ?SY_APPLICATION, SNR, Options) of
+		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA}
+				when ResultCode == ?'DIAMETER_BASE_RESULT-CODE_SUCCESS' ->
+			{ok, [], []};
+		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA} ->
+			ProblemDetails = #{cause => "SYSTEM_FAILURE",
+					status => 500, code => integer_to_list(ResultCode),
+					title => "The request is rejected due to generic error"
+							" condition in the NF",
+					type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+							"TS29571_CommonData.yaml#/components/responses/500"},
+			{error, 500, ProblemDetails};
+		{ok, #'diameter_base_answer-message'{'Result-Code' = ResultCode}} ->
+			ProblemDetails = #{cause => "SYSTEM_FAILURE",
+					status => 500, code => integer_to_list(ResultCode),
+					title => "The request is rejected due to generic error"
+							" condition in the NF",
+					type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+							"TS29571_CommonData.yaml#/components/responses/500"},
+			{error, 500, ProblemDetails};
+		{error, _Reason} ->
+			ProblemDetails = #{cause => "SYSTEM_FAILURE",
+					status => 500, code => "",
+					title => "The request is rejected due to generic error"
+							" condition in the NF",
+					type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+							"TS29571_CommonData.yaml#/components/responses/500"},
+			{error, 500, ProblemDetails}
+	end.
+
+%% @hidden
+terminate({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
+		_Cause) ->
+	SNR = #'3gpp_sy_SNR'{'Session-Id' = SessionId,
+			'Auth-Application-Id' = ?SY_APPLICATION_ID,
+			'Origin-Host' = OHost,
+			'Origin-Realm' = ORealm,
+			'Destination-Host' = DHost,
+			'Destination-Realm' = DRealm,
+			'SN-Request-Type' = [1]},
 	Options = [],
 	case diameter:call(ServiceName, ?SY_APPLICATION, SNR, Options) of
 		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA}

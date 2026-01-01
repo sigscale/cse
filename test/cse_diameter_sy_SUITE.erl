@@ -29,6 +29,7 @@
 -export([slr_initial/0, slr_initial/1,
 		slr_intermediate/0, slr_intermediate/1,
 		snr_normal/0, snr_normal/1,
+		snr_asr/0, snr_asr/1,
 		final_str/0, final_str/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1]).
@@ -228,7 +229,7 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[slr_initial, slr_intermediate, snr_normal, final_str,
+	[slr_initial, slr_intermediate, snr_normal, snr_asr, final_str,
 			client_connect, client_reconnect].
 
 %%---------------------------------------------------------------------
@@ -292,6 +293,31 @@ snr_normal(Config) ->
 	receive
 		{Session, StatusInfos} ->
 			StatusInfos
+	after
+		1000 ->
+			ct:fail(timeout)
+	end.
+
+snr_asr() ->
+	Description = "Abort Session Request (ASR) Spending-Status-Notification-Request (SNR)",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+snr_asr(Config) ->
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Session = session_id(Config),
+	Answer1 = subscribe(Config, Session, IMSI, MSISDN),
+	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+	#'3gpp_sy_SLA'{'Session-Id' = Session,
+			'Result-Code' = [ResultCode]} = Answer1,
+	SubscriptionTerminationInfo = #{supi => "imsi-" ++ IMSI,
+			termCause => "REMOVED_SUBSCRIBER"},
+	yes = global:register_name(Session, self()),
+	ok = send_termination(Config, zj:encode(SubscriptionTerminationInfo)),
+	receive
+		{Session, Cause} ->
+			Cause
 	after
 		1000 ->
 			ct:fail(timeout)
@@ -484,11 +510,23 @@ terminate(Config, Session, Host) ->
 send_notification(Config, SpendingLimitStatus) ->
 	Profile = ?config(iwf_profile, Config),
 	URI = ?config(iwf_uri, Config),
-	Accept = "application/json, application/problem+json",
+	Accept = "application/problem+json",
 	Headers = [{"accept", Accept}],
 	ContentType = "application/json",
 	RequestURL = list_to_binary([URI, <<"/notify">>]),
 	Request = {RequestURL, Headers, ContentType, SpendingLimitStatus},
+	{ok, {{_, 204, _}, _, []}} = httpc:request(post,
+			Request, [], [], Profile),
+	ok.
+
+send_termination(Config, SubscriptionTerminationInfo) ->
+	Profile = ?config(iwf_profile, Config),
+	URI = ?config(iwf_uri, Config),
+	Accept = "application/problem+json",
+	Headers = [{"accept", Accept}],
+	ContentType = "application/json",
+	RequestURL = list_to_binary([URI, <<"/terminate">>]),
+	Request = {RequestURL, Headers, ContentType, SubscriptionTerminationInfo},
 	{ok, {{_, 204, _}, _, []}} = httpc:request(post,
 			Request, [], [], Profile),
 	ok.
@@ -499,10 +537,11 @@ handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
 	handle_request1(Request, Capabilities).
 handle_request1(#'3gpp_sy_SNR'{'Session-Id' = Session,
 				'Auth-Application-Id' = 16777302,
-				'SN-Request-Type' = [0],
+				'SN-Request-Type' = [RequestType],
 				'Policy-Counter-Status-Report' = PCSR},
 		#diameter_caps{origin_host = {OHost, _DHost},
-				origin_realm = {ORealm, _DRealm}}) ->
+				origin_realm = {ORealm, _DRealm}})
+		when (RequestType band 2#1) =:= 0 ->
 	F = fun(#'3gpp_sy_Policy-Counter-Status-Report'{
 					'Policy-Counter-Identifier' = Id,
 					'Policy-Counter-Status' = Status}, Acc) ->
@@ -511,6 +550,19 @@ handle_request1(#'3gpp_sy_SNR'{'Session-Id' = Session,
 	end,
 	StatusInfos = lists:foldl(F, #{}, PCSR),
 	global:send(Session, {Session, StatusInfos}),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
+			'Origin-Host' = OHost,
+			'Origin-Realm' = ORealm,
+			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
+	{reply, SNA};
+handle_request1(#'3gpp_sy_SNR'{'Session-Id' = Session,
+				'Auth-Application-Id' = 16777302,
+				'SN-Request-Type' = [RequestType],
+				'Policy-Counter-Status-Report' = []},
+		#diameter_caps{origin_host = {OHost, _DHost},
+				origin_realm = {ORealm, _DRealm}})
+		when (RequestType band 2#1) =:= 1 ->
+	global:send(Session, {Session, undefined}),
 	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
 			'Origin-Host' = OHost,
 			'Origin-Realm' = ORealm,
