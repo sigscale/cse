@@ -1,3 +1,15 @@
+January 1, 2026
+---------------
+	- SLP for Spending limits IWF (Sy - Nchf)
+	- 3GPP Nchf SBI 
+		- Nchf_SpendingLimitControl_Subscribe consumer
+		- Nchf_SpendingLimitControl_Unsubscribe consumer
+		- Nchf_SpendingLimitControl_Notify producer
+	- 3GPP DIAMETER Sy dictionary and CODEC
+	- 3GPP DIAMETER Sy support in statistics
+	- 3GPP DIAMETER Sy support in ECS log CODEC
+	- 3GPP DIAMETER Sy test suite
+
 October 30, 2025
 ----------------
 	- Resource Activation API schema correction

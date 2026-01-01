@@ -1,3 +1,49 @@
+2026-01-01 Vance Shipley <vances@sigscale.org>
+
+	* include sy/nchf spending limits in list of iwfs
+	* update ets table row description in edoc
+	* feature negotiation for sy snr asr
+	* handle nchf terminate for sy asr
+	* sy str termination-cause logout mandatory
+	* handle sy str for nchf unsubscribe
+	* correct callback module in sy [re]connect test cases
+	* correct matching session-id in sy test suite
+	* test case: destination-host in intermediate slr
+	* test case for normal snr/sna
+	* handle diameter sy snr/sna
+	* refactor diameter callback using guard
+	* httpd handles path for nchf spending limit control notification
+	* escript for testing spending limit (diameter sy)
+	* refactor and improve sy error handling
+	* test case for sy subscription update
+	* improved problem details in test nchf httpd handler
+	* httpd handler for nchf notifications
+	* manage ets tables for spending limit iwf slp
+	* call init/1 of diameter_app callback modules during service initialization
+	* declare diameter behaviour for sy callback module
+	* optionally start httpc profile for nchf
+	* test suite: result-code optional in sla
+	* remove trailing / from spending limits subscription collection uri
+	* test suite: correct nchf resource path parsing
+	* test suite for spending limits iwf
+	* indicate hidden function (edoc)
+	* document manadatory sy config
+	* remove unused include
+	* seperate diameter test suite into per application suites
+	* no logging for spending limits iwf slp
+	* correct matching httpc:request/5 success result
+	* spending limits subscription service iwf
+	* experimental-result-code enumerations for sy
+	* message sequence chart for spending limits iwf
+	* configuration for nchf httpc profile
+	* diameter sy application callback module
+	* 3gpp sy support in diameter statistics
+	* 3gpp sy support in health api
+	* 3gpp sy support in ecs log codec
+	* 3gpp sy diameter dictionary and codec
+	* correct air operation statistics count
+	* httpd default page is doc index
+
 2025-10-30 Vance Shipley <vances@sigscale.org>
 
 	* use lists:usort/1 rather than lists:uniq/1 (only otp > 24)
