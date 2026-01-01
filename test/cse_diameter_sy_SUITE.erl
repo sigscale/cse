@@ -246,7 +246,7 @@ slr_initial(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
-	Answer = subscribe(Config, Session, IMSI, MSISDN, initial),
+	Answer = subscribe(Config, Session, IMSI, MSISDN),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer.
 
@@ -259,10 +259,11 @@ slr_intermediate(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
-	Answer1 = subscribe(Config, Session, IMSI, MSISDN, initial),
+	Answer1 = subscribe(Config, Session, IMSI, MSISDN),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
-	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer1,
-	Answer2 = subscribe(Config, Session, IMSI, MSISDN, intermediate),
+	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode],
+			'Origin-Host' = Host} = Answer1,
+	Answer2 = update(Config, Session, Host, IMSI, MSISDN),
 	#'3gpp_sy_SLA'{'Result-Code' = [ResultCode]} = Answer2.
 
 snr_normal() ->
@@ -274,7 +275,7 @@ snr_normal(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
-	Answer1 = subscribe(Config, Session, IMSI, MSISDN, initial),
+	Answer1 = subscribe(Config, Session, IMSI, MSISDN),
 	ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 	#'3gpp_sy_SLA'{'Session-Id' = SessionId,
 			'Result-Code' = [ResultCode],
@@ -422,15 +423,18 @@ client_reconnect(Config) ->
 %%  Internal functions
 %%---------------------------------------------------------------------
 
-subscribe(Config, Session, IMSI, MSISDN, initial) ->
+subscribe(Config, Session, IMSI, MSISDN) ->
 	SLR = #'3gpp_sy_SLR'{
 			'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST'},
-	subscribe(Config, Session, IMSI, MSISDN, SLR);
-subscribe(Config, Session, IMSI, MSISDN, intermediate) ->
+	slr(Config, Session, IMSI, MSISDN, SLR).
+
+update(Config, Session, Host, IMSI, MSISDN) ->
 	SLR = #'3gpp_sy_SLR'{
+			'Destination-Host' = [Host],
 			'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST'},
-	subscribe(Config, Session, IMSI, MSISDN, SLR);
-subscribe(Config, Session, IMSI, MSISDN, SLR)
+	slr(Config, Session, IMSI, MSISDN, SLR).
+
+slr(Config, Session, IMSI, MSISDN, SLR)
 		when is_record(SLR, '3gpp_sy_SLR') ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
