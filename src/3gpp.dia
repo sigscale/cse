@@ -21,6 +21,8 @@
    Server-Capabilities                                     603  Grouped          VM
    Mandatory-Capability                                    604  Unsigned32       VM
    Optional-Capability                                     605  Unsigned32       VM
+   Feature-List-ID                                         629  Unsigned32       V
+   Feature-List                                            630  Unsigned32       V
    Session-Priority                                        650  Enumerated       VM
    Event-Type                                              823  Grouped          VM
    SIP-Method                                              824  UTF8String       VM
@@ -1552,8 +1554,8 @@
 
    Supported-Features ::= <AVP Header: 628>
       { Vendor-Id }
-;     { Feature-List-ID }
-;     { Feature-List }
+      { Feature-List-ID }
+      { Feature-List }
      *[ AVP ]
 
    SIP-Digest-Authenticate ::= <AVP Header: 635>

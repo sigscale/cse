@@ -38,6 +38,7 @@
 
 -define(SY_APPLICATION, cse_diameter_3gpp_sy_application).
 -define(SY_APPLICATION_ID, 16777302).
+-define(IANA_PEN_3GPP, 10415).
 
 %%----------------------------------------------------------------------
 %%  cse_rest_res_nchf public API functions
@@ -232,8 +233,8 @@ policy_counter_info(PolicyCounterId, _PolicyCounterInfo) ->
 	{error, 400, ProblemDetails}.
 
 %% @hidden
-notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
-		PCSR) ->
+notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+		_SupportedFeatures}, PCSR) ->
 	SNR = #'3gpp_sy_SNR'{'Session-Id' = SessionId,
 			'Auth-Application-Id' = ?SY_APPLICATION_ID,
 			'Origin-Host' = OHost,
@@ -274,8 +275,11 @@ notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
 	end.
 
 %% @hidden
-terminate({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
-		_Cause) ->
+terminate({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+		[#'3gpp_sy_Supported-Features'{'Vendor-Id' = ?IANA_PEN_3GPP,
+				'Feature-List-ID' = 1,
+				'Feature-List' = FeatureList} | _T] = _SupportedFeatures},
+		_Cause) when (FeatureList band 2#1) == 1 ->
 	SNR = #'3gpp_sy_SNR'{'Session-Id' = SessionId,
 			'Auth-Application-Id' = ?SY_APPLICATION_ID,
 			'Origin-Host' = OHost,
@@ -312,5 +316,24 @@ terminate({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm},
 					type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
 							"TS29571_CommonData.yaml#/components/responses/500"},
 			{error, 500, ProblemDetails}
-	end.
+	end;
+terminate({SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+		[#'3gpp_sy_Supported-Features'{'Vendor-Id' = ?IANA_PEN_3GPP,
+				'Feature-List-ID' = 1} | _T] = _SupportedFeatures},
+		Cause) ->
+	terminate({SUPI, ServiceName, SessionId, OHost, ORealm,
+			DHost, DRealm, []}, Cause);
+terminate({SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+		[_H | T] = _SupportedFeatures}, Cause) ->
+	terminate({SUPI, ServiceName, SessionId, OHost, ORealm,
+			DHost, DRealm, T}, Cause);
+terminate({_SUPI, _ServiceName, _SessionId, _OHost, _ORealm, _DHost, _DRealm,
+		[] = _SupportedFeatures}, Cause) ->
+	ProblemDetails = #{cause => "UNSPECIFIED_MSG_FAILURE",
+			status => 400, code => Cause,
+			title => "The request is rejected due to lack of feature"
+					" support in the PCRF",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{error, 400, ProblemDetails}.
 

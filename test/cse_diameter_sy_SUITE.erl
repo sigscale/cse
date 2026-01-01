@@ -465,8 +465,13 @@ client_reconnect(Config) ->
 %%---------------------------------------------------------------------
 
 subscribe(Config, Session, IMSI, MSISDN) ->
+	SupportedFeatures = #'3gpp_sy_Supported-Features'{
+			'Vendor-Id' = ?IANA_PEN_3GPP,
+			'Feature-List-ID' = 1,
+			'Feature-List' = 1},
 	SLR = #'3gpp_sy_SLR'{
-			'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST'},
+			'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST',
+			'Supported-Features' = [SupportedFeatures]},
 	slr(Config, Session, IMSI, MSISDN, SLR).
 
 update(Config, Session, Host, IMSI, MSISDN) ->
