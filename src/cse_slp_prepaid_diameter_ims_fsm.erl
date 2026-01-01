@@ -2476,10 +2476,10 @@ quota_threshold(_) ->
 	{[], [], []}.
 
 %% @hidden
-vality_time(#{"expiryTime" := ValidityTime})
+validity_time(#{"expiryTime" := ValidityTime})
 		when is_integer(ValidityTime), ValidityTime > 0 ->
 	[ValidityTime];
-vality_time(_) ->
+validity_time(_) ->
 	[].
 
 %% @hidden
@@ -2974,7 +2974,7 @@ build_mscc1([SI], [RG], [#{"serviceId" := SI, "ratingGroup" := RG,
 		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
-	Validity = vality_time(ServiceRating),
+	Validity = validity_time(ServiceRating),
 	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -2992,7 +2992,7 @@ build_mscc1([SI], [], [#{"serviceId" := SI,
 		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
-	Validity = vality_time(ServiceRating),
+	Validity = validity_time(ServiceRating),
 	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -3009,7 +3009,7 @@ build_mscc1([], [RG], [#{"ratingGroup" := RG,
 		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
-	Validity = vality_time(ServiceRating),
+	Validity = validity_time(ServiceRating),
 	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
@@ -3026,7 +3026,7 @@ build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
 		{FinalRC, Acc}) ->
 	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
 	{QT, QV, QU} = quota_threshold(ServiceRating),
-	Validity = vality_time(ServiceRating),
+	Validity = validity_time(ServiceRating),
 	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
 	RC = result_code(ResultCode),
 	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
