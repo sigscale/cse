@@ -39,7 +39,7 @@
 %%% DIAMETER services provided by the {@link //cse. cse} application
 %%% are configured with the `diameter' application environment variable.
 %%%
-%%% An instance of this IWF requires a dedicated `diameter' service
+%%% An instance of this IWF requires a `diameter' service
 %%% (`{Addr, Port, Options}') where `Options' includes:
 %%% <div class="spec">
 %%% 	<p>
