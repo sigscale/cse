@@ -94,12 +94,12 @@ sy_session(Options) ->
 					record_info(fields, 'diameter_base_Proxy-Info')
 		end,
 		case diameter:call(Name, sy, SLR1, []) of
-			#'3gpp_sy_SLA'{'Result-Code' = 2001} = Answer1 ->
+			#'3gpp_sy_SLA'{'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fsy)]);
-			#'3gpp_sy_SLA'{'Result-Code' = ResultCode1} = Answer1 ->
+			#'3gpp_sy_SLA'{'Result-Code' = [ResultCode1]} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fsy)]),
 				throw(ResultCode1);
-			#'3gpp_sy_SLA'{'Experimental-Result' = ResultCode1} = Answer1 ->
+			#'3gpp_sy_SLA'{'Experimental-Result' = [ResultCode1]} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fsy)]),
 				throw(ResultCode1);
 			#'diameter_base_answer-message'{'Result-Code' = ResultCode1} = Answer1 ->
@@ -115,12 +115,12 @@ sy_session(Options) ->
 					SLR2 = SLR1#'3gpp_sy_SLR'{'Session-Id' = SId,
 							'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST'},
 					case diameter:call(Name, sy, SLR2, []) of
-						#'3gpp_sy_SLA'{'Result-Code' = 2001} = Answer2 ->
+						#'3gpp_sy_SLA'{'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fsy)]);
-						#'3gpp_sy_SLA'{'Result-Code' = ResultCode2} = Answer2 ->
+						#'3gpp_sy_SLA'{'Result-Code' = [ResultCode2]} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fsy)]),
 							throw(ResultCode2);
-						#'3gpp_sy_SLA'{'Experimental-Result' = ResultCode2} = Answer2 ->
+						#'3gpp_sy_SLA'{'Experimental-Result' = [ResultCode2]} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fsy)]),
 							throw(ResultCode2);
 						#'diameter_base_answer-message'{'Result-Code' = ResultCode2} = Answer2 ->
@@ -141,7 +141,7 @@ sy_session(Options) ->
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'Termination-Cause' = ?'DIAMETER_BASE_TERMINATION-CAUSE_LOGOUT'},
 		case diameter:call(Name, sy, STR, []) of
-			#'3gpp_sy_STA'{'Result-Code' = 2001} = Answer3 ->
+			#'3gpp_sy_STA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer3 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fsy)]);
 			#'3gpp_sy_STA'{'Result-Code' = ResultCode3} = Answer3 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fsy)]),
