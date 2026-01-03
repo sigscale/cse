@@ -441,7 +441,7 @@ process_request(ServiceName,
 					diameter_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, [])
 			end;
-		{201 = _StatusCode, ResponseHeaders, _ResponseBody} ->
+		{201 = _StatusCode, _ResponseHeaders, _ResponseBody} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf decoding SpendingLimitStatus failed"],
 			diameter_error(SessionId, OHost, ORealm,
@@ -583,7 +583,7 @@ process_request(_ServiceName,
 					'Supported-Features' = [],
 					'Policy-Counter-Status-Report' = PCSR},
 			{reply, SLA};
-		{200 = _StatusCode, ResponseHeaders, _ResponseBody} ->
+		{200 = _StatusCode, _ResponseHeaders, _ResponseBody} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf decoding SpendingLimitStatus failed"],
 			diameter_error(SessionId, OHost, ORealm,
