@@ -43,8 +43,12 @@ cdr_ps(Options) ->
 				{application, [{alias, rf},
 						{dictionary, diameter_gen_3gpp_rf_application},
 						{module, Callback}]}],
-		ok = diameter:start_service(Name, ServiceOptions),
 		true = diameter:subscribe(Name),
+		ok = diameter:start_service(Name, ServiceOptions),
+		receive
+			#diameter_event{service = Name, info = start} ->
+				ok
+		end,
 		TransportOptions =  [{transport_module, diameter_tcp},
 				{transport_config,
 						[{raddr, maps:get(raddr, Options, {127,0,0,1})},
