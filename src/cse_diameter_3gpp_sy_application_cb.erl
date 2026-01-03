@@ -447,6 +447,11 @@ process_request(ServiceName,
 					diameter_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, [])
 			end;
+		{201 = _StatusCode, ResponseHeaders, _ResponseBody} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Nchf decoding SpendingLimitStatus failed"],
+			diameter_error(SessionId, OHost, ORealm,
+					ResultCode, ErrorMessage, []);
 		{StatusCode, ResponseHeaders, ResponseBody} ->
 			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
 					1, ResponseHeaders) of
@@ -584,6 +589,11 @@ process_request(_ServiceName,
 					'Supported-Features' = [],
 					'Policy-Counter-Status-Report' = PCSR},
 			{reply, SLA};
+		{200 = _StatusCode, ResponseHeaders, _ResponseBody} ->
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
+			ErrorMessage = ["Nchf decoding SpendingLimitStatus failed"],
+			diameter_error(SessionId, OHost, ORealm,
+					ResultCode, ErrorMessage, []);
 		{StatusCode, ResponseHeaders, ResponseBody} ->
 			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
 					1, ResponseHeaders) of
@@ -816,7 +826,8 @@ nchf_initial(Body, Config) ->
 							{error, bad_json}, {profile, Profile},
 							{uri, RequestURL}, {host, Host},
 							{status_code, StatusCode},
-							{partial, Partial}, {remaining, Remaining}])
+							{partial, Partial}, {remaining, Remaining}]),
+					{StatusCode, ResponseHeaders, ResponseBody}
 			end;
 		{ok, {{_Version, StatusCode, _Phrase},
 				ResponseHeaders, ResponseBody}} ->
@@ -877,7 +888,8 @@ nchf_intermediate(Location, Body, Config) ->
 							{error, bad_json}, {profile, Profile},
 							{uri, RequestURL}, {host, Host},
 							{status_code, StatusCode},
-							{partial, Partial}, {remaining, Remaining}])
+							{partial, Partial}, {remaining, Remaining}]),
+					{StatusCode, ResponseHeaders, ResponseBody}
 			end;
 		{ok, {{_Version, StatusCode, _Phrase},
 				ResponseHeaders, ResponseBody}} ->
