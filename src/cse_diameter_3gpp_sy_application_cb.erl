@@ -58,7 +58,7 @@
 %%% 					nchf_sort => Sort,
 %%% 					nchf_retries => Retries,
 %%% 					nchf_http_options => HttpOptions,
-%%% 					nchf_Headers => Headers,
+%%% 					nchf_headers => Headers,
 %%% 					notify_uri := URI}
 %%% 				</tt>
 %%% 			</li>
