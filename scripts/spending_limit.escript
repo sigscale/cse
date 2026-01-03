@@ -63,7 +63,7 @@ sy_session(Options) ->
 				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
 				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
-		PCI = maps:get(pci, Options, []),
+		PCI = string:lexemes(maps:get(pci, Options, []), [$,]),
 		SLR1 = #'3gpp_sy_SLR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -166,7 +166,7 @@ sy_session(Options) ->
 usage() ->
 	Option1 = " [--msisdn 14165551234]",
 	Option2 = " [--imsi 001001123456789]",
-	Option3 = " [--policy-counter-id]",
+	Option3 = " [--policy-counter-id none]",
 	Option4 = " [--updates 0]",
 	Option5 = " [--interval 1000]",
 	Option6 = " [--ip 127.0.0.1]",
