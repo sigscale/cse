@@ -1,3 +1,14 @@
+2026-01-04 Vance Shipley <vances@sigscale.org>
+
+	* handle snr (normal, asr) in spending limit escript
+	* wait for diameter service start in escripts
+	* correct --policy-counter-id option in spending limit escript
+	* correct result handling in spending limits escript
+	* suppress unused variable warnings
+	* sy diameter_app callback module not diameter_app behaviour because extended
+	* handle json decode failure of spending limit status in nchf
+	* remove erroneous reference to dedicated diameter service
+
 2026-01-01 Vance Shipley <vances@sigscale.org>
 
 	* include sy/nchf spending limits in list of iwfs
