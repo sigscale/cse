@@ -1,6 +1,8 @@
 #!/usr/bin/env escript
 %% vim: syntax=erlang
 
+-export([handle_request/3]).
+
 -include_lib("cse/include/diameter_gen_3gpp.hrl").
 -include_lib("cse/include/diameter_gen_3gpp_sy_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -28,7 +30,8 @@ sy_session(Options) ->
 			_ ->
 				"example.net"
 		end,
-		Callback = #diameter_callback{},
+		Callback = #diameter_callback{
+				handle_request = {?MODULE, handle_request, []}},
 		ServiceOptions = [{'Origin-Host', Hostname},
 				{'Origin-Realm', OriginRealm},
 				{'Vendor-Id', ?IANA_PEN_SigScale},
@@ -68,6 +71,10 @@ sy_session(Options) ->
 				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
 		SubscriptionId = [IMSI, MSISDN],
 		PCI = string:lexemes(maps:get(pci, Options, []), [$,]),
+		SupportedFeatures = #'3gpp_sy_Supported-Features'{
+				'Vendor-Id' = ?IANA_PEN_3GPP,
+				'Feature-List-ID' = 1,
+				'Feature-List' = 1},
 		SLR1 = #'3gpp_sy_SLR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -75,7 +82,7 @@ sy_session(Options) ->
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST',
 				'Subscription-Id' = SubscriptionId,
-				'Supported-Features' = [],
+				'Supported-Features' = [SupportedFeatures],
 				'Policy-Counter-Identifier' = PCI},
 		Fsy = fun('3gpp_sy_SLA', _N) ->
 					record_info(fields, '3gpp_sy_SLA');
@@ -112,11 +119,20 @@ sy_session(Options) ->
 			{error, Reason1} ->
 				error(Reason1)
 		end,
-		timer:sleep(maps:get(interval, Options, 1000)),
+		true = register(?MODULE, self()),
+		Interval = maps:get(interval, Options, 1000),
+		Updates = receive
+			snr_asr ->
+				0
+		after
+			Interval ->
+				maps:get(updates, Options, 0)
+		end,
 		Fupdate = fun F(0) ->
 					ok;
 				F(N) ->
 					SLR2 = SLR1#'3gpp_sy_SLR'{'Session-Id' = SId,
+							'Supported-Features' = [],
 							'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST'},
 					case diameter:call(Name, sy, SLR2, []) of
 						#'3gpp_sy_SLA'{'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = Answer2 ->
@@ -133,10 +149,15 @@ sy_session(Options) ->
 						{error, Reason2} ->
 							error(Reason2)
 					end,
-					timer:sleep(maps:get(interval, Options, 1000)),
-					F(N - 1)
+					receive
+						snr_asr ->
+							F(0)
+					after
+						Interval ->
+							F(N - 1)
+					end
 		end,
-		Fupdate(maps:get(updates, Options, 0)),
+		Fupdate(Updates),
 		STR = #'3gpp_sy_STR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -166,6 +187,39 @@ sy_session(Options) ->
 			io:fwrite("~w: ~w~n", [error, Reason4]),
 			usage()
 	end.
+
+handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
+		_ServiceName, {_, Capabilities} = _Peer) ->
+	#diameter_caps{origin_host = {Host, _},
+			origin_realm = {Realm, _}} = Capabilities,
+	Fsy = fun('3gpp_sy_SNR', _N) ->
+				record_info(fields, '3gpp_sy_SNR');
+			('3gpp_sy_Policy-Counter-Status-Report', _N) ->
+				record_info(fields, '3gpp_sy_Policy-Counter-Status-Report');
+			('3gpp_sy_Pending-Policy-Counter-Information', _N) ->
+				record_info(fields, '3gpp_sy_Pending-Policy-Counter-Information')
+	end,
+	handle_request(Request, Host, Realm, Fsy).
+
+handle_request(#'3gpp_sy_SNR'{'Session-Id' = Session,
+				'SN-Request-Type' = [RequestType]} = Request,
+		Host, Realm, Fsy) when (RequestType band 2#1) =:= 0 ->
+	io:fwrite("~s~n", [io_lib_pretty:print(Request, Fsy)]),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
+			'Origin-Host' = Host,
+			'Origin-Realm' = Realm,
+			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
+	{reply, SNA};
+handle_request(#'3gpp_sy_SNR'{'Session-Id' = Session,
+				'SN-Request-Type' = [RequestType]} = Request,
+		Host, Realm, Fsy) when (RequestType band 2#1) =:= 1 ->
+	io:fwrite("~s~n", [io_lib_pretty:print(Request, Fsy)]),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
+			'Origin-Host' = Host,
+			'Origin-Realm' = Realm,
+			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
+	PostF = {erlang, send, [?MODULE, snr_asr]},
+	{eval, {reply, SNA}, PostF}.
 
 usage() ->
 	Option1 = " [--msisdn 14165551234]",
