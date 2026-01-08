@@ -2922,7 +2922,8 @@ subscription_id2(_Data, Acc) ->
 
 %% @hidden
 imsi([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Data' = IMSI,
-		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI'} | _]) ->
+		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI'}
+		| _]) ->
 	binary_to_list(IMSI);
 imsi([_H | T]) ->
 	imsi(T);
@@ -2930,13 +2931,37 @@ imsi([]) ->
 	undefined.
 
 %% @hidden
+msisdn(SubscriptionIds) ->
+	msisdn(SubscriptionIds, SubscriptionIds).
+%% @hidden
 msisdn([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Data' = MSISDN,
-		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164'} | _]) ->
+		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164'}
+		| _], _SubscriptionIds) ->
 	binary_to_list(MSISDN);
-msisdn([_H | T]) ->
-	msisdn(T);
-msisdn([]) ->
+msisdn([_H | T], SubscriptionIds) ->
+	msisdn(T, SubscriptionIds);
+msisdn([], SubscriptionIds) ->
+	msisdn1(SubscriptionIds).
+%% @hidden
+msisdn1([#'3gpp_ro_Subscription-Id'{'Subscription-Id-Data' = SIP_URI,
+		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_SIP_URI'}
+		| T]) ->
+	msisdn2(cse_codec:ims_uri(SIP_URI), T);
+msisdn1([_H | T]) ->
+	msisdn1(T);
+msisdn1([]) ->
 	undefined.
+%% @hidden
+msisdn2(#ims_uri{scheme = tel, user = <<$+, MSISDN/binary>>}, _) ->
+	binary_to_list(MSISDN);
+msisdn2(#ims_uri{scheme = sip, user = <<$+, MSISDN/binary>>}, _) ->
+	binary_to_list(MSISDN);
+msisdn2(#ims_uri{scheme = sips, user = <<$+, MSISDN/binary>>}, _) ->
+	binary_to_list(MSISDN);
+msisdn2(#ims_uri{}, T) ->
+	msisdn1(T);
+msisdn2({error, _Reason}, T) ->
+	msisdn1(T).
 
 %% @hidden
 imei([#'3gpp_ro_User-Equipment-Info'{
