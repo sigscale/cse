@@ -1,3 +1,7 @@
+January 8, 2026
+---------------
+	- Accept MSISDN subscription ID as SIP URI in IMS SLP
+
 January 4, 2026
 ---------------
 	- Spending limit escript handles SNR, normal and ASR

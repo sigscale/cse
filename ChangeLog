@@ -1,3 +1,8 @@
+2026-01-08 Vance Shipley <vances@sigscale.org>
+
+	* support msisdn as subscription-id-type=sip_uri
+	* refactor cse_codec:ims_uri/1 for binary or string
+
 2026-01-04 Vance Shipley <vances@sigscale.org>
 
 	* handle snr (normal, asr) in spending limit escript
