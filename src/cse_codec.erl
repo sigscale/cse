@@ -375,49 +375,54 @@ cause2(Coding, beyond, Acc) ->
 %% 	An IP Multimedia Subsystem (IMS) address is provided
 %% 	as a SIP URI (RFC3261) or a Tel URI (RFC3966).
 %%
-ims_uri(URIString) when is_list(URIString) ->
+ims_uri(URIString)
+		when is_list(URIString); is_binary(URIString)  ->
 	ims_uri1(uri_string:parse(URIString)).
 %% @hidden
 ims_uri1(#{scheme := "tel", path := Path}) ->
 	[Subscriber | Params] = string:lexemes(Path, [$;]),
-	#ims_uri{scheme = tel, user = Subscriber, user_params = params(Params)};
+	#ims_uri{scheme = tel, user = Subscriber,
+			user_params = params(Params)};
+ims_uri1(#{scheme := <<"tel">>, path := Path}) ->
+	[Subscriber | Params] = string:lexemes(Path, [$;]),
+	#ims_uri{scheme = tel, user = Subscriber,
+			user_params = params(Params)};
 ims_uri1(#{scheme := "sip", path := Path}) ->
 	ims_uri2(Path, #ims_uri{scheme = sip});
+ims_uri1(#{scheme := <<"sip">>, path := Path}) ->
+	ims_uri2(Path, #ims_uri{scheme = sip});
 ims_uri1(#{scheme := "sips", path := Path}) ->
+	ims_uri2(Path, #ims_uri{scheme = sips});
+ims_uri1(#{scheme := <<"sips">>, path := Path}) ->
 	ims_uri2(Path, #ims_uri{scheme = sips});
 ims_uri1({error, Reason, _}) ->
 	{error, Reason}.
 %% @hidden
 ims_uri2(Path, Acc) ->
-	Pred = fun($@) ->
-				false;
-			(_) ->
-				true
-	end,
-	ims_uri3(lists:splitwith(Pred, Path), Acc).
+	ims_uri3(string:split(Path, [$@]), Acc).
 %% @hidden
-ims_uri3({Rest, []}, Acc) ->
+ims_uri3([Rest], Acc) ->
 	ims_uri4(Rest, Acc);
-ims_uri3({User, Rest}, Acc) ->
+ims_uri3([User, Rest], Acc) ->
 	[Subscriber | Params] = string:lexemes(User, [$;]),
 	NewAcc = Acc#ims_uri{user = Subscriber, user_params = params(Params)},
-	ims_uri4(tl(Rest), NewAcc).
+	ims_uri4(Rest, NewAcc);
+ims_uri3([], Acc) ->
+	Acc.
 %% @hidden
 ims_uri4(Rest, Acc) ->
-	Pred = fun($:) ->
-				false;
-			(_) ->
-				true
-	end,
-	ims_uri5(lists:splitwith(Pred, Rest), Acc).
-%% @hidden
-ims_uri5({Rest, []}, Acc) ->
 	[Host | Params] = string:lexemes(Rest, [$;]),
-	Acc#ims_uri{host = Host, uri_params = params(Params)};
-ims_uri5({Host, Rest}, Acc) ->
-	[Port | Params] = string:lexemes(tl(Rest), [$;]),
-	Acc#ims_uri{host = Host, port = list_to_integer(Port),
-			uri_params = params(Params)}.
+	NewAcc = Acc#ims_uri{uri_params = params(Params)},
+	ims_uri5(string:split(Host, [$:]), NewAcc).
+%% @hidden
+ims_uri5([Host], Acc) ->
+	Acc#ims_uri{host = Host};
+ims_uri5([Host, Port], Acc) when is_list(Port) ->
+	Acc#ims_uri{host = Host, port = list_to_integer(Port)};
+ims_uri5([Host, Port], Acc) when is_binary(Port) ->
+	Acc#ims_uri{host = Host, port = binary_to_integer(Port)};
+ims_uri5([], Acc) ->
+	Acc.
 
 -spec rat_type(RatType) -> string()
 	when
@@ -499,7 +504,8 @@ redirect_info(#redirect_info{indicator = Ind,
 
 -spec params(ParamList) -> Params
 	when
-		ParamList :: [string()],
+		ParamList :: [Parameter],
+		Parameter :: string() | binary(),
 		Params :: map().
 %% @doc Create `map()' from parsed parameter list.
 %% @hidden
