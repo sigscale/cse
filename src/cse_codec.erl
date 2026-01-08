@@ -407,7 +407,7 @@ ims_uri3([User, Rest], Acc) ->
 	[Subscriber | Params] = string:lexemes(User, [$;]),
 	NewAcc = Acc#ims_uri{user = Subscriber, user_params = params(Params)},
 	ims_uri4(Rest, NewAcc);
-ims_uri3([], Acc) ->
+ims_uri3([[]], Acc) ->
 	Acc.
 %% @hidden
 ims_uri4(Rest, Acc) ->
@@ -421,7 +421,7 @@ ims_uri5([Host, Port], Acc) when is_list(Port) ->
 	Acc#ims_uri{host = Host, port = list_to_integer(Port)};
 ims_uri5([Host, Port], Acc) when is_binary(Port) ->
 	Acc#ims_uri{host = Host, port = binary_to_integer(Port)};
-ims_uri5([], Acc) ->
+ims_uri5([[]], Acc) ->
 	Acc.
 
 -spec rat_type(RatType) -> string()
