@@ -247,7 +247,7 @@ null({call, _From}, #'3gpp_ro_CCR'{
 						'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_TERMINATING_ROLE']}]}]},
 		Data) ->
 	NewData = Data#{direction => terminating},
-	Actions = [postpone, ?IDLE_TIMEOUT(Data) , ?IDLE_TIMEOUT(Data)],
+	Actions = [postpone, ?IDLE_TIMEOUT(NewData)],
 	{next_state, terminating_call_handling, NewData, Actions};
 null(timeout, idle, _Data) ->
 	{stop, shutdown}.
