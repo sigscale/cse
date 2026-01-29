@@ -86,6 +86,8 @@ sy_session(Options) ->
 				'Policy-Counter-Identifier' = PCI},
 		Fsy = fun('3gpp_sy_SLA', _N) ->
 					record_info(fields, '3gpp_sy_SLA');
+				('3gpp_sy_Experimental-Result', _N) ->
+					record_info(fields, '3gpp_sy_Experimental-Result');
 				('3gpp_sy_Policy-Counter-Status-Report', _N) ->
 					record_info(fields, '3gpp_sy_Policy-Counter-Status-Report');
 				('3gpp_sy_Pending-Policy-Counter-Information', _N) ->
