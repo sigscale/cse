@@ -1280,7 +1280,7 @@ nrf_start1(ServiceRating, Data)
 	Data1 = Data#{nrf_groups => Groups},
 	nrf_start2(#{"serviceRating" => ServiceRating}, Data1);
 nrf_start1(_ServiceRating, Data) ->
-	nrf_start2(#{}, Data).
+	nrf_start2(#{}, Data#{nrf_groups => []}).
 %% @hidden
 nrf_start2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
