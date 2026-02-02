@@ -1292,7 +1292,7 @@ nrf_start2(JSON, #{one_time := true,
 			"oneTimeEvent" => true,
 			"oneTimeEventType" => "IEC"},
 	nrf_start3(Now, JSON1, Data);
-nrf_start2(JSON,
+nrf_start2(JSON, #{one_time := false,
 		#{context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
