@@ -2110,13 +2110,18 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @doc Start rating a session.
 %% @hidden
 nrf_start(Data) ->
-	ServiceRating = service_rating(Data),
+	nrf_start1(service_rating(Data), Data).
+%% @hidden
+nrf_start1(ServiceRating, Data)
+		when length(ServiceRating) > 0 ->
 	Groups = lists:usort([maps:get("ratingGroup", SR, undefined)
 			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	Data1 = Data#{nrf_groups => Groups},
-	nrf_start1(#{"serviceRating" => ServiceRating}, Data1).
+	nrf_start2(#{"serviceRating" => ServiceRating}, Data1);
+nrf_start1(_ServiceRating, Data) ->
+	nrf_start2(#{}, Data).
 %% @hidden
-nrf_start1(JSON,
+nrf_start2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
@@ -2124,13 +2129,12 @@ nrf_start1(JSON,
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
-	nrf_start2(Now, JSON1, Data).
+	nrf_start3(Now, JSON1, Data).
 %% @hidden
-nrf_start2(Now, JSON,
+nrf_start3(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
@@ -2152,24 +2156,21 @@ nrf_start2(Now, JSON,
 				when length(NextURIs) > 0 ->
 			NewData = Data#{nrf_uri => hd(NextURIs),
 					nrf_next_uris => tl(NextURIs)},
-			nrf_start2(Now, JSON, NewData);
+			nrf_start3(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI},
-					{origin_host, OHost}, {origin_realm, ORealm},
-					{slpi, self()}]),
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, Data, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
-			{next_state, null, Data, Actions}
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
+			{keep_state, Data, Actions}
 	end.
 
 -spec nrf_update(Data) -> Result
@@ -2181,8 +2182,12 @@ nrf_start2(Now, JSON,
 		From :: {pid(), reference()},
 		Time :: erlang:timeout().
 %% @doc Update rating a session.
-nrf_update(#{nrf_groups := PreviousGroups} = Data) ->
-	ServiceRating = service_rating(Data),
+nrf_update(Data) ->
+	nrf_update1(service_rating(Data), Data).
+%% @hidden
+nrf_update1(ServiceRating,
+		#{nrf_groups := PreviousGroups} = Data)
+		when length(ServiceRating) > 0 ->
 	Groups = lists:usort([maps:get("ratingGroup", SR, undefined)
 			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	case Groups -- PreviousGroups of
@@ -2190,26 +2195,28 @@ nrf_update(#{nrf_groups := PreviousGroups} = Data) ->
 			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
 		NewGroups ->
 			Data1 = Data#{nrf_groups => PreviousGroups ++ NewGroups},
-			nrf_update1(#{"serviceRating" => ServiceRating}, Data1)
-	end.
+			nrf_update2(#{"serviceRating" => ServiceRating}, Data1)
+	end;
+nrf_update1(_ServiceRating, Data) ->
+	nrf_update2(#{}, Data).
 %% @hidden
-nrf_update1(JSON,
+nrf_update2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	NewData = Data#{sequence => NewSequence},
-	nrf_update2(Now, JSON1, NewData).
+	nrf_update3(Now, JSON1, NewData).
 %% @hidden
-nrf_update2(Now, JSON,
+nrf_update3(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				nrf_location := Location, ohost := OHost, orealm := ORealm,
+				nrf_location := Location,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
@@ -2232,12 +2239,11 @@ nrf_update2(Now, JSON,
 				when length(NextURIs) > 0 ->
 			NewData = Data#{nrf_uri => hd(NextURIs),
 					nrf_next_uris => tl(NextURIs)},
-			nrf_update2(Now, JSON, NewData);
+			nrf_update3(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -2246,8 +2252,7 @@ nrf_update2(Now, JSON,
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -2264,17 +2269,23 @@ nrf_update2(Now, JSON,
 		From :: {pid(), reference()},
 		Time :: erlang:timeout().
 %% @doc Finish rating a session.
-nrf_release(#{nrf_groups := PreviousGroups} = Data) ->
-	ServiceRating = service_rating(Data),
+nrf_release(Data) ->
+	nrf_release1(service_rating(Data), Data).
+%% @hidden
+nrf_release1(ServiceRating,
+		#{nrf_groups := PreviousGroups} = Data)
+		when length(ServiceRating) > 0 ->
 	Groups = lists:usort([maps:get("ratingGroup", SR, undefined)
 			|| #{"requestSubType" := RST} = SR <- ServiceRating,
 			((RST == "DEBIT") or (RST == "RELEASE"))]),
 	Missing = [#{"ratingGroup" => RG, "requestSubType" => "RELEASE"}
 			|| RG <- PreviousGroups -- Groups],
 	ServiceRating1 = ServiceRating ++ Missing,
-	nrf_release1(#{"serviceRating" => ServiceRating1}, Data).
+	nrf_release2(#{"serviceRating" => ServiceRating1}, Data);
+nrf_release1(_ServiceRating, Data) ->
+	nrf_release2(#{}, Data).
 %% @hidden
-nrf_release1(JSON,
+nrf_release2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
@@ -2284,14 +2295,13 @@ nrf_release1(JSON,
 			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	NewData = Data#{sequence => NewSequence},
-	nrf_release2(Now, JSON1, NewData).
+	nrf_release3(Now, JSON1, NewData).
 %% @hidden
-nrf_release2(Now, JSON,
+nrf_release3(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
 				nrf_location := Location,
-				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
@@ -2314,12 +2324,11 @@ nrf_release2(Now, JSON,
 				when length(NextURIs) > 0 ->
 			NewData = Data#{nrf_uri => hd(NextURIs),
 					nrf_next_uris => tl(NextURIs)},
-			nrf_release2(Now, JSON, NewData);
+			nrf_release3(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -2328,8 +2337,7 @@ nrf_release2(Now, JSON,
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
