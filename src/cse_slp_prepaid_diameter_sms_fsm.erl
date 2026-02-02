@@ -1281,6 +1281,17 @@ nrf_start1(ServiceRating, Data)
 nrf_start1(_ServiceRating, Data) ->
 	nrf_start2(#{}, Data#{nrf_groups => []}).
 %% @hidden
+nrf_start2(JSON, #{one_time := true,
+		context := Context, sequence := Sequence} = Data) ->
+	Now = erlang:system_time(millisecond),
+	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
+			"invocationTimeStamp" => cse_log:iso8601(Now),
+			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
+			"serviceContextId" => Context,
+			"subscriptionId" => subscription_id(Data)
+			"oneTimeEvent" => true,
+			"oneTimeEventType" => "IEC"},
+	nrf_start3(Now, JSON1, Data);
 nrf_start2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
