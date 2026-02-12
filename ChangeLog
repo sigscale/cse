@@ -1,3 +1,12 @@
+2026-02-12 Vance Shipley <vances@sigscale.org>
+
+	* diameter callback requires escript compilation
+	* do not include empty service rating in rating data nrf payload
+	* Revert "always send debit service rating on update/release"
+	* pretty print sy experimental-result in escript
+	* nrf oas v1.2.2
+	* correct expected empty return from string:split/2
+
 2026-01-08 Vance Shipley <vances@sigscale.org>
 
 	* support msisdn as subscription-id-type=sip_uri

@@ -1,3 +1,9 @@
+February 12, 2026
+-----------------
+	- Fixes for spending limit escript
+	- Do not include empty ServiceRating in Nrf_Rating
+	- Nrf_Rating OAS v1.2.2
+
 January 8, 2026
 ---------------
 	- Accept MSISDN subscription ID as SIP URI in IMS SLP
