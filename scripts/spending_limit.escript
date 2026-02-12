@@ -1,6 +1,8 @@
 #!/usr/bin/env escript
 %% vim: syntax=erlang
 
+-mode(compile).
+
 -export([handle_request/3]).
 
 -include_lib("cse/include/diameter_gen_3gpp.hrl").
