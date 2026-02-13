@@ -1288,7 +1288,7 @@ nrf_start2(JSON, #{one_time := true,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"serviceContextId" => Context,
-			"subscriptionId" => subscription_id(Data)
+			"subscriptionId" => subscription_id(Data),
 			"oneTimeEvent" => true,
 			"oneTimeEventType" => "IEC"},
 	nrf_start3(Now, JSON1, Data);
