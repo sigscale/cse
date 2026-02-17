@@ -138,7 +138,7 @@
 		nrf_req_url => string(),
 		nrf_http => map(),
 		nrf_reqid => reference(),
-		nrf_groups => []}.
+		nrf_groups := [0..4294967295]}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_prepaid_diameter_ps_fsm gen_statem callbacks
@@ -194,6 +194,7 @@ init(Args) when is_list(Args) ->
 			nrf_sort => Sort, nrf_retries => Retries,
 			nrf_resolver => Resolver,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
+			nrf_groups => [],
 			start => erlang:system_time(millisecond),
 			idle => IdleTime, sequence => 1},
 	Data1 = add_nrf(URI, Data),
@@ -1235,7 +1236,7 @@ nrf_start1(ServiceRating, Data)
 	Data1 = Data#{nrf_groups => Groups},
 	nrf_start2(#{"serviceRating" => ServiceRating}, Data1);
 nrf_start1(_ServiceRating, Data) ->
-	nrf_start2(#{}, Data#{nrf_groups => []}).
+	nrf_start2(#{}, Data).
 %% @hidden
 nrf_start2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
