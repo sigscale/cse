@@ -1366,7 +1366,7 @@ nrf_update2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"serviceContextId" => Context,

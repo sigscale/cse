@@ -147,7 +147,7 @@
 		nrf_req_url => string(),
 		nrf_http => map(),
 		nrf_reqid => reference(),
-		nrf_groups := [0..4294967295]}.
+		nrf_groups := [0..4294967295 | undefined]}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_prepaid_diameter_ims_fsm gen_statem callbacks
@@ -2205,7 +2205,7 @@ nrf_update2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
-	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
+	JSON1 = JSON#{"invocationSequenceNumber" => NewSequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"serviceContextId" => Context,
