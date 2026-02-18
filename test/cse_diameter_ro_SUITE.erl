@@ -28,12 +28,14 @@
 % export test case functions
 -export([initial_scur_ims/0, initial_scur_ims/1,
 		initial_scur_ims_nrf/0, initial_scur_ims_nrf/1,
+		initial_scur_ims_auth_only/0, initial_scur_ims_auth_only/1,
 		interim_scur_ims/0, interim_scur_ims/1,
 		interim_scur_ims_nrf/0, interim_scur_ims_nrf/1,
 		final_scur_ims/0, final_scur_ims/1,
 		final_scur_ims_nrf/0, final_scur_ims_nrf/1,
 		initial_scur_ps/0, initial_scur_ps/1,
 		initial_scur_ps_nrf/0, initial_scur_ps_nrf/1,
+		initial_scur_ps_auth_only/0, initial_scur_ps_auth_only/1,
 		interim_scur_ps/0, interim_scur_ps/1,
 		interim_scur_ps_nrf/0, interim_scur_ps_nrf/1,
 		final_scur_ps/0, final_scur_ps/1,
@@ -227,12 +229,12 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[initial_scur_ims, initial_scur_ims_nrf, interim_scur_ims,
-			interim_scur_ims_nrf, final_scur_ims, final_scur_ims_nrf,
-			initial_scur_ps, initial_scur_ps_nrf, interim_scur_ps,
+	[initial_scur_ims, initial_scur_ims_nrf, initial_scur_ims_auth_only,
+			interim_scur_ims, interim_scur_ims_nrf, final_scur_ims,
+			final_scur_ims_nrf, initial_scur_ps, initial_scur_ps_nrf,
+			initial_scur_ps_auth_only, interim_scur_ps,
 			interim_scur_ps_nrf, final_scur_ps, final_scur_ps_nrf,
-			sms_iec, mms_iec,
-			unknown_subscriber, out_of_credit,
+			sms_iec, mms_iec, unknown_subscriber, out_of_credit,
 			initial_in_call, interim_in_call, final_in_call,
 			idle_timeout_ps, idle_timeout_ims,
 			client_connect, client_reconnect,
@@ -296,6 +298,23 @@ initial_scur_ims_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant]} = GSU,
 	{ok, {NewBalance, Grant}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Grant.
+
+initial_scur_ims_auth_only() ->
+	Description = "IMS SCUR Nrf without ServiceRating",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+initial_scur_ims_auth_only(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
+	{ok, Answer} = scur_start_auth_only(Config, "32260@3gpp.org", Session, IMSI, MSISDN),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = []} = Answer,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}).
 
 interim_scur_ims() ->
 	Description = "IMS SCUR CCA-U success",
@@ -491,6 +510,23 @@ initial_scur_ps_nrf(Config) ->
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant]} = GSU,
 	{ok, {NewBalance, Grant}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Grant.
+
+initial_scur_ps_auth_only() ->
+	Description = "PS SCUR Nrf without ServiceRating",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+initial_scur_ps_auth_only(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
+	{ok, Answer} = scur_start_auth_only(Config, "32251@3gpp.org", Session, IMSI, MSISDN),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = []} = Answer,
+	{ok, {Balance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}).
 
 interim_scur_ps() ->
 	Description = "PS SCUR CCA-U success",
@@ -1347,6 +1383,54 @@ scur_ps_stop(Config, Context, Session, SI, RG, IMSI, MSISDN, RequestNum, Used) -
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Subscription-Id' = [MSISDN1, IMSI1],
 			'Service-Information' = [ServiceInformation]},
+	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
+
+scur_start_auth_only(Config, "32251@3gpp.org" = Context,
+		Session, IMSI, MSISDN) ->
+	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+	ServiceInformation = [#'3gpp_ro_Service-Information'{
+			'PS-Information' = [PS]}],
+	scur_start_auth_only(Config, Context,
+			Session, IMSI, MSISDN, ServiceInformation);
+scur_start_auth_only(Config, "32260@3gpp.org" = Context,
+		Session, IMSI, MSISDN) ->
+	Destination = "tel:+" ++ cse_test_lib:rand_dn(rand:uniform(10) + 5),
+	IMS = #'3gpp_ro_IMS-Information'{
+			'Node-Functionality' = ?'3GPP_RO_NODE-FUNCTIONALITY_AS',
+			'Role-Of-Node' = [?'3GPP_RO_ROLE-OF-NODE_ORIGINATING_ROLE'],
+			'Called-Party-Address' = [Destination]},
+	PS = #'3gpp_ro_PS-Information'{'3GPP-SGSN-MCC-MNC' = ["001001"]},
+	ServiceInformation = [#'3gpp_ro_Service-Information'{
+			'IMS-Information' = [IMS],
+			'PS-Information' = [PS]}],
+	scur_start_auth_only(Config, Context,
+			Session, IMSI, MSISDN, ServiceInformation).
+
+scur_start_auth_only(Config, Context, Session,
+		IMSI, MSISDN, ServiceInformation) ->
+	OriginHost = ?config(ct_host, Config),
+	OriginRealm = ?config(ct_realm, Config),
+	DestinationRealm = ?config(sut_realm, Config),
+	Realm = ?config(realm, Config),
+	MSISDN1 = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+			'Subscription-Id-Data' = MSISDN},
+	IMSI1 = #'3gpp_ro_Subscription-Id'{
+			'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+			'Subscription-Id-Data' = IMSI},
+	CCR = #'3gpp_ro_CCR'{'Session-Id' = Session,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Destination-Realm' = DestinationRealm,
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'Service-Context-Id' = Context,
+			'User-Name' = [MSISDN ++ "@" ++ Realm],
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
+			'CC-Request-Number' = 0,
+			'Event-Timestamp' = [calendar:universal_time()],
+			'Subscription-Id' = [MSISDN1, IMSI1],
+			'Multiple-Services-Indicator' = [1],
+			'Service-Information' = ServiceInformation},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
 iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
