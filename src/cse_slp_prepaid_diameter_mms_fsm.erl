@@ -1354,7 +1354,7 @@ nrf_update1(ServiceRating,
 			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	case Groups -- PreviousGroups of
 		[] ->
-			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
+			nrf_update2(#{"serviceRating" => ServiceRating}, Data);
 		NewGroups ->
 			Data1 = Data#{nrf_groups => PreviousGroups ++ NewGroups},
 			nrf_update2(#{"serviceRating" => ServiceRating}, Data1)
