@@ -101,13 +101,17 @@ do_post(ModData, Body, ["ratingdata"]) ->
 				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
 			Subscriber = get_sub_id(SubscriptionId),
-			ServiceRatingResponse = rate(Subscriber, Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
-					"invocationTimeStamp" => cse_log:iso8601(Now),
-					"serviceRating" => ServiceRatingResponse},
+					"invocationTimeStamp" => cse_log:iso8601(Now)},
+			Response1 = case rate(Subscriber, Request, ModData) of
+				[] ->
+					Response;
+				ServiceRatingResponse ->
+					Response#{"serviceRating" => ServiceRatingResponse}
+			end,
 			RatingDataRef = integer_to_list(rand:uniform(16#ffff)),
 			Headers = [{location, "/ratingdata/" ++ RatingDataRef}],
-			do_response(ModData, {201, Headers, zj:encode(Response)});
+			do_response(ModData, {201, Headers, zj:encode(Response1)});
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
 	end;
@@ -117,11 +121,15 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "update"]) ->
 				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
 			Subscriber = get_sub_id(SubscriptionId),
-			ServiceRatingResponse = rate(Subscriber, Request, ModData),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
-					"invocationTimeStamp" => cse_log:iso8601(Now),
-					"serviceRating" => ServiceRatingResponse},
-			do_response(ModData, {200, [], zj:encode(Response)});
+					"invocationTimeStamp" => cse_log:iso8601(Now)},
+			Response1 = case rate(Subscriber, Request, ModData) of
+				[] ->
+					Response;
+				ServiceRatingResponse ->
+					Response#{"serviceRating" => ServiceRatingResponse}
+			end,
+			do_response(ModData, {200, [], zj:encode(Response1)});
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
 	end;
@@ -131,13 +139,17 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 				"subscriptionId" := SubscriptionId} = Request} ->
 			Now = erlang:system_time(millisecond),
 			Subscriber = get_sub_id(SubscriptionId),
-			ServiceRatingResponse = rate(Subscriber, Request, ModData),
+			Response = #{"invocationSequenceNumber" => SequenceNumber,
+					"invocationTimeStamp" => cse_log:iso8601(Now)},
+			Response1 = case rate(Subscriber, Request, ModData) of
+				[] ->
+					Response;
+				ServiceRatingResponse ->
+					Response#{"serviceRating" => ServiceRatingResponse}
+			end,
 			{ok, {_, 0} = _Account} = gen_server:call(ocs,
 					{release, Subscriber}),
-			Response = #{"invocationSequenceNumber" => SequenceNumber,
-					"invocationTimeStamp" => cse_log:iso8601(Now),
-					"serviceRating" => ServiceRatingResponse},
-			do_response(ModData, {200, [], zj:encode(Response)});
+			do_response(ModData, {200, [], zj:encode(Response1)});
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
 	end.
@@ -147,16 +159,16 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 		Subscriber :: string(),
 		Request :: map(),
 		ModData :: #mod{},
-		Response :: map().
+		Response :: [map()].
 %% @doc Build a rating response.
-rate(Subscriber, #{"serviceContextId" := Context,
-		"serviceRating" := ServiceRating} = _Request,
+rate(Subscriber, #{"serviceContextId" := Context} = Request,
 		ModData) when length(Context) > 14 ->
 	Context1 = lists:sublist(Context, length(Context) - 13, 14),
+	ServiceRating = maps:get("serviceRating", Request, []),
 	rate1(Subscriber, Context1, ServiceRating, ModData, []);
-rate(Subscriber, #{"serviceContextId" := Context,
-		"serviceRating" := ServiceRating} = _Request,
+rate(Subscriber, #{"serviceContextId" := Context} = Request,
 		ModData) ->
+	ServiceRating = maps:get("serviceRating", Request, []),
 	rate1(Subscriber, Context, ServiceRating, ModData, []).
 %% @hidden
 rate1(Subscriber, ?PS = Context,
