@@ -1,3 +1,9 @@
+February 20, 2026
+-----------------
+	- Correct invocationSequenceNumber in Nrf update
+	- Fix bug in previous version with Nrf update
+	- Handle SMS-Information Reply-Path-Requested
+
 February 12, 2026
 -----------------
 	- Fixes for spending limit escript

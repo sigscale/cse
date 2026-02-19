@@ -1,3 +1,16 @@
+2026-02-20 Vance Shipley <vances@sigscale.org>
+
+	* test: cases for release of dangling reservations
+	* test: support multiple-credit-control-services in mock ocs
+	* correct invocationSequenceNumber in nrf_update
+	* test: cases for omitted service rating in nrf start
+	* test: httpd nrf handler does not include empty service rating
+	* test: use cc-request in variable
+	* test: weighted random inclusion of service-id and rating-group
+	* correct typo in commit 95eb73f
+	* include sms reply-path-requested in diameter codec
+	* refactor type spec and initialization of nrf_groups
+
 2026-02-12 Vance Shipley <vances@sigscale.org>
 
 	* diameter callback requires escript compilation
