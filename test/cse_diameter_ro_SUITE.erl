@@ -33,6 +33,7 @@
 		interim_scur_ims_nrf/0, interim_scur_ims_nrf/1,
 		final_scur_ims/0, final_scur_ims/1,
 		final_scur_ims_nrf/0, final_scur_ims_nrf/1,
+		final_scur_ims_missing_rg/0, final_scur_ims_missing_rg/1,
 		initial_scur_ps/0, initial_scur_ps/1,
 		initial_scur_ps_nrf/0, initial_scur_ps_nrf/1,
 		initial_scur_ps_auth_only/0, initial_scur_ps_auth_only/1,
@@ -40,6 +41,7 @@
 		interim_scur_ps_nrf/0, interim_scur_ps_nrf/1,
 		final_scur_ps/0, final_scur_ps/1,
 		final_scur_ps_nrf/0, final_scur_ps_nrf/1,
+		final_scur_ps_missing_rg/0, final_scur_ps_missing_rg/1,
 		sms_iec/0, sms_iec/1,
 		mms_iec/0, mms_iec/1,
 		unknown_subscriber/0, unknown_subscriber/1,
@@ -237,13 +239,14 @@ sequences() ->
 all() ->
 	[initial_scur_ims, initial_scur_ims_nrf, initial_scur_ims_auth_only,
 			interim_scur_ims, interim_scur_ims_nrf, final_scur_ims,
-			final_scur_ims_nrf, initial_scur_ps, initial_scur_ps_nrf,
+			final_scur_ims_nrf, final_scur_ims_missing_rg,
+			initial_scur_ps, initial_scur_ps_nrf,
 			initial_scur_ps_auth_only, interim_scur_ps,
 			interim_scur_ps_nrf, final_scur_ps, final_scur_ps_nrf,
-			sms_iec, mms_iec, unknown_subscriber, out_of_credit,
-			initial_in_call, interim_in_call, final_in_call,
-			idle_timeout_ps, idle_timeout_ims,
-			client_connect, client_reconnect,
+			final_scur_ps_missing_rg, sms_iec, mms_iec,
+			unknown_subscriber, out_of_credit, initial_in_call,
+			interim_in_call, final_in_call, idle_timeout_ps,
+			idle_timeout_ims, client_connect, client_reconnect,
 			location_tai_ecgi].
 
 %%---------------------------------------------------------------------
@@ -464,6 +467,47 @@ final_scur_ims_nrf(Config) ->
 	{ok, {NewBalance, #{}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
 
+final_scur_ims_missing_rg() ->
+	Description = "IMS SCUR CCR-T missing Rating-Group",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+final_scur_ims_missing_rg(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI1 = service_id(),
+	RG1 = [rand:uniform(99) + 100],
+	Balance = rand:uniform(100) + 3600,
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
+	RequestNum0 = 0,
+	{ok, Answer0} = scur_ims_start(Config, Session, SI1, RG1, IMSI, MSISDN, originate, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
+			'CC-Request-Number' = RequestNum0,
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant0]} = GSU0,
+	RequestNum1 = RequestNum0 + 1,
+	Used1 = rand:uniform(Grant0),
+	SI2 = service_id(),
+	RG2 = [rand:uniform(99) + 100],
+	{ok, Answer1} = scur_ims_interim(Config, Session, SI2, RG2, IMSI, MSISDN, originate, RequestNum1, Used1),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU1]} = MSCC1,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant1]} = GSU1,
+	RequestNum2 = RequestNum1 + 1,
+	Used2 = rand:uniform(Grant1),
+	{ok, Answer2} = scur_ims_stop(Config, Session, SI1, RG1, IMSI, MSISDN, originate, RequestNum2, Used2),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
+	{ok, {NewBalance, #{}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Used1 + Used2.
+
 initial_scur_ps() ->
 	Description = "PS SCUR CCA-I success",
 	ct:comment(Description),
@@ -674,6 +718,47 @@ final_scur_ps_nrf(Config) ->
 	RequestNum2 = RequestNum1 + 1,
 	Used2 = rand:uniform(Grant1),
 	{ok, Answer2} = scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum2, Used2),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
+	{ok, {NewBalance, #{}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Used1 + Used2.
+
+final_scur_ps_missing_rg() ->
+	Description = "PS SCUR CCR-T missing Rating-Group",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+final_scur_ps_missing_rg(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI1 = service_id(),
+	RG1 = [rand:uniform(99) + 100],
+	Balance = (rand:uniform(10) + 50) * 1048576,
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
+	RequestNum0 = 0,
+	{ok, Answer0} = scur_ps_start(Config, Session, SI1, RG1, IMSI, MSISDN, RequestNum0),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'CC-Request-Type' = ?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST',
+			'CC-Request-Number' = RequestNum0,
+			'Multiple-Services-Credit-Control' = [MSCC0]} = Answer0,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU0]} = MSCC0,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant0]} = GSU0,
+	RequestNum1 = RequestNum0 + 1,
+	Used1 = rand:uniform(Grant0),
+	SI2 = service_id(),
+	RG2 = [rand:uniform(99) + 100],
+	{ok, Answer1} = scur_ps_interim(Config, Session, SI2, RG2, IMSI, MSISDN, RequestNum1, Used1),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
+	#'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Granted-Service-Unit' = [GSU1]} = MSCC1,
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant1]} = GSU1,
+	RequestNum2 = RequestNum1 + 1,
+	Used2 = rand:uniform(Grant1),
+	{ok, Answer2} = scur_ps_stop(Config, Session, SI1, RG2, IMSI, MSISDN, RequestNum2, Used2),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
 	{ok, {NewBalance, #{}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
