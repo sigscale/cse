@@ -34,8 +34,9 @@
 % export the private api
 -export([]).
 
--type state() :: #{Subscriber :: string()
-		:= Account :: {Balance :: integer(), Reserve :: integer()}}.
+-type reservations() :: #{RatingGroup :: 0..4294967295 | undefined := Reserve :: integer()}.
+-type account() :: {Balance :: integer(), Reservations :: reservations()}.
+-type state() :: #{Subscriber :: string() := Account :: account()}.
 
 %%----------------------------------------------------------------------
 %%  The gen_server callbacks
@@ -66,7 +67,7 @@ init(_Args) ->
 %% @see //stdlib/gen_server:handle_call/3
 %% @private
 handle_call({add_subscriber, Subscriber, Balance}, _From, State) ->
-	Account = {Balance, 0},
+	Account = {Balance, #{}},
 	NewState = State#{Subscriber => Account},
 	{reply, {ok, Account}, NewState};
 handle_call({get_subscriber, Subscriber}, _From, State) ->
@@ -78,24 +79,29 @@ handle_call({get_subscriber, Subscriber}, _From, State) ->
 	end;
 handle_call({add_balance, Subscriber, Amount}, _From, State) ->
 	case maps:find(Subscriber, State) of
-		{ok, {Balance, Reserve}} ->
+		{ok, {Balance, Reservations}} ->
 			NewBalance = Balance + Amount,
-			Account = {NewBalance, Reserve},
+			Account = {NewBalance, Reservations},
 			NewState = State#{Subscriber => Account},
 			{reply, {ok, Account}, NewState};
 		error ->
 			{reply, {error, not_found}, State}
 	end;
-handle_call({reserve, Subscriber, Amount}, _From, State) ->
+handle_call({reserve, Subscriber, RatingGroup, Amount}, _From, State) ->
 	case maps:find(Subscriber, State) of
-		{ok, {Balance, Reserve}}
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}}
 				when (Balance + Reserve) >= Amount ->
-			Account = {(Balance + Reserve) - Amount, Amount},
+			Account = {(Balance + Reserve) - Amount, Reservations#{RatingGroup => Amount}},
 			NewState = State#{Subscriber => Account},
 			{reply, {ok, Account}, NewState};
-		{ok, {Balance, Reserve}}
+		{ok, {Balance, Reservations}}
+				when Balance >= Amount ->
+			Account = {Balance - Amount, Reservations#{RatingGroup => Amount}},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}}
 				when (Balance + Reserve) > 0 ->
-			Account = {0, Balance + Reserve},
+			Account = {0, Reservations#{RatingGroup => Balance + Reserve}},
 			NewState = State#{Subscriber => Account},
 			{reply, {ok, Account}, NewState};
 		{ok, _Account} ->
@@ -103,31 +109,43 @@ handle_call({reserve, Subscriber, Amount}, _From, State) ->
 		error ->
 			{reply, {error, not_found}, State}
 	end;
-handle_call({debit, Subscriber, Amount}, _From, State) ->
+handle_call({debit, Subscriber, RatingGroup, Amount}, _From, State) ->
 	case maps:find(Subscriber, State) of
-		{ok, {Balance, Reserve}}
-				when Balance >= Amount ->
-			Account = {Balance - Amount, Reserve},
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}}
+				when Reserve >= Amount ->
+			Account = {Balance, Reservations#{RatingGroup => Reserve - Amount}},
 			NewState = State#{Subscriber => Account},
 			{reply, {ok, Account}, NewState};
-		{ok, {Balance, Reserve}}
-				when (Balance + Reserve) > Amount->
-			Account = {0, (Balance + Reserve) - Amount},
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}}
+				when (Balance + Reserve) >= Amount ->
+			NewBalance = Balance - (Amount - Reserve),
+			Account = {NewBalance, Reservations#{RatingGroup => 0}},
 			NewState = State#{Subscriber => Account},
 			{reply, {ok, Account}, NewState};
-		{ok, {Balance, Reserve}} ->
-			Account = {(Balance + Reserve) - Amount, 0},
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}} ->
+			Account = {(Balance + Reserve) - Amount, Reservations#{RatingGroup => 0}},
 			NewState = State#{Subscriber => Account},
 			{reply, {error, out_of_credit}, NewState};
 		error ->
 			{reply, {error, not_found}, State}
 	end;
-handle_call({release, Subscriber}, _From, State) ->
+handle_call({release, Subscriber, RatingGroup, Amount}, _From, State) ->
 	case maps:find(Subscriber, State) of
-		{ok, {Balance, Reserve}} ->
-			Account = {Balance + Reserve, 0},
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}}
+				when Reserve >= Amount ->
+			Account = {Balance + (Reserve - Amount), maps:remove(RatingGroup, Reservations)},
 			NewState = State#{Subscriber => Account},
 			{reply, {ok, Account}, NewState};
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}}
+				when (Balance + Reserve) >= Amount ->
+			NewBalance = Balance - (Amount - Reserve),
+			Account = {NewBalance, maps:remove(RatingGroup, Reservations)},
+			NewState = State#{Subscriber => Account},
+			{reply, {ok, Account}, NewState};
+		{ok, {Balance, #{RatingGroup := Reserve} = Reservations}} ->
+			Account = {(Balance + Reserve) - Amount, maps:remove(RatingGroup, Reservations)},
+			NewState = State#{Subscriber => Account},
+			{reply, {error, out_of_credit}, NewState};
 		error ->
 			{reply, {error, not_found}, State}
 	end;

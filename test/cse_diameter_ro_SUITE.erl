@@ -70,6 +70,12 @@
 -define(IANA_PEN_3GPP, 10415).
 -define(IANA_PEN_SigScale, 50386).
 
+-define(RG(L),
+		case L of
+			[N] -> N;
+			[] -> undefined
+		end).
+
 %%---------------------------------------------------------------------
 %%  Test server callback functions
 %%---------------------------------------------------------------------
@@ -256,7 +262,7 @@ initial_scur_ims(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
@@ -287,7 +293,7 @@ initial_scur_ims_nrf(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
@@ -296,7 +302,8 @@ initial_scur_ims_nrf(Config) ->
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Granted-Service-Unit' = [GSU]} = MSCC,
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant]} = GSU,
-	{ok, {NewBalance, Grant}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	RatingGroup = ?RG(RG),
+	{ok, {NewBalance, #{RatingGroup := Grant}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Grant.
 
 initial_scur_ims_auth_only() ->
@@ -309,12 +316,12 @@ initial_scur_ims_auth_only(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	{ok, Answer} = scur_start_auth_only(Config, "32260@3gpp.org", Session, IMSI, MSISDN),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = []} = Answer,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}).
+	{ok, {Balance, _}} = gen_server:call(OCS, {get_subscriber, IMSI}).
 
 interim_scur_ims() ->
 	Description = "IMS SCUR CCA-U success",
@@ -328,7 +335,7 @@ interim_scur_ims(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
@@ -367,7 +374,7 @@ interim_scur_ims_nrf(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
@@ -383,9 +390,10 @@ interim_scur_ims_nrf(Config) ->
 			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Granted-Service-Unit' = [GSU1]} = MSCC1,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [Grant1]} = GSU1,
-	{ok, {NewBalance, Grant1}} = gen_server:call(OCS, {get_subscriber, IMSI}),
-	Balance = NewBalance + Grant1 + Used.
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [_Grant1]} = GSU1,
+	RatingGroup = ?RG(RG),
+	{ok, {NewBalance, #{RatingGroup := Reserve}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Reserve + Used.
 
 final_scur_ims() ->
 	Description = "IMS SCUR CCR-T with CCA-T success",
@@ -399,7 +407,7 @@ final_scur_ims(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100000),
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
@@ -429,7 +437,7 @@ final_scur_ims_nrf(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum0),
@@ -453,7 +461,7 @@ final_scur_ims_nrf(Config) ->
 	Used2 = rand:uniform(Grant1),
 	{ok, Answer2} = scur_ims_stop(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum2, Used2),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
-	{ok, {NewBalance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	{ok, {NewBalance, #{}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
 
 initial_scur_ps() ->
@@ -468,7 +476,7 @@ initial_scur_ps(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 20) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum),
@@ -499,7 +507,7 @@ initial_scur_ps_nrf(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 20) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum),
@@ -508,7 +516,8 @@ initial_scur_ps_nrf(Config) ->
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Granted-Service-Unit' = [GSU]} = MSCC,
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant]} = GSU,
-	{ok, {NewBalance, Grant}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	RatingGroup = ?RG(RG),
+	{ok, {NewBalance, #{RatingGroup := Grant}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Grant.
 
 initial_scur_ps_auth_only() ->
@@ -521,12 +530,12 @@ initial_scur_ps_auth_only(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	{ok, Answer} = scur_start_auth_only(Config, "32251@3gpp.org", Session, IMSI, MSISDN),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
 			'Multiple-Services-Credit-Control' = []} = Answer,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}).
+	{ok, {Balance, _}} = gen_server:call(OCS, {get_subscriber, IMSI}).
 
 interim_scur_ps() ->
 	Description = "PS SCUR CCA-U success",
@@ -540,7 +549,7 @@ interim_scur_ps(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 50) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
@@ -579,7 +588,7 @@ interim_scur_ps_nrf(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 50) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
@@ -595,9 +604,10 @@ interim_scur_ps_nrf(Config) ->
 			'Multiple-Services-Credit-Control' = [MSCC1]} = Answer1,
 	#'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Granted-Service-Unit' = [GSU1]} = MSCC1,
-	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [Grant1]} = GSU1,
-	{ok, {NewBalance, Grant1}} = gen_server:call(OCS, {get_subscriber, IMSI}),
-	Balance = NewBalance + Grant1 + Used.
+	#'3gpp_ro_Granted-Service-Unit'{'CC-Total-Octets' = [_Grant1]} = GSU1,
+	RatingGroup = ?RG(RG),
+	{ok, {NewBalance, #{RatingGroup := Reserve}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	Balance = NewBalance + Reserve + Used.
 
 final_scur_ps() ->
 	Description = "IMS SCUR CCR-T with CCA-T success",
@@ -611,7 +621,7 @@ final_scur_ps(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 50) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
@@ -641,7 +651,7 @@ final_scur_ps_nrf(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 50) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Config, Session, SI, RG, IMSI, MSISDN, RequestNum0),
@@ -665,7 +675,7 @@ final_scur_ps_nrf(Config) ->
 	Used2 = rand:uniform(Grant1),
 	{ok, Answer2} = scur_ps_stop(Config, Session, SI, RG, IMSI, MSISDN, RequestNum2, Used2),
 	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
-	{ok, {NewBalance, 0}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	{ok, {NewBalance, #{}}} = gen_server:call(OCS, {get_subscriber, IMSI}),
 	Balance = NewBalance + Used1 + Used2.
 
 sms_iec() ->
@@ -680,7 +690,7 @@ sms_iec(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100000),
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
@@ -707,7 +717,7 @@ mms_iec(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100000),
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
@@ -748,7 +758,7 @@ out_of_credit(Config) ->
 	MSISDN = cse_test_lib:rand_dn(11),
 	SI = service_id(),
 	RG = rating_group(),
-	{ok, {0, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, 0}),
+	{ok, {0, _}} = gen_server:call(OCS, {add_subscriber, IMSI, 0}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum),
@@ -766,7 +776,7 @@ initial_in_call(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum = 0,
 	{ok, Answer} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum),
@@ -797,7 +807,7 @@ interim_in_call(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
@@ -836,7 +846,7 @@ final_in_call(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100000),
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum0),
@@ -870,7 +880,7 @@ idle_timeout_ps(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = (rand:uniform(10) + 50) * 1048576,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = list_to_binary(diameter:session_id(atom_to_list(?MODULE))),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ps_start(Config, Context, Session,
@@ -904,7 +914,7 @@ idle_timeout_ims(Config) ->
 	SI = service_id(),
 	RG = rating_group(),
 	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
 	Session = list_to_binary(diameter:session_id(atom_to_list(?MODULE))),
 	RequestNum0 = 0,
 	{ok, Answer0} = scur_ims_start(Config, Context, Session,

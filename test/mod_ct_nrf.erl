@@ -103,7 +103,7 @@ do_post(ModData, Body, ["ratingdata"]) ->
 			Subscriber = get_sub_id(SubscriptionId),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now)},
-			Response1 = case rate(Subscriber, Request, ModData) of
+			Response1 = case rate(Subscriber, Request, false, ModData) of
 				[] ->
 					Response;
 				ServiceRatingResponse ->
@@ -123,7 +123,7 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "update"]) ->
 			Subscriber = get_sub_id(SubscriptionId),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now)},
-			Response1 = case rate(Subscriber, Request, ModData) of
+			Response1 = case rate(Subscriber, Request, false, ModData) of
 				[] ->
 					Response;
 				ServiceRatingResponse ->
@@ -141,45 +141,53 @@ do_post(ModData, Body, ["ratingdata", _RatingDataRef, "release"]) ->
 			Subscriber = get_sub_id(SubscriptionId),
 			Response = #{"invocationSequenceNumber" => SequenceNumber,
 					"invocationTimeStamp" => cse_log:iso8601(Now)},
-			Response1 = case rate(Subscriber, Request, ModData) of
+			Response1 = case rate(Subscriber, Request, true, ModData) of
 				[] ->
 					Response;
 				ServiceRatingResponse ->
 					Response#{"serviceRating" => ServiceRatingResponse}
 			end,
-			{ok, {_, 0} = _Account} = gen_server:call(ocs,
-					{release, Subscriber}),
 			do_response(ModData, {200, [], zj:encode(Response1)});
 		{error, _Partial, _Remaining} ->
 			do_response(ModData, {error, 400})
 	end.
 
--spec rate(Subscriber, Request, ModData) -> Response
+-spec rate(Subscriber, Request, Final, ModData) -> Response
 	when
 		Subscriber :: string(),
 		Request :: map(),
+		Final :: boolean(),
 		ModData :: #mod{},
 		Response :: [map()].
 %% @doc Build a rating response.
 rate(Subscriber, #{"serviceContextId" := Context} = Request,
-		ModData) when length(Context) > 14 ->
+		Final, ModData) when length(Context) > 14 ->
 	Context1 = lists:sublist(Context, length(Context) - 13, 14),
 	ServiceRating = maps:get("serviceRating", Request, []),
-	rate1(Subscriber, Context1, ServiceRating, ModData, []);
+	rate1(Subscriber, Context1, ServiceRating, Final, ModData, []);
 rate(Subscriber, #{"serviceContextId" := Context} = Request,
-		ModData) ->
+		Final, ModData) ->
 	ServiceRating = maps:get("serviceRating", Request, []),
-	rate1(Subscriber, Context, ServiceRating, ModData, []).
+	rate1(Subscriber, Context, ServiceRating, Final, ModData, []).
 %% @hidden
 rate1(Subscriber, ?PS = Context,
-		[#{"requestSubType" := "RESERVE"} = H | T], ModData, Acc) ->
-	Amount = (rand:uniform(10) + 5) * 1048576,
-	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+		[#{"requestSubType" := "RESERVE"} = H | T],
+		false = Final, ModData, Acc) ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
+	Amount = case maps:get("requestedUnit", H, undefined) of
+		#{"time" := Seconds} ->
+			Seconds;
+		#{"totalVolume" := Octets} ->
+			Octets;
+		_ ->
+			(rand:uniform(10) + 5) * 1048576
+	end,
+	case gen_server:call(ocs, {reserve, Subscriber, RatingGroup, Amount}) of
+		{ok, {_Balance, #{RatingGroup := Reserve}}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"totalVolume" => Reserve}},
-			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, Final, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -189,14 +197,20 @@ rate1(Subscriber, ?PS = Context,
 	end;
 rate1(Subscriber, ?IMS = Context,
 		[#{"requestSubType" := "RESERVE"} = H | T],
-		ModData, Acc) ->
-	Amount = rand:uniform(50) * 30,
-	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+		false = Final, ModData, Acc) ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
+	Amount = case maps:get("requestedUnit", H, undefined) of
+		#{"time" := Seconds} ->
+			Seconds;
+		_ ->
+			rand:uniform(50) * 30
+	end,
+	case gen_server:call(ocs, {reserve, Subscriber, RatingGroup, Amount}) of
+		{ok, {_Balance, #{RatingGroup := Reserve}}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"time" => Reserve}},
-			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, Final, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -206,15 +220,21 @@ rate1(Subscriber, ?IMS = Context,
 	end;
 rate1(Subscriber, Context,
 		[#{"requestSubType" := "RESERVE"} = H | T],
-		ModData, Acc)
+		false = Final, ModData, Acc)
 		when Context == ?SMS; Context == ?MMS ->
-	Amount = rand:uniform(5),
-	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
+	Amount = case maps:get("requestedUnit", H, undefined) of
+		#{"serviceSpecificUnit" := Messages} ->
+			Messages;
+		_ ->
+			rand:uniform(5)
+	end,
+	case gen_server:call(ocs, {reserve, Subscriber, RatingGroup, Amount}) of
+		{ok, {_Balance, #{RatingGroup := Reserve}}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"serviceSpecificUnit" => 1}},
-			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, Final, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -224,14 +244,20 @@ rate1(Subscriber, Context,
 	end;
 rate1(Subscriber, ?VCS = Context,
 		[#{"requestSubType" := "RESERVE"} = H | T],
-		ModData, Acc) ->
-	Amount = rand:uniform(50) * 30,
-	case gen_server:call(ocs, {reserve, Subscriber, Amount}) of
-		{ok, {_Balance, Reserve}} when Reserve > 0 ->
+		false = Final, ModData, Acc) ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
+	Amount = case maps:get("requestedUnit", H, undefined) of
+		#{"time" := Seconds} ->
+			Seconds;
+		_ ->
+			rand:uniform(50) * 30
+	end,
+	case gen_server:call(ocs, {reserve, Subscriber, RatingGroup, Amount}) of
+		{ok, {_Balance, #{RatingGroup := Reserve}}} when Reserve > 0 ->
 			H1 = maps:remove("requestedUnit", H),
 			ServiceRating = H1#{"resultCode" => "SUCCESS",
 					"grantedUnit" => #{"time" => Reserve}},
-			rate1(Subscriber, Context, T, ModData, [ServiceRating | Acc]);
+			rate1(Subscriber, Context, T, Final, ModData, [ServiceRating | Acc]);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -241,12 +267,13 @@ rate1(Subscriber, ?VCS = Context,
 	end;
 rate1(Subscriber, Context,
 		[#{"requestSubType" := "DEBIT",
-		"consumedUnit" := ConsumedUnit} = _H | T],
-		ModData, Acc) ->
+		"consumedUnit" := ConsumedUnit} = H | T],
+		false = Final, ModData, Acc) ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
 	Amount = get_units(ConsumedUnit),
-	case gen_server:call(ocs, {debit, Subscriber, Amount}) of
+	case gen_server:call(ocs, {debit, Subscriber, RatingGroup, Amount}) of
 		{ok, {Balance, _Reserve}} when Balance >= 0 ->
-			rate1(Subscriber, Context, T, ModData, Acc);
+			rate1(Subscriber, Context, T, Final, ModData, Acc);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -255,11 +282,14 @@ rate1(Subscriber, Context,
 			do_response(ModData, {error, 500})
 	end;
 rate1(Subscriber, Context,
-		[#{"requestSubType" := "RELEASE"} = _H | T],
-		ModData, Acc) ->
-	case gen_server:call(ocs, {debit, Subscriber, 0}) of
-		{ok, {_Balance, _Reserve}} ->
-			rate1(Subscriber, Context, T, ModData, Acc);
+		[#{"requestSubType" := "DEBIT",
+		"consumedUnit" := ConsumedUnit} = H | T],
+		true = Final, ModData, Acc) ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
+	Amount = get_units(ConsumedUnit),
+	case gen_server:call(ocs, {release, Subscriber, RatingGroup, Amount}) of
+		{ok, {Balance, _Reserve}} when Balance >= 0 ->
+			rate1(Subscriber, Context, T, Final, ModData, Acc);
 		{error, out_of_credit} ->
 			do_response(ModData, {error, 403});
 		{error, not_found} ->
@@ -267,7 +297,21 @@ rate1(Subscriber, Context,
 		{error, _Reason} ->
 			do_response(ModData, {error, 500})
 	end;
-rate1(_, _, [], _, Acc) ->
+rate1(Subscriber, Context,
+		[#{"requestSubType" := "RELEASE"} = H | T],
+		Final, ModData, Acc) ->
+	RatingGroup = maps:get("ratingGroup", H, undefined),
+	case gen_server:call(ocs, {release, Subscriber, RatingGroup, 0}) of
+		{ok, {_Balance, _Reserve}} ->
+			rate1(Subscriber, Context, T, Final, ModData, Acc);
+		{error, out_of_credit} ->
+			do_response(ModData, {error, 403});
+		{error, not_found} ->
+			do_response(ModData, {error, 404});
+		{error, _Reason} ->
+			do_response(ModData, {error, 500})
+	end;
+rate1(_, _Context, [], _, _, Acc) ->
 	lists:reverse(Acc).
 
 %% @hidden
