@@ -53,7 +53,8 @@ sy_session(Options) ->
 			#diameter_event{service = Name, info = start} ->
 				ok
 		end,
-		TransportOptions =  [{transport_module, diameter_tcp},
+		TransportModule =  maps:get(transport, Options, diameter_tcp),
+		TransportOptions =  [{transport_module, TransportModule},
 				{transport_config,
 						[{raddr, maps:get(raddr, Options, {127,0,0,1})},
 						{rport, maps:get(rport, Options, 3868)},
@@ -231,11 +232,12 @@ usage() ->
 	Option3 = " [--policy-counter-id none]",
 	Option4 = " [--updates 0]",
 	Option5 = " [--interval 1000]",
-	Option6 = " [--ip 127.0.0.1]",
-	Option7 = " [--raddr 127.0.0.1]",
-	Option8 = " [--rport 3868]",
+	Option6 = " [--transport tcp]",
+	Option7 = " [--ip 127.0.0.1]",
+	Option8 = " [--raddr 127.0.0.1]",
+	Option9 = " [--rport 3868]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
-			Option6, Option7, Option8],
+			Option6, Option7, Option8, Option9],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -254,6 +256,10 @@ options(["--interval", MS | T], Acc) ->
 	options(T, Acc#{interval => list_to_integer(MS)});
 options(["--updates", N | T], Acc) ->
 	options(T, Acc#{updates => list_to_integer(N)});
+options(["--transport", "tcp" | T], Acc) ->
+	options(T, Acc#{transport => diameter_tcp});
+options(["--transport", "sctp" | T], Acc) ->
+	options(T, Acc#{transport => diameter_sctp});
 options(["--ip", Address | T], Acc) ->
 	{ok, IP} = inet:parse_address(Address),
 	options(T, Acc#{ip => IP});
