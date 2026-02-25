@@ -438,13 +438,13 @@ process_request(ServiceName,
 				false ->
 					ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					ErrorMessage = ["Nchf response missing Location"],
-					diameter_error(SessionId, OHost, ORealm,
+					diameter_sla_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, [])
 			end;
 		{201 = _StatusCode, _ResponseHeaders, _ResponseBody} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf decoding SpendingLimitStatus failed"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, []);
 		{StatusCode, ResponseHeaders, ResponseBody} ->
 			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
@@ -512,18 +512,18 @@ process_request(ServiceName,
 					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							["Nchf unexpected response"], []}
 			end,
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, Failed);
 		{error, _Reason} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf transport error"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
 	catch
 		throw:supi ->
 			ResultCode = ?'IETF_RESULT-CODE_USER_UNKNOWN',
 			ErrorMessage = ["SUPI (IMSI/NAI) missing"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, []);
 		?CATCH_STACK ->
 			?SET_STACK,
@@ -533,7 +533,7 @@ process_request(ServiceName,
 					{error, Reason}, {stack, StackTrace}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Unspecified error"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
 	end;
 process_request(_ServiceName,
@@ -586,7 +586,7 @@ process_request(_ServiceName,
 		{200 = _StatusCode, _ResponseHeaders, _ResponseBody} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf decoding SpendingLimitStatus failed"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, []);
 		{StatusCode, ResponseHeaders, ResponseBody} ->
 			{ResultCode, ErrorMessage, Failed} = case lists:keyfind("content-type",
@@ -654,18 +654,18 @@ process_request(_ServiceName,
 					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							["Nchf unexpected response"], []}
 			end,
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, Failed);
 		{error, _Reason} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf transport error"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
 	catch
 		throw:session ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNKNOWN_SESSION_ID',
 			ErrorMessage = ["Sy Session-Id not found"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, []);
 		?CATCH_STACK ->
 			?SET_STACK,
@@ -675,7 +675,7 @@ process_request(_ServiceName,
 					{error, Reason}, {stack, StackTrace}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Unspecified error"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
 	end;
 process_request(_ServiceName,
@@ -741,19 +741,21 @@ process_request(_ServiceName,
 					{?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 							["Nchf unexpected response"], []}
 			end,
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sta_error(SessionId, OHost, ORealm,
 							ResultCode, ErrorMessage, Failed);
 		{error, _Reason} ->
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Nchf transport error"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sta_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
 	catch
 		throw:session ->
-			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNKNOWN_SESSION_ID',
-			ErrorMessage = ["Sy Session-Id not found"],
-			diameter_error(SessionId, OHost, ORealm,
-					ResultCode, ErrorMessage, []);
+			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			STA = #'3gpp_sy_STA'{'Session-Id' = SessionId,
+					'Origin-Host' = OHost,
+					'Origin-Realm' = ORealm,
+					'Result-Code' = [ResultCode]},
+			{reply, STA};
 		?CATCH_STACK ->
 			?SET_STACK,
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME},
@@ -762,7 +764,7 @@ process_request(_ServiceName,
 					{error, Reason}, {stack, StackTrace}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			ErrorMessage = ["Unspecified error"],
-			diameter_error(SessionId, OHost, ORealm,
+			diameter_sta_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, [])
 	end.
 
@@ -946,7 +948,7 @@ nchf_final(Location, Config) ->
 			{error, Reason}
 	end.
 
--spec diameter_error(SessionId, OriginHost, OriginRealm,
+-spec diameter_sla_error(SessionId, OriginHost, OriginRealm,
 			ResultCode, ErrorMessage, Failed) -> Reply
 	when
 		SessionId :: binary(),
@@ -958,7 +960,7 @@ nchf_final(Location, Config) ->
 		Reply :: {reply, #'3gpp_sy_SLA'{}}.
 %% @doc Send SLA to DIAMETER client indicating an operation failure.
 %% @hidden
-diameter_error(SessionId, OriginHost, OriginRealm,
+diameter_sla_error(SessionId, OriginHost, OriginRealm,
 		ResultCode, ErrorMessage, Failed)
 		when ResultCode ==
 		?'3GPP_SY_EXPERIMENTAL-RESULT-CODE_NO_AVAILABLE_POLICY_COUNTERS';
@@ -975,7 +977,7 @@ diameter_error(SessionId, OriginHost, OriginRealm,
 			'Error-Message' = ErrorMessage,
 			'Failed-AVP' = Failed},
 	{reply, SLA};
-diameter_error(SessionId, OriginHost, OriginRealm,
+diameter_sla_error(SessionId, OriginHost, OriginRealm,
 		ResultCode, ErrorMessage, Failed) ->
 	SLA = #'3gpp_sy_SLA'{'Session-Id' = SessionId,
 			'Auth-Application-Id' = ?SY_APPLICATION_ID,
@@ -985,6 +987,28 @@ diameter_error(SessionId, OriginHost, OriginRealm,
 			'Error-Message' = ErrorMessage,
 			'Failed-AVP' = Failed},
 	{reply, SLA}.
+
+-spec diameter_sta_error(SessionId, OriginHost, OriginRealm,
+			ResultCode, ErrorMessage, Failed) -> Reply
+	when
+		SessionId :: binary(),
+		OriginHost :: string(),
+		OriginRealm :: string(),
+		ResultCode :: pos_integer(),
+		ErrorMessage :: [string() | binary()],
+		Failed :: [#diameter_avp{}],
+		Reply :: {reply, #'3gpp_sy_STA'{}}.
+%% @doc Send STA to DIAMETER client indicating an operation failure.
+%% @hidden
+diameter_sta_error(SessionId, OriginHost, OriginRealm,
+		ResultCode, ErrorMessage, Failed) ->
+	STA = #'3gpp_sy_STA'{'Session-Id' = SessionId,
+			'Origin-Host' = OriginHost,
+			'Origin-Realm' = OriginRealm,
+			'Result-Code' = [ResultCode],
+			'Error-Message' = ErrorMessage,
+			'Failed-AVP' = Failed},
+	{reply, STA}.
 
 %% @hidden
 supi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = IMSI,
