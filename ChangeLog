@@ -1,3 +1,8 @@
+2026-02-26 Vance Shipley <vances@sigscale.org>
+
+	* support sctp transport in escripts
+	* correct diameter sy str/sta handling
+
 2026-02-20 Vance Shipley <vances@sigscale.org>
 
 	* test: cases for release of dangling reservations
