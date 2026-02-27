@@ -51,7 +51,10 @@ sy_session(Options) ->
 		ok = diameter:start_service(Name, ServiceOptions),
 		receive
 			#diameter_event{service = Name, info = start} ->
-				ok
+				ok;
+			#diameter_event{service = Name,
+					info = {closed, Ref, Reason, _Config}} ->
+				error(Reason)
 		end,
 		TransportModule =  maps:get(transport, Options, diameter_tcp),
 		TransportOptions =  [{transport_module, TransportModule},
