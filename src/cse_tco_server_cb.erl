@@ -63,7 +63,7 @@
 init([Sup | ExtraArgs] = _Args) ->
 	ACs = proplists:get_value(ac, ExtraArgs),
 	PC = proplists:get_value(sccp_pc, ExtraArgs, true),
-	NI = proplists:get_value(mtp_ni, ExtraArgs, 3),
+	NI = proplists:get_value(mtp_ni, ExtraArgs, 2),
 	process_flag(trap_exit, true),
 	State = #state{sup = Sup, ac = ACs, pc = PC, ni = NI},
 	{ok, State, {continue, init}}.
