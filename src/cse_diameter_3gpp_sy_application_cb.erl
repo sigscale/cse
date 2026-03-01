@@ -401,11 +401,15 @@ process_request(ServiceName,
 	try
 		SLC1 = supi(SubscriptionId, #{}),
 		SLC2 = gpsi(SubscriptionId, SLC1),
-		SubscriberId = case maps:get(sub_id_type, Config, supi) of
-			supi ->
-				maps:get(supi, SLC2);
-			gpsi ->
-				maps:get(gpsi, SLC2)
+		SubscriberId = case {maps:get(sub_id_type, Config, supi), SLC2} of
+			{supi, #{supi := SUPI}} ->
+				SUPI;
+			{gpsi, #{gpsi := GPSI}} ->
+				GPSI;
+			{supi, _} ->
+				throw(supi);
+			{gpsi, _} ->
+				throw(gpsi)
 		end,
 		SLC3 = pcid(PolicyCounterId, SLC2),
 		SLC4 = notify(Config, SLC3),
@@ -532,6 +536,11 @@ process_request(ServiceName,
 			ErrorMessage = ["SUPI (IMSI/NAI) missing"],
 			diameter_sla_error(SessionId, OHost, ORealm,
 					ResultCode, ErrorMessage, []);
+		throw:gpsi ->
+			ResultCode = ?'IETF_RESULT-CODE_USER_UNKNOWN',
+			ErrorMessage = ["GPSI (MSISDN) missing"],
+			diameter_sla_error(SessionId, OHost, ORealm,
+					ResultCode, ErrorMessage, []);
 		?CATCH_STACK ->
 			?SET_STACK,
 			?LOG_ERROR([{?MODULE, ?FUNCTION_NAME},
@@ -565,7 +574,7 @@ process_request(_ServiceName,
 						SLC2#{supi => SubscriberId,
 								supportedFeatures => "0"};
 					<<"msisdn-", _/binary>> ->
-						SLC2#{gpsi => SubscriberId,
+						SLC2#{supi => <<>>, gpsi => SubscriberId,
 								supportedFeatures => "0"}
 				end,
 				Body = zj:encode(SpendingLimitContext),
@@ -1036,8 +1045,8 @@ supi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = NAI,
 	SLC#{supi => SUPI};
 supi([_H | T], SLC) ->
 	supi(T, SLC);
-supi([], _SLC) ->
-	throw(supi).
+supi([], SLC) ->
+	SLC#{supi => <<>>}.
 
 %% @hidden
 gpsi([#'3gpp_sy_Subscription-Id'{'Subscription-Id-Data' = MSISDN,
