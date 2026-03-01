@@ -1,3 +1,8 @@
+March 1, 2026
+-------------
+	- Optionally index Sy/Nchf sessions by IMSI/GPSI
+	- Default MTP network indicator (NI) as national (3)
+
 February 26, 2026
 -----------------
 	- Correct DIAMETER Sy STR/STA handling
