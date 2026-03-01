@@ -403,9 +403,9 @@ process_request(ServiceName,
 		SLC2 = gpsi(SubscriptionId, SLC1),
 		SubscriberId = case maps:get(sub_id_type, Config, supi) of
 			supi ->
-				maps:get(supi, SLC1);
+				maps:get(supi, SLC2);
 			gpsi ->
-				maps:get(gpsi, SLC1)
+				maps:get(gpsi, SLC2)
 		end,
 		SLC3 = pcid(PolicyCounterId, SLC2),
 		SLC4 = notify(Config, SLC3),
@@ -561,10 +561,10 @@ process_request(_ServiceName,
 				SLC1 = pcid(PolicyCounterId, #{}),
 				SLC2 = notify(Config, SLC1),
 				SpendingLimitContext = case SubscriberId of
-					"imsi-" ++ _ ->
+					<<"imsi-", _/binary>> ->
 						SLC2#{supi => SubscriberId,
 								supportedFeatures => "0"};
-					"msisdn-" ++ _ ->
+					<<"msisdn-", _/binary>> ->
 						SLC2#{gpsi => SubscriberId,
 								supportedFeatures => "0"}
 				end,

@@ -120,7 +120,7 @@ notification2(#{"statusInfos" := _StatusInfos} = _SpendingLimitStatus) ->
 			title => "GPSI is mandatory if SUPI is empty",
 			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
 					"TS29571_CommonData.yaml#/components/responses/400"},
-	{error, 400, ProblemDetails}.
+	{error, 400, ProblemDetails};
 notification2(_SpendingLimitStatus) ->
 	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
 			invalidParams => [#{param => "/statusInfos"}],
@@ -178,25 +178,23 @@ termination1({error, _Partial, _Remaining}) ->
 	{error, 400, ProblemDetails}.
 %% @hidden
 termination2(#{"supi" := SUPI,
-		"statusInfos" := StatusInfos} = _SpendingLimitStatus)
-		when length(SUPI) > 0, is_map(StatusInfos) ->
-		#{"termCause" := "REMOVED_SUBSCRIBER" = Cause}) ->
+		"termCause" := "REMOVED_SUBSCRIBER" = Cause})
+		when length(SUPI) > 0 ->
 	SubscriberId = list_to_binary(SUPI),
 	termination3(ets:lookup(nchf_session, SubscriberId), Cause);
-termination2(#{"gpsi" := SUPI,
-		"statusInfos" := StatusInfos} = _SpendingLimitStatus)
-		when length(GPSI) > 0, is_map(StatusInfos) ->
-		#{"termCause" := "REMOVED_SUBSCRIBER" = Cause}) ->
+termination2(#{"gpsi" := GPSI,
+		"termCause" := "REMOVED_SUBSCRIBER" = Cause})
+		when length(GPSI) > 0 ->
 	SubscriberId = list_to_binary(GPSI),
 	termination3(ets:lookup(nchf_session, SubscriberId), Cause);
-termination2(#{"statusInfos" := _StatusInfos} = _SpendingLimitStatus) ->
+termination2(#{"supi" := [], "termCause" := _Cause}) ->
 	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
 			invalidParams => [#{param => "/gpsi"}],
 			status => 400, code => "",
 			title => "GPSI is mandatory if SUPI is empty",
 			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
 					"TS29571_CommonData.yaml#/components/responses/400"},
-	{error, 400, ProblemDetails}.
+	{error, 400, ProblemDetails};
 termination2(#{"termCause" := _Cause}) ->
 	ProblemDetails = #{cause => "OPTIONAL_IE_INCORRECT ",
 			invalidParams => [#{param => "/termCause"}],
@@ -360,7 +358,7 @@ terminate({SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 		[_H | T] = _SupportedFeatures}, Cause) ->
 	terminate({SubscriptionId, ServiceName, SessionId, OHost, ORealm,
 			DHost, DRealm, T}, Cause);
-terminate({SubscriptionId, _ServiceName, _SessionId, _OHost, _ORealm, _DHost, _DRealm,
+terminate({_SubscriptionId, _ServiceName, _SessionId, _OHost, _ORealm, _DHost, _DRealm,
 		[] = _SupportedFeatures}, Cause) ->
 	ProblemDetails = #{cause => "UNSPECIFIED_MSG_FAILURE",
 			status => 400, code => Cause,
