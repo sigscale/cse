@@ -59,6 +59,7 @@
 %%% 					nchf_retries => Retries,
 %%% 					nchf_http_options => HttpOptions,
 %%% 					nchf_headers => Headers,
+%%% 					sub_id_type => supi | gpsi,
 %%% 					notify_uri := URI}
 %%% 				</tt>
 %%% 			</li>
@@ -398,8 +399,14 @@ process_request(ServiceName,
 		Config)
 		when RequestType == ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST' ->
 	try
-		#{supi := SUPI} = SLC1 = supi(SubscriptionId, #{}),
+		SLC1 = supi(SubscriptionId, #{}),
 		SLC2 = gpsi(SubscriptionId, SLC1),
+		SubscriberId = case maps:get(sub_id_type, Config, supi) of
+			supi ->
+				maps:get(supi, SLC1);
+			gpsi ->
+				maps:get(gpsi, SLC1)
+		end,
 		SLC3 = pcid(PolicyCounterId, SLC2),
 		SLC4 = notify(Config, SLC3),
 		SpendingLimitContext = SLC4#{supportedFeatures => "0"},
@@ -412,9 +419,9 @@ process_request(ServiceName,
 			case lists:keyfind("location", 1, ResponseHeaders) of
 				{_, Location} ->
 					ets:insert(sy_session,
-							{SessionId, SUPI, list_to_binary(Location)}),
+							{SessionId, SubscriberId, list_to_binary(Location)}),
 					ets:insert(nchf_session,
-							{SUPI, ServiceName, SessionId, OHost, ORealm,
+							{SubscriberId, ServiceName, SessionId, OHost, ORealm,
 							OriginHost, OriginRealm, SupportedFeatures}),
 					F = fun(PolicyCounterId1,
 								#{"policyCounterId" := PolicyCounterId1,
@@ -550,11 +557,17 @@ process_request(_ServiceName,
 		when RequestType == ?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST' ->
 	try
 		case ets:lookup(sy_session, SessionId) of
-			[{_, SUPI, Location}] ->
+			[{_, SubscriberId, Location}] ->
 				SLC1 = pcid(PolicyCounterId, #{}),
 				SLC2 = notify(Config, SLC1),
-				SpendingLimitContext = SLC2#{supi => SUPI,
-						supportedFeatures => "0"},
+				SpendingLimitContext = case SubscriberId of
+					"imsi-" ++ _ ->
+						SLC2#{supi => SubscriberId,
+								supportedFeatures => "0"};
+					"msisdn-" ++ _ ->
+						SLC2#{gpsi => SubscriberId,
+								supportedFeatures => "0"}
+				end,
 				Body = zj:encode(SpendingLimitContext),
 				nchf_intermediate(Location, Body, Config);
 			[] ->
@@ -689,9 +702,9 @@ process_request(_ServiceName,
 		Config) when Cause == ?'DIAMETER_BASE_TERMINATION-CAUSE_LOGOUT' ->
 	try
 		case ets:lookup(sy_session, SessionId) of
-			[{_, SUPI, Location}] ->
+			[{_, SubscriberId, Location}] ->
 				ets:delete(sy_session, SessionId),
-				ets:delete(nchf_session, SUPI),
+				ets:delete(nchf_session, SubscriberId),
 				nchf_final(Location, Config);
 			[] ->
 				throw(session)

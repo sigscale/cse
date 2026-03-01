@@ -76,7 +76,7 @@ notification(RequestBody) ->
 %% @hidden
 notification1({ok, #{"supi" := SUPI} = SpendingLimitStatus})
 		when is_list(SUPI) ->
-	notification2(list_to_binary(SUPI), SpendingLimitStatus);
+	notification2(SpendingLimitStatus);
 notification1({ok, #{} = _SpendingLimitStatus}) ->
 	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
 			invalidParams => [#{param => "/supi"}],
@@ -93,16 +93,35 @@ notification1({error, _Partial, _Remaining}) ->
 					"TS29571_CommonData.yaml#/components/responses/400"},
 	{error, 400, ProblemDetails}.
 %% @hidden
-notification2(SUPI,
-		#{"statusInfos" := StatusInfos} = _SpendingLimitStatus)
-		when is_map(StatusInfos) ->
+notification2(#{"supi" := SUPI,
+		"statusInfos" := StatusInfos} = _SpendingLimitStatus)
+		when length(SUPI) > 0, is_map(StatusInfos) ->
 	case status_infos(StatusInfos) of
 		{ok, PCSR} ->
-			notification3(ets:lookup(nchf_session, SUPI), PCSR);
+			SubscriberId = list_to_binary(SUPI),
+			notification3(ets:lookup(nchf_session, SubscriberId), PCSR);
 		{error, Status, Problem} ->
 			{error, Status, Problem}
 	end;
-notification2(_SUPI, _SpendingLimitStatus) ->
+notification2(#{"gpsi" := GPSI,
+		"statusInfos" := StatusInfos} = _SpendingLimitStatus)
+		when length(GPSI) > 0, is_map(StatusInfos) ->
+	case status_infos(StatusInfos) of
+		{ok, PCSR} ->
+			SubscriberId = list_to_binary(GPSI),
+			notification3(ets:lookup(nchf_session, SubscriberId), PCSR);
+		{error, Status, Problem} ->
+			{error, Status, Problem}
+	end;
+notification2(#{"statusInfos" := _StatusInfos} = _SpendingLimitStatus) ->
+	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
+			invalidParams => [#{param => "/gpsi"}],
+			status => 400, code => "",
+			title => "GPSI is mandatory if SUPI is empty",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{error, 400, ProblemDetails}.
+notification2(_SpendingLimitStatus) ->
 	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
 			invalidParams => [#{param => "/statusInfos"}],
 			status => 400, code => "",
@@ -141,7 +160,7 @@ termination(RequestBody) ->
 %% @hidden
 termination1({ok, #{"supi" := SUPI} = SubscriptionTerminationInfo})
 		when is_list(SUPI) ->
-	termination2(list_to_binary(SUPI), SubscriptionTerminationInfo);
+	termination2(SubscriptionTerminationInfo);
 termination1({ok, #{} = _SubscriptionTerminationInfo}) ->
 	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
 			invalidParams => [#{param => "/supi"}],
@@ -158,11 +177,27 @@ termination1({error, _Partial, _Remaining}) ->
 					"TS29571_CommonData.yaml#/components/responses/400"},
 	{error, 400, ProblemDetails}.
 %% @hidden
-termination2(SUPI,
+termination2(#{"supi" := SUPI,
+		"statusInfos" := StatusInfos} = _SpendingLimitStatus)
+		when length(SUPI) > 0, is_map(StatusInfos) ->
 		#{"termCause" := "REMOVED_SUBSCRIBER" = Cause}) ->
-	termination3(ets:lookup(nchf_session, SUPI), Cause);
-termination2(_SUPI,
-		#{"termCause" := _Cause}) ->
+	SubscriberId = list_to_binary(SUPI),
+	termination3(ets:lookup(nchf_session, SubscriberId), Cause);
+termination2(#{"gpsi" := SUPI,
+		"statusInfos" := StatusInfos} = _SpendingLimitStatus)
+		when length(GPSI) > 0, is_map(StatusInfos) ->
+		#{"termCause" := "REMOVED_SUBSCRIBER" = Cause}) ->
+	SubscriberId = list_to_binary(GPSI),
+	termination3(ets:lookup(nchf_session, SubscriberId), Cause);
+termination2(#{"statusInfos" := _StatusInfos} = _SpendingLimitStatus) ->
+	ProblemDetails = #{cause => "MANDATORY_IE_MISSING",
+			invalidParams => [#{param => "/gpsi"}],
+			status => 400, code => "",
+			title => "GPSI is mandatory if SUPI is empty",
+			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
+					"TS29571_CommonData.yaml#/components/responses/400"},
+	{error, 400, ProblemDetails}.
+termination2(#{"termCause" := _Cause}) ->
 	ProblemDetails = #{cause => "OPTIONAL_IE_INCORRECT ",
 			invalidParams => [#{param => "/termCause"}],
 			status => 400, code => "",
@@ -170,9 +205,7 @@ termination2(_SUPI,
 					"  semantically incorrect value",
 			type => "https://forge.3gpp.org/rep/all/5G_APIs/-/blob/REL-18/"
 					"TS29571_CommonData.yaml#/components/responses/400"},
-	{error, 400, ProblemDetails};
-termination2(SUPI, _SubscriptionTerminationInfo) ->
-	termination3(ets:lookup(nchf_session, SUPI), []).
+	{error, 400, ProblemDetails}.
 %% @hidden
 termination3([Object], Cause) ->
 	terminate(Object, Cause);
@@ -233,7 +266,7 @@ policy_counter_info(PolicyCounterId, _PolicyCounterInfo) ->
 	{error, 400, ProblemDetails}.
 
 %% @hidden
-notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+notify({_SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 		_SupportedFeatures}, PCSR) ->
 	SNR = #'3gpp_sy_SNR'{'Session-Id' = SessionId,
 			'Auth-Application-Id' = ?SY_APPLICATION_ID,
@@ -275,7 +308,7 @@ notify({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 	end.
 
 %% @hidden
-terminate({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+terminate({_SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 		[#'3gpp_sy_Supported-Features'{'Vendor-Id' = ?IANA_PEN_3GPP,
 				'Feature-List-ID' = 1,
 				'Feature-List' = FeatureList} | _T] = _SupportedFeatures},
@@ -317,17 +350,17 @@ terminate({_SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 							"TS29571_CommonData.yaml#/components/responses/500"},
 			{error, 500, ProblemDetails}
 	end;
-terminate({SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+terminate({SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 		[#'3gpp_sy_Supported-Features'{'Vendor-Id' = ?IANA_PEN_3GPP,
 				'Feature-List-ID' = 1} | _T] = _SupportedFeatures},
 		Cause) ->
-	terminate({SUPI, ServiceName, SessionId, OHost, ORealm,
+	terminate({SubscriptionId, ServiceName, SessionId, OHost, ORealm,
 			DHost, DRealm, []}, Cause);
-terminate({SUPI, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
+terminate({SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 		[_H | T] = _SupportedFeatures}, Cause) ->
-	terminate({SUPI, ServiceName, SessionId, OHost, ORealm,
+	terminate({SubscriptionId, ServiceName, SessionId, OHost, ORealm,
 			DHost, DRealm, T}, Cause);
-terminate({_SUPI, _ServiceName, _SessionId, _OHost, _ORealm, _DHost, _DRealm,
+terminate({SubscriptionId, _ServiceName, _SessionId, _OHost, _ORealm, _DHost, _DRealm,
 		[] = _SupportedFeatures}, Cause) ->
 	ProblemDetails = #{cause => "UNSPECIFIED_MSG_FAILURE",
 			status => 400, code => Cause,
