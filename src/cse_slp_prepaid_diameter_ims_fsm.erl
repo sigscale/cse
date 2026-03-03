@@ -2982,9 +2982,9 @@ build_mscc(MSCC, ServiceRating) ->
 	build_mscc(MSCC, ServiceRating, {FailRC, []}).
 %% @hidden
 build_mscc([#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = RSU,
+		'Requested-Service-Unit' = [_RSU],
 		'Service-Identifier' = SI, 'Rating-Group' = RG} | T] = _MSCC,
-		ServiceRating, Acc) when length(RSU) > 0 ->
+		ServiceRating, Acc) ->
 	build_mscc(T, ServiceRating, build_mscc1(SI, RG, ServiceRating, Acc));
 build_mscc([_ | T], ServiceRating, Acc) ->
 	build_mscc(T, ServiceRating, Acc);
