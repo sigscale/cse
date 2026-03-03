@@ -1,5 +1,10 @@
+2026-03-03 Vance Shipley <vances@sigscale.org>
+
+	* match mscc rsu only to granted unit service rating result
+
 2026-03-01 Vance Shipley <vances@sigscale.org>
 
+	* handle missing sy sub_id_type
 	* optionally index sy/nchf sessions by imsi/gpsi
 	* default mtp network indicator (ni) as national (3)
 	* diameter escripts catch peer connect failure
