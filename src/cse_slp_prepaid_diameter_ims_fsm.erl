@@ -2427,10 +2427,10 @@ usu4(_USU, Acc) ->
 	Acc.
 
 %% @hidden
-gsu({ok, #{"time" := CCTime} = GSU})
+gsu(#{"time" := CCTime} = GSU)
 		when is_integer(CCTime), CCTime > 0 ->
 	gsu1(GSU, #'3gpp_ro_Granted-Service-Unit'{'CC-Time' = [CCTime]});
-gsu({ok, GSU}) when map_size(GSU) > 0 ->
+gsu(GSU) when map_size(GSU) > 0 ->
 	gsu1(GSU, #'3gpp_ro_Granted-Service-Unit'{});
 gsu(_) ->
 	[].
