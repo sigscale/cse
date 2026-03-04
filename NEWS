@@ -1,6 +1,10 @@
+March 4, 2026
+-------------
+	- Match MSCC RSU on ServiceRating result without [granted|consumed]Unit
+
 March 3, 2026
 -------------
-	- Match MSCC RSU on consumedUnit ServiceRating result
+	- Match MSCC RSU on grantedUnit ServiceRating result
 
 March 1, 2026
 -------------
