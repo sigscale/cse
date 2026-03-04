@@ -2038,6 +2038,19 @@ build_mscc1([SI], [RG],
 			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([SI], [RG],
+		[#{"serviceId" := SI,
+				"ratingGroup" := RG,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([SI], [],
 		[#{"serviceId" := SI,
 				"grantedUnit" := GrantedUnit,
@@ -2053,6 +2066,17 @@ build_mscc1([SI], [],
 			'Granted-Service-Unit' = GSU,
 			'Unit-Quota-Threshold' = Quota,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([SI], [],
+		[#{"serviceId" := SI,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
 			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
@@ -2074,6 +2098,17 @@ build_mscc1([], [RG],
 			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [RG],
+		[#{"ratingGroup" := RG,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Rating-Group' = [RG],
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
 build_mscc1([], [],
 		[#{"grantedUnit" := GrantedUnit,
 				"resultCode" := ResultCode} = ServiceRating | _],
@@ -2087,6 +2122,15 @@ build_mscc1([], [],
 			'Granted-Service-Unit' = GSU,
 			'Unit-Quota-Threshold' = Quota,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [],
+		[#{"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};
