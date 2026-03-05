@@ -53,7 +53,7 @@ sy_session(Options) ->
 			#diameter_event{service = Name, info = start} ->
 				ok;
 			#diameter_event{service = Name,
-					info = {closed, Ref, Reason, _Config}} ->
+					info = {closed, _Ref, Reason, _Config}} ->
 				error(Reason)
 		end,
 		TransportModule =  maps:get(transport, Options, diameter_tcp),
@@ -69,13 +69,24 @@ sy_session(Options) ->
 				ok
 		end,
 		SId = diameter:session_id(Hostname),
-		IMSI = #'3gpp_sy_Subscription-Id'{
-				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-				'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
-		MSISDN = #'3gpp_sy_Subscription-Id'{
-				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
-		SubscriptionId = [IMSI, MSISDN],
+		IMSI = case maps:get(imsi, Options, "001001123456789") of
+			ImsiOption when length(ImsiOption) > 0 ->
+				[#'3gpp_sy_Subscription-Id'{
+						'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+						'Subscription-Id-Data' = ImsiOption}];
+			[] ->
+				[]
+		end,
+		MSISDN = case maps:get(msisdn, Options, "14165551234") of
+			MsisdnOption when length(MsisdnOption) > 0 ->
+				[#'3gpp_sy_Subscription-Id'{
+						'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+						'Subscription-Id-Data' = MsisdnOption}];
+			[] ->
+				[]
+		end,
+		SubscriptionId = IMSI ++ MSISDN,
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, SubscriptionId}),
 		PCI = string:lexemes(maps:get(pci, Options, []), [$,]),
 		SupportedFeatures = #'3gpp_sy_Supported-Features'{
 				'Vendor-Id' = ?IANA_PEN_3GPP,
