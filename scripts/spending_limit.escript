@@ -53,7 +53,7 @@ sy_session(Options) ->
 			#diameter_event{service = Name, info = start} ->
 				ok;
 			#diameter_event{service = Name,
-					info = {closed, _Ref, Reason, _Config}} ->
+					info = {closed, _Ref1, Reason, _Config}} ->
 				error(Reason)
 		end,
 		TransportModule =  maps:get(transport, Options, diameter_tcp),
@@ -62,7 +62,7 @@ sy_session(Options) ->
 						[{raddr, maps:get(raddr, Options, {127,0,0,1})},
 						{rport, maps:get(rport, Options, 3868)},
 						{ip, maps:get(ip, Options, {127,0,0,1})}]}],
-		{ok, _Ref} = diameter:add_transport(Name, {connect, TransportOptions}),
+		{ok, _Ref2} = diameter:add_transport(Name, {connect, TransportOptions}),
 		receive
 			#diameter_event{service = Name, info = Info}
 					when element(1, Info) == up ->
