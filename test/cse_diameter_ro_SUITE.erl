@@ -43,7 +43,9 @@
 		final_scur_ps_nrf/0, final_scur_ps_nrf/1,
 		final_scur_ps_missing_rg/0, final_scur_ps_missing_rg/1,
 		sms_iec/0, sms_iec/1,
+		sms_refund/0, sms_refund/1,
 		mms_iec/0, mms_iec/1,
+		mms_refund/0, mms_refund/1,
 		unknown_subscriber/0, unknown_subscriber/1,
 		out_of_credit/0, out_of_credit/1,
 		initial_in_call/0, initial_in_call/1,
@@ -764,7 +766,7 @@ final_scur_ps_missing_rg(Config) ->
 	Balance = NewBalance + Used1 + Used2.
 
 sms_iec() ->
-	Description = "SMS IEC CCR-E with CCA-E success",
+	Description = "SMS IEC debit CCR-E with CCA-E success",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -790,8 +792,34 @@ sms_iec(Config) ->
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC,
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [1]} = GSU.
 
+sms_refund() ->
+	Description = "SMS IEC refund CCR-E with CCA-E success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+sms_refund(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI = service_id(),
+	RG = rating_group(),
+	Balance = rand:uniform(100000),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session1 = diameter:session_id(atom_to_list(?MODULE)),
+	RequestNum = 0,
+	{ok, Answer1} = iec_event_sms(Config, Session1, SI, RG, IMSI, MSISDN,
+			originate, RequestNum, ?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
+	{ok, {NewBalance, _}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	true = NewBalance < Balance,
+	Session2 = diameter:session_id(atom_to_list(?MODULE)),
+	{ok, Answer2} = iec_event_sms(Config, Session2, SI, RG, IMSI, MSISDN,
+			originate, RequestNum, ?'3GPP_RO_REQUESTED-ACTION_REFUND_ACCOUNT'),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
+	{ok, {Balance, _}} = gen_server:call(OCS, {get_subscriber, IMSI}).
+
 mms_iec() ->
-	Description = "MMS IEC CCR-E with CCA-E success",
+	Description = "MMS IEC debit CCR-E with CCA-E success",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -816,6 +844,32 @@ mms_iec(Config) ->
 			'Granted-Service-Unit' = [GSU],
 			'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = MSCC,
 	#'3gpp_ro_Granted-Service-Unit'{'CC-Service-Specific-Units' = [1]} = GSU.
+
+mms_refund() ->
+	Description = "MMS IEC refund CCR-E with CCA-E success",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+mms_refund(Config) ->
+	OCS = ?config(ocs, Config),
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	SI = service_id(),
+	RG = rating_group(),
+	Balance = rand:uniform(100000),
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, IMSI, Balance}),
+	Session1 = diameter:session_id(atom_to_list(?MODULE)),
+	RequestNum = 0,
+	{ok, Answer1} = iec_event_mms(Config, Session1, SI, RG, IMSI, MSISDN,
+			originate, RequestNum, ?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer1,
+	{ok, {NewBalance, _}} = gen_server:call(OCS, {get_subscriber, IMSI}),
+	true = NewBalance < Balance,
+	Session2 = diameter:session_id(atom_to_list(?MODULE)),
+	{ok, Answer2} = iec_event_mms(Config, Session2, SI, RG, IMSI, MSISDN,
+			originate, RequestNum, ?'3GPP_RO_REQUESTED-ACTION_REFUND_ACCOUNT'),
+	#'3gpp_ro_CCA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer2,
+	{ok, {Balance, _}} = gen_server:call(OCS, {get_subscriber, IMSI}).
 
 unknown_subscriber() ->
 	Description = "SCUR Nrf start with unknown user",
@@ -1528,7 +1582,13 @@ scur_start_auth_only(Config, Context, Session,
 			'Service-Information' = ServiceInformation},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN,
+		Direction, RequestNum) ->
+	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, Direction,
+			RequestNum, ?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING').
+
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate,
+		RequestNum, Action) ->
 	Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [MSISDN]},
@@ -1540,8 +1600,10 @@ iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 	SMS = #'3gpp_ro_SMS-Information'{
 			'Originator-Received-Address' = [Originator],
 			'Recipient-Info' = [Info]},
-	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
-iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN,
+			SMS, RequestNum, Action);
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, terminate,
+		RequestNum, Action) ->
 	Origination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	Originator = #'3gpp_ro_Originator-Received-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
@@ -1553,8 +1615,10 @@ iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	SMS = #'3gpp_ro_SMS-Information'{
 			'Originator-Received-Address' = [Originator],
 			'Recipient-Info' = [Info]},
-	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum);
-iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
+	iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN,
+			SMS, RequestNum, Action);
+iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN,
+		SMS, RequestNum, Action)
 		when is_record(SMS, '3gpp_ro_SMS-Information') ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
@@ -1586,13 +1650,19 @@ iec_event_sms(Config, Session, SI, RG, IMSI, MSISDN, SMS, RequestNum)
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
 			'Subscription-Id' = [MSISDN1, IMSI1],
-			'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
+			'Requested-Action' = [Action],
 			'Multiple-Services-Indicator' = [1],
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Service-Information' = [ServiceInformation]},
 	diameter:call({?MODULE, client}, cc_app_test, CCR, []).
 
-iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN,
+		Direction, RequestNum) ->
+	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, Direction,
+			RequestNum, ?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING').
+
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, originate,
+		RequestNum, Action) ->
 	Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
 			'Address-Data' = [MSISDN]},
@@ -1603,8 +1673,10 @@ iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, originate, RequestNum) ->
 	MMS = #'3gpp_ro_MMS-Information'{
 			'Originator-Address' = [Originator],
 			'Recipient-Address' = [Recipient]},
-	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
-iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
+	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN,
+			MMS, RequestNum, Action);
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, terminate,
+		RequestNum, Action) ->
 	Origination = [cse_test_lib:rand_dn(rand:uniform(10) + 5)],
 	Originator = #'3gpp_ro_Originator-Address'{
 			'Address-Type' = [?'3GPP_RO_ADDRESS-TYPE_MSISDN'],
@@ -1615,8 +1687,10 @@ iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, terminate, RequestNum) ->
 	MMS = #'3gpp_ro_MMS-Information'{
 			'Originator-Address' = [Originator],
 			'Recipient-Address' = [Recipient]},
-	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum);
-iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
+	iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN,
+			MMS, RequestNum, Action);
+iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN,
+		MMS, RequestNum, Action)
 		when is_record(MMS, '3gpp_ro_MMS-Information') ->
 	OriginHost = ?config(ct_host, Config),
 	OriginRealm = ?config(ct_realm, Config),
@@ -1648,7 +1722,7 @@ iec_event_mms(Config, Session, SI, RG, IMSI, MSISDN, MMS, RequestNum)
 			'CC-Request-Number' = RequestNum,
 			'Event-Timestamp' = [calendar:universal_time()],
 			'Subscription-Id' = [MSISDN1, IMSI1],
-			'Requested-Action' = [?'3GPP_RO_REQUESTED-ACTION_DIRECT_DEBITING'],
+			'Requested-Action' = [Action],
 			'Multiple-Services-Indicator' = [1],
 			'Multiple-Services-Credit-Control' = [MSCC],
 			'Service-Information' = [ServiceInformation]},

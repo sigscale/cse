@@ -24,7 +24,7 @@
 %%% 	This Service Logic Program (SLP) implements a 3GPP Online
 %%% 	Charging Function (OCF) interfacing across the <i>Re</i> reference
 %%% 	point interface, using the
-%%% 	<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.2">
+%%% 	<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.3">
 %%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
 %%%
 %%% 	This SLP specifically handles Short Message Service (SMS)
@@ -56,7 +56,7 @@
 %%% 					client. (default: `nrf')</dd>
 %%% 		<dt>`nrf_uri'</dt>
 %%% 			<dd>Uniform Resource Identifier (URI) for a
-%%% 					<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.2">Nrf_Rating</a>
+%%% 					<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.3">Nrf_Rating</a>
 %%% 					server (i.e. OCS).</dd>
 %%% 		<dt>`nrf_http_options'</dt>
 %%% 			<dd>HTTP request {@link //inets/httpc:http_options(). options}
@@ -1643,6 +1643,7 @@ service_rating(#{one_time := OneTime, mscc := MSCC} = Data) ->
 %% @hidden
 service_rating(true, [MSCC | T],
 		#{context := ServiceContextId,
+		action := direct_debiting,
 		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
@@ -1651,6 +1652,18 @@ service_rating(true, [MSCC | T],
 	SR5 = service_rating_sms(ServiceInformation, SR4),
 	SR6 = service_rating_vcs(ServiceInformation, SR5),
 	Acc1 = service_rating_reserve(MSCC, SR6, Acc),
+	service_rating(true, T, Data, Acc1);
+service_rating(true, [MSCC | T],
+		#{context := ServiceContextId,
+		action := refund_account,
+		service_info := ServiceInformation} = Data, Acc) ->
+	SR1 = #{"serviceContextId" => ServiceContextId},
+	SR2 = service_rating_si(MSCC, SR1),
+	SR3 = service_rating_rg(MSCC, SR2),
+	SR4 = service_rating_ps(ServiceInformation, SR3),
+	SR5 = service_rating_sms(ServiceInformation, SR4),
+	SR6 = service_rating_vcs(ServiceInformation, SR5),
+	Acc1 = service_rating_refund(MSCC, SR6, Acc),
 	service_rating(true, T, Data, Acc1);
 service_rating(false, [MSCC | T],
 		#{context := ServiceContextId,
@@ -1959,6 +1972,20 @@ service_rating_debit(#'3gpp_ro_Multiple-Services-Credit-Control'{
 	end;
 service_rating_debit(#'3gpp_ro_Multiple-Services-Credit-Control'{
 		'Used-Service-Unit' = []}, _ServiceRating, Acc) ->
+	Acc.
+
+%% @hidden
+service_rating_refund(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = [RSU]}, ServiceRating, Acc) ->
+	case rsu(RSU) of
+		ResquestedUnit when map_size(ResquestedUnit) > 0 ->
+			[ServiceRating#{"requestSubType" => "REFUND",
+					"requestedUnit" => ResquestedUnit} | Acc];
+		_ResquestedUnit ->
+			[ServiceRating#{"requestSubType" => "REFUND"} | Acc]
+	end;
+service_rating_refund(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = []}, _ServiceRating, Acc) ->
 	Acc.
 
 %% @hidden
