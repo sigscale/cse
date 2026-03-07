@@ -1,3 +1,8 @@
+2026-03-07 Vance Shipley <vances@sigscale.org>
+
+	* sms/mms iec refund
+	* nrf oas v1.2.3
+
 2026-03-06 Vance Shipley <vances@sigscale.org>
 
 	* prepaid cap slp always includes both [origin|destin]ationId in nrf service rating
