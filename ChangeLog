@@ -1,3 +1,7 @@
+2026-03-13 Vance Shipley <vances@sigscale.org>
+
+	* find erts version in new release specification
+
 2026-03-10 Vance Shipley <vances@sigscale.org>
 
 	* ietf service-parameter-info group avp

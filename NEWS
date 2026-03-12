@@ -1,3 +1,7 @@
+March 12, 2026
+--------------
+	- Refactor install release script (handle long app name)
+
 March 7, 2026
 -------------
 	- SMS/MMS IEC refund
