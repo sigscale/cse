@@ -1,3 +1,7 @@
+2026-03-20 Vance Shipley <vances@sigscale.org>
+
+	* counters by diameter application id in health rest handler
+
 2026-03-13 Vance Shipley <vances@sigscale.org>
 
 	* find erts version in new release specification
