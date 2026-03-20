@@ -79,6 +79,9 @@
    Restriction-Filter-Rule                                 438  OctetString      M
    Service-Context-Id                                      461  UTF8String       M
    Service-Identifier                                      439  Unsigned32       M
+   Service-Parameter-Info                                  440  Grouped          M
+   Service-Parameter-Type                                  441  Unsigned32       M
+   Service-Parameter-Value                                 442  OctetString      M
    Service-Type                                              6  Enumerated       M
    State                                                    24  OctetString      M
    Subscription-Id                                         443  Grouped          M
@@ -298,6 +301,10 @@
       [ CC-Output-Octets ]
       [ CC-Service-Specific-Units ]
      *[ AVP ]
+
+   Service-Parameter-Info ::= <AVP Header: 440>
+      { Service-Parameter-Type }
+      { Service-Parameter-Value }
 
    Subscription-Id ::= <AVP Header: 443>
       { Subscription-Id-Type }

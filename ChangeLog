@@ -1,3 +1,80 @@
+2026-03-13 Vance Shipley <vances@sigscale.org>
+
+	* find erts version in new release specification
+
+2026-03-10 Vance Shipley <vances@sigscale.org>
+
+	* ietf service-parameter-info group avp
+
+2026-03-07 Vance Shipley <vances@sigscale.org>
+
+	* sms/mms iec refund
+	* nrf oas v1.2.3
+
+2026-03-06 Vance Shipley <vances@sigscale.org>
+
+	* prepaid cap slp always includes both [origin|destin]ationId in nrf service rating
+	* omit imsi subscription-id if escript imsi option empty
+
+2026-03-04 Vance Shipley <vances@sigscale.org>
+
+	* match mscc rsu to service rating result without granted units
+
+2026-03-03 Vance Shipley <vances@sigscale.org>
+
+	* correct gsu/1 argument after build_mscc/3 refactor
+	* match mscc rsu only to granted unit service rating result
+
+2026-03-01 Vance Shipley <vances@sigscale.org>
+
+	* handle missing sy sub_id_type
+	* optionally index sy/nchf sessions by imsi/gpsi
+	* default mtp network indicator (ni) as national (3)
+	* diameter escripts catch peer connect failure
+
+2026-02-26 Vance Shipley <vances@sigscale.org>
+
+	* support sctp transport in escripts
+	* correct diameter sy str/sta handling
+
+2026-02-20 Vance Shipley <vances@sigscale.org>
+
+	* test: cases for release of dangling reservations
+	* test: support multiple-credit-control-services in mock ocs
+	* correct invocationSequenceNumber in nrf_update
+	* test: cases for omitted service rating in nrf start
+	* test: httpd nrf handler does not include empty service rating
+	* test: use cc-request in variable
+	* test: weighted random inclusion of service-id and rating-group
+	* correct typo in commit 95eb73f
+	* include sms reply-path-requested in diameter codec
+	* refactor type spec and initialization of nrf_groups
+
+2026-02-12 Vance Shipley <vances@sigscale.org>
+
+	* diameter callback requires escript compilation
+	* do not include empty service rating in rating data nrf payload
+	* Revert "always send debit service rating on update/release"
+	* pretty print sy experimental-result in escript
+	* nrf oas v1.2.2
+	* correct expected empty return from string:split/2
+
+2026-01-08 Vance Shipley <vances@sigscale.org>
+
+	* support msisdn as subscription-id-type=sip_uri
+	* refactor cse_codec:ims_uri/1 for binary or string
+
+2026-01-04 Vance Shipley <vances@sigscale.org>
+
+	* handle snr (normal, asr) in spending limit escript
+	* wait for diameter service start in escripts
+	* correct --policy-counter-id option in spending limit escript
+	* correct result handling in spending limits escript
+	* suppress unused variable warnings
+	* sy diameter_app callback module not diameter_app behaviour because extended
+	* handle json decode failure of spending limit status in nchf
+	* remove erroneous reference to dedicated diameter service
+
 2026-01-01 Vance Shipley <vances@sigscale.org>
 
 	* include sy/nchf spending limits in list of iwfs

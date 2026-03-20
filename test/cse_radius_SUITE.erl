@@ -223,7 +223,7 @@ all() ->
 %%---------------------------------------------------------------------
 
 auth_only() ->
-	Description = "RADIUS Access-Request.",
+	Description = "RADIUS Access-Request (data).",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
@@ -231,8 +231,8 @@ auth_only(Config) ->
 	OCS = proplists:get_value(ocs, Config),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Password = cse_test_lib:rand_name(),
-	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, MSISDN, Balance}),
+	Balance = (rand:uniform(100) + 100) * 1048576,
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, MSISDN, Balance}),
 	RadID = 1,
 	NasID = atom_to_list(?FUNCTION_NAME),
 	AcctSessionID = cse_test_lib:rand_name(),
@@ -254,8 +254,8 @@ auth_start(Config) ->
 	OCS = proplists:get_value(ocs, Config),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Password = cse_test_lib:rand_name(),
-	Balance = rand:uniform(100) + 3600,
-	{ok, {Balance, 0}} = gen_server:call(OCS, {add_subscriber, MSISDN, Balance}),
+	Balance = (rand:uniform(100) + 100) * 1048576,
+	{ok, {Balance, _}} = gen_server:call(OCS, {add_subscriber, MSISDN, Balance}),
 	RadID = 1,
 	NasID = atom_to_list(?FUNCTION_NAME),
 	AcctSessionID = cse_test_lib:rand_name(),

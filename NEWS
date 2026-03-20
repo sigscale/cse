@@ -1,3 +1,56 @@
+March 12, 2026
+--------------
+	- Refactor install release script (handle long app name)
+
+March 7, 2026
+-------------
+	- SMS/MMS IEC refund
+	- Nrf_Rating OAS v1.2.3 
+
+March 6, 2026
+-------------
+	- Prepaid CAP SLP always includes both originationId and destinationId
+	- Spending limit escripts allows omitting IMSI Subscription-Id
+
+March 4, 2026
+-------------
+	- Match MSCC RSU on ServiceRating result without [granted|consumed]Unit
+
+March 3, 2026
+-------------
+	- Match MSCC RSU on grantedUnit ServiceRating result
+
+March 1, 2026
+-------------
+	- Optionally index Sy/Nchf sessions by IMSI/GPSI
+	- Default MTP network indicator (NI) as national (3)
+
+February 26, 2026
+-----------------
+	- Correct DIAMETER Sy STR/STA handling
+	- Support SCTP in escripts
+
+February 20, 2026
+-----------------
+	- Correct invocationSequenceNumber in Nrf update
+	- Fix bug in previous version with Nrf update
+	- Handle SMS-Information Reply-Path-Requested
+
+February 12, 2026
+-----------------
+	- Fixes for spending limit escript
+	- Do not include empty ServiceRating in Nrf_Rating
+	- Nrf_Rating OAS v1.2.2
+
+January 8, 2026
+---------------
+	- Accept MSISDN subscription ID as SIP URI in IMS SLP
+
+January 4, 2026
+---------------
+	- Spending limit escript handles SNR, normal and ASR
+	- Spending limit escript corrections
+
 January 1, 2026
 ---------------
 	- SLP for Spending limits IWF (Sy - Nchf)

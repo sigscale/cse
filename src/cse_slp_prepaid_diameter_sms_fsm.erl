@@ -24,7 +24,7 @@
 %%% 	This Service Logic Program (SLP) implements a 3GPP Online
 %%% 	Charging Function (OCF) interfacing across the <i>Re</i> reference
 %%% 	point interface, using the
-%%% 	<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">
+%%% 	<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.3">
 %%% 	Nrf_Rating</a> API, with a remote <i>Rating Function</i>.
 %%%
 %%% 	This SLP specifically handles Short Message Service (SMS)
@@ -56,7 +56,7 @@
 %%% 					client. (default: `nrf')</dd>
 %%% 		<dt>`nrf_uri'</dt>
 %%% 			<dd>Uniform Resource Identifier (URI) for a
-%%% 					<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.0">Nrf_Rating</a>
+%%% 					<a href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.2.3">Nrf_Rating</a>
 %%% 					server (i.e. OCS).</dd>
 %%% 		<dt>`nrf_http_options'</dt>
 %%% 			<dd>HTTP request {@link //inets/httpc:http_options(). options}
@@ -149,7 +149,7 @@
 		nrf_req_url => string(),
 		nrf_http => map(),
 		nrf_reqid => reference(),
-		nrf_groups => []}.
+		nrf_groups := [0..4294967295]}.
 
 %%----------------------------------------------------------------------
 %%  The cse_slp_prepaid_diameter_sms_fsm gen_statem callbacks
@@ -205,6 +205,7 @@ init(Args) ->
 			nrf_sort => Sort, nrf_retries => Retries,
 			nrf_resolver => Resolver,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
+			nrf_groups => [],
 			start => erlang:system_time(millisecond),
 			idle => IdleTime, sequence => 1},
 	Data1 = add_nrf(URI, Data),
@@ -1270,15 +1271,19 @@ nrf_release_reply(ReplyInfo, Fsm) ->
 %% @doc Start rating a session.
 %% @hidden
 nrf_start(Data) ->
-	ServiceRating = service_rating(Data),
+	nrf_start1(service_rating(Data), Data).
+%% @hidden
+nrf_start1(ServiceRating, Data)
+		when length(ServiceRating) > 0 ->
 	Groups = lists:usort([maps:get("ratingGroup", SR, undefined)
 			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	Data1 = Data#{nrf_groups => Groups},
-	nrf_start1(#{"serviceRating" => ServiceRating}, Data1).
+	nrf_start2(#{"serviceRating" => ServiceRating}, Data1);
+nrf_start1(_ServiceRating, Data) ->
+	nrf_start2(#{}, Data).
 %% @hidden
-nrf_start1(JSON,
-		#{context := Context, sequence := Sequence,
-				one_time := true} = Data) ->
+nrf_start2(JSON, #{one_time := true,
+		context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
@@ -1287,23 +1292,21 @@ nrf_start1(JSON,
 			"subscriptionId" => subscription_id(Data),
 			"oneTimeEvent" => true,
 			"oneTimeEventType" => "IEC"},
-	nrf_start2(Now, JSON1, Data);
-nrf_start1(JSON,
-		#{context := Context, sequence := Sequence,
-				one_time := false} = Data) ->
+	nrf_start3(Now, JSON1, Data);
+nrf_start2(JSON, #{one_time := false,
+		context := Context, sequence := Sequence} = Data) ->
 	Now = erlang:system_time(millisecond),
 	JSON1 = JSON#{"invocationSequenceNumber" => Sequence,
 			"invocationTimeStamp" => cse_log:iso8601(Now),
 			"nfConsumerIdentification" => #{"nodeFunctionality" => "OCF"},
 			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
-	nrf_start2(Now, JSON1, Data).
+	nrf_start3(Now, JSON1, Data).
 %% @hidden
-nrf_start2(Now, JSON,
+nrf_start3(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				ohost := OHost, orealm := ORealm,
 				req_type := RequestType, reqno := RequestNum} = Data) ->
 	MFA = {?MODULE, nrf_start_reply, [self()]},
 	Options = [{sync, false}, {receiver, MFA}],
@@ -1325,24 +1328,21 @@ nrf_start2(Now, JSON,
 				when length(NextURIs) > 0 ->
 			NewData = Data#{nrf_uri => hd(NextURIs),
 					nrf_next_uris => tl(NextURIs)},
-			nrf_start2(Now, JSON, NewData);
+			nrf_start3(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI},
-					{origin_host, OHost}, {origin_realm, ORealm},
-					{slpi, self()}]),
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
 			Actions = [{reply, From, Reply}],
 			{next_state, null, Data, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_start}, {error, Reason},
-					{profile, Profile}, {uri, URI}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{profile, Profile}, {uri, URI}, {slpi, self()}]),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
-			{next_state, null, Data, Actions}
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
+			{keep_state, Data, Actions}
 	end.
 
 -spec nrf_update(Data) -> Result
@@ -1354,19 +1354,25 @@ nrf_start2(Now, JSON,
 		From :: {pid(), reference()},
 		Time :: erlang:timeout().
 %% @doc Update rating a session.
-nrf_update(#{nrf_groups := PreviousGroups} = Data) ->
-	ServiceRating = service_rating(Data),
+nrf_update(Data) ->
+	nrf_update1(service_rating(Data), Data).
+%% @hidden
+nrf_update1(ServiceRating,
+		#{nrf_groups := PreviousGroups} = Data)
+		when length(ServiceRating) > 0 ->
 	Groups = lists:usort([maps:get("ratingGroup", SR, undefined)
 			|| #{"requestSubType" := "RESERVE"} = SR <- ServiceRating]),
 	case Groups -- PreviousGroups of
 		[] ->
-			nrf_update1(#{"serviceRating" => ServiceRating}, Data);
+			nrf_update2(#{"serviceRating" => ServiceRating}, Data);
 		NewGroups ->
 			Data1 = Data#{nrf_groups => PreviousGroups ++ NewGroups},
-			nrf_update1(#{"serviceRating" => ServiceRating}, Data1)
-	end.
+			nrf_update2(#{"serviceRating" => ServiceRating}, Data1)
+	end;
+nrf_update1(_ServiceRating, Data) ->
+	nrf_update2(#{}, Data).
 %% @hidden
-nrf_update1(JSON,
+nrf_update2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
@@ -1376,13 +1382,13 @@ nrf_update1(JSON,
 			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	NewData = Data#{sequence => NewSequence},
-	nrf_update2(Now, JSON1, NewData).
+	nrf_update3(Now, JSON1, NewData).
 %% @hidden
-nrf_update2(Now, JSON,
+nrf_update3(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				nrf_location := Location, ohost := OHost, orealm := ORealm,
+				nrf_location := Location,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_update_reply, [self()]},
@@ -1405,26 +1411,24 @@ nrf_update2(Now, JSON,
 				when length(NextURIs) > 0 ->
 			NewData = Data#{nrf_uri => hd(NextURIs),
 					nrf_next_uris => tl(NextURIs)},
-			nrf_update2(Now, JSON, NewData);
+			nrf_update3(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions};
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_update}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
-			Actions = [{reply, From, Reply}],
+			Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
 			{keep_state, NewData, Actions}
 	end.
 
@@ -1437,17 +1441,23 @@ nrf_update2(Now, JSON,
 		From :: {pid(), reference()},
 		Time :: erlang:timeout().
 %% @doc Finish rating a session.
-nrf_release(#{nrf_groups := PreviousGroups} = Data) ->
-	ServiceRating = service_rating(Data),
+nrf_release(Data) ->
+	nrf_release1(service_rating(Data), Data).
+%% @hidden
+nrf_release1(ServiceRating,
+		#{nrf_groups := PreviousGroups} = Data)
+		when length(ServiceRating) > 0 ->
 	Groups = lists:usort([maps:get("ratingGroup", SR, undefined)
 			|| #{"requestSubType" := RST} = SR <- ServiceRating,
 			((RST == "DEBIT") or (RST == "RELEASE"))]),
 	Missing = [#{"ratingGroup" => RG, "requestSubType" => "RELEASE"}
 			|| RG <- PreviousGroups -- Groups],
 	ServiceRating1 = ServiceRating ++ Missing,
-	nrf_release1(#{"serviceRating" => ServiceRating1}, Data).
+	nrf_release2(#{"serviceRating" => ServiceRating1}, Data);
+nrf_release1(_ServiceRating, Data) ->
+	nrf_release2(#{}, Data).
 %% @hidden
-nrf_release1(JSON,
+nrf_release2(JSON,
 		#{context := Context, sequence := Sequence} = Data) ->
 	NewSequence = Sequence + 1,
 	Now = erlang:system_time(millisecond),
@@ -1457,13 +1467,13 @@ nrf_release1(JSON,
 			"serviceContextId" => Context,
 			"subscriptionId" => subscription_id(Data)},
 	NewData = Data#{sequence => NewSequence},
-	nrf_release2(Now, JSON1, NewData).
+	nrf_release3(Now, JSON1, NewData).
 %% @hidden
-nrf_release2(Now, JSON,
+nrf_release3(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
-				nrf_location := Location, ohost := OHost, orealm := ORealm,
+				nrf_location := Location,
 				req_type := RequestType, reqno := RequestNum} = Data)
 		when is_list(Location) ->
 	MFA = {?MODULE, nrf_release_reply, [self()]},
@@ -1486,12 +1496,11 @@ nrf_release2(Now, JSON,
 				when length(NextURIs) > 0 ->
 			NewData = Data#{nrf_uri => hd(NextURIs),
 					nrf_next_uris => tl(NextURIs)},
-			nrf_release2(Now, JSON, NewData);
+			nrf_release3(Now, JSON, NewData);
 		{error, {failed_connect, _} = Reason} ->
 			?LOG_WARNING([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -1500,8 +1509,7 @@ nrf_release2(Now, JSON,
 		{error, Reason} ->
 			?LOG_ERROR([{?MODULE, nrf_release}, {error, Reason},
 					{profile, Profile}, {uri, URI},
-					{location, Location}, {slpi, self()},
-					{origin_host, OHost}, {origin_realm, ORealm}]),
+					{location, Location}, {slpi, self()}]),
 			NewData = maps:remove(nrf_location, Data),
 			ResultCode = ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 			Reply = diameter_error(ResultCode, RequestType, RequestNum),
@@ -1533,7 +1541,7 @@ usu(_USU) ->
 	#{}.
 
 %% @hidden
-gsu({ok, #{"serviceSpecificUnit" := CCSpecUnits}})
+gsu(#{"serviceSpecificUnit" := CCSpecUnits})
 		when is_integer(CCSpecUnits), CCSpecUnits > 0 ->
 	[#'3gpp_ro_Granted-Service-Unit'{
 			'CC-Service-Specific-Units' = [CCSpecUnits]}];
@@ -1635,6 +1643,7 @@ service_rating(#{one_time := OneTime, mscc := MSCC} = Data) ->
 %% @hidden
 service_rating(true, [MSCC | T],
 		#{context := ServiceContextId,
+		action := direct_debiting,
 		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
@@ -1644,9 +1653,9 @@ service_rating(true, [MSCC | T],
 	SR6 = service_rating_vcs(ServiceInformation, SR5),
 	Acc1 = service_rating_reserve(MSCC, SR6, Acc),
 	service_rating(true, T, Data, Acc1);
-service_rating(false, [MSCC | T],
-		#{req_type := RequestType,
-		context := ServiceContextId,
+service_rating(true, [MSCC | T],
+		#{context := ServiceContextId,
+		action := refund_account,
 		service_info := ServiceInformation} = Data, Acc) ->
 	SR1 = #{"serviceContextId" => ServiceContextId},
 	SR2 = service_rating_si(MSCC, SR1),
@@ -1654,18 +1663,19 @@ service_rating(false, [MSCC | T],
 	SR4 = service_rating_ps(ServiceInformation, SR3),
 	SR5 = service_rating_sms(ServiceInformation, SR4),
 	SR6 = service_rating_vcs(ServiceInformation, SR5),
-	Acc1 = case RequestType of
-		?'3GPP_CC-REQUEST-TYPE_TERMINATION_REQUEST' ->
-			Acc;
-		_ ->
-			service_rating_reserve(MSCC, SR6, Acc)
-	end,
-	Acc2 = case RequestType of
-		?'3GPP_CC-REQUEST-TYPE_INITIAL_REQUEST' ->
-			Acc1;
-		_ ->
-			service_rating_debit(MSCC, SR6, Acc1)
-	end,
+	Acc1 = service_rating_refund(MSCC, SR6, Acc),
+	service_rating(true, T, Data, Acc1);
+service_rating(false, [MSCC | T],
+		#{context := ServiceContextId,
+		service_info := ServiceInformation} = Data, Acc) ->
+	SR1 = #{"serviceContextId" => ServiceContextId},
+	SR2 = service_rating_si(MSCC, SR1),
+	SR3 = service_rating_rg(MSCC, SR2),
+	SR4 = service_rating_ps(ServiceInformation, SR3),
+	SR5 = service_rating_sms(ServiceInformation, SR4),
+	SR6 = service_rating_vcs(ServiceInformation, SR5),
+	Acc1 = service_rating_reserve(MSCC, SR6, Acc),
+	Acc2 = service_rating_debit(MSCC, SR6, Acc1),
 	service_rating(false, T, Data, Acc2);
 service_rating(_OneTime, [], _Data, Acc) ->
 	lists:reverse(Acc).
@@ -1958,11 +1968,25 @@ service_rating_debit(#'3gpp_ro_Multiple-Services-Credit-Control'{
 			[ServiceRating#{"requestSubType" => "DEBIT",
 					"consumedUnit" => usu(USU)} | Acc];
 		_UsedUnit ->
-			[ServiceRating#{"requestSubType" => "DEBIT"} | Acc]
+			Acc
 	end;
 service_rating_debit(#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Used-Service-Unit' = []}, ServiceRating, Acc) ->
-	[ServiceRating#{"requestSubType" => "DEBIT"} | Acc].
+		'Used-Service-Unit' = []}, _ServiceRating, Acc) ->
+	Acc.
+
+%% @hidden
+service_rating_refund(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = [RSU]}, ServiceRating, Acc) ->
+	case rsu(RSU) of
+		ResquestedUnit when map_size(ResquestedUnit) > 0 ->
+			[ServiceRating#{"requestSubType" => "REFUND",
+					"requestedUnit" => ResquestedUnit} | Acc];
+		_ResquestedUnit ->
+			[ServiceRating#{"requestSubType" => "REFUND"} | Acc]
+	end;
+service_rating_refund(#'3gpp_ro_Multiple-Services-Credit-Control'{
+		'Requested-Service-Unit' = []}, _ServiceRating, Acc) ->
+	Acc.
 
 %% @hidden
 subscription_id(Data) ->
@@ -2010,9 +2034,9 @@ build_mscc(MSCC, ServiceRating) ->
 	build_mscc(MSCC, ServiceRating, {FailRC, []}).
 %% @hidden
 build_mscc([#'3gpp_ro_Multiple-Services-Credit-Control'{
-		'Requested-Service-Unit' = RSU,
+		'Requested-Service-Unit' = [_RSU],
 		'Service-Identifier' = SI, 'Rating-Group' = RG} | T] = _MSCC,
-		ServiceRating, Acc) when length(RSU) > 0 ->
+		ServiceRating, Acc) ->
 	build_mscc(T, ServiceRating, build_mscc1(SI, RG, ServiceRating, Acc));
 build_mscc([_ | T], ServiceRating, Acc) ->
 	build_mscc(T, ServiceRating, Acc);
@@ -2021,55 +2045,102 @@ build_mscc([], _ServiceRating, {_, []}) ->
 build_mscc([], _ServiceRating, {FinalRC, Acc}) ->
 	{FinalRC, lists:reverse(Acc)}.
 %% @hidden
-build_mscc1([SI], [RG], [#{"serviceId" := SI, "ratingGroup" := RG,
-		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
-	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
-	Quota = quota_threshold(ServiceRating),
-	Validity = validity_time(ServiceRating),
-	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
-	RC = result_code(ResultCode),
-	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Service-Identifier' = [SI],
-			'Rating-Group' = [RG],
-			'Granted-Service-Unit' = GSU,
-			'Unit-Quota-Threshold' = Quota,
-			'Validity-Time' = Validity,
-			'Final-Unit-Indication' = FUI,
-			'Result-Code' = [RC]},
-	{final_result(RC, FinalRC), [MSCC | Acc]};
-build_mscc1([SI], [], [#{"serviceId" := SI,
-		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
-	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
-	Quota = quota_threshold(ServiceRating),
-	Validity = validity_time(ServiceRating),
-	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
-	RC = result_code(ResultCode),
-	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Service-Identifier' = [SI],
-			'Granted-Service-Unit' = GSU,
-			'Unit-Quota-Threshold' = Quota,
-			'Validity-Time' = Validity,
-			'Final-Unit-Indication' = FUI,
-			'Result-Code' = [RC]},
-	{final_result(RC, FinalRC), [MSCC | Acc]};
-build_mscc1([], [RG], [#{"ratingGroup" := RG,
-		"resultCode" := ResultCode} = ServiceRating | _], {FinalRC, Acc}) ->
-	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
-	Quota = quota_threshold(ServiceRating),
-	Validity = validity_time(ServiceRating),
-	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
-	RC = result_code(ResultCode),
-	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
-			'Rating-Group' = [RG],
-			'Granted-Service-Unit' = GSU,
-			'Unit-Quota-Threshold' = Quota,
-			'Validity-Time' = Validity,
-			'Final-Unit-Indication' = FUI,
-			'Result-Code' = [RC]},
-	{final_result(RC, FinalRC), [MSCC | Acc]};
-build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
+build_mscc1([SI], [RG],
+		[#{"serviceId" := SI,
+				"ratingGroup" := RG,
+				"grantedUnit" := GrantedUnit,
+				"resultCode" := ResultCode} = ServiceRating | _],
 		{FinalRC, Acc}) ->
-	GSU = gsu(maps:find("grantedUnit", ServiceRating)),
+	GSU = gsu(GrantedUnit),
+	Quota = quota_threshold(ServiceRating),
+	Validity = validity_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Granted-Service-Unit' = GSU,
+			'Unit-Quota-Threshold' = Quota,
+			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([SI], [RG],
+		[#{"serviceId" := SI,
+				"ratingGroup" := RG,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Rating-Group' = [RG],
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([SI], [],
+		[#{"serviceId" := SI,
+				"grantedUnit" := GrantedUnit,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) ->
+	GSU = gsu(GrantedUnit),
+	Quota = quota_threshold(ServiceRating),
+	Validity = validity_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Granted-Service-Unit' = GSU,
+			'Unit-Quota-Threshold' = Quota,
+			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([SI], [],
+		[#{"serviceId" := SI,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Service-Identifier' = [SI],
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [RG],
+		[#{"ratingGroup" := RG,
+				"grantedUnit" := GrantedUnit,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) ->
+	GSU = gsu(GrantedUnit),
+	Quota = quota_threshold(ServiceRating),
+	Validity = validity_time(ServiceRating),
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Rating-Group' = [RG],
+			'Granted-Service-Unit' = GSU,
+			'Unit-Quota-Threshold' = Quota,
+			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [RG],
+		[#{"ratingGroup" := RG,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
+			'Rating-Group' = [RG],
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [],
+		[#{"grantedUnit" := GrantedUnit,
+				"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) ->
+	GSU = gsu(GrantedUnit),
 	Quota = quota_threshold(ServiceRating),
 	Validity = validity_time(ServiceRating),
 	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
@@ -2078,6 +2149,15 @@ build_mscc1([], [], [#{"resultCode" := ResultCode} = ServiceRating | _],
 			'Granted-Service-Unit' = GSU,
 			'Unit-Quota-Threshold' = Quota,
 			'Validity-Time' = Validity,
+			'Final-Unit-Indication' = FUI,
+			'Result-Code' = [RC]},
+	{final_result(RC, FinalRC), [MSCC | Acc]};
+build_mscc1([], [],
+		[#{"resultCode" := ResultCode} = ServiceRating | _],
+		{FinalRC, Acc}) when not is_map_key("consumedUnit", ServiceRating) ->
+	FUI = fui(maps:find("finalUnitIndication", ServiceRating)),
+	RC = result_code(ResultCode),
+	MSCC = #'3gpp_ro_Multiple-Services-Credit-Control'{
 			'Final-Unit-Indication' = FUI,
 			'Result-Code' = [RC]},
 	{final_result(RC, FinalRC), [MSCC | Acc]};

@@ -1,6 +1,10 @@
 #!/usr/bin/env escript
 %% vim: syntax=erlang
 
+-mode(compile).
+
+-export([handle_request/3]).
+
 -include_lib("cse/include/diameter_gen_3gpp.hrl").
 -include_lib("cse/include/diameter_gen_3gpp_sy_application.hrl").
 -include_lib("diameter/include/diameter.hrl").
@@ -28,7 +32,8 @@ sy_session(Options) ->
 			_ ->
 				"example.net"
 		end,
-		Callback = #diameter_callback{},
+		Callback = #diameter_callback{
+				handle_request = {?MODULE, handle_request, []}},
 		ServiceOptions = [{'Origin-Host', Hostname},
 				{'Origin-Realm', OriginRealm},
 				{'Vendor-Id', ?IANA_PEN_SigScale},
@@ -42,28 +47,51 @@ sy_session(Options) ->
 				{application, [{alias, sy},
 						{dictionary, diameter_gen_3gpp_sy_application},
 						{module, Callback}]}],
-		ok = diameter:start_service(Name, ServiceOptions),
 		true = diameter:subscribe(Name),
-		TransportOptions =  [{transport_module, diameter_tcp},
+		ok = diameter:start_service(Name, ServiceOptions),
+		receive
+			#diameter_event{service = Name, info = start} ->
+				ok;
+			#diameter_event{service = Name,
+					info = {closed, _Ref1, Reason, _Config}} ->
+				error(Reason)
+		end,
+		TransportModule =  maps:get(transport, Options, diameter_tcp),
+		TransportOptions =  [{transport_module, TransportModule},
 				{transport_config,
 						[{raddr, maps:get(raddr, Options, {127,0,0,1})},
 						{rport, maps:get(rport, Options, 3868)},
 						{ip, maps:get(ip, Options, {127,0,0,1})}]}],
-		{ok, _Ref} = diameter:add_transport(Name, {connect, TransportOptions}),
+		{ok, _Ref2} = diameter:add_transport(Name, {connect, TransportOptions}),
 		receive
 			#diameter_event{service = Name, info = Info}
 					when element(1, Info) == up ->
 				ok
 		end,
 		SId = diameter:session_id(Hostname),
-		IMSI = #'3gpp_sy_Subscription-Id'{
-				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-				'Subscription-Id-Data' = maps:get(imsi, Options, "001001123456789")},
-		MSISDN = #'3gpp_sy_Subscription-Id'{
-				'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-				'Subscription-Id-Data' = maps:get(msisdn, Options, "14165551234")},
-		SubscriptionId = [IMSI, MSISDN],
-		PCI = maps:get(pci, Options, []),
+		IMSI = case maps:get(imsi, Options, "001001123456789") of
+			ImsiOption when length(ImsiOption) > 0 ->
+				[#'3gpp_sy_Subscription-Id'{
+						'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
+						'Subscription-Id-Data' = ImsiOption}];
+			[] ->
+				[]
+		end,
+		MSISDN = case maps:get(msisdn, Options, "14165551234") of
+			MsisdnOption when length(MsisdnOption) > 0 ->
+				[#'3gpp_sy_Subscription-Id'{
+						'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
+						'Subscription-Id-Data' = MsisdnOption}];
+			[] ->
+				[]
+		end,
+		SubscriptionId = IMSI ++ MSISDN,
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, SubscriptionId}),
+		PCI = string:lexemes(maps:get(pci, Options, []), [$,]),
+		SupportedFeatures = #'3gpp_sy_Supported-Features'{
+				'Vendor-Id' = ?IANA_PEN_3GPP,
+				'Feature-List-ID' = 1,
+				'Feature-List' = 1},
 		SLR1 = #'3gpp_sy_SLR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -71,10 +99,12 @@ sy_session(Options) ->
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INITIAL_REQUEST',
 				'Subscription-Id' = SubscriptionId,
-				'Supported-Features' = [],
+				'Supported-Features' = [SupportedFeatures],
 				'Policy-Counter-Identifier' = PCI},
 		Fsy = fun('3gpp_sy_SLA', _N) ->
 					record_info(fields, '3gpp_sy_SLA');
+				('3gpp_sy_Experimental-Result', _N) ->
+					record_info(fields, '3gpp_sy_Experimental-Result');
 				('3gpp_sy_Policy-Counter-Status-Report', _N) ->
 					record_info(fields, '3gpp_sy_Policy-Counter-Status-Report');
 				('3gpp_sy_Pending-Policy-Counter-Information', _N) ->
@@ -94,12 +124,12 @@ sy_session(Options) ->
 					record_info(fields, 'diameter_base_Proxy-Info')
 		end,
 		case diameter:call(Name, sy, SLR1, []) of
-			#'3gpp_sy_SLA'{'Result-Code' = 2001} = Answer1 ->
+			#'3gpp_sy_SLA'{'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fsy)]);
-			#'3gpp_sy_SLA'{'Result-Code' = ResultCode1} = Answer1 ->
+			#'3gpp_sy_SLA'{'Result-Code' = [ResultCode1]} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fsy)]),
 				throw(ResultCode1);
-			#'3gpp_sy_SLA'{'Experimental-Result' = ResultCode1} = Answer1 ->
+			#'3gpp_sy_SLA'{'Experimental-Result' = [ResultCode1]} = Answer1 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer1, Fsy)]),
 				throw(ResultCode1);
 			#'diameter_base_answer-message'{'Result-Code' = ResultCode1} = Answer1 ->
@@ -108,19 +138,28 @@ sy_session(Options) ->
 			{error, Reason1} ->
 				error(Reason1)
 		end,
-		timer:sleep(maps:get(interval, Options, 1000)),
+		true = register(?MODULE, self()),
+		Interval = maps:get(interval, Options, 1000),
+		Updates = receive
+			snr_asr ->
+				0
+		after
+			Interval ->
+				maps:get(updates, Options, 0)
+		end,
 		Fupdate = fun F(0) ->
 					ok;
 				F(N) ->
 					SLR2 = SLR1#'3gpp_sy_SLR'{'Session-Id' = SId,
+							'Supported-Features' = [],
 							'SL-Request-Type' = ?'3GPP_SY_SL-REQUEST-TYPE_INTERMEDIATE_REQUEST'},
 					case diameter:call(Name, sy, SLR2, []) of
-						#'3gpp_sy_SLA'{'Result-Code' = 2001} = Answer2 ->
+						#'3gpp_sy_SLA'{'Result-Code' = [?'DIAMETER_BASE_RESULT-CODE_SUCCESS']} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fsy)]);
-						#'3gpp_sy_SLA'{'Result-Code' = ResultCode2} = Answer2 ->
+						#'3gpp_sy_SLA'{'Result-Code' = [ResultCode2]} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fsy)]),
 							throw(ResultCode2);
-						#'3gpp_sy_SLA'{'Experimental-Result' = ResultCode2} = Answer2 ->
+						#'3gpp_sy_SLA'{'Experimental-Result' = [ResultCode2]} = Answer2 ->
 							io:fwrite("~s~n", [io_lib_pretty:print(Answer2, Fsy)]),
 							throw(ResultCode2);
 						#'diameter_base_answer-message'{'Result-Code' = ResultCode2} = Answer2 ->
@@ -129,10 +168,15 @@ sy_session(Options) ->
 						{error, Reason2} ->
 							error(Reason2)
 					end,
-					timer:sleep(maps:get(interval, Options, 1000)),
-					F(N - 1)
+					receive
+						snr_asr ->
+							F(0)
+					after
+						Interval ->
+							F(N - 1)
+					end
 		end,
-		Fupdate(maps:get(updates, Options, 0)),
+		Fupdate(Updates),
 		STR = #'3gpp_sy_STR'{'Session-Id' = SId,
 				'Origin-Host' = Hostname,
 				'Origin-Realm' = OriginRealm,
@@ -141,7 +185,7 @@ sy_session(Options) ->
 				'Auth-Application-Id' = ?SY_APPLICATION_ID,
 				'Termination-Cause' = ?'DIAMETER_BASE_TERMINATION-CAUSE_LOGOUT'},
 		case diameter:call(Name, sy, STR, []) of
-			#'3gpp_sy_STA'{'Result-Code' = 2001} = Answer3 ->
+			#'3gpp_sy_STA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'} = Answer3 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fsy)]);
 			#'3gpp_sy_STA'{'Result-Code' = ResultCode3} = Answer3 ->
 				io:fwrite("~s~n", [io_lib_pretty:print(Answer3, Fsy)]),
@@ -163,17 +207,51 @@ sy_session(Options) ->
 			usage()
 	end.
 
+handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
+		_ServiceName, {_, Capabilities} = _Peer) ->
+	#diameter_caps{origin_host = {Host, _},
+			origin_realm = {Realm, _}} = Capabilities,
+	Fsy = fun('3gpp_sy_SNR', _N) ->
+				record_info(fields, '3gpp_sy_SNR');
+			('3gpp_sy_Policy-Counter-Status-Report', _N) ->
+				record_info(fields, '3gpp_sy_Policy-Counter-Status-Report');
+			('3gpp_sy_Pending-Policy-Counter-Information', _N) ->
+				record_info(fields, '3gpp_sy_Pending-Policy-Counter-Information')
+	end,
+	handle_request(Request, Host, Realm, Fsy).
+
+handle_request(#'3gpp_sy_SNR'{'Session-Id' = Session,
+				'SN-Request-Type' = [RequestType]} = Request,
+		Host, Realm, Fsy) when (RequestType band 2#1) =:= 0 ->
+	io:fwrite("~s~n", [io_lib_pretty:print(Request, Fsy)]),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
+			'Origin-Host' = Host,
+			'Origin-Realm' = Realm,
+			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
+	{reply, SNA};
+handle_request(#'3gpp_sy_SNR'{'Session-Id' = Session,
+				'SN-Request-Type' = [RequestType]} = Request,
+		Host, Realm, Fsy) when (RequestType band 2#1) =:= 1 ->
+	io:fwrite("~s~n", [io_lib_pretty:print(Request, Fsy)]),
+	SNA = #'3gpp_sy_SNA'{'Session-Id' = Session,
+			'Origin-Host' = Host,
+			'Origin-Realm' = Realm,
+			'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS'},
+	PostF = {erlang, send, [?MODULE, snr_asr]},
+	{eval, {reply, SNA}, PostF}.
+
 usage() ->
 	Option1 = " [--msisdn 14165551234]",
 	Option2 = " [--imsi 001001123456789]",
-	Option3 = " [--policy-counter-id]",
+	Option3 = " [--policy-counter-id none]",
 	Option4 = " [--updates 0]",
 	Option5 = " [--interval 1000]",
-	Option6 = " [--ip 127.0.0.1]",
-	Option7 = " [--raddr 127.0.0.1]",
-	Option8 = " [--rport 3868]",
+	Option6 = " [--transport tcp]",
+	Option7 = " [--ip 127.0.0.1]",
+	Option8 = " [--raddr 127.0.0.1]",
+	Option9 = " [--rport 3868]",
 	Options = [Option1, Option2, Option3, Option4, Option5,
-			Option6, Option7, Option8],
+			Option6, Option7, Option8, Option9],
 	Format = lists:flatten(["usage: ~s", Options, "~n"]),
 	io:fwrite(Format, [escript:script_name()]),
 	halt(1).
@@ -192,6 +270,10 @@ options(["--interval", MS | T], Acc) ->
 	options(T, Acc#{interval => list_to_integer(MS)});
 options(["--updates", N | T], Acc) ->
 	options(T, Acc#{updates => list_to_integer(N)});
+options(["--transport", "tcp" | T], Acc) ->
+	options(T, Acc#{transport => diameter_tcp});
+options(["--transport", "sctp" | T], Acc) ->
+	options(T, Acc#{transport => diameter_sctp});
 options(["--ip", Address | T], Acc) ->
 	{ok, IP} = inet:parse_address(Address),
 	options(T, Acc#{ip => IP});
