@@ -401,12 +401,12 @@ slpi() ->
 %% @doc Get Diameter statistics checks.
 get_diameter_statistics() ->
 	Services = diameter:services(),
-	Dictionaries = diameter_all_dictionaries(Services, []),
-	get_diameter_checks(Dictionaries, Services, []).
+	ApplicationIds = diameter_all_application_ids(Services, []),
+	get_diameter_checks(ApplicationIds, Services, []).
 
 %% @hidden
-get_diameter_checks([Dictionary | T], Services, Acc) ->
-	case get_diameter_counters(Dictionary, Services, #{}) of
+get_diameter_checks([ApplicationId | T], Services, Acc) ->
+	case get_diameter_counters(ApplicationId , Services, #{}) of
 		{_, []} = _Check ->
 			get_diameter_checks(T, Services, Acc);
 		Check ->
@@ -415,114 +415,74 @@ get_diameter_checks([Dictionary | T], Services, Acc) ->
 get_diameter_checks([], _Services, Acc) ->
 	Acc.
 
-%% @doc Get all dictionaries.
+%% @doc Get all DIAMETER Application Ids.
 %% @hidden
-diameter_all_dictionaries([Service | T], Acc) ->
+diameter_all_application_ids([Service | T], Acc) ->
 	Applications = diameter:service_info(Service, applications),
-	Dictionaries = diameter_dictionaries(Applications, []),
-	diameter_all_dictionaries(T, [Dictionaries | Acc]);
-diameter_all_dictionaries([], Acc) ->
+	ApplicationIds = diameter_application_ids(Applications, []),
+	diameter_all_application_ids(T, [ApplicationIds | Acc]);
+diameter_all_application_ids([], Acc) ->
 	lists:sort(lists:flatten(Acc)).
 
 %% @hidden
-diameter_dictionaries([Application | T], Acc) ->
-	{dictionary, Dictionary} = lists:keyfind(dictionary, 1, Application),
-	diameter_dictionaries(T, [Dictionary | Acc]);
-diameter_dictionaries([], Acc) ->
+diameter_application_ids([Application | T], Acc) ->
+	{id, ApplicationId} = lists:keyfind(id, 1, Application),
+	diameter_application_ids(T, [ApplicationId | Acc]);
+diameter_application_ids([], Acc) ->
 	Acc.
 
--spec get_diameter_counters(Dictionary, Services, Counters) -> Components
+-spec get_diameter_counters(ApplicationId, Services, Counters) -> Components
 	when
-		Dictionary :: atom(),
+		ApplicationId :: 0..4294967295,
 		Services :: [diameter:service_name()],
 		Counters :: map(),
 		Components :: tuple().
 %% @doc Get Diameter count.
 %% @hidden
-get_diameter_counters(diameter_gen_base_rfc6733, [Service | T], Counters) ->
+get_diameter_counters(ApplicationId, [Service | T], Counters) ->
 	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(0, Statistics, Counters),
-	get_diameter_counters(diameter_gen_base_rfc6733, T, NewCounters);
-get_diameter_counters(diameter_gen_base_rfc6733, [], Counters) ->
+	NewCounters = service_counters(ApplicationId, Statistics, Counters),
+	get_diameter_counters(ApplicationId, T, NewCounters);
+get_diameter_counters(0, [], Counters) ->
 	Components = get_components(Counters),
 	{"diameter-base:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_ro_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(4, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_ro_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_ro_application, [], Counters) ->
+get_diameter_counters(1, [], Counters) ->
 	Components = get_components(Counters),
-	{"diameter-ro:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_rf_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(3, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_rf_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_rf_application, [], Counters) ->
+	{"diameter-nas:counters", Components};
+get_diameter_counters(3, [], Counters) ->
 	Components = get_components(Counters),
 	{"diameter-rf:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_gx_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777238, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_gx_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_gx_application, [], Counters) ->
+get_diameter_counters(4, [], Counters) ->
 	Components = get_components(Counters),
-	{"diameter-gx:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_s6a_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777251, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_s6a_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_s6a_application, [], Counters) ->
-	Components = get_components(Counters),
-	{"diameter-s6a:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_s6b_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777272, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_s6b_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_s6b_application, [], Counters) ->
-	Components = get_components(Counters),
-	{"diameter-s6b:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_sta_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777250, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_sta_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_sta_application, [], Counters) ->
-	Components = get_components(Counters),
-	{"diameter-sta:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_swm_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777264, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_swm_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_swm_application, [], Counters) ->
-	Components = get_components(Counters),
-	{"diameter-swm:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_swx_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777265, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_swx_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_swx_application, [], Counters) ->
-	Components = get_components(Counters),
-	{"diameter-swx:counters", Components};
-get_diameter_counters(diameter_gen_3gpp_sy_application, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(16777302, Statistics, Counters),
-	get_diameter_counters(diameter_gen_3gpp_sy_application, T, NewCounters);
-get_diameter_counters(diameter_gen_3gpp_sy_application, [], Counters) ->
-	Components = get_components(Counters),
-	{"diameter-sy:counters", Components};
-get_diameter_counters(diameter_gen_eap_application_rfc4072, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(5, Statistics, Counters),
-	get_diameter_counters(diameter_gen_eap_application_rfc4072, T, NewCounters);
-get_diameter_counters(diameter_gen_eap_application_rfc4072, [], Counters) ->
+	{"diameter-ro:counters", Components};
+get_diameter_counters(5, [], Counters) ->
 	Components = get_components(Counters),
 	{"diameter-eap:counters", Components};
-get_diameter_counters(diameter_gen_nas_application_rfc7155, [Service | T], Counters) ->
-	Statistics = diameter:service_info(Service, statistics),
-	NewCounters = service_counters(1, Statistics, Counters),
-	get_diameter_counters(diameter_gen_nas_application_rfc7155, T, NewCounters);
-get_diameter_counters(diameter_gen_nas_application_rfc7155, [], Counters) ->
+get_diameter_counters(16777238, [], Counters) ->
 	Components = get_components(Counters),
-	{"diameter-nas:counters", Components}.
+	{"diameter-gx:counters", Components};
+get_diameter_counters(16777250, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-sta:counters", Components};
+get_diameter_counters(16777251, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-s6a:counters", Components};
+get_diameter_counters(16777264, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-swm:counters", Components};
+get_diameter_counters(16777265, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-swx:counters", Components};
+get_diameter_counters(16777272, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-s6b:counters", Components};
+get_diameter_counters(16777302, [], Counters) ->
+	Components = get_components(Counters),
+	{"diameter-sy:counters", Components};
+get_diameter_counters(ApplicationId, [], Counters) ->
+	Components = get_components(Counters),
+	Key = io_lib:fwrite("diameter-~b:counters", [ApplicationId]),
+	{Key, Components}.
 
 %% @hidden
 get_components(Counters) ->
