@@ -1,6 +1,6 @@
 [Unit]
 Description=SigScale CSE
-Documentation="https://github.com/sigscale/cse"
+Documentation=https://github.com/sigscale/cse
 After=epmd.service epmd.socket
 
 [Service]
