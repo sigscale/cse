@@ -1,3 +1,8 @@
+2026-03-27 Vance Shipley <vances@sigscale.org>
+
+	* refactor to remove redundant function clause
+	* filter peers for snr by destination-host orelse relays
+
 2026-03-20 Vance Shipley <vances@sigscale.org>
 
 	* counters by diameter application id in health rest handler

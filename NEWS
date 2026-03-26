@@ -1,3 +1,7 @@
+March 27, 2026
+--------------
+	- Send DIAMETER SNR to Destination-Host directly or else DRAs 
+
 March 20, 2026
 --------------
 	- Refactor health API handler to handle counters for any DIAMETER application
