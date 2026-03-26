@@ -285,10 +285,10 @@ peer_stat1([{{{Application, CommandCode, RequestFlag}, _Direction, {'Result-Code
 			case maps:find({CommandCode, 'Result-Code', ResultCode}, CommandMap) of
 				{ok, Value} ->
 					Acc#{Application => CommandMap#{{CommandCode, RequestFlag, 'Result-Code', ResultCode} => Value + Count}};
-				error->
+				error ->
 					Acc#{Application => CommandMap#{{CommandCode, RequestFlag, 'Result-Code', ResultCode} => Count}}
 			end;
-		error->
+		error ->
 			Acc#{Application => #{{CommandCode, RequestFlag, 'Result-Code', ResultCode} => Count}}
 	end,
 	peer_stat1(T, NewAcc);
@@ -298,10 +298,10 @@ peer_stat1([{{{Application, CommandCode, RequestFlag}, _Direction, error}, Count
 			case maps:find({CommandCode, RequestFlag, error}, CommandMap) of
 				{ok, Value} ->
 					Acc#{Application => CommandMap#{{CommandCode, RequestFlag, error} => Value + Count}};
-				error->
+				error ->
 					Acc#{Application => CommandMap#{{CommandCode, RequestFlag, error} => Count}}
 			end;
-		error->
+		error ->
 			Acc#{Application => #{{CommandCode, RequestFlag, error} => Count}}
 	end,
 	peer_stat1(T, NewAcc);
@@ -311,10 +311,10 @@ peer_stat1([{{{Application, CommandCode, RequestFlag}, _Direction}, Count} | T],
 			case maps:find({CommandCode, RequestFlag}, CommandMap) of
 				{ok, Value} ->
 					Acc#{Application => CommandMap#{{CommandCode, RequestFlag} => Value + Count}};
-				error->
+				error ->
 					Acc#{Application => CommandMap#{{CommandCode, RequestFlag} => Count}}
 			end;
-		error->
+		error ->
 			Acc#{Application => #{{CommandCode, RequestFlag} => Count}}
 
 	end,
