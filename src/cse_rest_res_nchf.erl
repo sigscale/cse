@@ -38,6 +38,7 @@
 
 -define(SY_APPLICATION, cse_diameter_3gpp_sy_application).
 -define(SY_APPLICATION_ID, 16777302).
+-define(RELAY_APPLICATION_ID, 4294967295).
 -define(IANA_PEN_3GPP, 10415).
 
 %%----------------------------------------------------------------------
@@ -274,7 +275,12 @@ notify({_SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm,
 			'Destination-Realm' = DRealm,
 			'SN-Request-Type' = [0],
 			'Policy-Counter-Status-Report' = PCSR},
-	Options = [],
+	Fdra = fun (#diameter_caps{auth_application_id = {_, Apps}}) ->
+				lists:member(?RELAY_APPLICATION_ID, Apps);
+			(_) ->
+				false
+	end,
+	Options = [{filter, {first, [host, {eval, Fdra}]}}],
 	case diameter:call(ServiceName, ?SY_APPLICATION, SNR, Options) of
 		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA}
 				when ResultCode == ?'DIAMETER_BASE_RESULT-CODE_SUCCESS' ->
@@ -318,7 +324,12 @@ terminate({_SubscriptionId, ServiceName, SessionId, OHost, ORealm, DHost, DRealm
 			'Destination-Host' = DHost,
 			'Destination-Realm' = DRealm,
 			'SN-Request-Type' = [1]},
-	Options = [],
+	Fdra = fun (#diameter_caps{auth_application_id = {_, Apps}}) ->
+				lists:member(?RELAY_APPLICATION_ID, Apps);
+			(_) ->
+				false
+	end,
+	Options = [{filter, {first, [host, {eval, Fdra}]}}],
 	case diameter:call(ServiceName, ?SY_APPLICATION, SNR, Options) of
 		{ok, #'3gpp_sy_SNA'{'Result-Code' = [ResultCode]} = _SNA}
 				when ResultCode == ?'DIAMETER_BASE_RESULT-CODE_SUCCESS' ->
