@@ -1,3 +1,7 @@
+2026-04-16 Vance Shipley <vances@sigscale.org>
+
+	* nrf charging not applicable result in cap, continue without control
+
 2026-03-27 Vance Shipley <vances@sigscale.org>
 
 	* refactor to remove redundant function clause
