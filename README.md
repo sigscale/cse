@@ -4,7 +4,7 @@ Prebuilt packages available for
 [Ubuntu](https://github.com/sigscale/cse/blob/master/README.ubuntu.md),
 [Debian](https://github.com/sigscale/cse/blob/master/README.debian.md),
 [Red Hat](https://github.com/sigscale/cse/blob/master/README.redhat.md),
-[Docker](https://github.com/sigscale/cse/blob/master/README.docker.md).
+[Docker](https://github.com/sigscale/cse/blob/master/README.docker.md)
 and
 [Kubernetes](https://github.com/sigscale/cse/blob/master/README.kubernetes.md).
 
