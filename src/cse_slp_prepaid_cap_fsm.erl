@@ -461,6 +461,13 @@ collect_information(cast, {nrf_start,
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := "CHARGING_NOT_APPLICABLE"}},
+				{_, "application/problem+json" ++ _}} ->
+			NewIID = IID + 1,
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, abandon, Data#{iid => NewIID}, 0};
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
 			Cause = #cause{location = local_public, value = 31},
@@ -1003,6 +1010,13 @@ terminating_call_handling(cast, {nrf_start,
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := "CHARGING_NOT_APPLICABLE"}},
+				{_, "application/problem+json" ++ _}} ->
+			NewIID = IID + 1,
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, abandon, Data#{iid => NewIID}, 0};
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
 			Cause = #cause{location = local_public, value = 31},
@@ -1753,6 +1767,13 @@ o_active(cast, {nrf_update,
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := "CHARGING_NOT_APPLICABLE"}},
+				{_, "application/problem+json" ++ _}} ->
+			NewIID = IID + 1,
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, disconnect, Data#{iid => NewIID}, 0};
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
 			Cause = #cause{location = local_public, value = 31},
@@ -2039,6 +2060,13 @@ t_active(cast, {nrf_update,
 	log_nrf(ecs_http(Version, 403, Headers, Body, LogHTTP), Data),
 	NewData = remove_req(Data),
 	case {zj:decode(Body), lists:keyfind("content-type", 1, Headers)} of
+		{{ok, #{"cause" := "CHARGING_NOT_APPLICABLE"}},
+				{_, "application/problem+json" ++ _}} ->
+			NewIID = IID + 1,
+			Invoke = #'TC-INVOKE'{operation = ?'opcode-continue',
+					invokeID = NewIID, dialogueID = DialogueID, class = 4},
+			gen_statem:cast(CCO, {'TC', 'INVOKE', request, Invoke}),
+			{next_state, disconnect, Data#{iid => NewIID}, 0};
 		{{ok, #{"cause" := _}}, {_, "application/problem+json" ++ _}} ->
 			NewIID = IID + 1,
 			Cause = #cause{location = local_public, value = 31},
