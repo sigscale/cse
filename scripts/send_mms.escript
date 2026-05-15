@@ -48,7 +48,7 @@ send_mms(Options) ->
 			#diameter_event{service = Name, info = start} ->
 				ok;
 			#diameter_event{service = Name,
-					info = {closed, Ref, Reason, _Config}} ->
+					info = {closed, _, Reason, _}} ->
 				error(Reason)
 		end,
 		TransportModule =  maps:get(transport, Options, diameter_tcp),
