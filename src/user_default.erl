@@ -355,8 +355,8 @@ dia_application(16777272) ->
 	io:fwrite("    S6b: ~n");
 dia_application(16777238) ->
 	io:fwrite("    Gx: ~n");
-dia_application(16777302) ->
-	io:fwrite("    Sy: ~n");
+dia_application(unknown) ->
+	io:fwrite("    Unknown: ~n");
 dia_application(N) ->
 	io:fwrite("    ~b: ~n", [N]).
 
