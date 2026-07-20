@@ -1,3 +1,10 @@
+2026-07-20 Vance Shipley <vances@sigscale.org>
+
+	* charging-id, inter-operator-id, visited-network-id, access-network-info in state
+	* edoc grammar and formatting
+	* handle unknown application in diameter statistics
+	* suppress warning for unused variable
+
 2026-04-16 Vance Shipley <vances@sigscale.org>
 
 	* nrf charging not applicable result in cap, continue without control
