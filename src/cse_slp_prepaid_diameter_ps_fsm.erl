@@ -2073,7 +2073,7 @@ diameter_error(ResultCode, RequestType, RequestNum) ->
 	when
 		ResultCode :: string(),
 		Result :: pos_integer().
-%% @doc Convert a Nrf ResultCode to a Diameter ResultCode
+%% @doc Convert an Nrf `ResultCode' to a DIAMETER `Result-Code'.
 %% @hidden
 % 3GPP TS 32.291 6.1.7.3-1
 result_code("CHARGING_FAILED") ->
