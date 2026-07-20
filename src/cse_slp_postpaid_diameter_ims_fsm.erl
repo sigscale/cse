@@ -109,11 +109,14 @@
 		sip_uri => string(),
 		start_time => calendar:datetime(),
 		end_time => calendar:datetime(),
-		serving_plmn => [$0..$9],
 		duration => non_neg_integer(),
 		volume_in => non_neg_integer(),
 		volume_out => non_neg_integer(),
-		charging_id => 0..4294967295,
+		originating_ioi => binary(),
+		terminating_ioi => binary(),
+		charging_id => binary(),
+		visited_id => binary(),
+		access_info => binary(),
 		close_cause => 0..4294967295,
 		interim_interval := [pos_integer()],
 		bx_summary := boolean(),
@@ -394,9 +397,41 @@ sip_uri([]) ->
 	undefined.
 
 %% hidden
-ims_info(#'3gpp_rf_IMS-Information'{} = _IMS, Data) ->
-	Data;
-ims_info(_IMS, Data) ->
+ims_info(#'3gpp_rf_IMS-Information'{
+		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
+				'Originating-IOI' = [IOI]}]} = IMS,
+		Data) ->
+	ims_info1(IMS, Data#{originating_ioi => IOI});
+ims_info(IMS, Data) ->
+	ims_info1(IMS, Data).
+%% hidden
+ims_info1(#'3gpp_rf_IMS-Information'{
+		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
+				'Terminating-IOI' = [IOI]}]} = IMS,
+		Data) ->
+	ims_info2(IMS, Data#{terminating_ioi => IOI});
+ims_info1(IMS, Data) ->
+	ims_info2(IMS, Data).
+%% hidden
+ims_info2(#'3gpp_rf_IMS-Information'{
+		'IMS-Charging-Identifier' = [ICID]} = IMS,
+		Data) ->
+	ims_info3(IMS, Data#{charging_id => ICID});
+ims_info2(IMS, Data) ->
+	ims_info3(IMS, Data).
+%% hidden
+ims_info3(#'3gpp_rf_IMS-Information'{
+		'IMS-Visited-Network-Identifier' = [Visited]} = IMS,
+		Data) ->
+	ims_info4(IMS, Data#{visited_id => Visited});
+ims_info3(IMS, Data) ->
+	ims_info4(IMS, Data).
+%% hidden
+ims_info4(#'3gpp_rf_IMS-Information'{
+			'Access-Network-Information' = [ANI]} = _IMS,
+		Data) ->
+	Data#{access_info => ANI};
+ims_info4(_IMS, Data) ->
 	Data.
 
 -spec diameter_answer(ResultCode, Data) -> Result
@@ -648,22 +683,19 @@ bx15(RecordType, IMS, #{end_time := DateTime} = Data, CDR) ->
 bx15(RecordType, IMS, Data, CDR) ->
 	bx16(RecordType, IMS, Data, CDR).
 %% @hidden
-bx16(RecordType, #'3gpp_rf_IMS-Information'{
-		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
-				'Originating-IOI' = [Orig], 'Terminating-IOI' = [Term]}]} = IMS,
-		Data, CDR) ->
+bx16(RecordType, IMS,
+		#{originating_ioi := Orig, terminating_ioi := Term} = Data,
+		CDR) ->
 	IOIs = <<$", Orig/binary, $,, Term/binary, $">>,
 	bx17(RecordType, IMS, Data, CDR#{interOperatorIdentifiers => IOIs});
-bx16(RecordType, #'3gpp_rf_IMS-Information'{
-		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
-				'Originating-IOI' = [Orig]}]} = IMS,
-		Data, CDR) ->
+bx16(RecordType, IMS,
+		#{originating_ioi := Orig} = Data,
+		CDR) ->
 	IOIs = <<$", Orig/binary, $,, $">>,
 	bx17(RecordType, IMS, Data, CDR#{interOperatorIdentifiers => IOIs});
-bx16(RecordType, #'3gpp_rf_IMS-Information'{
-		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
-				'Terminating-IOI' = [Term]}]} = IMS,
-		Data, CDR) ->
+bx16(RecordType, IMS,
+		#{terminating_ioi := Term} = Data,
+		CDR) ->
 	IOIs = <<$", $,, Term/binary, $">>,
 	bx17(RecordType, IMS, Data, CDR#{interOperatorIdentifiers => IOIs});
 bx16(RecordType, IMS, Data, CDR) ->
@@ -679,26 +711,20 @@ bx18(RecordType, IMS, #{close_cause := Cause} = Data, CDR) ->
 bx18(RecordType, IMS, Data, CDR) ->
 	bx19(RecordType, IMS, Data, CDR).
 %% @hidden
-bx19(RecordType,
-		#'3gpp_rf_IMS-Information'{'IMS-Charging-Identifier' = [ICCID]} = IMS,
-		Data, CDR) ->
-	bx20(RecordType, IMS, Data, CDR#{'iMS-Charging-Identifier' => ICCID});
+bx19(RecordType, IMS, #{charging_id := ICID} = Data, CDR) ->
+	bx20(RecordType, IMS, Data, CDR#{'iMS-Charging-Identifier' => ICID});
 bx19(RecordType, IMS, Data, CDR) ->
 	bx20(RecordType, IMS, Data, CDR).
 %% @hidden
 bx20(RecordType, IMS, #{context := Context} = Data, CDR) ->
 	bx21(RecordType, IMS, Data, CDR#{serviceContextID => Context}).
 %% @hidden
-bx21(RecordType,
-		#'3gpp_rf_IMS-Information'{'IMS-Visited-Network-Identifier' = [Visited]} = IMS,
-		Data, CDR) ->
+bx21(RecordType, IMS, #{visited_id := Visited} = Data, CDR) ->
 	bx22(RecordType, IMS, Data, CDR#{iMSVisitedNetworkIdentifier => Visited});
 bx21(RecordType, IMS, Data, CDR) ->
 	bx22(RecordType, IMS, Data, CDR).
 %% @hidden
-bx22(_RecordType,
-		#'3gpp_rf_IMS-Information'{'Access-Network-Information' = [ANI]} = _IMS,
-		_Data, CDR) ->
+bx22(_RecordType, _IMS, #{access_info := ANI} = _Data, CDR) ->
 	CDR#{accessNetworkInformation => ANI};
 bx22(_RecordType, _IMS, _Data, CDR) ->
 	CDR.
