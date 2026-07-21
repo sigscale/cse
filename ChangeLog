@@ -1,5 +1,6 @@
 2026-07-20 Vance Shipley <vances@sigscale.org>
 
+	* correct parsing ims-information avp in postpaid ims slp
 	* charging-id, inter-operator-id, visited-network-id, access-network-info in state
 	* edoc grammar and formatting
 	* handle unknown application in diameter statistics
