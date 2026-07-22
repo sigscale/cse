@@ -15,10 +15,10 @@ main(Args) ->
 		#{help := true} = _Options ->
 			usage();
 		Options ->
-			cdr_ps(Options)
+			cdr_ims(Options)
 	end.
 
-cdr_ps(Options) ->
+cdr_ims(Options) ->
 	try
 		Name = escript:script_name(),
 		ok = diameter:start(),
