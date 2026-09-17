@@ -134,5 +134,5 @@ else
 endif
 
 
-CLEANFILES = $(beam_DATA) $(app_DATA)
+CLEANFILES = $(beam_DATA) cse.app
 
