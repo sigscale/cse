@@ -56,19 +56,19 @@ endif
 	$(ERLC) $(ERLCFLAGS) -I $(top_srcdir)/include -I $(top_builddir)/include $<
 
 .common_test_ok:	$(addsuffix .beam, $(testmods))
-	@if [ ! -d log ]; then mkdir log; fi
-	@if [ ! -f ct.cfg ]; then cp $(top_srcdir)/test/ct.cfg .; fi
-	@if [ ! -f test.spec ]; then cp $(top_srcdir)/test/test.spec .; fi
-	@if [ ! -d cse_api_SUITE_data ]; then mkdir cse_api_SUITE_data; fi
-	@if [ ! -d cse_rest_api_SUITE_data ]; then mkdir cse_rest_api_SUITE_data; fi
-	@if [ ! -d cse_log_SUITE_data ]; then mkdir cse_log_SUITE_data; fi
-	@if [ ! -d cse_cap_SUITE_data ]; then mkdir cse_cap_SUITE_data; fi
-	@if [ ! -d cse_inap_SUITE_data ]; then mkdir cse_inap_SUITE_data; fi
-	@if [ ! -d cse_diameter_ro_SUITE_data ]; then mkdir cse_diameter_ro_SUITE_data; fi
-	@if [ ! -d cse_diameter_rf_SUITE_data ]; then mkdir cse_diameter_rf_SUITE_data; fi
-	@if [ ! -d cse_diameter_sy_SUITE_data ]; then mkdir cse_diameter_sy_SUITE_data; fi
-	@if [ ! -d cse_radius_SUITE_data ]; then mkdir cse_radius_SUITE_data; fi
-	@if [ ! -d cse_re_SUITE_data ]; then mkdir cse_re_SUITE_data; fi
+	$(MKDIR_P) log
+	@if [ ! -f ct.cfg ]; then $(INSTALL_DATA) $(top_srcdir)/test/ct.cfg .; fi
+	@if [ ! -f test.spec ]; then $(INSTALL_DATA) $(top_srcdir)/test/test.spec .; fi
+	$(MKDIR_P) cse_api_SUITE_data
+	$(MKDIR_P) cse_rest_api_SUITE_data
+	$(MKDIR_P) cse_log_SUITE_data
+	$(MKDIR_P) cse_cap_SUITE_data
+	$(MKDIR_P) cse_inap_SUITE_data
+	$(MKDIR_P) cse_diameter_ro_SUITE_data
+	$(MKDIR_P) cse_diameter_rf_SUITE_data
+	$(MKDIR_P) cse_diameter_sy_SUITE_data
+	$(MKDIR_P) cse_radius_SUITE_data
+	$(MKDIR_P) cse_re_SUITE_data
 	ct_run -no_auto_compile \
 			-pa $(top_builddir)/ebin \
 			$(CT_ARGS) \
