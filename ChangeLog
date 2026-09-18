@@ -1,5 +1,16 @@
 2026-07-20 Vance Shipley <vances@sigscale.org>
 
+	* document nrf notify and ro/gy asr and rar
+	* add clauses to slp fsm state handlers for notifications
+	* add httpd handler module for nrf callbacks
+	* do not remove configure generated .appup on make clean
+	* nrf v1.3.0
+	* include (optional) snmp in application specification
+	* use autotools macros for installing files/directories
+	* rename escript function to match use case
+
+2026-07-20 Vance Shipley <vances@sigscale.org>
+
 	* correct parsing ims-information avp in postpaid ims slp
 	* charging-id, inter-operator-id, visited-network-id, access-network-info in state
 	* edoc grammar and formatting
