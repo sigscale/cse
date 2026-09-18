@@ -25,9 +25,13 @@
 -export([format_problem/2]).
 -export([id/0, etag/1, date/1, iso8601/1]).
 -export([resolve/1, resolve/2]).
+-export([notify_id/0, notify_id/1]).
 
 % calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
 -define(EPOCH, 62167219200).
+
+-type notify_id() :: uri_string:uri_string().
+-export_type([notify_id/0]).
 
 %%----------------------------------------------------------------------
 %%  The cse_rest public API
@@ -275,6 +279,41 @@ id() ->
 	TS = erlang:system_time(millisecond),
 	N = erlang:unique_integer([positive]),
 	integer_to_list(TS) ++ "-" ++ integer_to_list(N).
+
+-spec notify_id() -> NotifyId
+	when
+		NotifyId :: notify_id().
+%% @doc Encode the `NotifyId' portion of a `NotifyUri' URI.
+notify_id() ->
+	Bin = term_to_binary(self()),
+	UTF8 = unicode:characters_to_binary(Bin, latin1, utf8),
+erlang:display({?MODULE, ?FUNCTION_NAME, ?LINE, UTF8}),
+	uri_string:quote(UTF8).
+
+-spec notify_id(NotifyId) -> Result
+	when
+		NotifyId :: notify_id(),
+		Result :: {ok, SLPI} | {error, Reason},
+		SLPI :: pid(),
+		Reason :: term().
+%% @doc Decode the `NotifyId' portion of a `NotifyUri' URI.
+notify_id(NotifyId)
+		when is_list(NotifyId); is_binary(NotifyId) ->
+	try
+		UTF8 = uri_string:unquote(NotifyId),
+		Latin1 = unicode:characters_to_binary(UTF8, utf8, latin1),
+		binary_to_term(Latin1, [safe])
+	of
+		SLPI when is_pid(SLPI) ->
+			{ok, SLPI};
+		_ ->
+			throw(400)
+	catch
+		throw:Reason ->
+			{error, Reason};
+		_:_ ->
+			{error, 404}
+	end.
 
 -spec date(DateTimeFormat) -> Result
 	when
