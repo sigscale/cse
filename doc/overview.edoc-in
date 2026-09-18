@@ -190,6 +190,15 @@ href="https://app.swaggerhub.com/apis-docs/SigScale/nrf-rating/1.3.0">Nrf_Rating
 OpenAPI Specification (OAS). SigScale OCS is one example of an
 <i>Nrf_Rating</i> producer.
 
+===Message Sequence===
+The diagram below depicts a typical sequence of exchanged messages
+across the <i>Re</i> interface:
+
+<p><img class="diagram"
+		alt="message sequence chart"
+		src="ocf-nrf-msc.svg" />
+Figure 2-2: DIAMETER/Nrf_Rating Interworking</p>
+
 ===HTTP Resilience===
 The <i>Nrf_Rating</i> REST API uses an HTTP(S) transport. A base URI
 is configured for the service (`nrf_uri'). The OCFs use the host's
@@ -201,7 +210,7 @@ load balancing and resilience.
 
 <p><img class="diagram" alt="message sequence diagram of http resilience"
 		name="figure2-2" src="re-load-balance-msc.svg" /><br />
-Figure 2-2: HTTP Resilience</p>
+Figure 2-3: HTTP Resilience</p>
 
 ===Initialize CSE===
 ```
@@ -501,6 +510,9 @@ API on the 3GPP Re interface to a remote Rating Function (RF) (i.e. OCS).
 	<dt>`nrf_resolver'</dt>
 		<dd>Overide the default resolver used for deriving host address URIs from
 				a service name URI (`nrf_uri'). (default: `[{cse_rest, resolve}]').</dd>
+	<dt>`nrf_notify'</dt>
+		<dd>Enable <i>Nrf_Rating</i> notification callbacks.
+				(default: `false').</dd>
 </dl>
 
 ===Nchf===
