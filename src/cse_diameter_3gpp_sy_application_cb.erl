@@ -283,7 +283,7 @@ handle_error(Reason, _Request, _ServiceName, _Peer, _Config) ->
 -spec handle_request(Packet, ServiceName, Peer, Config) -> Action
 	when
 		Packet :: packet(),
-		ServiceName :: term(),
+		ServiceName :: diameter:service_name(),
 		Peer :: peer(),
 		Config :: map(),
 		Action :: Reply | {relay, [Opt]} | discard
@@ -317,7 +317,7 @@ handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
 
 -spec errors(ServiceName, Capabilities, Request, Errors) -> ResultCode
 	when
-		ServiceName :: term(),
+		ServiceName :: diameter:service_name(),
 		Capabilities :: capabilities(),
 		Request :: message(),
 		Errors :: [Error],
@@ -374,7 +374,7 @@ errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 
 -spec process_request(ServiceName, Caps, Request, Config) -> Result
 	when
-		ServiceName :: term(),
+		ServiceName :: diameter:service_name(),
 		Caps :: capabilities(),
 		Request :: #'3gpp_sy_SLR'{},
 		Config :: map(),

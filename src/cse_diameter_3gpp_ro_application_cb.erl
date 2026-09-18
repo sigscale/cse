@@ -114,6 +114,18 @@ pick_peer([Peer | _] = _LocalCandidates, _RemoteCandidates, _ServiceName, _State
 		Reason :: term(),
 		PostF :: diameter:evaluable().
 %% @doc Invoked to return a request for encoding and transport
+prepare_request(#diameter_packet{msg = ASR} = _Packet,
+		_ServiceName, {_, Caps} = _Peer)
+		when is_record(ASR, diameter_base_ASR) ->
+		#diameter_caps{origin_host = {OH, _}, origin_realm = {OR, _}} = Caps,
+	ASR1 = ASR#diameter_base_ASR{'Origin-Host' = OH, 'Origin-Realm' = OR},
+	{send, ASR1};
+prepare_request(#diameter_packet{msg = RAR} = _Packet,
+		_ServiceName, {_, Caps} = _Peer)
+		when is_record(RAR, '3gpp_ro_RAR') ->
+		#diameter_caps{origin_host = {OH, _}, origin_realm = {OR, _}} = Caps,
+	RAR1 = RAR#'3gpp_ro_RAR'{'Origin-Host' = OH, 'Origin-Realm' = OR},
+	{send, RAR1};
 prepare_request(#diameter_packet{} = Packet, _ServiceName, _Peer) ->
 	{send, Packet}.
 
@@ -158,7 +170,7 @@ handle_error(_Reason, _Request, _ServiceName, _Peer) ->
 -spec handle_request(Packet, ServiceName, Peer) -> Action
 	when
 		Packet :: packet(),
-		ServiceName :: term(),
+		ServiceName :: diameter:service_name(),
 		Peer :: peer(),
 		Action :: Reply | {relay, [Opt]} | discard
 			| {eval | eval_packet, Action, PostF},
@@ -169,9 +181,9 @@ handle_error(_Reason, _Request, _ServiceName, _Peer) ->
 		PostF :: diameter:evaluable().
 %% @doc Invoked when a request message is received from the peer.
 handle_request(#diameter_packet{errors = [], msg = Request} = _Packet,
-		{_, IpAddress, Port} = ServiceName, {_, Capabilities} = Peer) ->
+		ServiceName, {_, Capabilities} = Peer) ->
 	Start = erlang:system_time(millisecond),
-	Reply = process_request(IpAddress, Port, Capabilities, Request),
+	Reply = process_request(ServiceName, Capabilities, Request),
 	Stop = erlang:system_time(millisecond),
 	catch cse_log:blog(?LOGNAME, {Start, Stop, ServiceName, Peer, Request, Reply}),
 	Reply;
@@ -189,7 +201,7 @@ handle_request(#diameter_packet{errors = Errors, msg = Request} = _Packet,
 
 -spec errors(ServiceName, Capabilities, Request, Errors) -> Action
 	when
-		ServiceName :: atom(),
+		ServiceName :: diameter:service_name(),
 		Capabilities :: capabilities(),
 		Request :: message(),
 		Errors :: [Error],
@@ -251,16 +263,15 @@ errors(_ServiceName, _Capabilities, _Request, [{ResultCode, _} | _]) ->
 errors(_ServiceName, _Capabilities, _Request, [ResultCode | _]) ->
 	{answer_message, ResultCode}.
 
--spec process_request(IpAddress, Port, Caps, Request) -> Result
+-spec process_request(ServiceName, Caps, Request) -> Result
 	when
-		IpAddress :: inet:ip_address(),
-		Port :: inet:port_number(),
+		ServiceName :: diameter:service_name(),
 		Request :: #'3gpp_ro_CCR'{},
 		Caps :: capabilities(),
 		Result :: {reply, message()} | {answer_message, 5000..5999}.
 %% @doc Process a received DIAMETER packet.
 %% @private
-process_request(_IpAddress, _Port,
+process_request(ServiceName,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'Service-Context-Id' = ContextId,
@@ -271,8 +282,9 @@ process_request(_IpAddress, _Port,
 	try
 		Children = supervisor:which_children(cse_sup),
 		{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
-		#diameter_context{module = Module, args = Args,
+		#diameter_context{module = Module, args = ExtraArgs,
 				opts = Opts} = cse:get_context(ContextId),
+		Args = [ServiceName | ExtraArgs],
 		supervisor:start_child(SlpSup, [Module, Args, Opts])
 	of
 		{ok, Child} ->
@@ -306,7 +318,7 @@ process_request(_IpAddress, _Port,
 			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum)
 	end;
-process_request(_IpAddress, _Port,
+process_request(_ServiceName,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'Auth-Application-Id' = ?RO_APPLICATION_ID,
@@ -347,7 +359,7 @@ process_request(_IpAddress, _Port,
 			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum)
 	end;
-process_request(_IpAddress, _Port,
+process_request(_ServiceName,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'Auth-Application-Id' = ?RO_APPLICATION_ID,
@@ -390,7 +402,7 @@ process_request(_IpAddress, _Port,
 			diameter_error(SessionId, ?'DIAMETER_BASE_RESULT-CODE_UNABLE_TO_COMPLY',
 					OHost, ORealm, RequestType, RequestNum)
 	end;
-process_request(_IpAddress, _Port,
+process_request(ServiceName,
 		#diameter_caps{origin_host = {OHost, _DHost}, origin_realm = {ORealm, _DRealm}},
 		#'3gpp_ro_CCR'{'Session-Id' = SessionId,
 				'Service-Context-Id' = ContextId,
@@ -401,8 +413,9 @@ process_request(_IpAddress, _Port,
 	try
 		Children = supervisor:which_children(cse_sup),
 		{_, SlpSup, _, _} = lists:keyfind(cse_slp_sup, 1, Children),
-		#diameter_context{module = Module, args = Args,
+		#diameter_context{module = Module, args = ExtraArgs,
 				opts = Opts} = cse:get_context(ContextId),
+		Args = [ServiceName | ExtraArgs],
 		supervisor:start_child(SlpSup, [Module, Args, Opts])
 	of
 		{ok, Child} ->

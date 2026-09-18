@@ -3,6 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @copyright 2021-2025 SigScale Global Inc.
 %%% @author Refath Wadood <refath@sigscale.org> [http://www.sigscale.org]
+%%% @author Vance Shipley <vances@sigscale.org> [http://www.sigscale.org]
 %%% @end
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -61,6 +62,9 @@
 %%% 		<dt>`nrf_headers'</dt>
 %%% 			<dd>HTTP {@link //inets/httpc:headers(). headers} added by the
 %%% 					{@link //inets/httpc. httpc} client (default: `[]').</dd>
+%%% 		<dt>`nrf_notify'</dt>
+%%% 			<dd>Enable <i>Nrf_Rating</i> notification callbacks.
+%%% 			(default: `false').</dd>
 %%% 	</dl>
 %%% 	Extra start arguments supported with
 %%% 	{@link //cse/cse:add_context/4. cse:add_context/4} include:
@@ -74,6 +78,7 @@
 -module(cse_slp_prepaid_diameter_ims_fsm).
 -copyright('Copyright (c) 2021-2025 SigScale Global Inc.').
 -author('Refath Wadood <refath@sigscale.org>').
+-author('Vance Shipley <vances@sigscale.org>').
 
 -behaviour(gen_statem).
 
@@ -97,7 +102,9 @@
 -include("diameter_gen_3gpp_ro_application.hrl").
 -include("diameter_gen_cc_application_rfc4006.hrl").
 
+-define(BASE_APPLICATION_ID, 0).
 -define(RO_APPLICATION_ID, 4).
+-define(RO_APPLICATION, ocs_diameter_3gpp_ro_application).
 -define(IANA_PEN_SigScale, 50386).
 -define(IMS_CONTEXTID, "32260@3gpp.org").
 -define(VCS_CONTEXTID, "32276@3gpp.org").
@@ -114,9 +121,10 @@
 -type statedata() :: #{start := pos_integer(),
 		idle := erlang:timeout(),
 		from => pid(),
+		service_name := diameter:service_name(),
 		session_id => binary(),
 		context => string(),
-		sequence => pos_integer(),
+		sequence := pos_integer(),
 		mscc => [#'3gpp_ro_Multiple-Services-Credit-Control'{}],
 		service_info => [#'3gpp_ro_Service-Information'{}],
 		req_type => pos_integer(),
@@ -130,17 +138,18 @@
 		direction => originating | terminating,
 		called => [$0..$9],
 		calling => [$0..$9],
-		nrf_profile => atom(),
+		nrf_profile := atom(),
 		nrf_address => inet:ip_address(),
 		nrf_port => non_neg_integer(),
 		nrf_uri => string(),
-		nrf_resolver => {Module :: atom(), Function :: atom},
-		nrf_sort => random | none,
-		nrf_retries => non_neg_integer(),
+		nrf_resolver := {Module :: atom(), Function :: atom},
+		nrf_sort := random | none,
+		nrf_retries := non_neg_integer(),
 		nrf_next_uris => [string()],
 		nrf_host => string(),
-		nrf_http_options => httpc:http_options(),
-		nrf_headers => httpc:headers(),
+		nrf_http_options := httpc:http_options(),
+		nrf_headers := httpc:headers(),
+		nrf_notify := boolean(),
 		nrf_location => string(),
 		nrf_ref => string(),
 		nrf_start => pos_integer(),
@@ -165,7 +174,10 @@ callback_mode() ->
 
 -spec init(Args) -> Result
 	when
-		Args :: [term()],
+		Args :: [ServiceName | ExtraArgs],
+		ServiceName :: diameter:service_name(),
+		ExtraArgs :: [Property],
+		Property :: {idle_timeout, pos_integer()},
 		Result :: {ok, State, Data} | {ok, State, Data, Actions}
 				| ignore | {stop, Reason},
 		State :: state(),
@@ -179,7 +191,7 @@ callback_mode() ->
 %%
 %% @see //stdlib/gen_statem:init/1
 %% @private
-init(Args) ->
+init([ServiceName | ExtraArgs] = _Args) ->
 	{ok, Profile} = application:get_env(nrf_profile),
 	{ok, URI} = application:get_env(nrf_uri),
 	{ok, Resolver} = application:get_env(cse, nrf_resolver),
@@ -187,7 +199,8 @@ init(Args) ->
 	{ok, Retries} = application:get_env(cse, nrf_retries),
 	{ok, HttpOptions} = application:get_env(nrf_http_options),
 	{ok, Headers} = application:get_env(nrf_headers),
-	IdleTime = case proplists:get_value(idle_timeout, Args) of
+	{ok, Notify} = application:get_env(nrf_notify),
+	IdleTime = case proplists:get_value(idle_timeout, ExtraArgs) of
 		{days, Days} when is_integer(Days), Days > 0 ->
 			Days * 86400000;
 		{hours, Hours} when is_integer(Hours), Hours > 0 ->
@@ -199,11 +212,13 @@ init(Args) ->
 		_ ->
 			infinity
 	end,
-	Data = #{nrf_profile => Profile,
+	Data = #{service_name => ServiceName,
+			nrf_profile => Profile,
 			nrf_sort => Sort, nrf_retries => Retries,
 			nrf_resolver => Resolver,
 			nrf_http_options => HttpOptions, nrf_headers => Headers,
 			nrf_groups => [],
+			nrf_notify => Notify,
 			start => erlang:system_time(millisecond),
 			idle => IdleTime, sequence => 1},
 	Data1 = add_nrf(URI, Data),
@@ -1042,6 +1057,9 @@ collect_information(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
+collect_information(cast, {notify, RatingNotifyRequest}, Data) ->
+	send_notification(RatingNotifyRequest, ?FUNCTION_NAME, Data),
+	keep_state_and_data;
 collect_information(timeout, idle, Data) ->
 	{next_state, null, Data}.
 
@@ -1286,6 +1304,9 @@ analyse_information(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
+analyse_information(cast, {notify, RatingNotifyRequest}, Data) ->
+	send_notification(RatingNotifyRequest, ?FUNCTION_NAME, Data),
+	keep_state_and_data;
 analyse_information(timeout, idle, Data) ->
 	{next_state, null, Data}.
 
@@ -2007,6 +2028,9 @@ active(cast,
 			Actions = [{reply, From, Reply}],
 			{next_state, null, NewData, Actions}
 	end;
+active(cast, {notify, RatingNotifyRequest}, Data) ->
+	send_notification(RatingNotifyRequest, ?FUNCTION_NAME, Data),
+	keep_state_and_data;
 active(timeout, idle, Data) ->
 	{next_state, null, Data}.
 
@@ -2133,6 +2157,13 @@ nrf_start2(JSON,
 	nrf_start3(Now, JSON1, Data).
 %% @hidden
 nrf_start3(Now, JSON,
+		#{nrf_notify := true} = Data) ->
+	JSON1 = JSON#{"notifyUri" => ocs_rest:notify_id()},
+	nrf_start4(Now, JSON1, Data);
+nrf_start3(Now, JSON, Data) ->
+	nrf_start4(Now, JSON, Data).
+%% @hidden
+nrf_start4(Now, JSON,
 		#{from := From, nrf_profile := Profile,
 				nrf_uri := URI, nrf_next_uris := NextURIs, nrf_host := Host,
 				nrf_http_options := HttpOptions, nrf_headers := Headers,
@@ -3458,4 +3489,59 @@ rating_data_ref1([RatingDataRef | _]) ->
 	RatingDataRef;
 rating_data_ref1([]) ->
 	[].
+
+%% @hidden
+send_notification(_RatingNotifyRequest, _State,
+		#{nrf_notify := false} = _Data) ->
+	ok;
+send_notification(#{"notificationType" := NotificationType}, State,
+		#{nrf_notify := true, nrf_reqid := RequestId,
+				nrf_location := Location} = _Data) ->
+	?LOG_WARNING([{?MODULE, notify},
+			{error, busy_discard}, {slpi, self()},
+			{request_id, RequestId}, {location, Location},
+			{notification_type, NotificationType},
+			{state, State}]),
+	ok;
+send_notification(#{"notificationType" := "ABORT_CHARGING"}, State,
+		#{nrf_notify := true,
+				service_name := ServiceName, session_id := SessionId,
+				ohost := DHost, orealm := DRealm} = _Data) ->
+	ASR = #diameter_base_ASR{'Session-Id' = SessionId,
+			'Destination-Host' = DHost, 'Destination-Realm' = DRealm,
+         'Auth-Application-Id' = ?BASE_APPLICATION_ID},
+	CallOpts = [detach],
+	case diameter:call(ServiceName, ?RO_APPLICATION, ASR, CallOpts) of
+		ok ->
+			ok;
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, notify},
+					{error, Reason}, {slpi, self()},
+					{session_id, SessionId},
+					{destination_host, DHost}, {destination_realm, DRealm},
+					{request, ASR},
+					{state, State}]),
+			ok
+	end;
+send_notification(#{"notificationType" := "REAUTHORIZATION"}, State,
+		#{nrf_notify := true,
+				service_name := ServiceName, session_id := SessionId,
+				ohost := DHost, orealm := DRealm} = _Data) ->
+	RAR = #'3gpp_ro_RAR'{'Session-Id' = SessionId,
+			'Destination-Host' = DHost, 'Destination-Realm' = DRealm,
+         'Auth-Application-Id' = ?RO_APPLICATION_ID,
+			'Re-Auth-Request-Type' = ?'3GPP_RO_RE-AUTH-REQUEST-TYPE_AUTHORIZE_ONLY'},
+	CallOpts = [detach],
+	case diameter:call(ServiceName, ?RO_APPLICATION, RAR, CallOpts) of
+		ok ->
+			ok;
+		{error, Reason} ->
+			?LOG_ERROR([{?MODULE, notify},
+					{error, Reason}, {slpi, self()},
+					{session_id, SessionId},
+					{destination_host, DHost}, {destination_realm, DRealm},
+					{request, RAR},
+					{state, State}]),
+			ok
+	end.
 

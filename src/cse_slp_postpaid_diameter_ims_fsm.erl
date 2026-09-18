@@ -97,6 +97,7 @@
 -type statedata() :: #{start := pos_integer(),
 		idle := erlang:timeout(),
 		from => pid(),
+		service_name := diameter:service_name(),
 		session_id => binary(),
 		context => string(),
 		record_type => pos_integer(),
@@ -140,7 +141,9 @@ callback_mode() ->
 
 -spec init(Args) -> Result
 	when
-		Args :: [Property],
+		Args :: [ServiceName | ExtraArgs],
+		ServiceName :: diameter:service_name(),
+		ExtraArgs :: [Property],
 		Property :: {interim_interval, pos_integer()}
 				| {bx_summary, boolean()}
 				| {bx_log, atom()}
@@ -162,12 +165,12 @@ callback_mode() ->
 %%
 %% @see //stdlib/gen_statem:init/1
 %% @private
-init(Args) when is_list(Args) ->
-	Summary = proplists:get_value(bx_summary, Args, true),
-	Log = proplists:get_value(bx_log, Args, cdr),
-	Logger = proplists:get_value(bx_logger, Args, {cse_log, blog}),
-	LogCodec = proplists:get_value(bx_codec, Args, {cse_log_codec_bx, csv}),
-	IdleTime = case proplists:get_value(idle_timeout, Args) of
+init([ServiceName | ExtraArgs] = _Args) ->
+	Summary = proplists:get_value(bx_summary, ExtraArgs, true),
+	Log = proplists:get_value(bx_log, ExtraArgs, cdr),
+	Logger = proplists:get_value(bx_logger, ExtraArgs, {cse_log, blog}),
+	LogCodec = proplists:get_value(bx_codec, ExtraArgs, {cse_log_codec_bx, csv}),
+	IdleTime = case proplists:get_value(idle_timeout, ExtraArgs) of
 		{days, Days} when is_integer(Days), Days > 0 ->
 			Days * 86400000;
 		{hours, Hours} when is_integer(Hours), Hours > 0 ->
@@ -179,11 +182,12 @@ init(Args) when is_list(Args) ->
 		_ ->
 			infinity
 	end,
-	Data = #{start => erlang:system_time(millisecond),
+	Data = #{service_name => ServiceName,
+			start => erlang:system_time(millisecond),
 			idle => IdleTime,
 			volume_in => 0, volume_out => 0, bx_summary => Summary,
 			bx_log => Log, bx_logger => Logger, bx_codec => LogCodec},
-	NewData = case proplists:get_value(interim_interval, Args) of
+	NewData = case proplists:get_value(interim_interval, ExtraArgs) of
 		Interval when is_integer(Interval), Interval > 0 ->
 			Data#{interim_interval => [Interval]};
 		undefined ->
