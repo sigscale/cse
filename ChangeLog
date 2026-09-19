@@ -1,4 +1,8 @@
-2026-07-20 Vance Shipley <vances@sigscale.org>
+2026-08-19 Vance Shipley <vances@sigscale.org>
+
+	* no nrf notify callback for sms iec
+
+2026-08-18 Vance Shipley <vances@sigscale.org>
 
 	* document nrf notify and ro/gy asr and rar
 	* add clauses to slp fsm state handlers for notifications
