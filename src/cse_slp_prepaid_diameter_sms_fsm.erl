@@ -1328,7 +1328,8 @@ nrf_start2(JSON, #{one_time := false,
 	nrf_start3(Now, JSON1, Data).
 %% @hidden
 nrf_start3(Now, JSON,
-		#{nrf_notify := true} = Data) ->
+		#{nrf_notify := true} = Data)
+		when is_map_key("oneTimeEvent", Data) == false ->
 	JSON1 = JSON#{"notifyUri" => ocs_rest:notify_id()},
 	nrf_start4(Now, JSON1, Data);
 nrf_start3(Now, JSON, Data) ->
