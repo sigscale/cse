@@ -1,3 +1,7 @@
+2026-10-13 Vance Shipley <vances@sigscale.org>
+
+	* handle ims acr record type 'event' for failed call attempt
+
 2026-08-19 Vance Shipley <vances@sigscale.org>
 
 	* no nrf notify callback for sms iec

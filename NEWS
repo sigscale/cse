@@ -1,9 +1,13 @@
+October 13, 2026
+----------------
+	- Postpaid DIAMETER IMS SLP supports EVENT record type
+
 September 18, 2026
 ------------------
 	- Nrf_Rating OAS v1.3.0 
 	- Nrf_Rating_Notify HTTP callback listener
-	- Prepaid DIAMETER SLPs now suupport Abort-Session (ASR/ASA)
-	- Prepaid DIAMETER SLPs now suupport Re-Auth (RAR/RAA)
+	- Prepaid DIAMETER SLPs now support Abort-Session (ASR/ASA)
+	- Prepaid DIAMETER SLPs now support Re-Auth (RAR/RAA)
 
 July 20, 2026
 -------------
