@@ -26,7 +26,8 @@
 -export([init_per_testcase/2, end_per_testcase/2]).
 
 % export test case functions
--export([accounting_ims/0, accounting_ims/1,
+-export([acr_ims/0, acr_ims/1,
+		failed_call_attempt/0, failed_call_attempt/1,
 		client_connect/0, client_connect/1,
 		client_reconnect/0, client_reconnect/1]).
 
@@ -190,18 +191,18 @@ sequences() ->
 %% Returns a list of all test cases in this test suite.
 %%
 all() ->
-	[accounting_ims, client_connect, client_reconnect].
+	[acr_ims, failed_call_attempt, client_connect, client_reconnect].
 
 %%---------------------------------------------------------------------
 %%  Test cases
 %%---------------------------------------------------------------------
 
-accounting_ims() ->
+acr_ims() ->
 	Description = "Accounting record for IMS voice call",
 	ct:comment(Description),
 	[{userdata, [{doc, Description}]}].
 
-accounting_ims(Config) ->
+acr_ims(Config) ->
 	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
 	MSISDN = cse_test_lib:rand_dn(11),
 	Session = diameter:session_id(atom_to_list(?MODULE)),
@@ -224,6 +225,23 @@ accounting_ims(Config) ->
 			'Acct-Interim-Interval' = [Interval],
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
 			'Accounting-Record-Number' = RecordNum2} = Answer2.
+
+failed_call_attempt() ->
+	Description = "Accounting record for IMS voice call attempt failure",
+	ct:comment(Description),
+	[{userdata, [{doc, Description}]}].
+
+failed_call_attempt(Config) ->
+	IMSI = "001001" ++ cse_test_lib:rand_dn(9),
+	MSISDN = cse_test_lib:rand_dn(11),
+	Session = diameter:session_id(atom_to_list(?MODULE)),
+	Interval = ?config(interim_interval, Config),
+	RecordNum = 0,
+	{ok, Answer} = acct_ims(Config, Session, IMSI, MSISDN, event, RecordNum),
+	#'3gpp_rf_ACA'{'Result-Code' = ?'DIAMETER_BASE_RESULT-CODE_SUCCESS',
+			'Acct-Interim-Interval' = [Interval],
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_EVENT_RECORD',
+			'Accounting-Record-Number' = RecordNum} = Answer.
 
 client_connect() ->
 	Description = "Connect as client to peer server",
@@ -362,6 +380,11 @@ acct_ims(Config, Session, IMSI, MSISDN, interim, RecordNum) ->
 acct_ims(Config, Session, IMSI, MSISDN, stop, RecordNum) ->
 	ACR = #'3gpp_rf_ACR'{
 			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_STOP_RECORD',
+			'Accounting-Record-Number' = RecordNum},
+	acct_ims(Config, Session, IMSI, MSISDN, ACR);
+acct_ims(Config, Session, IMSI, MSISDN, event, RecordNum) ->
+	ACR = #'3gpp_rf_ACR'{
+			'Accounting-Record-Type' = ?'DIAMETER_BASE_ACCOUNTING_ACCOUNTING-RECORD-TYPE_EVENT_RECORD',
 			'Accounting-Record-Number' = RecordNum},
 	acct_ims(Config, Session, IMSI, MSISDN, ACR).
 acct_ims(Config, Session, IMSI, MSISDN, ACR) when is_record(ACR, '3gpp_rf_ACR') ->

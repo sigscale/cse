@@ -307,6 +307,37 @@ active({call, From},
 	Reply = diameter_answer(ResultCode, NewData),
 	Actions = [{reply, From, Reply}],
 	{next_state, null, NewData, Actions};
+active({call, From},
+		#'3gpp_rf_ACR'{'Session-Id' = SessionId,
+				'Service-Context-Id' = [SvcContextId],
+				'Origin-Host' = OHost, 'Origin-Realm' = ORealm,
+				'Destination-Realm' = DRealm,
+				'Accounting-Record-Type' = RecordType,
+				'Accounting-Record-Number' = RecordNum,
+				'User-Name' = _UserName,
+				'Event-Timestamp' = EventTimestamp,
+				'Service-Information' = [ServiceInformation]} = ACR, Data)
+		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_EVENT_RECORD' ->
+	TS = case EventTimestamp of
+		[DateTime] ->
+			DateTime;
+		[] ->
+			calendar:universal_time()
+	end,
+	Data1 = Data#{from => From, session_id => SessionId,
+			start_time => TS, end_time => TS, context => SvcContextId,
+			ohost => OHost, orealm => ORealm, drealm => DRealm,
+			record_number => RecordNum, record_type => RecordType},
+	NewData = service_info(ServiceInformation, Data1),
+	ResultCode = case log_cdr(ACR, NewData) of
+		ok ->
+			?'DIAMETER_BASE_RESULT-CODE_SUCCESS';
+		{error, _Reason} ->
+			?'DIAMETER_BASE_RESULT-CODE_OUT_OF_SPACE'
+	end,
+	Reply = diameter_answer(ResultCode, NewData),
+	Actions = [{reply, From, Reply}, ?IDLE_TIMEOUT(Data)],
+	{next_state, null, NewData, Actions};
 active(timeout, idle, Data) ->
 	{next_state, null, Data}.
 
@@ -497,7 +528,8 @@ log_cdr(#'3gpp_rf_ACR'{'Accounting-Record-Type' = RecordType,
 					'IMS-Information' = [IMS]}]},
 		#{bx_summary := true, bx_logger := {M1, F1},
 				bx_log := Log, bx_codec := {M2, F2}} = Data)
-		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' ->
+		when RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD';
+		RecordType == ?'3GPP_RF_ACCOUNTING-RECORD-TYPE_EVENT_RECORD' ->
 	% @todo: subsititute ACR values for accumulated counts from statedata()
 	M1:F1(Log, M2:F2(bx(RecordType, IMS, Data, #{}))).
 
@@ -655,6 +687,14 @@ bx12('3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' = RecordType,
 	Timestamp = cse_log:iso8601(cse_log:date(TS)),
 	bx13(RecordType, IMS, Data,
 			CDR#{serviceDeliveryEndTimeStamp => Timestamp});
+bx12('3GPP_RF_ACCOUNTING-RECORD-TYPE_EVENT_RECORD' = RecordType,
+			#'3gpp_rf_IMS-Information'{
+					'Time-Stamps' = [#'3gpp_rf_Time-Stamps'{
+							'SIP-Request-Timestamp' = [TS]}]} = IMS,
+		Data, CDR) ->
+	Timestamp = cse_log:iso8601(cse_log:date(TS)),
+	bx13(RecordType, IMS, Data,
+			CDR#{serviceRequestTimeStamp => Timestamp});
 bx12(RecordType, IMS, Data, CDR) ->
 	bx14(RecordType, IMS, Data, CDR).
 %% @hidden
@@ -672,6 +712,13 @@ bx13('3GPP_RF_ACCOUNTING-RECORD-TYPE_STOP_RECORD' = RecordType,
 		Data, CDR) ->
 	bx14(RecordType, IMS, Data,
 			CDR#{serviceDeliveryEndTimeStampFraction => integer_to_binary(N)});
+bx13('3GPP_RF_ACCOUNTING-RECORD-TYPE_EVENT_RECORD' = RecordType,
+		#'3gpp_rf_IMS-Information'{
+				'Time-Stamps' = [#'3gpp_rf_Time-Stamps'{
+							'SIP-Request-Timestamp-Fraction' = [N]}]} = IMS,
+		Data, CDR) ->
+	bx14(RecordType, IMS, Data,
+			CDR#{serviceRequestTimeStampFraction => integer_to_binary(N)});
 bx13(RecordType, IMS, Data, CDR) ->
 	bx14(RecordType, IMS, Data, CDR).
 %% @hidden
