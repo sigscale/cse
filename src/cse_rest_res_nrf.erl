@@ -62,7 +62,7 @@ content_types_provided() ->
 %%
 notification(NotifyId, RequestBody)
 		when is_list(NotifyId) ->
-	notification1(ocs_rest:notify_id(NotifyId), RequestBody).
+	notification1(cse_rest:notify_id(NotifyId), RequestBody).
 %% @hidden
 notification1({ok, SLPI}, RequestBody) ->
 	notification2(SLPI, zj:decode(RequestBody));

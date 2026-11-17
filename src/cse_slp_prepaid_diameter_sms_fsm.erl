@@ -107,7 +107,7 @@
 
 -define(BASE_APPLICATION_ID, 0).
 -define(RO_APPLICATION_ID, 4).
--define(RO_APPLICATION, ocs_diameter_3gpp_ro_application).
+-define(RO_APPLICATION, cse_diameter_3gpp_ro_application).
 -define(IANA_PEN_SigScale, 50386).
 -define(SMS_CONTEXTID, "32274@3gpp.org").
 -define(SERVICENAME, "Prepaid Messaging").
@@ -1330,7 +1330,7 @@ nrf_start2(JSON, #{one_time := false,
 nrf_start3(Now, JSON,
 		#{nrf_notify := true} = Data)
 		when is_map_key("oneTimeEvent", Data) == false ->
-	JSON1 = JSON#{"notifyUri" => ocs_rest:notify_id()},
+	JSON1 = JSON#{"notifyUri" => cse_rest:notify_id()},
 	nrf_start4(Now, JSON1, Data);
 nrf_start3(Now, JSON, Data) ->
 	nrf_start4(Now, JSON, Data).
