@@ -35,8 +35,21 @@
 	when
 		CDR:: map().
 %% @doc Bx interface CODEC for comma seperated values (CSV).
-csv(#{recordType := <<"aSRecord">>} = CDR) ->
-	[<<"aSRecord">>, $,,
+%%
+% IMS CDRs
+csv(#{recordType := RecordType} = CDR) when
+		RecordType == <<"aSRecord">>;
+		RecordType == <<"pCSCFRecord">>;
+		RecordType == <<"iCSCFRecord">>;
+		RecordType == <<"mRFCRecord">>;
+		RecordType == <<"mGCFRecord">>;
+		RecordType == <<"bGCFRecord">>;
+		RecordType == <<"iBCFRecord">>;
+		RecordType == <<"eCSCFRecord">>;
+		RecordType == <<"tRFRecord">>;
+		RecordType == <<"tFRecord">>;
+		RecordType == <<"aTCFRecord">> ->
+	[maps:get(recordType, CDR), $,,
 			maps:get('role-of-Node', CDR, []), $,,
 			maps:get(nodeAddress, CDR, []), $,,
 			maps:get('session-Id', CDR, []), $,,
@@ -60,6 +73,97 @@ csv(#{recordType := <<"aSRecord">>} = CDR) ->
 			maps:get('iMSVisitedNetworkIdentifier', CDR, []), $,,
 			maps:get('accessNetworkInformation', CDR, []), $,,
 			maps:get('servedIMEI', CDR, [])];
+% CS CDRs
+csv(#{recordType := RecordType} = CDR) when
+		RecordType == <<"moCallRecord">>;
+		RecordType == <<"mtCallRecord">>;
+		RecordType == <<"roamingRecord">>;
+		RecordType == <<"incGatewayRecord">>;
+		RecordType == <<"outGatewayRecord">>;
+		RecordType == <<"transitRecord">>;
+		RecordType == <<"moSMSRecord">>;
+		RecordType == <<"mtSMSRecord">>;
+		RecordType == <<"moSMSIWRecord">>;
+		RecordType == <<"mtSMSGWRecord">>;
+		RecordType == <<"ssActionRecord">>;
+		RecordType == <<"hlrIntRecord">>;
+		RecordType == <<"locUpdateHLRRecord">>;
+		RecordType == <<"locUpdateVLRRecord">>;
+		RecordType == <<"commonEquipRecord">>;
+		RecordType == <<"recTypeExtensions">>;
+		RecordType == <<"termCAMELRecord">>;
+		RecordType == <<"mtLCSRecord">>;
+		RecordType == <<"moLCSRecord">>;
+		RecordType == <<"niLCSRecord">>;
+		RecordType == <<"mSCsRVCCRecord">>;
+		RecordType == <<"mMTRFRecord">>;
+		RecordType == <<"iCSRegisterRecord">> ->
+	[maps:get(recordType, CDR, [])];
+% PS CDRs
+csv(#{recordType := RecordType} = CDR) when
+		RecordType == <<"sgsnPDPRecord">>;
+		RecordType == <<"sgsnMMRecord">>;
+		RecordType == <<"sgsnSMORecord">>;
+		RecordType == <<"sgsnSMTRecord">>;
+		RecordType == <<"sgsnMTLCSRecord">>;
+		RecordType == <<"sgsnMOLCSRecord">>;
+		RecordType == <<"sgsnNILCSRecord">>;
+		RecordType == <<"sgsnMBMSRecord">>;
+		RecordType == <<"ggsnMBMSRecord">>;
+		RecordType == <<"sGWRecord">>;
+		RecordType == <<"pGWRecord">>;
+		RecordType == <<"gwMBMSRecord">>;
+		RecordType == <<"tDFRecord">>;
+		RecordType == <<"iPERecord">>;
+		RecordType == <<"ePDGRecord">>;
+		RecordType == <<"tWAGRecord">> ->
+	[maps:get(recordType, CDR, [])];
+% SMS CDR
+csv(#{recordType := RecordType} = CDR) when
+		RecordType == <<"sCSMORecord">>;
+		RecordType == <<"sCSMTRecord">>;
+		RecordType == <<"sCDVTT4Record">>;
+		RecordType == <<"sCSMOT4Record">>;
+		RecordType == <<"iSMSMORecord">>;
+		RecordType == <<"iSMSMTRecord">> ->
+	[maps:get(recordType, CDR, [])];
+% MMS CDRs
+csv(#{recordType := RecordType} = CDR) when
+		RecordType == <<"mMO1SRecord">>;
+		RecordType == <<"mMO4FRqRecord">>;
+		RecordType == <<"mMO4FRsRecord">>;
+		RecordType == <<"mMO4DRecord">>;
+		RecordType == <<"mMO1DRecord">>;
+		RecordType == <<"mMO4RRecord">>;
+		RecordType == <<"mMO1RRecord">>;
+		RecordType == <<"mMOMDRecord">>;
+		RecordType == <<"mMR4FRecord">>;
+		RecordType == <<"mMR1NRqRecord">>;
+		RecordType == <<"mMR1NRsRecord">>;
+		RecordType == <<"mMR1RtRqRecord">>;
+		RecordType == <<"mMR1ARecord">>;
+		RecordType == <<"mMR4DRqRecord">>;
+		RecordType == <<"mMR4DRsRecord">>;
+		RecordType == <<"mMR1RRRecord">>;
+		RecordType == <<"mMR4RRqRecord">>;
+		RecordType == <<"mMR4RRsRecord">>;
+		RecordType == <<"mMRMDRecord">>;
+		RecordType == <<"mMFRecord">>;
+		RecordType == <<"mMBx1SRecord">>;
+		RecordType == <<"mMBx1VRecord">>;
+		RecordType == <<"mMBx1URecord">>;
+		RecordType == <<"mMBx1DRecord">>;
+		RecordType == <<"mM7SRecord">>;
+		RecordType == <<"mM7DRqRecord">>;
+		RecordType == <<"mM7DRsRecord">>;
+		RecordType == <<"mM7CRecord">>;
+		RecordType == <<"mM7RRecord">>;
+		RecordType == <<"mM7DRRqRecord">>;
+		RecordType == <<"mM7DRRsRecord">>;
+		RecordType == <<"mM7RRqRecord">>;
+		RecordType == <<"mM7RRsRecord">> ->
+	[maps:get(recordType, CDR, [])];
+% Other CDRs
 csv(#{} = CDR) ->
 	[maps:get(recordType, CDR, [])].
 
