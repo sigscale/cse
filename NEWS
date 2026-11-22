@@ -1,3 +1,9 @@
+November 22, 2026
+-----------------
+	- Handle undefined (mandatyory!) Origin-[Host|Realm] in SLP log CODEC 
+	- IMEI in Bx CDR
+	- Fix module name (typo) in DIAMETER Re-Auth
+
 October 13, 2026
 ----------------
 	- Postpaid DIAMETER IMS SLP supports EVENT record type

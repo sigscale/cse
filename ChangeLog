@@ -1,3 +1,13 @@
+2026-11-22 Vance Shipley <vances@sigscale.org>
+
+	* handle undefined origin-[host|realm] in slp log codec for ro ccr, rf acr and sy slr
+	* group bx codec clauses by: ps, cs, ims, sms, mms
+	* append served imei to bx cdr
+	* keep imei in rf slp state
+	* typo in edoc hidden tag
+	* align subscriber ids in state data with type spec (no undefined)
+	* typo from ocs to cse port of diameter re-auth
+
 2026-10-13 Vance Shipley <vances@sigscale.org>
 
 	* handle ims acr record type 'event' for failed call attempt
