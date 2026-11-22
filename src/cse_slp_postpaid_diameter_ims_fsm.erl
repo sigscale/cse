@@ -106,6 +106,7 @@
 		orealm => binary(),
 		drealm => binary(),
 		imsi => [$0..$9],
+		imei => binary(),
 		msisdn => [$0..$9],
 		sip_uri => string(),
 		start_time => calendar:datetime(),
@@ -393,12 +394,15 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 
 %% @hidden
-service_info(#'3gpp_rf_Service-Information'{'IMS-Information' = [IMS],
+service_info(#'3gpp_rf_Service-Information'{
+		'PS-Information' = PS,
+		'IMS-Information' = [IMS],
 		'Subscription-Id' = SubScriptionId}, Data) ->
 	Data1 = imsi(SubScriptionId, Data),
 	Data2 = msisdn(SubScriptionId, Data1),
 	Data3 = sip_uri(SubScriptionId, Data2),
-	ims_info(IMS, Data3).
+	Data4 = imei(PS, Data3),
+	ims_info(IMS, Data4).
 
 %% @hidden
 imsi([#'3gpp_rf_Subscription-Id'{
@@ -431,6 +435,15 @@ sip_uri([], Data) ->
 	Data.
 
 %% @hidden
+imei([#'3gpp_rf_PS-Information'{
+		'User-Equipment-Info' = [#'3gpp_rf_User-Equipment-Info'{
+				'User-Equipment-Info-Type' = ?'3GPP_RF_USER-EQUIPMENT-INFO-TYPE_IMEISV',
+				'User-Equipment-Info-Value' = IMEISV}]}], Data) ->
+	Data#{imei => IMEISV};
+imei(_PS, Data) ->
+	Data.
+
+%% hidden
 ims_info(#'3gpp_rf_IMS-Information'{
 		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
 				'Originating-IOI' = [IOI]}]} = IMS,
@@ -774,8 +787,13 @@ bx21(RecordType, IMS, #{visited_id := Visited} = Data, CDR) ->
 bx21(RecordType, IMS, Data, CDR) ->
 	bx22(RecordType, IMS, Data, CDR).
 %% @hidden
-bx22(_RecordType, _IMS, #{access_info := ANI} = _Data, CDR) ->
-	CDR#{accessNetworkInformation => ANI};
-bx22(_RecordType, _IMS, _Data, CDR) ->
+bx22(RecordType, IMS, #{access_info := ANI} = Data, CDR) ->
+	bx23(RecordType, IMS, Data, CDR#{accessNetworkInformation => ANI});
+bx22(RecordType, IMS, Data, CDR) ->
+	bx23(RecordType, IMS, Data, CDR).
+%% @hidden
+bx23(_RecordType, _IMS, #{imei := IMEI} = _Data, CDR) ->
+	CDR#{servedIMEI => IMEI};
+bx23(_RecordType, _IMS, _Data, CDR) ->
 	CDR.
 

@@ -103,6 +103,7 @@
 		orealm => binary(),
 		drealm => binary(),
 		imsi => [$0..$9],
+		imei => binary(),
 		msisdn => string(),
 		start_time => calendar:datetime(),
 		end_time => calendar:datetime(),
@@ -349,7 +350,8 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %%----------------------------------------------------------------------
 
 %% @hidden
-service_info(#'3gpp_rf_Service-Information'{'PS-Information' = PS,
+service_info(#'3gpp_rf_Service-Information'{
+		'PS-Information' = [PS],
 		'Subscription-Id' = SubScriptionId}, Data) ->
 	Data1 = imsi(SubScriptionId, Data),
 	Data2 = msisdn(SubScriptionId, Data1),
@@ -407,10 +409,20 @@ ps_info3(#'3gpp_rf_PS-Information'{'Traffic-Data-Volumes' = DataVolumes} = PS,
 ps_info3(PS, Data) ->
 	ps_info4(PS, Data).
 %% @hidden
-ps_info4(#'3gpp_rf_PS-Information'{'Change-Condition' = Cause} = _PS,
+ps_info4(#'3gpp_rf_PS-Information'{'Change-Condition' = Cause} = PS,
 		Data) ->
-	Data#{close_cause => Cause};
-ps_info4(_PS, Data) ->
+	NewData = Data#{close_cause => Cause},
+	ps_info5(PS, NewData);
+ps_info4(PS, Data) ->
+	ps_info5(PS, Data).
+%% hidden
+ps_info5(#'3gpp_rf_PS-Information'{
+		'User-Equipment-Info' = [#'3gpp_rf_User-Equipment-Info'{
+				'User-Equipment-Info-Type' = ?'3GPP_RF_USER-EQUIPMENT-INFO-TYPE_IMEISV',
+				'User-Equipment-Info-Value' = IMEISV}]} = _PS,
+		Data) ->
+	Data#{imei => IMEISV};
+ps_info5(_PS, Data) ->
 	Data.
 
 %% @hidden
