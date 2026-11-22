@@ -395,41 +395,40 @@ code_change(_OldVsn, OldState, OldData, _Extra) ->
 %% @hidden
 service_info(#'3gpp_rf_Service-Information'{'IMS-Information' = [IMS],
 		'Subscription-Id' = SubScriptionId}, Data) ->
-	IMSI = imsi(SubScriptionId),
-	MSISDN = msisdn(SubScriptionId),
-	SIPURI = sip_uri(SubScriptionId),
-	NewData = Data#{imsi => IMSI, msisdn => MSISDN, sip_uri => SIPURI},
-	ims_info(IMS, NewData).
+	Data1 = imsi(SubScriptionId, Data),
+	Data2 = msisdn(SubScriptionId, Data1),
+	Data3 = sip_uri(SubScriptionId, Data2),
+	ims_info(IMS, Data3).
 
 %% @hidden
 imsi([#'3gpp_rf_Subscription-Id'{
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_IMSI',
-		'Subscription-Id-Data' = IMSI} | _]) ->
-	binary_to_list(IMSI);
-imsi([_H | T]) ->
-	imsi(T);
-imsi([]) ->
-	undefined.
+		'Subscription-Id-Data' = IMSI} | _], Data) ->
+	Data#{imsi => binary_to_list(IMSI)};
+imsi([_H | T], Data) ->
+	imsi(T, Data);
+imsi([], Data) ->
+	Data.
 
 %% @hidden
 msisdn([#'3gpp_rf_Subscription-Id'{
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_E164',
-		'Subscription-Id-Data' = MSISDN} | _]) ->
-	binary_to_list(MSISDN);
-msisdn([_H | T]) ->
-	msisdn(T);
-msisdn([]) ->
-	undefined.
+		'Subscription-Id-Data' = MSISDN} | _], Data) ->
+	Data#{msisdn => binary_to_list(MSISDN)};
+msisdn([_H | T], Data) ->
+	msisdn(T, Data);
+msisdn([], Data) ->
+	Data.
 
 %% @hidden
 sip_uri([#'3gpp_rf_Subscription-Id'{
 		'Subscription-Id-Type' = ?'3GPP_SUBSCRIPTION-ID-TYPE_END_USER_SIP_URI',
-		'Subscription-Id-Data' = SIPURI} | _]) ->
-	binary_to_list(SIPURI);
-sip_uri([_H | T]) ->
-	sip_uri(T);
-sip_uri([]) ->
-	undefined.
+		'Subscription-Id-Data' = SIPURI} | _], Data) ->
+	Data#{sip_uri => binary_to_list(SIPURI)};
+sip_uri([_H | T], Data) ->
+	sip_uri(T, Data);
+sip_uri([], Data) ->
+	Data.
 
 %% hidden
 ims_info(#'3gpp_rf_IMS-Information'{
