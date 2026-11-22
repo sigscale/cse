@@ -375,21 +375,21 @@ msisdn([_H | T], Data) ->
 msisdn([], Data) ->
 	Data.
 
-%% hidden
+%% @hidden
 ps_info(#'3gpp_rf_PS-Information'{'3GPP-Charging-Id' = [ChargingId]} = PS,
 		Data) when is_integer(ChargingId) ->
 	NewData = Data#{charging_id => ChargingId},
 	ps_info1(PS, NewData);
 ps_info(PS, Data) ->
 	ps_info1(PS, Data).
-%% hidden
+%% @hidden
 ps_info1(#'3gpp_rf_PS-Information'{'SGW-Address' = [Address]} = PS,
 		Data) when is_tuple(Address) ->
 	NewData = Data#{sgw_address => Address},
 	ps_info2(PS, NewData);
 ps_info1(PS, Data) ->
 	ps_info2(PS, Data).
-%% hidden
+%% @hidden
 ps_info2(#'3gpp_rf_PS-Information'{
 			'3GPP-GGSN-MCC-MNC' = [<<MCC1, MCC2, MCC3, MNC1, MNC2, MNC3>>]} = PS,
 		Data) ->
@@ -399,21 +399,21 @@ ps_info2(#'3gpp_rf_PS-Information'{
 	ps_info3(PS, NewData);
 ps_info2(PS, Data) ->
 	ps_info3(PS, Data).
-%% hidden
+%% @hidden
 ps_info3(#'3gpp_rf_PS-Information'{'Traffic-Data-Volumes' = DataVolumes} = PS,
 		Data) ->
 	NewData = volumes(DataVolumes, Data),
 	ps_info4(PS, NewData);
 ps_info3(PS, Data) ->
 	ps_info4(PS, Data).
-%% hidden
+%% @hidden
 ps_info4(#'3gpp_rf_PS-Information'{'Change-Condition' = Cause} = _PS,
 		Data) ->
 	Data#{close_cause => Cause};
 ps_info4(_PS, Data) ->
 	Data.
 
-%% hidden
+%% @hidden
 volumes([#'3gpp_rf_Traffic-Data-Volumes'{
 		'Accounting-Input-Octets' = [VolumeIn],
 		'Accounting-Output-Octets' = [VolumeOut]} | T], Data) ->

@@ -430,7 +430,7 @@ sip_uri([_H | T], Data) ->
 sip_uri([], Data) ->
 	Data.
 
-%% hidden
+%% @hidden
 ims_info(#'3gpp_rf_IMS-Information'{
 		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
 				'Originating-IOI' = [IOI]}]} = IMS,
@@ -438,7 +438,7 @@ ims_info(#'3gpp_rf_IMS-Information'{
 	ims_info1(IMS, Data#{originating_ioi => IOI});
 ims_info(IMS, Data) ->
 	ims_info1(IMS, Data).
-%% hidden
+%% @hidden
 ims_info1(#'3gpp_rf_IMS-Information'{
 		'Inter-Operator-Identifier' = [#'3gpp_rf_Inter-Operator-Identifier'{
 				'Terminating-IOI' = [IOI]}]} = IMS,
@@ -446,21 +446,21 @@ ims_info1(#'3gpp_rf_IMS-Information'{
 	ims_info2(IMS, Data#{terminating_ioi => IOI});
 ims_info1(IMS, Data) ->
 	ims_info2(IMS, Data).
-%% hidden
+%% @hidden
 ims_info2(#'3gpp_rf_IMS-Information'{
 		'IMS-Charging-Identifier' = [ICID]} = IMS,
 		Data) ->
 	ims_info3(IMS, Data#{charging_id => ICID});
 ims_info2(IMS, Data) ->
 	ims_info3(IMS, Data).
-%% hidden
+%% @hidden
 ims_info3(#'3gpp_rf_IMS-Information'{
 		'IMS-Visited-Network-Identifier' = [Visited]} = IMS,
 		Data) ->
 	ims_info4(IMS, Data#{visited_id => Visited});
 ims_info3(IMS, Data) ->
 	ims_info4(IMS, Data).
-%% hidden
+%% @hidden
 ims_info4(#'3gpp_rf_IMS-Information'{
 			'Access-Network-Information' = [ANI]} = _IMS,
 		Data) ->

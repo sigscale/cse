@@ -375,7 +375,7 @@ msisdn([_H | T]) ->
 msisdn([]) ->
 	undefined.
 
-%% hidden
+%% @hidden
 sms_info(#'3gpp_rf_SMS-Information'{} = _SMS, Data) ->
 	Data;
 sms_info(_SMS, Data) ->

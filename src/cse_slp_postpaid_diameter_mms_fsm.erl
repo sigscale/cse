@@ -388,7 +388,7 @@ msisdn([_H | T]) ->
 msisdn([]) ->
 	undefined.
 
-%% hidden
+%% @hidden
 mms_info(#'3gpp_rf_MMS-Information'{} = MMS, Data) ->
 	Data;
 mms_info(_MMS, Data) ->
