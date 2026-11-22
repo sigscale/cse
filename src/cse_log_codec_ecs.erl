@@ -103,6 +103,14 @@ codec_diameter_ecs1(#'3gpp_sy_SLR'{} = Request,
 			ecs_network("sy", "diameter")],
 	codec_diameter_ecs2(Request, Reply, Start, Stop, Duration, NewAcc).
 %% @hidden
+codec_diameter_ecs2(#'3gpp_ro_CCR'{'Origin-Host' = undefined} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	codec_diameter_ecs2(Request#'3gpp_ro_CCR'{'Origin-Host' = []},
+			Reply, Start, Stop, Duration, Acc);
+codec_diameter_ecs2(#'3gpp_ro_CCR'{'Origin-Realm' = undefined} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	codec_diameter_ecs2(Request#'3gpp_ro_CCR'{'Origin-Realm' = []},
+			Reply, Start, Stop, Duration, Acc);
 codec_diameter_ecs2(#'3gpp_ro_CCR'{
 		'CC-Request-Type' = RequestType,
 		'Origin-Host' = OriginHost,
@@ -127,7 +135,16 @@ codec_diameter_ecs2(#'3gpp_ro_CCR'{
 			ecs_source(OriginHost, OriginHost, OriginRealm,
 					UserName, UserIds), $,,
 			ecs_destination(DestinationRealm)],
-	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc);
+	codec_diameter_ecs3(Request, Reply, EventType,
+			Start, Stop, Duration, NewAcc);
+codec_diameter_ecs2(#'3gpp_rf_ACR'{'Origin-Host' = undefined} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	codec_diameter_ecs2(Request#'3gpp_rf_ACR'{'Origin-Host' = []},
+			Reply, Start, Stop, Duration, Acc);
+codec_diameter_ecs2(#'3gpp_rf_ACR'{'Origin-Realm' = undefined} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	codec_diameter_ecs2(Request#'3gpp_rf_ACR'{'Origin-Realm' = []},
+			Reply, Start, Stop, Duration, Acc);
 codec_diameter_ecs2(#'3gpp_rf_ACR'{
 		'Accounting-Record-Type' = RecordType,
 		'Origin-Host' = OriginHost,
@@ -153,6 +170,14 @@ codec_diameter_ecs2(#'3gpp_rf_ACR'{
 					UserName, UserIds), $,,
 			ecs_destination(DestinationRealm)],
 	codec_diameter_ecs3(Request, Reply, EventType, Start, Stop, Duration, NewAcc);
+codec_diameter_ecs2(#'3gpp_sy_SLR'{'Origin-Host' = undefined} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	codec_diameter_ecs2(Request#'3gpp_sy_SLR'{'Origin-Host' = []},
+			Reply, Start, Stop, Duration, Acc);
+codec_diameter_ecs2(#'3gpp_sy_SLR'{'Origin-Realm' = undefined} = Request,
+		Reply, Start, Stop, Duration, Acc) ->
+	codec_diameter_ecs2(Request#'3gpp_sy_SLR'{'Origin-Realm' = []},
+			Reply, Start, Stop, Duration, Acc);
 codec_diameter_ecs2(#'3gpp_sy_SLR'{
 		'SL-Request-Type' = RequestType,
 		'Origin-Host' = OriginHost,
